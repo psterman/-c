@@ -73,7 +73,7 @@
               var card = api.actionState.cards[cid];
               if (!card) return;
               card.expanded = api.actionState.detailCardId === cid;
-              api.mountActionCardIntoList(card, runList);
+              api.mountActionCardSummary(card, runList);
             });
           }
         }
@@ -103,7 +103,7 @@
               var card = api.actionState.cards[cid];
               if (!card) return;
               card.expanded = api.actionState.detailCardId === cid;
-              api.mountActionCardIntoList(card, doneList);
+              api.mountActionCardSummary(card, doneList);
             });
           }
           if (!api.actionState.showAllDone && doneIds.length > doneLimit) {
@@ -149,7 +149,6 @@
             stack.appendChild(empty);
           }
         }
-        api.replayExpandedCardPipelineBlocks();
         api.syncActionDetailNav();
         requestAnimationFrame(api.syncActionListLayout);
         } finally {

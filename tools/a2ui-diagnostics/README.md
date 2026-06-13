@@ -12,7 +12,7 @@
 | [`memory/`](memory/) | 内存基线、多卡阶梯、索引部署、 soak、P0A/P2 空闲退出 | `Run-A2uiMultiCardMemory.ps1` |
 | [`surface/`](surface/) | Surface Manager 门禁 S2–S11、运行时诊断、Surface 看板 | `Open-SurfaceGateDashboard.ps1` |
 | [`command-palette/`](command-palette/) | 命令面板性能采集、PerfGate、**CP 发布票（P0）** | `Run-HybridCpSignoffPipeline.ps1` |
-| [`a2ui-rollout/`](a2ui-rollout/) | A2UI 灰度 Wave0/2、日检、Day4 决策 | `Run-A2uiRolloutGate.ps1` |
+| [`a2ui-rollout/`](a2ui-rollout/) | A2UI 灰度 Wave0/2、日检、Day4、**P3 聚合** | `Run-A2uiP3SignoffPipeline.ps1` |
 | [`v4/`](v4/) | v4 正式签收看板（P0A/P0B/P0C 前置） | `Open-V4SignoffDashboard.ps1` |
 | [`dashboards/`](dashboards/) | HTML 模板与 `*-live.html`（脚本注入 JSON 后浏览器打开） | 由 `Open-*Dashboard.ps1` 生成 |
 
@@ -88,6 +88,7 @@ powershell -ExecutionPolicy Bypass -File tools\a2ui-diagnostics\Run-P2MemorySide
 | Hybrid 集成 | `hybrid/Run-HybridSignoff.ps1`、日志 `Cache/debug/scwv_trace.log` |
 | 内存/索引优化 | `memory/` + [`docs/search-memory-index-optimization-plan.md`](../../docs/search-memory-index-optimization-plan.md) |
 | 灰度值班 | `a2ui-rollout/Run-A2uiDailyObservation.ps1` |
+| **A2UI P3 签收** | `Run-A2uiP3SignoffPipeline.ps1` → `p3RolloutGatePass` / `p3ExpandGrayPass` |
 | 正式签收 | `v4/Open-V4SignoffDashboard.ps1`、`memory/Deploy-MemoryIndexBaseline.ps1 -FormalSignoff` |
 | **CP 产品发布（AHK）** | `Run-HybridCpSignoffPipeline.ps1` → `cpReleasePass`；见 [`docs/cp-release-signoff.md`](../../docs/cp-release-signoff.md) |
 

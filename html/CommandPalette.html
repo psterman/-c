@@ -977,11 +977,24 @@ body[data-theme="light"] .ai-bg-card {
   border-color: rgba(255, 255, 255, 0.08);
   background: rgba(12, 18, 28, 0.88);
 }
+.cmd-action-card.is-collapsed .card-detail-pane,
+.cmd-action-card:not(.mounted-detail) .card-detail-pane {
+  display: none !important;
+}
 .cmd-action-card.is-collapsed .card-body,
 .cmd-action-card.is-collapsed .card-live-thought,
 .cmd-action-card.is-collapsed .card-followup,
 .cmd-action-card.is-collapsed .card-pulse-loader {
   display: none !important;
+}
+.cmd-action-card.mounted-detail.is-expanded .card-detail-pane {
+  display: block;
+}
+.cmd-action-card.mounted-detail.is-expanded .card-live-thought {
+  display: block;
+}
+.cmd-action-card.mounted-detail.is-expanded .card-followup {
+  display: block;
 }
 .cmd-action-card.is-collapsed .cmd-action-card-head {
   margin-bottom: 0;
@@ -2059,7 +2072,8 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
 <script src="palette/search/result-merger.js?v=1"></script>
 <script src="palette/views/detail-pane.js?v=1"></script>
 <script src="palette/views/command-results.js?v=1"></script>
-<script src="palette/agent/agent-summary.js?v=1"></script>
+<script src="palette/agent/detail-dom-lru.js?v=1"></script>
+<script src="palette/agent/agent-summary.js?v=2"></script>
 <script src="palette/agent/agent-detail.js?v=1"></script>
 <script src="palette/agent/agent-card-sync.js?v=1"></script>
 <script src="palette/app/host-bridge.js?v=1"></script>
@@ -2177,7 +2191,7 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     }
     if (actionCardManager) actionCardManager.transitionCardState(cardId, "Done");
     refreshActionCardDom(card);
-    ensureCardPipelineRendered(card);
+    if (card.mountedDetail) ensureCardPipelineRendered(card);
     var dom = document.getElementById("card-" + cardId);
     if (dom) {
       var logBox = dom.querySelector(".card-status-log");
@@ -3476,6 +3490,9 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
   function removeActionCard(cardId, syncHost) {
     var id = String(cardId || "");
     if (!id) return;
+    if (typeof PaletteDetailDomLru !== "undefined") {
+      PaletteDetailDomLru.unloadCardDetail(id, paletteAgentBridgeApi);
+    }
     if (actionState.detailCardId === id) actionState.detailCardId = null;
     delete actionState.cards[id];
     var el = document.getElementById("card-" + id);
@@ -3682,6 +3699,10 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
       actionState.cards[otherId].expanded = otherId === id;
     });
     hideCardHoverPreview();
+    if (typeof PaletteDetailDomLru !== "undefined") {
+      PaletteDetailDomLru.evictLruDetailDom(id, paletteAgentBridgeApi);
+      PaletteDetailDomLru.mountCardDetail(id, paletteAgentBridgeApi);
+    }
     renderActionHistoryList();
     syncActionDetailNav();
     requestAnimationFrame(function () {
@@ -3697,6 +3718,9 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     actionState.detailCardId = null;
     var card = id ? getActionCard(id) : null;
     if (card) card.expanded = false;
+    if (id && typeof PaletteDetailDomLru !== "undefined") {
+      PaletteDetailDomLru.unloadCardDetail(id, paletteAgentBridgeApi);
+    }
     renderActionHistoryList();
     syncActionDetailNav();
     var results = document.getElementById("results");
@@ -5001,6 +5025,9 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
 
   function renderBlocks(cardId, blocks) {
     var card = getActionCard(cardId);
+    if (card && !card.mountedDetail) {
+      return { ok: true, blocks: blocks || [], deferred: true };
+    }
     var dom = ensureActionCardDom(card);
     if (!dom) return { ok: false, blocks: [] };
     if (typeof PaletteRendererRegistry !== "undefined" && PaletteRendererRegistry.renderBlocks) {
@@ -5415,6 +5442,7 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
   function ensureCardPipelineRendered(card, opts) {
     opts = opts || {};
     if (!card) return false;
+    if (!card.mountedDetail) return false;
     var id = card.id;
     maybeHealDoneCardPipelineBlocks(card, id);
     var blocks = (card.blockStore && card.blockStore.blocks) || card.pipelineBlocks || [];
@@ -5461,9 +5489,13 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
   }
 
   function replayExpandedCardPipelineBlocks() {
+    if (typeof PaletteDetailDomLru !== "undefined" && PaletteDetailDomLru.replayMountedDetailPipelines) {
+      PaletteDetailDomLru.replayMountedDetailPipelines(paletteAgentBridgeApi);
+      return;
+    }
     Object.keys(actionState.cards).forEach(function (cid) {
       var c = actionState.cards[cid];
-      if (c && c.expanded) ensureCardPipelineRendered(c);
+      if (c && c.mountedDetail) ensureCardPipelineRendered(c);
     });
   }
 
@@ -6323,6 +6355,9 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     };
     card.expanded = true;
     actionState.activeCardId = card.id;
+    if (typeof PaletteDetailDomLru !== "undefined") {
+      PaletteDetailDomLru.mountCardDetail(card.id, paletteAgentBridgeApi);
+    }
     refreshActionCardDom(card);
     return { ok: true, cardId: card.id, fixtureId: card.officialA2ui.fixtureId };
   }
@@ -6368,6 +6403,9 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     };
     card.expanded = true;
     actionState.activeCardId = card.id;
+    if (typeof PaletteDetailDomLru !== "undefined") {
+      PaletteDetailDomLru.mountCardDetail(card.id, paletteAgentBridgeApi);
+    }
     var dom = ensureActionCardDom(card);
     if (!dom) {
       return { ok: false, reason: "dom_unavailable" };
@@ -6567,6 +6605,11 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
 
   function refreshActionCardDom(card) {
     if (!card) return;
+    if (typeof PaletteDetailDomLru !== "undefined") {
+      PaletteDetailDomLru.ensureCardDetailState(card);
+    } else if (card.mountedDetail == null) {
+      card.mountedDetail = false;
+    }
     if (card.expanded == null) card.expanded = card.id === actionState.activeCardId;
     var dom = ensureActionCardDom(card);
     if (!dom) return;
@@ -6588,13 +6631,21 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
       (card.expanded ? " is-expanded" : " is-collapsed") +
       (card.id === actionState.activeCardId ? " is-active" : "") +
       (card.id === actionState.detailCardId ? " is-detail-card" : "") +
+      (card.mountedDetail ? " mounted-detail" : "") +
       (dom.classList.contains("has-status-log") ? " has-status-log" : "");
     var loader = dom.querySelector(".card-pulse-loader");
-    if (loader) loader.style.display =
-      card.expanded && (card.uiState === "Planning" || card.uiState === "Running") ? "block" : "none";
-    if (card.expanded || (card.id === actionState.activeCardId && isActionCardRunning(card))) {
+    if (loader) {
+      loader.style.display =
+        card.mountedDetail &&
+        card.expanded &&
+        (card.uiState === "Planning" || card.uiState === "Running")
+          ? "block"
+          : "none";
+    }
+    var summaryLive = dom.querySelector(".card-summary-shell .card-live-thought") || dom.querySelector(".card-live-thought");
+    if (card.mountedDetail) {
       ensureCardPipelineRendered(card);
-      var ltEl = dom.querySelector(".card-live-thought");
+      var ltEl = dom.querySelector(".card-detail-pane .card-live-thought") || summaryLive;
       if (cardLatestTurnHasReply(card)) {
         if (ltEl) ltEl.style.display = "none";
       } else if (
@@ -6635,19 +6686,29 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
           var blockLt = PaletteBlockPipeline.blockPreviewSummary(pipeBlocksLt);
           if (blockLt) ltText = blockLt;
         }
-        setCardLiveThought(
-          card.id,
-          ltText,
-          card.uiState === "Planning" || card.uiState === "Running"
-        );
+        setCardLiveThought(card.id, ltText, card.uiState === "Planning" || card.uiState === "Running");
       }
+    } else if (summaryLive) {
+      summaryLive.style.display = "";
+      var previewText = String(card._summaryPreview || card.rawAnswer || card.liveThought || "")
+        .replace(/\s+/g, " ")
+        .trim();
+      if (!previewText && getCardPipelineBlocks(card).length && typeof PaletteBlockPipeline !== "undefined") {
+        previewText = PaletteBlockPipeline.blockPreviewSummary(getCardPipelineBlocks(card)) || "";
+      }
+      summaryLive.classList.remove("card-live-thought-rich", "thinking");
+      summaryLive.textContent = previewText
+        ? previewText.slice(0, 160) + (previewText.length > 160 ? "…" : "")
+        : isActionCardRunning(card)
+          ? "执行中…"
+          : "点击展开查看详情";
     }
     refreshActionCardPreview(card.id);
     if (card.id === actionState.activeCardId) updateActionLiveDock(card.id);
     var cancelBtn = dom.querySelector(".card-cancel-btn");
     if (cancelBtn) cancelBtn.hidden = !isActionCardRunning(card);
     var follow = dom.querySelector(".card-followup");
-    if (follow) follow.hidden = !card.expanded;
+    if (follow) follow.hidden = !card.mountedDetail;
     var fin = dom.querySelector(".card-followup-input");
     if (fin && fin.dataset.prefillHint !== "1") {
       fin.placeholder =
@@ -6657,17 +6718,19 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
             ? "追加新指令…"
             : "补充要求（不中断当前任务）…";
     }
-    if (typeof PaletteRendererRegistry !== "undefined" && PaletteRendererRegistry.refreshCard) {
-      PaletteRendererRegistry.refreshCard(card, dom, { debugLog: agentDebugLog });
-    } else {
-      if (typeof PaletteCardRenderer !== "undefined" && PaletteCardRenderer.renderActions) {
-        PaletteCardRenderer.renderActions(card.id, card, dom, { debugLog: agentDebugLog });
-      }
-      if (
-        typeof PaletteOfficialA2UIBridge !== "undefined" &&
-        PaletteOfficialA2UIBridge.syncCard
-      ) {
-        PaletteOfficialA2UIBridge.syncCard(card, dom, { debugLog: agentDebugLog });
+    if (card.mountedDetail) {
+      if (typeof PaletteRendererRegistry !== "undefined" && PaletteRendererRegistry.refreshCard) {
+        PaletteRendererRegistry.refreshCard(card, dom, { debugLog: agentDebugLog });
+      } else {
+        if (typeof PaletteCardRenderer !== "undefined" && PaletteCardRenderer.renderActions) {
+          PaletteCardRenderer.renderActions(card.id, card, dom, { debugLog: agentDebugLog });
+        }
+        if (
+          typeof PaletteOfficialA2UIBridge !== "undefined" &&
+          PaletteOfficialA2UIBridge.syncCard
+        ) {
+          PaletteOfficialA2UIBridge.syncCard(card, dom, { debugLog: agentDebugLog });
+        }
       }
     }
     publishSlotRenderersDebug(card.id);
@@ -6805,6 +6868,7 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
       el.className = "cmd-action-card is-collapsed";
       el.innerHTML =
         '<div class="card-pulse-loader" style="display:none"></div>' +
+        '<div class="card-summary-shell">' +
         '<div class="cmd-action-card-head">' +
         '<button type="button" class="card-expand-btn" aria-label="展开">▼</button>' +
         '<span class="card-state-dot" aria-hidden="true"></span>' +
@@ -6822,6 +6886,8 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
         "</div></div>" +
         '<div class="card-compact-progress"></div>' +
         '<div class="card-live-thought thinking">等待引擎响应…</div>' +
+        "</div>" +
+        '<div class="card-detail-pane" hidden>' +
         '<div class="card-body">' +
         '<div class="card-timeline"></div>' +
         '<div class="card-status-log"></div>' +
@@ -6838,7 +6904,8 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
         '<div class="card-followup-input-row">' +
         '<input type="text" class="card-followup-input" />' +
         '<button type="button" class="card-followup-btn">补充</button>' +
-        "</div></div>";
+        "</div></div>" +
+        "</div>";
       var stack0 = box.querySelector(".action-card-stack");
       if (!stack0) {
         stack0 = document.createElement("div");
@@ -6849,6 +6916,9 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
       if (list0) list0.appendChild(el);
       else stack0.appendChild(el);
       refreshActionCardDom(card);
+    }
+    if (typeof PaletteDetailDomLru !== "undefined") {
+      PaletteDetailDomLru.migrateActionCardDomStructure(el);
     }
     if (el && !el.querySelector(".card-a2ui")) {
       var replySlot = el.querySelector(".card-replies") || el.querySelector(".card-reply");
@@ -6913,8 +6983,13 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     });
   }
 
-  function mountActionCardIntoList(card, listHost) {
+  function mountActionCardSummary(card, listHost) {
     if (!card || !listHost) return;
+    if (typeof PaletteDetailDomLru !== "undefined") {
+      PaletteDetailDomLru.ensureCardDetailState(card);
+    } else if (card.mountedDetail == null) {
+      card.mountedDetail = false;
+    }
     var dom = ensureActionCardDom(card);
     if (!dom) return;
     dom.style.display = "";
@@ -6923,6 +6998,10 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     dom.style.overflow = "";
     listHost.appendChild(dom);
     refreshActionCardDom(card);
+  }
+
+  function mountActionCardIntoList(card, listHost) {
+    mountActionCardSummary(card, listHost);
   }
 
   var actionCardManager = null;
@@ -6995,6 +7074,7 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
         _summaryOnly: summaryDto,
         _summaryPreview: summaryDto ? String(dto.rawAnswer || "") : "",
         expanded: false,
+        mountedDetail: false,
         liveThought: "",
         rawAnswer: summaryDto ? "" : clipStreamText(dto.rawAnswer || ""),
         updatedAt: dto.updatedAt || "",
@@ -7129,7 +7209,7 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
     refreshActionCardDom(card);
     if (actionCardManager) actionCardManager.transitionCardState(id, card.uiState);
     if (!summaryDto && restoredBlocks && (card.uiState === "Done" || dto.uiState === "Done")) {
-      if (shouldEagerPipelineFinalize(card)) ensureCardPipelineRendered(card);
+      if (card.mountedDetail && shouldEagerPipelineFinalize(card)) ensureCardPipelineRendered(card);
       else maybeHealDoneCardPipelineBlocks(card, id);
     }
   }
@@ -8774,7 +8854,10 @@ body[data-theme="light"] .a2ui-alert-info { background: rgba(59,130,246,.1); bor
       isActionCardRunning: isActionCardRunning,
       sortCardIds: sortCardIds,
       ensureActionCardSection: ensureActionCardSection,
+      mountActionCardSummary: mountActionCardSummary,
       mountActionCardIntoList: mountActionCardIntoList,
+      clearOfficialA2ui: clearOfficialA2ui,
+      openActionCardDetail: openActionCardDetail,
       historyFilterEmptyMessage: historyFilterEmptyMessage,
       agentProviderLabel: agentProviderLabel,
       replayExpandedCardPipelineBlocks: replayExpandedCardPipelineBlocks,

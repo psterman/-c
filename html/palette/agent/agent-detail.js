@@ -14,6 +14,7 @@
               (card.expanded ? " is-expanded" : " is-collapsed") +
               (card.id === api.actionState.activeCardId ? " is-active" : "") +
               (card.id === api.actionState.detailCardId ? " is-detail-card" : "") +
+              (card.mountedDetail ? " mounted-detail" : "") +
               (dom.classList.contains("has-status-log") ? " has-status-log" : "");
             var loader = dom.querySelector(".card-pulse-loader");
             var badge = dom.querySelector(".cmd-action-card-badge");

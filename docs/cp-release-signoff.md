@@ -70,3 +70,23 @@ cd tools\a2ui-diagnostics
 | 10 轮 hub 恢复 | `hubEnd ≤ hubStart × 1.10` |
 
 产物：`Cache/debug/p2_memory_sidecar_gate.json`。`PASS_WITH_WARNINGS` = hub 在 50–55 MiB 警告带。
+
+## P3 — A2UI 灰度（独立线）
+
+与 CP 发布票正交：`rolloutGatePass` / `p3ExpandGrayPass` **均不改变** `commandPaletteHost` 或 `wailsDefaultEligible`。
+
+```powershell
+cd tools\a2ui-diagnostics
+.\Run-A2uiP3SignoffPipeline.ps1              # 全量
+.\Run-A2uiP3SignoffPipeline.ps1 -SkipRolloutGate   # gate 已绿时仅日检+Day4
+.\Run-A2uiDailyObservation.ps1             # 每日任务（cron）
+```
+
+| 阶段 | 字段 | 当前状态 |
+|------|------|----------|
+| Rollout 门禁 | `p3RolloutGatePass` / `rolloutGatePass` | ✅ Wave0/Wave2 + L3 + eval |
+| 扩灰决策 | `p3ExpandGrayPass` / `day4Pass` | ⏳ 需 `observation_days >= 7`（日历累积） |
+
+产物：`Cache/debug/p3_a2ui_signoff_pipeline.json`、`a2ui_rollout_gate_last.json`、`a2ui_day4_decision_last.json`。
+
+扩灰前保持 `recommendation=maintain_b_granularity`；满 7 日日检且 Day4 硬检查全绿后可为 `expand_gray_cautiously`。

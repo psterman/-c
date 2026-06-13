@@ -2,7 +2,8 @@
 param(
     [string]$RepoRoot = "",
     [double]$MaxTotalPrivateMiB = 4096,
-    [double]$MaxLargestRendererPrivateMiB = 2048
+    [double]$MaxLargestRendererPrivateMiB = 2048,
+    [int]$MinObservationDays = 7
 )
 
 . (Join-Path $PSScriptRoot "..\_DiagRoot.ps1")
@@ -128,8 +129,8 @@ if (Test-Path $histPath) {
             } catch { }
         } | Where-Object { $_ } | Sort-Object -Unique
     )
-    Add-Check "observation_days" ($days.Count -ge 7) "distinct_days=$($days.Count) history_lines=$($lines.Count) (needs >=7)" -Hard
-    if ($days.Count -lt 7) { $recommendation = "maintain_b_granularity" }
+    Add-Check "observation_days" ($days.Count -ge $MinObservationDays) "distinct_days=$($days.Count) history_lines=$($lines.Count) (needs >=$MinObservationDays)" -Hard
+    if ($days.Count -lt $MinObservationDays) { $recommendation = "maintain_b_granularity" }
 }
 
 if ($pass -and $l3 -and $l3.l3Pass -and $gray -and $gray.routeMode -eq "r3_gray") {
