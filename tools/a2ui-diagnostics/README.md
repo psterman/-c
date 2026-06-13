@@ -11,7 +11,7 @@
 | [`hybrid/`](hybrid/) | Hybrid 运行终验：手动探测、FTB/CP/UI 环、Hub 链、看板采集 | `Run-HybridSignoff.ps1` |
 | [`memory/`](memory/) | 内存基线、多卡阶梯、索引部署、 soak、P0A/P2 空闲退出 | `Run-A2uiMultiCardMemory.ps1` |
 | [`surface/`](surface/) | Surface Manager 门禁 S2–S11、运行时诊断、Surface 看板 | `Open-SurfaceGateDashboard.ps1` |
-| [`command-palette/`](command-palette/) | 命令面板性能采集与 PerfGate | `Run-CommandPalettePerfGate.ps1` |
+| [`command-palette/`](command-palette/) | 命令面板性能采集、PerfGate、**CP 发布票（P0）** | `Run-HybridCpSignoffPipeline.ps1` |
 | [`a2ui-rollout/`](a2ui-rollout/) | A2UI 灰度 Wave0/2、日检、Day4 决策 | `Run-A2uiRolloutGate.ps1` |
 | [`v4/`](v4/) | v4 正式签收看板（P0A/P0B/P0C 前置） | `Open-V4SignoffDashboard.ps1` |
 | [`dashboards/`](dashboards/) | HTML 模板与 `*-live.html`（脚本注入 JSON 后浏览器打开） | 由 `Open-*Dashboard.ps1` 生成 |
@@ -33,7 +33,10 @@
 # Hybrid 终验一条龙（采集 + 浏览器看板）
 powershell -ExecutionPolicy Bypass -File tools\a2ui-diagnostics\Run-HybridSignoff.ps1
 
-# Hybrid 终验 + CP PerfGate 自动化（Patch C D→E）
+# CP 发布票（P0，2026-06-13 已关，默认 AHK）
+powershell -ExecutionPolicy Bypass -File tools\a2ui-diagnostics\Run-HybridCpSignoffPipeline.ps1 -SkipHybrid -SkipPerfGate
+
+# Hybrid 终验 + CP PerfGate 全量
 powershell -ExecutionPolicy Bypass -File tools\a2ui-diagnostics\Run-HybridCpSignoffPipeline.ps1
 
 # 仅采内存基线
@@ -68,6 +71,8 @@ powershell -ExecutionPolicy Bypass -File tools\a2ui-diagnostics\Run-A2uiRolloutG
 | `Cache/debug/a2ui_memory_baseline.json` | 内存基线（空载/索引等） |
 | `Cache/debug/v4_signoff_dashboard.json` | v4 签收看板 |
 | `Cache/debug/surface_runtime_diagnosis.json` | Surface 运行时诊断 |
+| `Cache/debug/hybrid_cp_signoff_pipeline.json` | Hybrid + CP 发布聚合（`cpReleasePass`） |
+| `Cache/debug/cp_manual_release_checklist.json` | CP 发布手动 6 项 |
 | `Cache/debug/command_palette_perf_gate.json` | CP 性能门禁（pipelinePass + performancePass） |
 | `Cache/debug/multi_card_memory_report.json` | 多卡内存阶梯报告（uiPrivateMiB 剥离 SearchCore） |
 | `Cache/debug/*_gate_diagnosis.json` | 各阶段静态门禁 |
@@ -83,10 +88,20 @@ powershell -ExecutionPolicy Bypass -File tools\a2ui-diagnostics\Run-A2uiRolloutG
 | 内存/索引优化 | `memory/` + [`docs/search-memory-index-optimization-plan.md`](../../docs/search-memory-index-optimization-plan.md) |
 | 灰度值班 | `a2ui-rollout/Run-A2uiDailyObservation.ps1` |
 | 正式签收 | `v4/Open-V4SignoffDashboard.ps1`、`memory/Deploy-MemoryIndexBaseline.ps1 -FormalSignoff` |
+| **CP 产品发布（AHK）** | `Run-HybridCpSignoffPipeline.ps1` → `cpReleasePass`；见 [`docs/cp-release-signoff.md`](../../docs/cp-release-signoff.md) |
+
+## 产品默认与 Wails 边界
+
+- **CP 产品默认 = AHK**（`commandPaletteHost:ahk`）
+- **Wails CP = architecture ready / non-default**（CP7～10 签收记 `wailsArchitecturePass`，不自动改默认）
+- **CP 发布票已关 ≠ Wails 默认票已关** — 默认切 Wails 需 P4.1 Raycast UX Gate（[`docs/cp-wails-raycast-ux-gate-spec.md`](../../docs/cp-wails-raycast-ux-gate-spec.md)）
+- **A2UI `rolloutGatePass`** 不改变 `commandPaletteHost` 或 `wailsDefaultEligible`（见 `a2ui-rollout/README.md`）
 
 ## 相关文档
 
 - [`docs/search-memory-index-optimization-plan.md`](../../docs/search-memory-index-optimization-plan.md)
+- [`docs/cp-release-signoff.md`](../../docs/cp-release-signoff.md)
+- [`docs/cp-wails-raycast-ux-gate-spec.md`](../../docs/cp-wails-raycast-ux-gate-spec.md)
 - [`docs/surface-manager-execution-plan.md`](../../docs/surface-manager-execution-plan.md)
 - [`docs/command-palette-perf-phase0.md`](../../docs/command-palette-perf-phase0.md)
 - [`docs/a2ui-rollout-todo.md`](../../docs/a2ui-rollout-todo.md)
