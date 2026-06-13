@@ -76,7 +76,7 @@ try {
     $smOk = $smOut -match "ok=true"
 
     Write-Host "=== rollback drill ==="
-    & (Join-Path $RepoRoot "scripts\Run-A2uiRollbackDrill.ps1") -RepoRoot $RepoRoot
+    & (Join-Path $PSScriptRoot "Run-A2uiRollbackDrill.ps1") -RepoRoot $RepoRoot
     $rbOk = $LASTEXITCODE -eq 0
     $rbPath = Join-Path $debugDir "rollback_drill_last.json"
     if ($rbOk -and (Test-Path $rbPath)) {

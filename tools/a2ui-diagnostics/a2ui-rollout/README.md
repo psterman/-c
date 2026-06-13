@@ -2,7 +2,7 @@
 
 Wave0/Wave2 基线、日检观察、Day4 扩灰决策、合并门禁。
 
-**入口**：`Run-A2uiRolloutGate.ps1`
+**入口**：`Run-A2uiRolloutGate.ps1`、`Run-A2uiRollbackDrill.ps1`、`Run-A2uiL3ProbeSummary.ps1`
 
 **输出**：`gray_flags_baseline.json`、`a2ui_daily_observation_last.json` 等（均在 `Cache/debug/`）。
 

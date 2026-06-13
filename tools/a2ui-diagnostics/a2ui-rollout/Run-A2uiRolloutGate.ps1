@@ -75,7 +75,7 @@ if (Test-DiagNiumaAhkRunning -RepoRoot $RepoRoot) {
         }
     }
 }
-& (Join-Path $RepoRoot "scripts\Run-A2uiL3ProbeSummary.ps1") -RepoRoot $RepoRoot
+& (Join-Path $PSScriptRoot "Run-A2uiL3ProbeSummary.ps1") -RepoRoot $RepoRoot
 $l3Ok = ($LASTEXITCODE -eq 0)
 
 $summary = [ordered]@{
