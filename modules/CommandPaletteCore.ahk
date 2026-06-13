@@ -1325,7 +1325,7 @@ CommandPalette_ProbeAdapterMerged(engine, web := 0) {
     if (web is Map) && webCode = "ADP_PASS"
         return web
     engOk := !!(engine is Map && engine.Get("ok", false))
-    if engOk && ((web is Map) && (webCode = "ADP_PROBE_TIMEOUT" || webCode = "ADP_CARD_MISSING" || webCode = "ADP_PROBE_FN_MISSING")) {
+    if engOk && ((web is Map) && (webCode = "ADP_PROBE_TIMEOUT" || webCode = "ADP_CARD_MISSING" || webCode = "ADP_PROBE_FN_MISSING" || webCode = "ADP_SURFACE_OK_TITLE_PENDING")) {
         return Map(
             "ok", true,
             "code", "ADP_L2_PASS_L3_PENDING",

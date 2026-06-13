@@ -24,9 +24,35 @@ function Test-SidecarHealth {
     }
 }
 
+function Get-SidecarKind {
+    $flagsPath = Join-Path $RepoRoot "local\nmer-flags.json"
+    $kind = "wails"
+    if (Test-Path $flagsPath) {
+        try {
+            $f = Get-Content $flagsPath -Raw -Encoding UTF8 | ConvertFrom-Json
+            if ($f.wailsBridge -and $f.wailsBridge.sidecarHost) {
+                $k = [string]$f.wailsBridge.sidecarHost
+                if ($k -eq "hub") { $kind = "hub" }
+            }
+        } catch { }
+    }
+    if (Get-Process -Name "nmer-hub" -ErrorAction SilentlyContinue) { return "hub" }
+    return $kind
+}
+
 function Ensure-SidecarHealth {
     param([int]$WaitSec = 20)
     if (Test-SidecarHealth) { return $true }
+    $kind = Get-SidecarKind
+    if ($kind -eq "hub") {
+        if (Ensure-DiagNmerHub -RepoRoot $RepoRoot -WarmupSec 3) {
+            for ($i = 0; $i -lt $WaitSec; $i++) {
+                if (Test-SidecarHealth) { return $true }
+                Start-Sleep -Seconds 1
+            }
+        }
+        return $false
+    }
     $exe = @(
         (Join-Path $RepoRoot "apps\nmer-wails\build\bin\nmer-wails.exe"),
         (Join-Path $RepoRoot "tools\wails\nmer-wails.exe")

@@ -65,6 +65,16 @@ Write-Host "=== hermes provider contract ==="
 $hermesOk = ($LASTEXITCODE -eq 0)
 
 Write-Host "=== l3 probe summary ==="
+if (Test-DiagNiumaAhkRunning -RepoRoot $RepoRoot) {
+    $adpProbe = Join-Path $PSScriptRoot "Invoke-A2uiAdpL3Probe.ps1"
+    if (Test-Path $adpProbe) {
+        try {
+            & $adpProbe -RepoRoot $RepoRoot
+        } catch {
+            Write-Host "WARN adp_l3_probe: $($_.Exception.Message)" -ForegroundColor Yellow
+        }
+    }
+}
 & (Join-Path $RepoRoot "scripts\Run-A2uiL3ProbeSummary.ps1") -RepoRoot $RepoRoot
 $l3Ok = ($LASTEXITCODE -eq 0)
 

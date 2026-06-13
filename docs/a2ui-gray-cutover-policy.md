@@ -68,7 +68,7 @@ R3 Surface 渲染失败
 
 | ID | 场景 | 预期 |
 |----|------|------|
-| R1 | 杀 `nmer-wails.exe` | R1/R2 正常；R3 降级 |
+| R1 | 杀侧车进程（`sidecarHost=hub` → `nmer-hub`；否则 `nmer-wails`） | R1/R2 正常；R3 降级；`:18791` health 不可达 |
 | R2 | `forceNmerOnly=true` | 无 official WS；fixtures 全绿 |
 | R3 | malformed JSONL | fallback + 旧 reply 可见 |
 | R4 | OpenClaw 断连 | 明确错误；可 recover |

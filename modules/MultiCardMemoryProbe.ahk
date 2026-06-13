@@ -606,6 +606,38 @@ Nmer_MultiCardMemoryProbePoll(*) {
                 "r4Pass", r4,
                 "r5Pass", r5
             ))
+        case "adp_l3_probe":
+            Nmer_MultiCardMemoryProbeShowCp()
+            global g_CmdPal_Ready
+            readyDeadline := A_TickCount + 25000
+            while (A_TickCount < readyDeadline) {
+                if (g_CmdPal_Ready)
+                    break
+                Sleep(250)
+            }
+            if FuncExists("CommandPalette_PushToWeb") {
+                try {
+                    CommandPalette_PushToWeb(Map("type", "palette_set_intent", "intent", "action"))
+                    Sleep(400)
+                } catch {
+                }
+            }
+            adpCode := "ADP_PROBE_UNAVAILABLE"
+            adpOk := false
+            if FuncExists("CommandPalette_RunAdapterProbeAndPersist")
+                r := CommandPalette_RunAdapterProbeAndPersist(22000)
+            else if FuncExists("CommandPalette_ProbeAdapterOfficialA2ui")
+                r := CommandPalette_ProbeAdapterOfficialA2ui(22000)
+            else
+                r := Map("ok", false, "code", "ADP_PROBE_UNAVAILABLE")
+            if (r is Map) {
+                adpCode := String(r.Get("code", "ADP_FAIL"))
+                adpOk := !!r.Get("ok", false)
+            }
+            Nmer_MultiCardMemoryProbeWriteResult(id, true, adpOk, adpCode, "adapter_l3_probe", Map(
+                "adpCode", adpCode,
+                "adpOk", adpOk
+            ))
         case "prepare_tier":
             count := Integer(root.Get("cardCount", 0))
             settle := Integer(root.Get("settleMs", 3000))
