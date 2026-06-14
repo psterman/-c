@@ -292,6 +292,13 @@ CapsLockChordInputBlocked(*) {
             return true
         if FuncExists("ConfigWebView_HostWindowVisible") && ConfigWebView_HostWindowVisible()
             return true
+        ; 搜索中心 WebView 前台：禁止 Caps 和弦 / L1 单键吞字母（含 y→牛马云）
+        try {
+            if FuncExists("SearchCenter_ShouldUseWebView") && SearchCenter_ShouldUseWebView()
+                && FuncExists("SCWV_IsHostForegroundActive") && SCWV_IsHostForegroundActive()
+                return true
+        } catch {
+        }
     } catch {
     }
     return false
@@ -351,9 +358,9 @@ IsSearchCenterActive() {
     global GuiID_SearchCenter
     try {
         if (SearchCenter_ShouldUseWebView()) {
-            ; WebView 模式：以 SCWV 可见且宿主窗口仍存在为准（不要求前台，避免句柄瞬时为空误判）
+            ; WebView 模式：仅前台视为 active，与 SCWV_ScCapsInputAllowed / hostForeground 一致，避免后台劫持键
             try {
-                if (SCWV_IsRevealedToUser())
+                if FuncExists("SCWV_IsHostForegroundActive") && SCWV_IsHostForegroundActive()
                     return true
             } catch {
             }
@@ -388,8 +395,6 @@ SearchCenter_ShouldCaptureGlobalHotkeys(*) {
     }
     try {
         if SearchCenter_ShouldUseWebView() {
-            if FuncExists("SCWV_IsSearchInputFocused") && SCWV_IsSearchInputFocused()
-                return true
             global g_SCWV_Gui
             if IsObject(g_SCWV_Gui) && g_SCWV_Gui.Hwnd && WinActive("ahk_id " . g_SCWV_Gui.Hwnd)
                 return true
@@ -410,6 +415,35 @@ SearchCenter_ShouldCaptureLegacyListHotkeys(*) {
     } catch {
     }
     return true
+}
+
+SearchCenter_CapsChordHotIf(*) {
+    if !CapsLockChordHotIf()
+        return false
+    try {
+        if SearchCenter_ShouldUseWebView() && FuncExists("SCWV_ScCapsInputAllowed") && !SCWV_ScCapsInputAllowed()
+            return false
+    } catch {
+    }
+    try {
+        if FuncExists("VK_IsTypingPassthroughContext") && VK_IsTypingPassthroughContext()
+            return false
+    } catch {
+    }
+    return true
+}
+
+SearchCenter_CapsChordKey(ch) {
+    if SearchCenter_HandleCapsChordKey(ch)
+        return
+    try {
+        if FuncExists("VK_IsTypingPassthroughContext") && VK_IsTypingPassthroughContext() {
+            c := StrLower(Trim(String(ch)))
+            if (c != "")
+                Send("{Raw}" . c)
+        }
+    } catch {
+    }
 }
 
 SearchCenter_HandleCapsChordKey(ch) {
@@ -436,6 +470,15 @@ SearchCenter_HandleCapsChordKey(ch) {
         if dbg
             OutputDebug("SC_CapsChord abort: !IsSearchCenterActive key=" . k)
         return false
+    }
+    try {
+        if FuncExists("SCWV_ScCapsInputAllowed") && !SCWV_ScCapsInputAllowed() {
+            try SCWV_Log("caps_chord_skip", "key=" . k . " reason=sc_caps_blocked")
+            catch {
+            }
+            return false
+        }
+    } catch {
     }
     try {
         if FuncExists("VK_IsTypingPassthroughContext") && VK_IsTypingPassthroughContext() {

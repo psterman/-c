@@ -742,6 +742,7 @@ Nmer_MigrateDataLayout(*) {
     }
     for name in ["SearchCenterHistory.json", "fulltext_settings.json", "fulltext_config.json"] {
         Nmer_MigrateFileIfMissing(data . "\" . name, search . "\" . name)
+        Nmer_MigrateFileIfMissing(runtime . "\app\" . name, search . "\" . name)
     }
     for name in ["prompts.json", "config.json", "CommandPaletteExec.json", "vk_cursor_keymap_compiled.json"] {
         Nmer_MigrateFileIfMissing(data . "\" . name, state . "\" . name)

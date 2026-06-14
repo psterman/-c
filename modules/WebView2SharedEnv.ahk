@@ -239,6 +239,11 @@ WebView2_PrepareForScriptReload() {
             NiumaMobileBrowser_PrepareForScriptReload()
     } catch {
     }
+    try {
+        if FuncExists("ScWebEmbedProbePrepareForScriptReload")
+            ScWebEmbedProbePrepareForScriptReload()
+    } catch {
+    }
     g_WV2SharedEnv := 0
     g_WV2EnvCreatePromise := 0
     g_WV2EnvReadyCallbacks := []

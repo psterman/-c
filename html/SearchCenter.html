@@ -2,6 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
+<style id="sc-critical-bg">html,body{background-color:#0d1016 !important}</style>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>搜索中心</title>
 <link rel="stylesheet" href="https://app.local/assets/vendor/prism/prism-tomorrow.min.css">
@@ -2738,12 +2739,24 @@ body.sc-cli-layout #app {
 .dock-status-dot.warn {
   background: #f59e0b;
 }
+.sc-status-group-dock {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: nowrap;
+  min-width: 0;
+}
+.sc-status-group-dock #nm-bottom-dock.nm-embedded {
+  flex: 1 1 auto;
+  min-width: 0;
+  justify-content: flex-end;
+}
 .sc-footer-stack {
   width: 100%;
 }
 body.nm-dock-mounted #app.sc-container,
 body.nm-dock-mounted #app {
-  padding-bottom: 58px;
+  padding-bottom: 0;
 }
 .cli-workspace {
   flex: 1 1 auto;
@@ -2922,6 +2935,9 @@ body.sc-cli-layout .cli-shell {
 }
 .filter-drawer.sc-mode-cli .filter-drawer-body {
   max-height: 88px;
+}
+.filter-drawer.sc-mode-web .filter-drawer-body {
+  max-height: min(52vh, 420px);
 }
 .cli-shell {
   min-height: 280px;
@@ -3175,7 +3191,7 @@ html[data-theme="light"] .search-wrapper.has-content .search-box-inner {
         </div>
       </div>
       <span class="sc-status-spacer"></span>
-      <div class="sc-status-group sc-status-group-dock">
+      <div class="sc-status-group sc-status-group-dock" id="sc-status-group-dock">
         <div class="sc-status-item">
           <span class="sc-status-dot-wrap" title="搜索状态">
             <span class="dock-status-dot" id="dock-sync-dot"></span>
@@ -3300,7 +3316,7 @@ const SC_RESULTS_MORE_COLLAPSED_KEY = "sc_results_more_collapsed_v1";
 const SC_UI_MODE_KEY = "sc_ui_mode_v1";
 const SC_ACTIVE_CLI_ENGINE_KEY = "sc_active_cli_engine_v1";
 const SC_NOVICE_SORT_PREF_KEY = "sc_novice_sort_pref_v1";
-const SC_WEB_SEARCH_HIDDEN = true;
+const SC_WEB_SEARCH_HIDDEN = false;
 const SC_WEB_CATEGORY_KEYS = new Set([
   "ai", "academic", "baidu", "image", "audio", "video", "book", "price", "medical", "cloud"
 ]);
@@ -3440,6 +3456,8 @@ let fulltextPollTimer = 0;
 let fulltextEsBackoffMs = 2000;
 let fulltextEsReconnectTimer = 0;
 let fulltextStatusHeartbeatTimer = 0;
+let _scHotkeySyncHostPending = false;
+let _scFulltextBackgroundStarted = false;
 const HOTKEY_QUEUE_TTL_MS = 250;
 const HOTKEY_QUEUE_TICK_MS = 16;
 let hotkeyDispatchTimer = 0;
@@ -3453,6 +3471,8 @@ const state = {
   limit: 30,
   engineMode: (typeof localStorage !== "undefined" && localStorage.getItem(SC_ENGINE_MODE_KEY)) || "go",
   hostLifecycle: "closed",
+  hostForeground: false,
+  hostMinimized: false,
   categories: [],
   currentCategoryKey: "ai",
   engines: [],
@@ -3652,13 +3672,49 @@ try {
 const PDF_JS_ASSET_BASE = "https://app.local/assets/pdfjs/";
 
 const postToAhk = (obj) => BasePanel.postToAhk(obj);
+let scReadySent = false;
+let _scWebEngineHostSynced = false;
+let _scApplyStateBusy = false;
+let _scApplyStatePending = null;
+let _scApplyStateRaf = 0;
+let _scApplyStateQueued = null;
+let _scHostLayoutRaf = 0;
+let _scUiPaintReadyAt = 0;
+let _scClientQuerySeq = 0;
+let _scLatestSubmittedQueryId = 0;
+let _scInputDraftVersion = 0;
+function scNextQueryId() {
+  const queryId = ++_scClientQuerySeq;
+  _scLatestSubmittedQueryId = queryId;
+  return queryId;
+}
+function scSendReadyOnce() {
+  if (scReadySent) return;
+  if (!(window.chrome && window.chrome.webview)) return;
+  scReadySent = true;
+  try { postToAhk({ type: "setUiMode", mode: getUIMode() }); } catch (_) {}
+  try { postToAhk({ type: "ready" }); } catch (_) {}
+  requestAnimationFrame(function () {
+    requestAnimationFrame(function () {
+      try { postToAhk({ type: "UI_PAINT_READY" }); } catch (_) {}
+      dismissStartupSplash(true);
+    });
+  });
+}
 
 function requestHostClose(source = "ui") {
+  state.hostLifecycle = "closing";
+  onHostForegroundChanged(false);
+  endCapsHoldHint();
+  stopFulltextBackgroundTasks();
   // 双通道关闭：优先 lifecycle，兜底 direct close，避免宿主状态机偶发悬挂
   postToAhk({ type: "lifecycle", phase: "close_request", source });
   setTimeout(() => {
     postToAhk({ type: "close" });
   }, 60);
+  setTimeout(() => {
+    postToAhk({ type: "close" });
+  }, 420);
 }
 
 function syncEngineModeButton() {
@@ -3708,17 +3764,19 @@ function effectiveSearchLimit() {
 
 /** 极速模式：由 AHK WinHttp 请求本机 Go（避免 https://app.local 页面 fetch http 被混合内容拦截） */
 function runSearchGoPipeline(offset) {
+  const queryId = scNextQueryId();
   postToAhk({
     type: "searchGoRequest",
     keyword: state.keyword,
     offset: offset || 0,
     limit: effectiveSearchLimit(),
-    goType: mapFilterToGoSearchType()
+    goType: mapFilterToGoSearchType(),
+    queryId
   });
 }
 
 function fallbackToAhkSearch() {
-  postToAhk({ type: "search", keyword: state.keyword });
+  postToAhk({ type: "search", keyword: state.keyword, queryId: scNextQueryId() });
 }
 
 const PREVIEW_DEBOUNCE_MS = 150;
@@ -4003,12 +4061,57 @@ function syncAllScHotkeyBindingsToHost() {
   postToAhk({ type: "scHotkeyBindingsSync", payload: { resetAll: true, entries } });
 }
 
+function scHostInputActive() {
+  if (state.hostMinimized) return false;
+  if (document.visibilityState !== "visible") return false;
+  if (state.hostLifecycle === "closing" || state.hostLifecycle === "closed") return false;
+  return !!state.hostForeground;
+}
+
+function onHostForegroundChanged(active) {
+  const next = !!active;
+  if (state.hostForeground === next) return;
+  state.hostForeground = next;
+  if (next) {
+    if (_scHotkeySyncHostPending) {
+      _scHotkeySyncHostPending = false;
+      scheduleScHotkeyBindingsSync(80);
+    }
+    if (!_scFulltextBackgroundStarted && String(state.filterType || "").toLowerCase() === "fulltext") {
+      ensureFulltextBackgroundTasks();
+    }
+  } else {
+    endCapsHoldHint();
+  }
+}
+
+function ensureFulltextBackgroundTasks() {
+  if (_scFulltextBackgroundStarted) return;
+  if (state.hostLifecycle === "closing" || state.hostLifecycle === "closed") return;
+  _scFulltextBackgroundStarted = true;
+  try { requestFulltextStatus(true); } catch (_) {}
+  try { ensureFulltextStatusHeartbeat(); } catch (_) {}
+  try { startFulltextProgressStream(); } catch (_) {}
+}
+
 function scheduleScHotkeyBindingsSync(delayMs = 160) {
+  const allowSync = !!state.hostForeground
+    || !!(state.hotkeyBindDialog && state.hotkeyBindDialog.open)
+    || !!state.capsHintActive;
+  if (!allowSync) {
+    _scHotkeySyncHostPending = true;
+    return;
+  }
   if (scHotkeySyncTimer) clearTimeout(scHotkeySyncTimer);
   scHotkeySyncTimer = setTimeout(() => {
     scHotkeySyncTimer = 0;
     syncAllScHotkeyBindingsToHost();
   }, Math.max(0, Number(delayMs) || 0));
+}
+
+function scheduleScHotkeyBindingsSyncFromState(delayMs = 500) {
+  if (!state.hostForeground && !state.capsHintActive) return;
+  scheduleScHotkeyBindingsSync(delayMs);
 }
 
 function syncCustomOnlyScHotkeyBindingsToHost() {
@@ -4269,7 +4372,7 @@ function syncComposeHintsUi() {
   if (!bar) return;
   const mode = getUIMode();
   const b = getComposeBindings();
-  bar.classList.toggle("visible", mode === "cli" || mode === "local");
+  bar.classList.toggle("visible", mode === "cli" || mode === "local" || mode === "web");
   const map = {
     cli_send: document.getElementById("sc-hint-cli-send"),
     compose_newline: document.getElementById("sc-hint-compose-newline"),
@@ -4283,7 +4386,11 @@ function syncComposeHintsUi() {
   const runHint = bar.querySelector('[data-compose-action="compose_run"]');
   if (runHint) {
     const kbd = runHint.querySelector("kbd");
-    if (kbd) kbd.textContent = mode === "cli" ? formatComposeChordLabel(b.compose_run) : formatComposeChordLabel(b.local_run);
+    if (kbd) {
+      kbd.textContent = mode === "cli"
+        ? formatComposeChordLabel(b.compose_run)
+        : formatComposeChordLabel(b.local_run);
+    }
   }
 }
 
@@ -4410,7 +4517,7 @@ function loadUIModePref() {
   try {
     const v = localStorage.getItem(SC_UI_MODE_KEY);
     if (v === "local" || v === "cli") state.uiMode = v;
-    else if (v === "web" && SC_WEB_SEARCH_HIDDEN) state.uiMode = "local";
+    else if (v === "web" && !SC_WEB_SEARCH_HIDDEN) state.uiMode = "web";
   } catch (_) {}
   if (!state.uiMode) state.uiMode = "local";
   try {
@@ -4441,18 +4548,18 @@ function syncModeSections() {
   const previewColumn = document.getElementById("local-preview-column");
   const cliWorkspace = document.getElementById("cli-workspace");
   const layout = document.getElementById("layout");
-  if (secCats) secCats.classList.add("hidden");
-  if (secEng) secEng.classList.add("hidden");
+  if (secCats) secCats.classList.toggle("hidden", mode !== "web");
+  if (secEng) secEng.classList.toggle("hidden", mode !== "web");
   if (resultsFilters) resultsFilters.classList.toggle("hidden", mode !== "local");
-  if (resultsCard) resultsCard.classList.toggle("hidden", mode === "cli");
-  if (previewColumn) previewColumn.classList.toggle("hidden", mode === "cli");
+  if (resultsCard) resultsCard.classList.toggle("hidden", mode === "cli" || mode === "web");
+  if (previewColumn) previewColumn.classList.toggle("hidden", mode === "cli" || mode === "web");
   if (cliWorkspace) cliWorkspace.classList.toggle("hidden", mode !== "cli");
   if (layout) layout.classList.toggle("sc-cli-active", mode === "cli");
   document.body.classList.toggle("sc-cli-layout", mode === "cli");
   const drawer = document.getElementById("filter-drawer");
   if (drawer) {
     drawer.classList.toggle("sc-mode-local", mode === "local");
-    drawer.classList.toggle("sc-mode-web", false);
+    drawer.classList.toggle("sc-mode-web", mode === "web");
     drawer.classList.toggle("sc-mode-cli", mode === "cli");
   }
   if (mode === "cli") scheduleSyncCliWorkspace(true);
@@ -4466,9 +4573,10 @@ function renderModeBar() {
   const mode = getUIMode();
   const modes = [
     { id: "local", label: "本地搜索", desc: "文件、剪贴板、配置" },
+    { id: "web", label: "联网搜索", desc: "大模型与搜索引擎" },
     { id: "cli", label: "终端 CLI", desc: "ttyd 多标签终端" }
   ];
-  bar.classList.add("sc-mode-bar-duo");
+  bar.classList.remove("sc-mode-bar-duo");
   bar.innerHTML = "";
   modes.forEach((m) => {
     const btn = document.createElement("button");
@@ -4484,24 +4592,35 @@ function renderModeBar() {
   });
 }
 
-function setUIMode(mode, persist) {
-  const m = mode === "cli" ? "cli" : "local";
+function setUIMode(mode, persist, skipHostPost, skipCategoryReset) {
+  let m = "local";
+  if (mode === "cli") m = "cli";
+  else if (mode === "web" && !SC_WEB_SEARCH_HIDDEN) m = "web";
+  else if (mode === "local") m = "local";
   const searchInput = document.getElementById("search");
-  if (m === "cli") {
-    const guardMs = Math.max(250, Number(state.modeSwitchGuardMs || 120));
-    state.modeSwitchGuardUntil = Date.now() + guardMs;
-    postToAhk({ type: "modeSwitchGuard", active: true, ms: guardMs, heavy: "cli" });
+  if (!skipHostPost) {
+    if (m === "cli") {
+      const guardMs = Math.max(250, Number(state.modeSwitchGuardMs || 120));
+      state.modeSwitchGuardUntil = Date.now() + guardMs;
+      postToAhk({ type: "modeSwitchGuard", active: true, ms: guardMs, heavy: "cli" });
+    } else if (m === "web") {
+      const guardMs = Math.max(200, Number(state.modeSwitchGuardMs || 120));
+      postToAhk({ type: "modeSwitchGuard", active: true, ms: guardMs, heavy: "web" });
+    }
   }
   state.uiMode = m;
   if (persist) {
     try { localStorage.setItem(SC_UI_MODE_KEY, m); } catch (_) {}
+  }
+  if (!skipHostPost) {
+    try { postToAhk({ type: "setUiMode", mode: m }); } catch (_) {}
   }
   if (m === "cli") {
     setCliTerminalFocusLock(true);
     if (searchInput) {
       try { searchInput.blur(); } catch (_) {}
     }
-    postToAhk({ type: "setCategory", category: "cli" });
+    if (!skipHostPost) postToAhk({ type: "setCategory", category: "cli" });
     if (state.activeCliEngine) state.activeCliEngine = normalizeCliEngineId(state.activeCliEngine);
     try { localStorage.setItem(SC_ACTIVE_CLI_ENGINE_KEY, String(state.activeCliEngine || "codex_cli")); } catch (_) {}
     ensureCliFrameForEngine(getActiveCliEngine());
@@ -4511,8 +4630,17 @@ function setUIMode(mode, persist) {
     if (searchInput) {
       try { searchInput.focus(); } catch (_) {}
     }
-    if (state.currentCategoryKey === "cli") {
-      postToAhk({ type: "setCategory", category: "ai" });
+    if (!skipHostPost && !skipCategoryReset) {
+      if (m === "web") {
+        const catKey = String(state.currentCategoryKey || "");
+        if (catKey === "cli" || !SC_WEB_CATEGORY_KEYS.has(catKey)) {
+          state.currentCategoryKey = "ai";
+          postToAhk({ type: "setCategory", category: "ai" });
+        }
+      } else if (state.currentCategoryKey === "cli") {
+        state.currentCategoryKey = "ai";
+        postToAhk({ type: "setCategory", category: "ai" });
+      }
     }
   }
   renderModeBar();
@@ -4520,23 +4648,54 @@ function setUIMode(mode, persist) {
   syncFilterDrawerSummary();
   syncFooterHint();
   renderCliEngineTabs();
+  renderCategories();
+  renderEngines();
+  if (m === "local") {
+    renderResults();
+    if (!skipHostPost && !state.keyword && !(state.resultsRaw || []).length) {
+      scRequestSearchHomeRefresh();
+    }
+  }
   if (searchInput) {
     const b = getComposeBindings();
-    searchInput.placeholder = m === "cli"
-      ? ("输入提示词，" + formatComposeChordLabel(b.cli_send) + " 发送到下方终端（点击快捷键条可改）")
-      : ("搜索本地结果，" + formatComposeChordLabel(b.local_run) + " 搜索");
+    if (m === "cli") {
+      searchInput.placeholder = "输入提示词，" + formatComposeChordLabel(b.cli_send) + " 发送到下方终端（点击快捷键条可改）";
+    } else if (m === "web") {
+      searchInput.placeholder = "输入关键词，选引擎后 " + formatComposeChordLabel(b.local_run) + " 并发网页搜索";
+    } else {
+      searchInput.placeholder = "搜索本地结果，" + formatComposeChordLabel(b.local_run) + " 搜索";
+    }
   }
   const drawer = document.getElementById("filter-drawer");
   if (drawer) {
-    // 不在 CLI 自动折叠，避免切换引擎后难以切回本地搜索
-    if (drawer.classList.contains("collapsed")) setFilterCollapsed(false, false);
+    if (m === "web" && drawer.classList.contains("collapsed")) setFilterCollapsed(false, false);
+    else if (drawer.classList.contains("collapsed")) setFilterCollapsed(false, false);
   }
-  if (m === "cli") {
+  if (!skipHostPost) {
+    if (m === "cli") {
+      scheduleSyncCliWorkspace(true);
+      setTimeout(() => {
+        const guardMs = Math.max(250, Number(state.modeSwitchGuardMs || 120));
+        postToAhk({ type: "modeSwitchGuard", active: false, ms: guardMs, heavy: "cli" });
+      }, Math.max(260, Number(state.modeSwitchGuardMs || 120) + 20));
+    } else if (m === "web") {
+      setTimeout(() => {
+        const guardMs = Math.max(200, Number(state.modeSwitchGuardMs || 120));
+        postToAhk({ type: "modeSwitchGuard", active: false, ms: guardMs, heavy: "web" });
+      }, 280);
+    }
+  } else if (m === "cli") {
     scheduleSyncCliWorkspace(true);
+  }
+  if (!skipHostPost && m === "web") {
+    if (!(state.categories || []).length || !(state.engines || []).length) {
+      scRequestWebUiRefresh();
+    }
     setTimeout(() => {
-      const guardMs = Math.max(250, Number(state.modeSwitchGuardMs || 120));
-      postToAhk({ type: "modeSwitchGuard", active: false, ms: guardMs, heavy: "cli" });
-    }, Math.max(260, Number(state.modeSwitchGuardMs || 120) + 20));
+      if (!(state.categories || []).length || !(state.engines || []).length) {
+        scRequestWebUiRefresh();
+      }
+    }, 180);
   }
 }
 
@@ -4559,6 +4718,13 @@ function syncFilterDrawerSummary() {
   if (mode === "cli") {
     const n = (state.selectedEngines || []).length;
     el.textContent = n ? ("终端 CLI · " + n + " 个引擎") : "终端 CLI";
+    return;
+  }
+  if (mode === "web") {
+    const cat = (state.categories || []).find((c) => c && c.key === state.currentCategoryKey);
+    const n = (state.selectedEngines || []).length;
+    const catLabel = cat && cat.text ? cat.text : "联网";
+    el.textContent = n ? ("联网搜索 · " + catLabel + " · " + n + " 个引擎") : ("联网搜索 · " + catLabel);
     return;
   }
   el.textContent = "本地搜索";
@@ -4885,6 +5051,7 @@ function scheduleCliAutoBoot(engine, bootCmd) {
 
 function syncCliWorkspace(spawnIfNeeded) {
   if (getUIMode() !== "cli") return;
+  if (state.hostMinimized) return;
   const engine = getActiveCliEngine();
   try { localStorage.setItem(SC_ACTIVE_CLI_ENGINE_KEY, String(engine || "codex_cli")); } catch (_) {}
   ensureCliFrameForEngine(engine);
@@ -4925,7 +5092,7 @@ function syncCliWorkspace(spawnIfNeeded) {
     setCliLoadingVisible(true, "正在连接 ttyd…");
     if (spawnIfNeeded) throttledNiumaCliOpen(false);
   }
-  if (_cliTerminalFocusLock || spawnIfNeeded) {
+  if ((_cliTerminalFocusLock || spawnIfNeeded) && !state.hostMinimized) {
     setTimeout(() => {
       focusCliTerminalFrame();
       setCliTerminalFocusLock(true);
@@ -5122,6 +5289,7 @@ function setFilterCollapsed(collapsed, persist) {
 
 function initFilterDrawer() {
   loadUIModePref();
+  setUIMode(getUIMode(), false, true);
   const drawer = document.getElementById("filter-drawer");
   const btn = document.getElementById("btn-filter-drawer-toggle");
   if (!drawer) return;
@@ -5319,10 +5487,23 @@ function initSearchWrapperFocus() {
     syncSearchInputFocusToHost(focused);
     if (focused) endCapsHoldHint();
   };
+  wrap.addEventListener("pointerdown", () => {
+    setTimeout(() => syncSearchInputFocusToHost(document.activeElement === input), 0);
+  });
   input.addEventListener("focus", sync);
   input.addEventListener("blur", sync);
   input.addEventListener("input", sync);
+  input.addEventListener("keydown", () => {
+    if (document.activeElement === input) syncSearchInputFocusToHost(true);
+  });
   sync();
+}
+
+function initSearchHostFocusRelease() {
+  window.addEventListener("blur", () => syncSearchInputFocusToHost(false));
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState !== "visible") syncSearchInputFocusToHost(false);
+  });
 }
 
 function initFtDrawerToggle() {
@@ -5332,6 +5513,7 @@ function initFtDrawerToggle() {
     state.fulltextCollapsed = !state.fulltextCollapsed;
     saveFulltextCollapsed();
     applyFulltextCollapsedUi();
+    if (!state.fulltextCollapsed) ensureFulltextBackgroundTasks();
   });
 }
 
@@ -5673,6 +5855,7 @@ function bindFulltextHitPreviewPanel(pane) {
 }
 
 function stopFulltextBackgroundTasks() {
+  _scFulltextBackgroundStarted = false;
   if (fulltextPollTimer) {
     clearInterval(fulltextPollTimer);
     fulltextPollTimer = 0;
@@ -6030,6 +6213,7 @@ function setCapsHintActive(active) {
   if (state.capsHintActive === next) return;
   state.capsHintActive = next;
   if (!next) state.capsPressedKey = "";
+  else scheduleScHotkeyBindingsSync(50);
   updateHotkeyHighlights();
   syncFooterHint();
 }
@@ -6149,6 +6333,7 @@ function enqueueHotkeyDispatch(eventObj) {
 }
 
 function queueCapsHotkeyTrigger(rawKey, modeScope = "search", targetChannel = "caps") {
+  if (!scHostInputActive()) return false;
   const key = normalizeHintKey(rawKey);
   if (!key) return false;
   const dispatchKey = `${key}|${modeScope}|${targetChannel}`;
@@ -6198,6 +6383,7 @@ function focusSearchInput() {
   const input = document.getElementById("search");
   if (input) {
     input.focus();
+    syncSearchInputFocusToHost(true);
     try { input.select(); } catch (_) {}
   }
 }
@@ -6357,7 +6543,9 @@ function isScTypingFocus(el) {
   if (!node) return false;
   const tag = String(node.tagName || "").toUpperCase();
   if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return true;
+  if (tag === "BUTTON") return true;
   if (node.isContentEditable) return true;
+  if (node.closest && node.closest(".engine-chip")) return true;
   return false;
 }
 
@@ -6885,6 +7073,23 @@ function renderSubtagPanel() {
     : `${audienceText} · ${activeRule.label}：${activeRule.desc}`;
 }
 
+function selectCategoryLocal(categoryKey, postHost = true) {
+  const key = String(categoryKey || "").trim();
+  if (!key) return;
+  if (key === "cli") {
+    setUIMode("cli", true);
+    return;
+  }
+  state.currentCategoryKey = key;
+  if (!SC_WEB_SEARCH_HIDDEN && SC_WEB_CATEGORY_KEYS.has(key)) {
+    setUIMode("web", true, !postHost, true);
+  }
+  renderCategories();
+  renderEngines();
+  syncFilterDrawerSummary();
+  if (postHost) postToAhk({ type: "setCategory", category: key });
+}
+
 function renderCategories() {
   const wrap = document.getElementById("categories");
   if (!wrap) return;
@@ -6894,20 +7099,55 @@ function renderCategories() {
     if (String(cat.key || "") === "cli") return;
     const hotkey = getHintHotkey("category", cat.key);
     const el = document.createElement("button");
+    el.type = "button";
     el.className = "chip hotkey-item" + (cat.key === state.currentCategoryKey ? " active" : "");
     el.dataset.hotkey = hotkey || "";
     el.dataset.hotkeyGroup = "category";
     el.dataset.hotkeyValue = String(cat.key || "");
     el.dataset.hotkeyLabel = String(cat.text || cat.key || "");
     el.innerHTML = "<span class=\"chip-main\"><span class=\"chip-title\">" + escapeHtml(cat.text) + "</span>" + hotkeyHintHtml(hotkey, "category", cat.key, cat.text) + "</span><span class=\"count\">" + (cat.selectedCount || 0) + "</span>";
-    el.onclick = () => {
-      if (cat.key === "cli") setUIMode("cli", true);
-      else if (!SC_WEB_SEARCH_HIDDEN && SC_WEB_CATEGORY_KEYS.has(cat.key)) setUIMode("web", true);
-      postToAhk({ type: "setCategory", category: cat.key });
-    };
+    el.addEventListener("mousedown", (e) => {
+      e.preventDefault();
+    });
+    el.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      selectCategoryLocal(cat.key);
+    });
     wrap.appendChild(el);
   });
   updateHotkeyHighlights();
+}
+
+function ensureWebEnginesSelected() {
+  if (getUIMode() !== "web") return false;
+  const list = Array.isArray(state.selectedEngines) ? state.selectedEngines.filter(Boolean) : [];
+  if (list.length) return false;
+  const engines = Array.isArray(state.engines) ? state.engines : [];
+  if (!engines.length) return false;
+  const pick = engines.find((e) => String(e && e.value || "") === "deepseek") || engines[0];
+  const v = String(pick && pick.value || "");
+  if (!v) return false;
+  state.selectedEngines = [v];
+  renderEngines();
+  syncFilterDrawerSummary();
+  return true;
+}
+
+function toggleEngineLocal(engineValue) {
+  const v = String(engineValue || "");
+  if (!v) return;
+  const list = Array.isArray(state.selectedEngines) ? state.selectedEngines.slice() : [];
+  const idx = list.indexOf(v);
+  if (idx >= 0) {
+    if (getUIMode() === "web" && list.length <= 1) return;
+    list.splice(idx, 1);
+  } else {
+    list.push(v);
+  }
+  state.selectedEngines = list;
+  renderEngines();
+  syncFilterDrawerSummary();
 }
 
 function renderEngines() {
@@ -6927,7 +7167,16 @@ function renderEngines() {
       ? "<span class=\"engine-icon-wrap\"><img src=\"" + engine.iconUrl + "\" alt=\"\"></span>"
       : "<span class=\"engine-icon-wrap\"><span class=\"engine-fallback\">" + escapeHtml((engine.name || "?").slice(0, 1).toUpperCase()) + "</span></span>";
     el.innerHTML = icon + "<span class=\"label\">" + escapeHtml(engine.name) + "</span>" + hotkeyHintHtml(hotkey, "engine", engine.value, engine.name);
-    el.onclick = () => postToAhk({ type: "toggleEngine", engine: engine.value });
+    el.addEventListener("mousedown", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+    });
+    el.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      toggleEngineLocal(engine.value);
+      postToAhk({ type: "toggleEngine", engine: engine.value });
+    });
     wrap.appendChild(el);
   });
   updateHotkeyHighlights();
@@ -6948,13 +7197,18 @@ function renderFilters() {
     el.dataset.filterKey = filter.key || "";
     el.innerHTML = "<span class=\"filter-label\">" + escapeHtml(filter.text) + "</span>" + hotkeyHintHtml(hotkey, "filter", filter.key, filter.text);
     const applyFilter = () => {
-      if (getUIMode() !== "local") setUIMode("local", true);
+      if (getUIMode() !== "local") setUIMode("local", true, false, true);
       const input = document.getElementById("search");
       const keyword = input ? String(input.value || "") : String(state.keyword || "");
       state.keyword = keyword;
       const fk = String(filter.key || "");
-      if (fk !== "clipboard") state.clipboardHomeLock = false;
-      postToAhk({ type: "setFilter", filterType: fk, keyword });
+      const nextFilter = (fk === state.filterType) ? "" : fk;
+      if (nextFilter !== "clipboard") state.clipboardHomeLock = false;
+      state.filterType = nextFilter;
+      renderFilters();
+      syncFilterDrawerSummary();
+      if (getUIMode() === "local") renderResults();
+      postToAhk({ type: "setFilter", filterType: nextFilter, keyword, queryId: scNextQueryId() });
     };
     let pressedHandled = false;
     let pressedAt = 0;
@@ -6985,7 +7239,7 @@ function unmountInlinePreview() {
   const host = document.getElementById("local-preview-column");
   if (!dock || !host) return;
   if (dock.parentElement !== host) host.appendChild(dock);
-  if (getUIMode() === "cli") dock.classList.add("hidden");
+  if (getUIMode() === "cli" || getUIMode() === "web") dock.classList.add("hidden");
   else dock.classList.remove("hidden");
   stopNativePreview();
   setQuickLookHintVisible(false);
@@ -6997,7 +7251,7 @@ function mountInlinePreview() {
   const row = Number(state.expandedRow) || 0;
   if (!dock || !host) return;
   if (dock.parentElement !== host) host.appendChild(dock);
-  if (getUIMode() === "cli") {
+  if (getUIMode() === "cli" || getUIMode() === "web") {
     dock.classList.add("hidden");
     return;
   }
@@ -7127,9 +7381,10 @@ function renderResults() {
     const lead = inTransition
       ? "<span class=\"empty-lead\"><span class=\"empty-dot\"></span>全文搜索视图已切换，等待结果更新…</span><br>"
       : "";
+    const skel = state.loading ? buildSkeletonListHtml(7) : "";
     list.innerHTML =
       "<div class=\"" + emptyClass + "\">" + lead + "暂无结果。<br>你可以在输入框输入关键词搜索本地内容，或选择引擎后执行网络搜索 / CLI 发送。</div>" +
-      buildSkeletonListHtml(7);
+      skel;
     return;
   }
 
@@ -7254,7 +7509,7 @@ function renderResults() {
     state.results.forEach(renderOneRow);
   }
 
-  if (state.results.length < 7) {
+  if (state.results.length < 7 && state.loading) {
     list.insertAdjacentHTML("beforeend", buildSkeletonListHtml(7 - state.results.length));
   }
 
@@ -8792,6 +9047,77 @@ function fallbackFilterPayload() {
 }
 
 function applyState(payload) {
+  const msgType = String(payload && payload.type || "");
+  const incomingQueryId = Number(payload && payload.queryId) || 0;
+  if (incomingQueryId && incomingQueryId < _scLatestSubmittedQueryId) return;
+  if (!incomingQueryId && _scLatestSubmittedQueryId && (msgType === "init" || msgType === "state")) return;
+  if (incomingQueryId) {
+    _scClientQuerySeq = Math.max(_scClientQuerySeq, incomingQueryId);
+    _scLatestSubmittedQueryId = Math.max(_scLatestSubmittedQueryId, incomingQueryId);
+  }
+  if (msgType === "init" || msgType === "UI_PAINT_READY") {
+    applyStateNow(payload);
+    return;
+  }
+  const incomingFilter = String(payload && payload.filterType || "");
+  if (incomingFilter !== String(state.filterType || "")) {
+    applyStateNow(payload);
+    return;
+  }
+  _scApplyStatePending = payload;
+  if (_scApplyStateRaf) return;
+  _scApplyStateRaf = requestAnimationFrame(() => {
+    _scApplyStateRaf = 0;
+    const p = _scApplyStatePending;
+    _scApplyStatePending = null;
+    if (p) applyStateNow(p);
+  });
+}
+
+function scResultsNeedDefaultSearchKick() {
+  if (state.clipboardHomeLock || state.keyword) return false;
+  const rows = Array.isArray(state.resultsRaw) ? state.resultsRaw : [];
+  if (!rows.length) return true;
+  const hasHistory = rows.some((r) => {
+    const dt = String((r && (r.dataType || r.originalDataType || r.type)) || "").toLowerCase();
+    return dt === "history";
+  });
+  if (hasHistory) return false;
+  if (rows.length <= 3) {
+    return rows.every((r) => {
+      const dt = String((r && (r.dataType || r.originalDataType || r.type)) || "").toLowerCase();
+      return dt === "tutorial" || dt === "history" || dt === "clipboard_top";
+    });
+  }
+  return false;
+}
+
+function scRequestSearchHomeRefresh() {
+  if (getUIMode() === "cli" || getUIMode() === "web") return;
+  if (state.clipboardHomeLock || state.keyword) return;
+  const now = Date.now();
+  if (now - _localInitKickAt < 600) return;
+  _localInitKickAt = now;
+  postToAhk({ type: "refreshSearchHome", queryId: scNextQueryId() });
+}
+
+function scRequestWebUiRefresh() {
+  if (getUIMode() !== "web") return;
+  const now = Date.now();
+  if (now - _scWebUiRefreshAt < 400) return;
+  _scWebUiRefreshAt = now;
+  postToAhk({ type: "requestUiRefresh" });
+}
+
+function applyStateNow(payload) {
+  const msgType = String(payload && payload.type || "");
+  if (_scApplyStateBusy) {
+    _scApplyStateQueued = payload;
+    return;
+  }
+  _scApplyStateBusy = true;
+  let applied = false;
+  try {
   if (payload && payload.themeMode != null) {
     applyTheme(payload.themeMode, false);
   }
@@ -8808,12 +9134,37 @@ function applyState(payload) {
   if (state.unifiedMode === "clipboard" && msgType === "init" && incomingFilter !== "clipboard" && incomingFilter !== "") {
     return;
   }
-  state.keyword = payload.keyword || "";
+  applied = true;
+  if (payload.uiMode != null) {
+    const um = String(payload.uiMode || "").toLowerCase();
+    if (um === "local" || um === "cli") state.uiMode = um;
+    else if (um === "web" && !SC_WEB_SEARCH_HIDDEN) state.uiMode = "web";
+  }
+  const incomingKeyword = String(payload.keyword || "");
+  const searchEl = document.getElementById("search");
+  const localDraft = searchEl ? String(searchEl.value || "") : String(state.keyword || "");
+  const incomingQueryId = Number(payload.queryId) || 0;
+  const keepLocalDraft =
+    _scInputDraftVersion > 0
+    && document.activeElement === searchEl
+    && localDraft !== incomingKeyword;
+  if (!keepLocalDraft) state.keyword = incomingKeyword;
   state.limit = payload.limit || 50;
   state.categories = normalizeListPayload(payload.categories);
   state.currentCategoryKey = payload.currentCategoryKey || "ai";
   state.engines = normalizeListPayload(payload.engines);
   state.selectedEngines = normalizeStringListPayload(payload.selectedEngines);
+  if (getUIMode() === "web" && !state.selectedEngines.length && state.engines.length) {
+    ensureWebEnginesSelected();
+    if (!_scWebEngineHostSynced) {
+      _scWebEngineHostSynced = true;
+      setTimeout(() => {
+        try {
+          postToAhk({ type: "syncSelectedEngines", selectedEngines: state.selectedEngines.slice() });
+        } catch (_) {}
+      }, 0);
+    }
+  }
   state.filters = normalizeListPayload(payload.filters);
   if (!state.filters.length) {
     state.filters = fallbackFilterPayload();
@@ -8821,6 +9172,7 @@ function applyState(payload) {
   state.filterType = payload.filterType || "";
   if (state.filterType === "fulltext" && prevFilterType !== "fulltext") {
     state.fulltextEmptyTransitionUntil = Date.now() + 1200;
+    ensureFulltextBackgroundTasks();
   }
   if (payload.engineMode === "go" || payload.engineMode === "ahk") {
     state.engineMode = payload.engineMode;
@@ -8828,7 +9180,25 @@ function applyState(payload) {
       localStorage.setItem(SC_ENGINE_MODE_KEY, state.engineMode);
     } catch (e) {}
   }
-  state.resultsRaw = normalizeListPayload(payload.results);
+  const incomingResults = normalizeListPayload(payload.results);
+  const payloadUiMode = payload.uiMode != null ? String(payload.uiMode || "").toLowerCase() : "";
+  const effectiveUiMode = payloadUiMode || getUIMode();
+  const isLocalHomeView =
+    effectiveUiMode === "local"
+    && !String(payload.keyword || "").trim()
+    && !String(payload.filterType || "").trim()
+    && !state.clipboardHomeLock;
+  const prevHomeRows = (Array.isArray(state.resultsRaw) ? state.resultsRaw : []).some((r) => {
+    const dt = String((r && (r.dataType || r.originalDataType || r.type)) || "").toLowerCase();
+    return dt === "history" || dt === "tutorial" || dt === "clipboard_top";
+  });
+  if (keepLocalDraft) {
+    // 宿主状态快照只更新外壳，不得覆盖正在编辑的查询及其结果。
+  } else if ((msgType === "state" || msgType === "init") && isLocalHomeView && !incomingResults.length && prevHomeRows) {
+    // debounced/重复 init 空结果不覆盖已展示的历史首页
+  } else {
+    state.resultsRaw = incomingResults;
+  }
   applySubtagResultView();
   state.hasMore = !!payload.hasMore;
   state.loading = false;
@@ -8861,7 +9231,7 @@ function applyState(payload) {
     unmountInlinePreview();
   }
 
-  document.getElementById("search").value = state.keyword;
+  if (searchEl && !keepLocalDraft) searchEl.value = state.keyword;
   document.getElementById("limit").value = String(state.limit);
   syncDockStatusText();
   // CLI 模式下全文状态降频刷新，降低 UI 抖动与整体卡顿
@@ -8876,7 +9246,7 @@ function applyState(payload) {
     _lastFtUiApplyAt = Date.now();
   }
   syncResultCountLabel();
-  document.getElementById("btn-run").textContent = getUIMode() === "cli" ? "发送" : "搜索";
+  document.getElementById("btn-run").textContent = getUIMode() === "cli" ? "发送" : (getUIMode() === "web" ? "网页搜索" : "搜索");
   document.getElementById("btn-open-cli").style.display = state.isCliCategory ? "inline-flex" : "none";
   syncFooterHint();
   syncRecycleBadge();
@@ -8884,7 +9254,7 @@ function applyState(payload) {
     renderRecycleModalList();
   }
 
-  if (state.currentCategoryKey === "cli" && state.uiMode !== "local") {
+  if ((payload.uiMode == null || payload.uiMode === "") && state.currentCategoryKey === "cli" && state.uiMode !== "local") {
     state.uiMode = "cli";
   }
   if (state.uiMode === "web" && SC_WEB_SEARCH_HIDDEN) state.uiMode = "local";
@@ -8906,37 +9276,39 @@ function applyState(payload) {
   renderCliEngineTabs();
   renderFilters();
   syncFilterDrawerSummary();
-  scheduleScHotkeyBindingsSync();
-  if (getUIMode() !== "cli") {
+  scheduleScHotkeyBindingsSyncFromState(500);
+  if (getUIMode() !== "cli" && getUIMode() !== "web") {
     renderResults();
-    // 本地首屏偶发空白兜底：空词+空结果时补拉一次默认搜索
-    if (
-      !state.clipboardHomeLock
-      && !state.loading
-      && !state.keyword
-      && (!Array.isArray(state.resultsRaw) || state.resultsRaw.length === 0)
-    ) {
-      const now = Date.now();
-      if (now - _localInitKickAt > 1200) {
-        _localInitKickAt = now;
-        postToAhk({ type: "search", keyword: "" });
-      }
+    if (msgType === "init" && scResultsNeedDefaultSearchKick()) {
+      scRequestSearchHomeRefresh();
     }
   }
   syncEngineModeButton();
   syncFilterDrawerUi();
   syncFtDrawerSummary();
   updateChromeTopMostButton();
-  requestAnimationFrame(() => {
-    window.dispatchEvent(new Event("resize"));
-  });
-  dismissStartupSplash();
-  if (getUIMode() === "cli") scheduleSyncCliWorkspace(false);
+  const needPreviewResize = getUIMode() === "local" && (!!state.previewPath || state.expandedRow > 0);
+  if (needPreviewResize) {
+    requestAnimationFrame(() => {
+      try { window.dispatchEvent(new Event("resize")); } catch (_) {}
+    });
+  }
+  if (getUIMode() === "cli" && !state.hostMinimized) scheduleSyncCliWorkspace(false);
+  } finally {
+    _scApplyStateBusy = false;
+    if (applied || String(payload && payload.type || "") === "init") dismissStartupSplash();
+    const queued = _scApplyStateQueued;
+    _scApplyStateQueued = null;
+    if (queued) {
+      requestAnimationFrame(() => applyStateNow(queued));
+    }
+  }
 }
 
 let searchDebounceTimer = 0;
 const SEARCH_INPUT_DEBOUNCE_MS = 180;
 function triggerSearch() {
+  if (getUIMode() === "web") return;
   if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
   searchDebounceTimer = setTimeout(() => {
     searchDebounceTimer = 0;
@@ -8947,7 +9319,7 @@ function triggerSearch() {
         fallbackToAhkSearch();
       }
     } else {
-      postToAhk({ type: "search", keyword: state.keyword });
+      postToAhk({ type: "search", keyword: state.keyword, queryId: scNextQueryId() });
     }
   }, SEARCH_INPUT_DEBOUNCE_MS);
 }
@@ -8973,6 +9345,23 @@ function runSearchNow() {
       return;
     }
     if (keyword.trim()) postToAhk({ type: "cliSend", prompt: keyword, engine: eng });
+    return;
+  }
+  if (getUIMode() === "web") {
+    const kw = keyword.trim();
+    if (!kw) {
+      const statusEl = document.getElementById("status");
+      if (statusEl) statusEl.textContent = "请输入搜索关键词";
+      return;
+    }
+    ensureWebEnginesSelected();
+    const engines = Array.isArray(state.selectedEngines) ? state.selectedEngines.slice() : [];
+    if (!engines.length) {
+      const statusEl = document.getElementById("status");
+      if (statusEl) statusEl.textContent = "请至少选择一个搜索引擎";
+      return;
+    }
+    postToAhk({ type: "webSearch", keyword: kw, selectedEngines: engines });
     return;
   }
   if (state.engineMode === "go") {
@@ -9032,18 +9421,20 @@ if (searchInputEl) {
   });
   searchInputEl.addEventListener("compositionend", (event) => {
     searchCompositionActive = false;
+    _scInputDraftVersion += 1;
     state.keyword = event.target.value;
     triggerSearch();
   });
   searchInputEl.addEventListener("input", (event) => {
     if (searchCompositionActive) return;
+    _scInputDraftVersion += 1;
     state.keyword = event.target.value;
     triggerSearch();
   });
 }
 
 document.getElementById("limit").addEventListener("change", (event) => {
-  postToAhk({ type: "setLimit", limit: Number(event.target.value) || 50 });
+  postToAhk({ type: "setLimit", limit: Number(event.target.value) || 50, queryId: scNextQueryId() });
 });
 
 document.getElementById("btn-run").addEventListener("click", () => {
@@ -9197,6 +9588,7 @@ initFilterDrawer();
 initResultsMoreCollapse();
 initCliTerminalControls();
 initSearchWrapperFocus();
+initSearchHostFocusRelease();
 document.querySelectorAll(".sc-compose-hint[data-compose-action]").forEach((el) => {
   el.addEventListener("click", () => {
     const act = String(el.getAttribute("data-compose-action") || "");
@@ -9234,6 +9626,8 @@ document.addEventListener("keydown", (event) => {
   const isTyping = activeTag === "INPUT" || activeTag === "TEXTAREA" || activeTag === "SELECT"
     || !!(document.activeElement && document.activeElement.isContentEditable);
 
+  if (!scHostInputActive()) return;
+
   if (!isTyping) {
     if (event.key === "CapsLock") {
       beginCapsHoldHint();
@@ -9243,7 +9637,7 @@ document.addEventListener("keydown", (event) => {
     }
   }
 
-  if (!event.repeat && !isTyping && shouldHandleCapsChordNow()) {
+  if (!event.repeat && !isTyping && getUIMode() !== "web" && shouldHandleCapsChordNow()) {
     const pressed = normalizeHintKey(event.key);
     if (pressed && queueCapsHotkeyTrigger(pressed, String(state.engineMode || "go"), "caps")) {
       event.preventDefault();
@@ -9304,7 +9698,7 @@ document.addEventListener("keydown", (event) => {
     renderResults();
   }
 
-  if (event.key === "Enter" && getUIMode() !== "cli" && state.results.length) {
+  if (event.key === "Enter" && getUIMode() === "local" && state.results.length) {
     event.preventDefault();
     postToAhk({ type: "activateResult", row: state.selectedRow });
   }
@@ -9354,15 +9748,14 @@ if (window.chrome && window.chrome.webview) {
       return;
     }
     if (payload.type === "capsHintPress") {
-      if (!isScTypingFocus()) {
-        flashCapsPressedKey(payload.key || "");
-        queueCapsHotkeyTrigger(payload.key || "", String(state.engineMode || "go"), "host_caps");
-        scheduleHostCapsHotkeyFallback(payload.key || "");
-      }
+      if (!scHostInputActive() || isScTypingFocus()) return;
+      flashCapsPressedKey(payload.key || "");
+      queueCapsHotkeyTrigger(payload.key || "", String(state.engineMode || "go"), "host_caps");
+      scheduleHostCapsHotkeyFallback(payload.key || "");
       return;
     }
     if (payload.type === "setCategory") {
-      postToAhk({ type: "setCategory", category: payload.category || "" });
+      selectCategoryLocal(payload.category || "", true);
       return;
     }
     if (payload.type === "toggleEngine") {
@@ -9382,6 +9775,7 @@ if (window.chrome && window.chrome.webview) {
       return;
     }
     if (payload.type === "focus_input") {
+      if (state.hostMinimized) return;
       if (getUIMode() === "cli" && (_cliTerminalFocusLock || isCliTerminalInputTarget())) {
         focusCliTerminalFrame();
         return;
@@ -9414,7 +9808,9 @@ if (window.chrome && window.chrome.webview) {
       return;
     }
     if (payload.type === "hostPaintNudge") {
-      dismissStartupSplash(true);
+      const now = Date.now();
+      if (now - _scUiPaintReadyAt < 280) return;
+      _scUiPaintReadyAt = now;
       requestAnimationFrame(function () {
         requestAnimationFrame(function () {
           try { void document.body.offsetHeight; } catch (_) {}
@@ -9424,25 +9820,26 @@ if (window.chrome && window.chrome.webview) {
       return;
     }
     if (payload.type === "hostLayout") {
-      dismissStartupSplash(true);
-      requestAnimationFrame(function () {
-        requestAnimationFrame(function () {
-          try { window.dispatchEvent(new Event("resize")); } catch (_) {}
-          try { void document.body.offsetHeight; } catch (_) {}
-          postToAhk({ type: "UI_PAINT_READY" });
-        });
+      if (_scHostLayoutRaf) cancelAnimationFrame(_scHostLayoutRaf);
+      _scHostLayoutRaf = requestAnimationFrame(function () {
+        _scHostLayoutRaf = 0;
+        try { window.dispatchEvent(new Event("resize")); } catch (_) {}
       });
       return;
     }
     if (payload.type === "hostShow") {
       dismissStartupSplash(true);
       applyHostShow(payload);
-      requestAnimationFrame(function () {
+      const nowShow = Date.now();
+      if (nowShow - _scUiPaintReadyAt >= 280) {
+        _scUiPaintReadyAt = nowShow;
         requestAnimationFrame(function () {
-          try { void document.body.offsetHeight; } catch (_) {}
-          postToAhk({ type: "UI_PAINT_READY" });
+          requestAnimationFrame(function () {
+            try { void document.body.offsetHeight; } catch (_) {}
+            postToAhk({ type: "UI_PAINT_READY" });
+          });
         });
-      });
+      }
       return;
     }
     if (payload.type === "clipFloat") {
@@ -9478,18 +9875,31 @@ if (window.chrome && window.chrome.webview) {
       runSearchNow();
       return;
     }
-    if (payload.type === "lifecycle") {
-      const phase = String(payload.phase || "").toLowerCase();
-      if (phase) {
-        state.hostLifecycle = phase;
-        if (phase === "closing" || phase === "closed") {
-          endCapsHoldHint();
-          dragCounter = 0;
-          stopFulltextBackgroundTasks();
-        }
+  if (payload.type === "lifecycle") {
+    const phase = String(payload.phase || "").toLowerCase();
+    if (phase) {
+      state.hostLifecycle = phase;
+      if (phase === "closing" || phase === "closed") {
+        onHostForegroundChanged(false);
+        endCapsHoldHint();
+        dragCounter = 0;
+        stopFulltextBackgroundTasks();
       }
-      return;
     }
+    return;
+  }
+  if (payload.type === "hostForeground") {
+    onHostForegroundChanged(!!payload.active);
+    return;
+  }
+  if (payload.type === "hostMinimized") {
+    state.hostMinimized = !!payload.active;
+    if (state.hostMinimized) {
+      _cliTerminalFocusLock = false;
+      onHostForegroundChanged(false);
+    }
+    return;
+  }
     if (payload.type === "WEB_PREVIEW_TEXT_RESULT") {
       onWebPreviewTextResult(payload);
       return;
@@ -9643,18 +10053,19 @@ if (window.chrome && window.chrome.webview) {
     }
   });
   installGlobalWheelScrollRouting();
-  if (window.NiumaBottomDock && typeof window.NiumaBottomDock.mount === "function")
-    __nmDock = window.NiumaBottomDock.mount({ sceneId: "search", post: postToAhk });
-  postToAhk({ type: "ready" });
-  requestAnimationFrame(function () {
-    requestAnimationFrame(function () {
-      postToAhk({ type: "UI_PAINT_READY" });
-    });
+  scSendReadyOnce();
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") return;
+    onHostForegroundChanged(false);
   });
-  setTimeout(() => scheduleScHotkeyBindingsSync(10), 120);
-  requestFulltextStatus(true);
-  ensureFulltextStatusHeartbeat();
-  startFulltextProgressStream();
+  try {
+    if (window.NiumaBottomDock && typeof window.NiumaBottomDock.mount === "function")
+      __nmDock = window.NiumaBottomDock.mount({
+        sceneId: "search",
+        post: postToAhk,
+        anchorSelector: "#sc-status-group-dock"
+      });
+  } catch (_) {}
 }
 
 applyTheme(state.themeMode, false);

@@ -409,6 +409,62 @@ VoiceInputEffect_SearchStopListeningImpl() {
     }
 }
 
+VoiceInputEffect_BuildSearchUrl(Content, Engine) {
+    eng := StrLower(Trim(String(Engine)))
+    if (eng = "")
+        return ""
+    AgentInfo := GetCLIAgentLaunchInfo(Engine)
+    if (AgentInfo && IsObject(AgentInfo))
+        return ""
+    EncodedContent := UriEncode(Content)
+    switch eng {
+        case "deepseek":
+            return "https://chat.deepseek.com/?q=" . EncodedContent
+        case "yuanbao":
+            return "https://yuanbao.tencent.com/?q=" . EncodedContent
+        case "doubao":
+            return "https://www.doubao.com/chat/?q=" . EncodedContent
+        case "zhipu":
+            return "https://chatglm.cn/main/search?query=" . EncodedContent
+        case "mita":
+            return "https://metaso.cn/?q=" . EncodedContent
+        case "wenxin":
+            return "https://yiyan.baidu.com/search?query=" . EncodedContent
+        case "qianwen":
+            return "https://tongyi.aliyun.com/qianwen/chat?intent=chat&query=" . EncodedContent
+        case "kimi":
+            return "https://kimi.moonshot.cn/_prefill_chat?force_search=true&send_immediately=true&prefill_prompt=" . EncodedContent
+        case "perplexity":
+            return "https://www.perplexity.ai/search?intent=qa&q=" . EncodedContent
+        case "copilot":
+            return "https://copilot.microsoft.com/chat?q=" . EncodedContent
+        case "chatgpt":
+            return "https://chat.openai.com/?q=" . EncodedContent
+        case "grok":
+            return "https://grok.com/?q=" . EncodedContent
+        case "you":
+            return "https://you.com/search?q=" . EncodedContent
+        case "claude":
+            return "https://claude.ai/new?q=" . EncodedContent
+        case "monica":
+            return "https://monica.so/answers/?q=" . EncodedContent
+        case "webpilot":
+            return "https://webpilot.ai/search?q=" . EncodedContent
+        case "zhihu":
+            return "https://www.zhihu.com/search?q=" . EncodedContent
+        case "baidu":
+            return "https://www.baidu.com/s?wd=" . EncodedContent
+        case "google", "google_image":
+            return "https://www.google.com/search?q=" . EncodedContent
+        case "youtube":
+            return "https://www.youtube.com/results?search_query=" . EncodedContent
+        case "gemini":
+            return "https://gemini.google.com/app"
+        default:
+            return "https://chat.deepseek.com/?q=" . EncodedContent
+    }
+}
+
 VoiceInputEffect_SendSearchToBrowser(Content, Engine) {
     try {
         AgentInfo := GetCLIAgentLaunchInfo(Engine)
@@ -417,48 +473,9 @@ VoiceInputEffect_SendSearchToBrowser(Content, Engine) {
                 VoiceInputEffect_DispatchCliAgents(Content, "send", [Engine])
             return
         }
-        EncodedContent := UriEncode(Content)
-        SearchURL := ""
-        switch Engine {
-            case "deepseek":
-                SearchURL := "https://chat.deepseek.com/?q=" . EncodedContent
-            case "yuanbao":
-                SearchURL := "https://yuanbao.tencent.com/?q=" . EncodedContent
-            case "doubao":
-                SearchURL := "https://www.doubao.com/chat/?q=" . EncodedContent
-            case "zhipu":
-                SearchURL := "https://chatglm.cn/main/search?query=" . EncodedContent
-            case "mita":
-                SearchURL := "https://metaso.cn/?q=" . EncodedContent
-            case "wenxin":
-                SearchURL := "https://yiyan.baidu.com/search?query=" . EncodedContent
-            case "qianwen":
-                SearchURL := "https://tongyi.aliyun.com/qianwen/chat?intent=chat&query=" . EncodedContent
-            case "kimi":
-                SearchURL := "https://kimi.moonshot.cn/_prefill_chat?force_search=true&send_immediately=true&prefill_prompt=" . EncodedContent
-            case "perplexity":
-                SearchURL := "https://www.perplexity.ai/search?intent=qa&q=" . EncodedContent
-            case "copilot":
-                SearchURL := "https://copilot.microsoft.com/chat?q=" . EncodedContent
-            case "chatgpt":
-                SearchURL := "https://chat.openai.com/?q=" . EncodedContent
-            case "grok":
-                SearchURL := "https://grok.com/?q=" . EncodedContent
-            case "you":
-                SearchURL := "https://you.com/search?q=" . EncodedContent
-            case "claude":
-                SearchURL := "https://claude.ai/new?q=" . EncodedContent
-            case "monica":
-                SearchURL := "https://monica.so/answers/?q=" . EncodedContent
-            case "webpilot":
-                SearchURL := "https://webpilot.ai/search?q=" . EncodedContent
-            case "zhihu":
-                SearchURL := "https://www.zhihu.com/search?q=" . EncodedContent
-            case "baidu":
-                SearchURL := "https://www.baidu.com/s?wd=" . EncodedContent
-            default:
-                SearchURL := "https://chat.deepseek.com/?q=" . EncodedContent
-        }
+        SearchURL := VoiceInputEffect_BuildSearchUrl(Content, Engine)
+        if (SearchURL = "")
+            return
         Run(SearchURL)
         TrayTip(GetText("voice_search_sent"), GetText("tip"), "Iconi 1")
     } catch as e {

@@ -43,9 +43,17 @@ $probeOut = Join-Path $probeDir "probe_out.txt"
 
 $probeCode = @'
 #Requires AutoHotkey v2.0
+#SingleInstance Off
+outPath := (A_Args.Length >= 1 && Trim(String(A_Args[1])) != "")
+    ? Trim(String(A_Args[1]))
+    : (A_Temp . "\ahk_launch_probe\probe_out.txt")
 try {
-    FileAppend("ok`r`n", A_Temp "\ahk_launch_probe\probe_out.txt", "UTF-8")
-} catch {
+    SplitPath outPath, , &outDir
+    if (outDir != "" && !DirExist(outDir))
+        DirCreate(outDir)
+    FileAppend("ok`n", outPath, "UTF-8")
+} catch as e {
+    try FileAppend("err=" . e.Message . "`n", A_Temp . "\ahk_launch_probe\probe_err.txt", "UTF-8")
 }
 ExitApp 0
 '@
@@ -67,10 +75,10 @@ if ($cands.Count -eq 0) {
 
 $lines.Add("candidate_count=$($cands.Count)")
 $variants = @(
-    @{ Name="plain"; Args={ param($exe,$script) @($script) }; UseCwd=$false },
-    @{ Name="plain_with_cwd"; Args={ param($exe,$script) @($script) }; UseCwd=$true },
-    @{ Name="errorstdout"; Args={ param($exe,$script) @("/ErrorStdOut", $script) }; UseCwd=$false },
-    @{ Name="errorstdout_with_cwd"; Args={ param($exe,$script) @("/ErrorStdOut", $script) }; UseCwd=$true }
+    @{ Name = "plain"; UseCwd = $false },
+    @{ Name = "plain_with_cwd"; UseCwd = $true },
+    @{ Name = "errorstdout"; UseCwd = $false },
+    @{ Name = "errorstdout_with_cwd"; UseCwd = $true }
 )
 
 $winner = $null
@@ -81,20 +89,19 @@ foreach ($exe in $cands) {
         $errText = ""
         $exitCode = ""
         try {
-            $args = & $v.Args $exe $probeScript
-            if ($v.UseCwd) {
-                Push-Location $probeDir
-                try {
-                    & $exe @args
-                    $exitCode = $LASTEXITCODE
-                } finally {
-                    Pop-Location
-                }
-            } else {
-                & $exe @args
-                $exitCode = $LASTEXITCODE
+            $argList = New-Object System.Collections.Generic.List[string]
+            if ($v.Name -like "errorstdout*") {
+                $argList.Add("/ErrorStdOut")
             }
-            $ok = Test-Path $probeOut
+            $argList.Add($probeScript)
+            $argList.Add($probeOut)
+            $wd = if ($v.UseCwd) { $probeDir } else { $null }
+            $proc = Start-Process -FilePath $exe -ArgumentList $argList.ToArray() `
+                -WorkingDirectory $(if ($wd) { $wd } else { (Get-Location).Path }) `
+                -Wait -PassThru -NoNewWindow
+            $exitCode = $proc.ExitCode
+            Start-Sleep -Milliseconds 50
+            $ok = Test-Path -LiteralPath $probeOut
         } catch {
             $errText = $_.Exception.Message
             $ok = $false

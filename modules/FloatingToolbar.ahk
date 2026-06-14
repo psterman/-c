@@ -180,20 +180,35 @@ FloatingToolbar_IsSearchCenterRevealedForToggle(*) {
 }
 
 FloatingToolbar_IsSearchCenterConsideredOpen(*) {
-    if FloatingToolbar_IsSearchCenterRevealedForToggle()
+    return FloatingToolbar_IsSearchCenterRevealedForToggle()
+}
+
+FloatingToolbar_RecoverSearchCenterFromToolbar(*) {
+    global g_SCWV_TransitionCtx, g_SCWV_UserMinimized
+    g_SCWV_UserMinimized := false
+    if SCWV_IsRevealedToUser() {
+        try SCWV_RequestFocusInput()
+        catch {
+        }
         return true
-    try {
-        global g_SCWV_WaitingUiFinishedReveal
-        if g_SCWV_WaitingUiFinishedReveal
-            return true
-    } catch {
+    }
+    if FuncExists("_SCWV_RecoverOpeningReveal") {
+        try _SCWV_RecoverOpeningReveal("toolbar_search_stale_recover", Map("triggerSource", "search_hotkey", "initialMode", "search"))
+        catch {
+        }
+        return true
     }
     try {
-        if SearchCenter_IsOpeningOrBusy()
-            return true
-    } catch {
+        g_SCWV_TransitionCtx["allow"] := true
+        SCWV_SubmitIntent("open", 30, Map(
+            "reason", "toolbar_search_stale_recover",
+            "initialMode", "search",
+            "triggerSource", "search_hotkey"
+        ))
+    } finally {
+        g_SCWV_TransitionCtx["allow"] := false
     }
-    return false
+    return true
 }
 
 ; 无 INI 时默认抽屉「逻辑宽」（三栏：52+200+主区），随高 DPI 略增、并限制在 560–1000
@@ -5452,29 +5467,24 @@ FloatingToolbar_VerifySearchCenterOpen(*) {
     global FloatingToolbarIsVisible, AppearanceActivationMode
     scVisible := false
     try {
-        if (SearchCenter_ShouldUseWebView()) {
-            hwnd := 0
-            try hwnd := SCWV_GetGuiHwnd()
-            if (hwnd && WinExist("ahk_id " . hwnd) && (WinGetStyle("ahk_id " . hwnd) & 0x10000000))
-                scVisible := true
-            else if (SCWV_IsVisible())
-                scVisible := true
-        } else {
-            global GuiID_SearchCenter
-            if (GuiID_SearchCenter && IsObject(GuiID_SearchCenter) && GuiID_SearchCenter.HasProp("Hwnd")) {
-                h := GuiID_SearchCenter.Hwnd
-                if (h && WinExist("ahk_id " . h) && (WinGetStyle("ahk_id " . h) & 0x10000000))
-                    scVisible := true
-            }
-        }
+        if SCWV_IsRevealedToUser()
+            scVisible := true
     } catch {
     }
 
     if scVisible
         return
 
+    ; 首屏揭示进行中（宿主已拉起但未 FinishReveal）：勿误判失败并回滚工具栏
+    try {
+        if FuncExists("SearchCenter_IsOpeningOrBusy") && SearchCenter_IsOpeningOrBusy() && FuncExists("SCWV_HostAlive") && SCWV_HostAlive()
+            return
+    } catch {
+    }
+
     try SCWV_Log("ftb_verify_search_center_miss", "tb_visible=" . (FloatingToolbarIsVisible ? "1" : "0") . " mode=" . FloatingToolbar_NormalizeAppearanceMode(AppearanceActivationMode))
 
+    try FloatingToolbar_ClearToolbarSelection("")
     ; 搜索中心未真正拉起：释放 search dock 抑制并恢复工具栏可见性
     try FloatingToolbar_PageDockLeave("search")
     if (FloatingToolbar_NormalizeAppearanceMode(AppearanceActivationMode) = "toolbar" && !FloatingToolbarIsVisible) {
@@ -5579,12 +5589,13 @@ FloatingToolbar_ActivateSearchCenter() {
     try {
         if (SearchCenter_IsOpeningOrBusy()) {
             try SCWV_Log("ftb_activate_search_center_busy", "active=" . (IsSearchCenterActive() ? "1" : "0") . " vis=" . (SCWV_IsVisible() ? "1" : "0") . " waiting=" . (g_SCWV_WaitingUiFinishedReveal ? "1" : "0"))
-            SCWV_SubmitIntent("open", 30, Map(
-                "reason", SCWV_IsRevealedToUser() ? "toolbar_search_reuse" : "toolbar_search_stale_recover",
-                "initialMode", "search",
-                "triggerSource", "search_hotkey"
-            ))
-            opened := true
+            opened := FloatingToolbar_RecoverSearchCenterFromToolbar()
+            SetTimer(FloatingToolbar_EnsureSearchCenterFocused, -20)
+            SetTimer(FloatingToolbar_EnsureSearchCenterFocused, -120)
+            SetTimer(FloatingToolbar_EnsureSearchCenterFocused, -320)
+            SetTimer(FloatingToolbar_VerifySearchCenterOpen, -260)
+            SetTimer(FloatingToolbar_VerifySearchCenterOpen, -900)
+            try SCWV_Log("toolbar_activate_search_end", "opened=" . (opened ? "1" : "0") . " vis=" . (usedWebView ? (SCWV_IsRevealedToUser() ? "1" : "0") : "n/a") . " recover=1")
             return
         }
     } catch {

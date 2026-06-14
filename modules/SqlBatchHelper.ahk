@@ -1,4 +1,5 @@
 #Requires AutoHotkey v2.0
+#Include FuncExists.ahk
 
 _SqlBatch_IsPragma(sql) {
     return RegExMatch(Trim(String(sql)), "i)^PRAGMA\s")

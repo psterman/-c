@@ -1305,7 +1305,9 @@ RestartAppCleanFromTrayMenu(*) {
     catch {
     }
     try {
-        if ProcessExist("SearchCenterCore.exe")
+        if FuncExists("SearchCore_Shutdown")
+            SearchCore_Shutdown("tray_restart_clean")
+        else if ProcessExist("SearchCenterCore.exe")
             ProcessClose("SearchCenterCore.exe")
     } catch {
     }
@@ -1358,19 +1360,10 @@ ReloadScriptFromPopupMenu(*) {
             WebView2_PrepareForScriptReload()
     } catch {
     }
-    ; Avoid Reload's single-instance wait dialog in hole mode:
-    ; spawn a fresh instance directly, then terminate current one.
-    try {
-        ahkExe := A_AhkPath
-        scriptPath := A_ScriptFullPath
-        Run(Chr(34) . ahkExe . Chr(34) . " " . Chr(34) . scriptPath . Chr(34), , "Hide")
-        try TrayMenu_Log("reload_hard_spawn_ok")
-        ExitApp()
-        return
-    } catch as err {
-        try TrayMenu_Log("reload_hard_spawn_failed msg=" . err.Message)
-    }
-    Reload
+    ; 等当前进程退出后再拉起，避免与 #SingleInstance Force 抢实例导致 Run(AutoHotkey64) 失败（error -1）
+    Nmer_ScheduleCleanRestart()
+    try TrayMenu_Log("reload_clean_spawn_scheduled")
+    ExitApp()
 }
 
 TrayPopup_GetThemeMode() {

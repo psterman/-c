@@ -67,63 +67,7 @@ Nmer_SearchCenterCoreHealthy(*) {
     }
 }
 
-Nmer_StartSearchCenterCore(forceRestart := false) {
-    global g_Nmer_SearchCoreLastLaunchTick
-    if !forceRestart && Nmer_SearchCenterCoreHealthy()
-        return true
-    exe := Nmer_SearchCenterCoreExe()
-    if (exe = "" || !FileExist(exe)) {
-        Nmer_SearchCoreLog("start_abort exe_missing path=" . exe)
-        return false
-    }
-    root := Nmer_InstallRoot()
-    if forceRestart && ProcessExist("SearchCenterCore.exe") {
-        Nmer_SearchCoreLog("start_force_kill")
-        try ProcessClose("SearchCenterCore.exe")
-        catch {
-        }
-        Sleep(400)
-    }
-    if ProcessExist("SearchCenterCore.exe") {
-        if Nmer_SearchCenterCoreHealthy() {
-            Nmer_SearchCoreLog("start_skip already_healthy pid=" . ProcessExist("SearchCenterCore.exe"))
-            return true
-        }
-        Nmer_SearchCoreLog("start_stale_process not_healthy, killing")
-        try ProcessClose("SearchCenterCore.exe")
-        catch {
-        }
-        Sleep(400)
-    }
-    now := A_TickCount
-    if IsSet(g_Nmer_SearchCoreLastLaunchTick) && (now - Integer(g_Nmer_SearchCoreLastLaunchTick) < 800)
-        return ProcessExist("SearchCenterCore.exe") ? true : false
-    g_Nmer_SearchCoreLastLaunchTick := now
-    if FuncExists("_SCWV_ApplySearchCoreDefaults") {
-        try _SCWV_ApplySearchCoreDefaults()
-        catch {
-        }
-    }
-    cmd := '"' . exe . '" -base "' . root . '"'
-    Nmer_SearchCoreLog("start_run cmd=" . cmd . " cwd=" . root)
-    try {
-        Run(cmd, root, "Hide", &pid)
-        Nmer_SearchCoreLog("start_run ok pid=" . (pid ? pid : "?"))
-    } catch as err {
-        Nmer_SearchCoreLog("start_run failed: " . err.Message)
-        return false
-    }
-    return true
-}
-
-Nmer_AutoStartSearchCenterCore(*) {
-    if Nmer_SearchCenterCoreHealthy() {
-        Nmer_SearchCoreLog("autostart_skip already_healthy")
-        return
-    }
-    Nmer_SearchCoreLog("autostart_begin")
-    Nmer_StartSearchCenterCore(false)
-}
+#Include SearchCoreLifecycle.ahk
 
 Nmer_TtydExe(*) {
     root := A_ScriptDir

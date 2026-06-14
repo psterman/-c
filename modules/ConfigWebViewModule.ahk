@@ -402,16 +402,22 @@ ConfigWebView_NotifyStudioLlmSynced(*) {
 }
 
 ConfigWebView_EnsureSearchCoreRunning() {
-    if ProcessExist("SearchCenterCore.exe")
-        return true
-    exe := ConfigWebView_SearchCoreExePath()
-    if !FileExist(exe)
-        return false
-    try {
-        Run('"' exe '" -base "' A_ScriptDir '"', A_ScriptDir, "Hide")
-        return true
-    } catch {
+    if FuncExists("SearchCore_EnsureStatus") {
+        st := SearchCore_EnsureStatus(false, "config")
+        if !(st is Map) || !st.Has("status")
+            return false
+        status := String(st["status"])
+        return (status = "healthy" || status = "started" || status = "process_only")
     }
+    if FuncExists("Nmer_StartSearchCenterCoreStatus") {
+        st := Nmer_StartSearchCenterCoreStatus(false, "config")
+        if !(st is Map) || !st.Has("status")
+            return false
+        status := String(st["status"])
+        return (status = "healthy" || status = "started" || status = "process_only")
+    }
+    if FuncExists("Nmer_StartSearchCenterCore")
+        return Nmer_StartSearchCenterCore(false)
     return false
 }
 
@@ -2048,9 +2054,15 @@ ConfigWebView_RelocateSearchCenterIfOpen(*) {
             return
         if !(IsSet(g_SCWV_Visible) && g_SCWV_Visible)
             return
-        Nmer_MoveGuiToPopupScreen(g_SCWV_Gui)
-        try WinMaximize("ahk_id " . g_SCWV_Gui.Hwnd)
-        catch {
+        if FuncExists("Nmer_EnsureGuiMaximizedOnPopupScreen") {
+            try Nmer_EnsureGuiMaximizedOnPopupScreen(g_SCWV_Gui)
+            catch {
+            }
+        } else {
+            Nmer_MoveGuiToPopupScreen(g_SCWV_Gui, true)
+            try WinMaximize("ahk_id " . g_SCWV_Gui.Hwnd)
+            catch {
+            }
         }
         try SCWV_ApplyBounds()
         catch {

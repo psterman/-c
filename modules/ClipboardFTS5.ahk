@@ -52,6 +52,10 @@ ClipboardFTS5_GetStartupSqlStatements() {
 }
 
 ClipboardFTS5_StopExternalDbLockers() {
+    if FuncExists("SearchCore_Shutdown") {
+        SearchCore_Shutdown("clip_db_recovery")
+        return
+    }
     if ProcessExist("SearchCenterCore.exe") {
         try ProcessClose("SearchCenterCore.exe")
         catch {
@@ -122,11 +126,11 @@ ClipboardFTS5_EnableWalMode(db) {
 
 ClipboardFTS5_OpenDbWithRecovery(dbPath) {
     dbPath := Trim(String(dbPath))
-    ClipboardFTS5_StopExternalDbLockers()
     if FileExist(dbPath) {
-        ClipboardFTS5_ClearWalSidecars(dbPath)
-        if ClipboardFTS5_IsSuspectStubDb(dbPath)
+        if ClipboardFTS5_IsSuspectStubDb(dbPath) {
+            ClipboardFTS5_StopExternalDbLockers()
             ClipboardFTS5_ResetDbFiles(dbPath, "corrupt")
+        }
     }
     loop 3 {
         attempt := A_Index
@@ -136,7 +140,6 @@ ClipboardFTS5_OpenDbWithRecovery(dbPath) {
                 throw Error("无法删除损坏的剪贴板库（文件可能被占用）: " . dbPath . "`n请先托盘完全退出牛马后再启动")
             Sleep(250 * attempt)
         }
-        ClipboardFTS5_ClearWalSidecars(dbPath)
         db := SQLiteDB()
         if !db.OpenDB(dbPath) {
             if (attempt >= 3)
@@ -153,7 +156,6 @@ ClipboardFTS5_OpenDbWithRecovery(dbPath) {
             catch {
             }
             Sleep(120)
-            ClipboardFTS5_ClearWalSidecars(dbPath)
             isIo := InStr(e.Message, "disk I/O") || InStr(e.Message, "IOERR") || InStr(e.Message, "locked")
             if (attempt >= 3 || !isIo)
                 throw e
@@ -166,6 +168,9 @@ ClipboardFTS5_OpenDbWithRecovery(dbPath) {
 ; 创建 Clipboard.db 数据库，开启 WAL 模式，创建 FTS5 虚拟表
 InitClipboardFTS5DB() {
     global ClipboardFTS5DB, ClipboardFTS5DBPath, MainScriptDir
+    ; 多个 UI 都会按需确保数据库。已有连接时直接复用，避免重复迁移和触碰搜索核心。
+    if (IsSet(ClipboardFTS5DB) && ClipboardFTS5DB && ClipboardFTS5DB != 0)
+        return true
     Nmer_EnsureDataDir()
     ClipboardFTS5DBPath := Nmer_ClipboardFts5DbPath()
     

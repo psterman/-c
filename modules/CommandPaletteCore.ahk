@@ -4302,22 +4302,23 @@ CommandPalette_ResolveSearchCoreExe() {
 }
 
 CommandPalette_EnsureSearchCoreRunning() {
-    if ProcessExist("SearchCenterCore.exe")
-        return true
+    if FuncExists("SearchCore_EnsureStatus") {
+        st := SearchCore_EnsureStatus(false, "palette")
+        if !(st is Map) || !st.Has("status")
+            return false
+        status := String(st["status"])
+        return (status = "healthy" || status = "started" || status = "process_only")
+    }
+    if FuncExists("Nmer_StartSearchCenterCoreStatus") {
+        st := Nmer_StartSearchCenterCoreStatus(false, "palette")
+        if !(st is Map) || !st.Has("status")
+            return false
+        status := String(st["status"])
+        return (status = "healthy" || status = "started" || status = "process_only")
+    }
     if FuncExists("Nmer_StartSearchCenterCore")
         return Nmer_StartSearchCenterCore(false)
-    exe := CommandPalette_ResolveSearchCoreExe()
-    if (exe = "")
-        return false
-    root := CommandPalette_InstallRoot()
-    try {
-        if FuncExists("_SCWV_ApplySearchCoreDefaults")
-            _SCWV_ApplySearchCoreDefaults()
-        Run('"' exe '" -base "' root '"', root, "Hide")
-    } catch {
-        return false
-    }
-    return true
+    return false
 }
 
 CommandPalette_IsSearchCoreReady() {

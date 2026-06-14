@@ -273,6 +273,7 @@ try SurfaceManager_ObserveSystemBootstrap(Map(
 #Include modules\CommandPaletteStateStoreShadow.ahk
 #Include modules\CommandPaletteSearchDebug.ahk
 #Include modules\MultiCardMemoryProbe.ahk
+#Include modules\ScWebEmbedProbe.ahk
 #Include modules\CommandPalettePerfProbe.ahk
 global g_CmdPal_AgentSubmitDispatch := CommandPalette_HandleAgentSubmit
 global g_CmdPal_AgentDebugTraceDispatch := CommandPalette_AgentDebugTrace
@@ -3251,8 +3252,6 @@ _WV2_BeginWarmupAfterEnv(*) {
     try SurfaceManager_ObserveWarmupQueue(WebViewWarmupQueue)
     SetTimer(_RunWebViewWarmupStep, -10)
     SetTimer(_WarmupConfigWebView, -5000)
-    if FuncExists("Nmer_AutoStartSearchCenterCore")
-        SetTimer(Nmer_AutoStartSearchCenterCore, -1200)
     ; interceptWarmup 下搜索中心不进入 warmup 队列，改为悬浮栏就绪后后台预热隐藏宿主。
     if FuncExists("SCWV_ScheduleIdlePrewarm")
         SetTimer((*) => SCWV_ScheduleIdlePrewarm(8000), -4000)
@@ -4693,13 +4692,6 @@ PromptQuickPad_ReloadCapsLockBSettings()
 InitClipboardDB()
 ; 初始化 Everything 服务（在数据库初始化后）
 InitEverythingService()
-; 上次崩溃残留的 SearchCenterCore / 旧连接会锁住 Clipboard.db
-if ProcessExist("SearchCenterCore.exe") {
-    try ProcessClose("SearchCenterCore.exe")
-    catch {
-    }
-    Sleep(400)
-}
 global ClipboardFTS5DB
 if IsObject(ClipboardFTS5DB) && ClipboardFTS5DB {
     try ClipboardFTS5DB.CloseDB()
@@ -4716,8 +4708,10 @@ if FuncExists("Nmer_SqliteClearWalSidecars") {
 InitClipboardFTS5DB()
 ; 剪贴板库就绪后再拉起 SearchCenterCore（避免 Go 进程抢先锁 Clipboard.db）
 if FuncExists("Nmer_AutoStartSearchCenterCore") {
-    SetTimer(Nmer_AutoStartSearchCenterCore, -1500)
-    SetTimer(Nmer_AutoStartSearchCenterCore, -6000)
+    SetTimer(Nmer_AutoStartSearchCenterCore, -2000)
+}
+if FuncExists("SearchCore_StartWatchdog") {
+    SetTimer(SearchCore_StartWatchdog, -15000)
 }
 if FuncExists("Nmer_AutoStartWailsBridge") {
     SetTimer(Nmer_AutoStartWailsBridge, -3000)
@@ -4733,6 +4727,9 @@ if FuncExists("Nmer_HybridSignoffBootstrapEnsure") {
 }
 if FuncExists("Nmer_MultiCardMemoryProbeEnsure") {
     SetTimer(Nmer_MultiCardMemoryProbeEnsure, -5000)
+}
+if FuncExists("ScWebEmbedProbeEnsure") {
+    SetTimer(ScWebEmbedProbeEnsure, -5400)
 }
 if FuncExists("Nmer_CpPerfProbeEnsure") {
     SetTimer(Nmer_CpPerfProbeEnsure, -5200)
@@ -6479,6 +6476,8 @@ Esc:: {
 
 ; C 键连续复制（立即响应，不等待面板）；$ 强制钩子，避免 WebView2 焦点下漏触发
 $c:: {
+    if FuncExists("VK_IsTypingPassthroughContext") && VK_IsTypingPassthroughContext()
+        return
     if (SearchCenter_HandleCapsChordKey("c"))
         return
     ; 【关键修复】在剪贴板管理面板打开时，检查是否是标签点击期间
@@ -6671,6 +6670,20 @@ g:: {
 ; B 键：面板显示且批量键为 B 时走 BatchOperation；面板显示且非批量键则透传 b；面板未显示时打开 Prompt 采集窗
 b:: {
     global CapsLock2
+    ; 搜索中心前台：禁止 CapsLock+B 采集，将 b 交给 WebView 输入
+    try {
+        if SearchCenter_ShouldUseWebView() && FuncExists("SCWV_IsHostForegroundActive") && SCWV_IsHostForegroundActive()
+            && FuncExists("SCWV_IsRevealedToUser") && SCWV_IsRevealedToUser() {
+            CapsLock2 := false
+            if FuncExists("CapsLock_RestoreForUiTypingOpen")
+                CapsLock_RestoreForUiTypingOpen()
+            else
+                RestoreCapsLockAfterChord()
+            Send("{Raw}b")
+            return
+        }
+    } catch {
+    }
     if (VirtualKeyboard_HandleKey("b"))
         return
     RestoreCapsLockAfterChord()
@@ -6808,17 +6821,30 @@ $Right::HandleSearchCenterRight() ; → 键：根据当前区域执行相应操�
 ; 【优先级】更具体的作用域（IsSearchCenterActive() && GetCapsLockState()）优先于全局作用域（GetCapsLockState()）
 ; 【功能】在 searchcenter 中，capslock+wsad 与方向键行为完全一致，遵守三个区域的操作规范
 ; 【三个区域】category（分类栏）、input（输入框）、listview（结果列表）
-#HotIf SearchCenter_ShouldCaptureGlobalHotkeys() && CapsLockChordHotIf()
-$q::SearchCenter_HandleCapsChordKey("q")
-$w::SearchCenter_HandleCapsChordKey("w")
-$e::SearchCenter_HandleCapsChordKey("e")
-$r::SearchCenter_HandleCapsChordKey("r")
-$a::SearchCenter_HandleCapsChordKey("a")
-$s::SearchCenter_HandleCapsChordKey("s")
-$d::SearchCenter_HandleCapsChordKey("d")
-$z::SearchCenter_HandleCapsChordKey("z")
-$x::SearchCenter_HandleCapsChordKey("x")
-$c::SearchCenter_HandleCapsChordKey("c")
+#HotIf SearchCenter_ShouldCaptureGlobalHotkeys() && SearchCenter_CapsChordHotIf()
+$q::SearchCenter_CapsChordKey("q")
+$w::SearchCenter_CapsChordKey("w")
+$e::SearchCenter_CapsChordKey("e")
+$r::SearchCenter_CapsChordKey("r")
+$a::SearchCenter_CapsChordKey("a")
+$s::SearchCenter_CapsChordKey("s")
+$d::SearchCenter_CapsChordKey("d")
+$z::SearchCenter_CapsChordKey("z")
+$x::SearchCenter_CapsChordKey("x")
+$c::SearchCenter_CapsChordKey("c")
+$b:: {
+    global CapsLock2
+    if (SearchCenter_HandleCapsChordKey("b"))
+        return
+    if (VirtualKeyboard_HandleKey("b"))
+        return
+    CapsLock2 := false
+    if FuncExists("CapsLock_RestoreForUiTypingOpen")
+        CapsLock_RestoreForUiTypingOpen()
+    else
+        RestoreCapsLockAfterChord()
+    Send("{Raw}b")
+}
 $v:: {
     if GetKeyState("Shift", "P") {
         CapsLock2 := false
@@ -6834,7 +6860,7 @@ $v:: {
 ; F 键：在倒计时期间加速执行
 $f:: {
     global IsCountdownActive, CapsLock2
-    if (SearchCenter_HandleCapsChordKey("f"))
+    if (SearchCenter_CapsChordKey("f"))
         return
     CapsLock2 := false
     if (IsCountdownActive) {
@@ -7150,7 +7176,11 @@ ExitFunc(ExitReason, ExitCode) {
     } catch {
     }
     try {
-        if ProcessExist("SearchCenterCore.exe")
+        if FuncExists("SearchCore_StopWatchdog")
+            SearchCore_StopWatchdog()
+        if FuncExists("SearchCore_Shutdown")
+            SearchCore_Shutdown("app_exit")
+        else if ProcessExist("SearchCenterCore.exe")
             ProcessClose("SearchCenterCore.exe")
     } catch {
     }

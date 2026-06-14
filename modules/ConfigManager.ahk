@@ -322,8 +322,9 @@ Nmer_GetPopupScreenIndex() {
     return idx
 }
 
-; 将 GUI 移到弹窗显示器工作区（最大化前调用，确保 WinMaximize 落在目标屏）
-Nmer_MoveGuiToPopupScreen(gui) {
+; 将 GUI 移到弹窗显示器工作区。
+; forMaximize=true：锚定到目标屏工作区，不锁死 1180x760，便于后续 WinMaximize/Show(Maximize) 铺满该屏。
+Nmer_MoveGuiToPopupScreen(gui, forMaximize := false) {
     if !IsObject(gui) || !gui.HasProp("Hwnd")
         return
     idx := Nmer_GetPopupScreenIndex()
@@ -333,8 +334,14 @@ Nmer_MoveGuiToPopupScreen(gui) {
         catch
             return
     }
-    workW := r - l
-    workH := b - t
+    workW := Max(200, r - l)
+    workH := Max(160, b - t)
+    if forMaximize {
+        try gui.Move(l, t, workW, workH)
+        catch {
+        }
+        return
+    }
     gw := 1180
     gh := 760
     try gui.GetPos(, , &gw, &gh)
@@ -351,6 +358,43 @@ Nmer_MoveGuiToPopupScreen(gui) {
     px := l + Max(0, (workW - gw) // 2)
     py := t + Max(0, (workH - gh) // 2)
     try gui.Move(px, py, gw, gh)
+}
+
+; 在弹窗显示器上最大化；失败时回退为铺满工作区（避免 1180x760 半屏）
+Nmer_EnsureGuiMaximizedOnPopupScreen(gui) {
+    if !IsObject(gui) || !gui.HasProp("Hwnd")
+        return false
+    hwnd := gui.Hwnd
+    if !hwnd
+        return false
+    expr := "ahk_id " . hwnd
+    Nmer_MoveGuiToPopupScreen(gui, true)
+    try gui.Show()
+    catch {
+    }
+    maximized := false
+    try {
+        if (WinGetMinMax(expr) != 1)
+            WinMaximize(expr)
+        maximized := (WinGetMinMax(expr) = 1)
+    } catch {
+    }
+    if !maximized {
+        idx := Nmer_GetPopupScreenIndex()
+        try MonitorGetWorkArea(idx, &l, &t, &r, &b)
+        catch {
+            try MonitorGetWorkArea(1, &l, &t, &r, &b)
+            catch
+                return false
+        }
+        workW := Max(200, r - l)
+        workH := Max(160, b - t)
+        try gui.Move(l, t, workW, workH)
+        catch {
+            return false
+        }
+    }
+    return true
 }
 
 ; 弹窗显示器上的默认窗口左上角（草稿本等，靠右居中）

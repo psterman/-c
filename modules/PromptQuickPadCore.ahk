@@ -389,13 +389,34 @@ PQP_Show() {
     panelW := AIListPanelWindowW > 0 ? AIListPanelWindowW : 560
     panelH := AIListPanelWindowH > 0 ? AIListPanelWindowH : 620
     if panelX = 0 && panelY = 0 {
-        ScreenW := SysGet(0)
-        ScreenH := SysGet(1)
-        panelX := (ScreenW - panelW) // 2
-        panelY := (ScreenH - panelH) // 2
+        if FuncExists("Nmer_DefaultPopupWindowXY") {
+            try Nmer_DefaultPopupWindowXY(panelW, panelH, &panelX, &panelY)
+            catch {
+                ScreenW := SysGet(0)
+                ScreenH := SysGet(1)
+                panelX := (ScreenW - panelW) // 2
+                panelY := (ScreenH - panelH) // 2
+            }
+        } else {
+            ScreenW := SysGet(0)
+            ScreenH := SysGet(1)
+            panelX := (ScreenW - panelW) // 2
+            panelY := (ScreenH - panelH) // 2
+        }
     }
 
-    try g_PQP_Gui.Show("Maximize NoActivate")
+    if FuncExists("Nmer_EnsureGuiMaximizedOnPopupScreen") {
+        try Nmer_EnsureGuiMaximizedOnPopupScreen(g_PQP_Gui)
+        catch {
+            try g_PQP_Gui.Show("Maximize NoActivate")
+            catch {
+            }
+        }
+    } else {
+        try g_PQP_Gui.Show("Maximize NoActivate")
+        catch {
+        }
+    }
     SetTimer(_PQP_EnsureMaximized, -80)
     SetTimer(_PQP_EnsureMaximized, -220)
     g_PQP_Visible := true

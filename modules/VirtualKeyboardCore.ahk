@@ -3033,6 +3033,11 @@ VK_IsTypingPassthroughContext() {
     if VK_IsVkTextInputFocused()
         return true
     try {
+        if FuncExists("SCWV_IsHostForegroundActive") && SCWV_IsHostForegroundActive()
+            return true
+    } catch {
+    }
+    try {
         if FuncExists("SCWV_IsSearchInputFocused") && SCWV_IsSearchInputFocused()
             return true
     } catch {
@@ -3067,11 +3072,14 @@ _BindKey(ahkKey, cmdId) {
         _VK_ReleaseBoundHotkey(ahkKey)
     fn := _MakeCmdFn(cmdId, ahkKey)
     useTypingGate := _VK_IsBareSingleKey(ahkKey)
+    useScHostGate := _VK_IsScHostScopedCmd(cmdId)
     try {
-        if useTypingGate
+        if useScHostGate
+            HotIf(_VkSearchCenterHostHotIfCb)
+        else if useTypingGate
             HotIf(_VkTypingBlockedHotIfCb)
         Hotkey(ahkKey, fn, "On")
-        if useTypingGate
+        if useScHostGate || useTypingGate
             HotIf()
         g_HotkeyBound[ahkKey] := 1
         OutputDebug("[VK] Bound: " . ahkKey . " -> " . cmdId)
@@ -3392,7 +3400,7 @@ VK_SearchCenterResolveCapsChordCmd(physKey) {
         return ""
     cmdId := VK_LookupBindingCmdForPhys(k)
     if (cmdId != "" && SubStr(cmdId, 1, 3) = "sc_") {
-        if VK_ScPanelCmdRequiresSearchOpen(cmdId) && !IsSearchCenterActive()
+        if VK_ScPanelCmdRequiresSearchOpen(cmdId) && !SCWV_ScCapsInputAllowed()
             return ""
         return cmdId
     }
@@ -3413,6 +3421,8 @@ VK_SearchCenterResolveCapsChordCmd(physKey) {
     if !def.Has(k)
         return ""
     sc := def[k]
+    if VK_ScPanelCmdRequiresSearchOpen(sc) && !SCWV_ScCapsInputAllowed()
+        return ""
     ; 内建 def 与 VirtualKeyboardExecCmd 中 sc_* 分支一致；若 CommandList 异常缺失，仍返回 sc 以便 VK_ExecCursorHelperCmd 执行
     if (g_Commands is Map) && g_Commands.Has("CommandList") {
         cl := g_Commands["CommandList"]
@@ -3455,12 +3465,7 @@ VirtualKeyboard_HandleKey(physKey) {
     }
     ; 误把「过滤/分类/引擎」绑到 CapsLock+F 等键时，搜索中心未打开会空吞按键；回退宿主默认（打开搜索中心等）
     if VK_ScPanelCmdRequiresSearchOpen(cmdId) {
-        active := false
-        try active := IsSearchCenterActive()
-        catch {
-            active := false
-        }
-        if !active
+        if !SCWV_ScCapsInputAllowed()
             return false
     }
     return _ExecuteCommand(cmdId)
@@ -3478,6 +3483,21 @@ _VkTypingBlockedHotIfCb(*) {
 
 _VkCapsLockDispatchHotIfCb(*) {
     return _VkCapsLockHotIfCb()
+}
+
+_VkSearchCenterHostHotIfCb(*) {
+    if !_VkCapsLockHotIfCb()
+        return false
+    try {
+        if FuncExists("SCWV_ScCapsInputAllowed")
+            return SCWV_ScCapsInputAllowed()
+    } catch {
+    }
+    return false
+}
+
+_VK_IsScHostScopedCmd(cmdId) {
+    return RegExMatch(String(cmdId), "i)^(sc_cat_|sc_eng_|sc_filter_)")
 }
 
 _VkCursorWinHotIfCb(*) {
@@ -3664,9 +3684,23 @@ _VK_RegisterCapsLockDispatchHotkeys() {
     }
     _VK_UnregisterCapsLockDispatchHotkeys()
     try {
+        HotIf(_VkSearchCenterHostHotIfCb)
+        for ahkKey, cmdId in g_Bindings {
+            if _VK_IsHostStaticCapsHotkeyKey(ahkKey)
+                continue
+            if !_VK_IsScHostScopedCmd(cmdId)
+                continue
+            try {
+                Hotkey(ahkKey, VkDynCapsLockHandler, "On")
+                g_VK_CapsLockDynHotkeys.Push(ahkKey)
+            } catch as e
+                OutputDebug("[VK] CapsLock dyn on " . ahkKey . ": " . e.Message)
+        }
         HotIf(_VkCapsLockDispatchHotIfCb)
         for ahkKey, cmdId in g_Bindings {
             if _VK_IsHostStaticCapsHotkeyKey(ahkKey)
+                continue
+            if _VK_IsScHostScopedCmd(cmdId)
                 continue
             try {
                 Hotkey(ahkKey, VkDynCapsLockHandler, "On")

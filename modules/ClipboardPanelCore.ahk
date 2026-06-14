@@ -81,23 +81,41 @@ CP_SearchAsync(url, callback := 0, timeoutMs := 2600, reqId := 0) {
 }
 
 _CP_EnsureSearchCoreRunning() {
-    if ProcessExist("SearchCenterCore.exe") {
-        global g_CP_BackendHealth, g_CP_LastHealthTick
-        g_CP_BackendHealth := true
-        g_CP_LastHealthTick := A_TickCount
-        CP_HealthProbeAsync()
-        return true
+    global g_CP_BackendHealth, g_CP_LastHealthTick
+    if FuncExists("SearchCore_EnsureStatus") {
+        st := SearchCore_EnsureStatus(false, "clipboard")
+        if !(st is Map) || !st.Has("status")
+            return false
+        status := String(st["status"])
+        ok := (status = "healthy" || status = "started" || status = "process_only")
+        if ok {
+            if (status = "healthy") {
+                g_CP_BackendHealth := true
+                g_CP_LastHealthTick := A_TickCount
+            } else {
+                SetTimer((*) => CP_HealthProbeAsync(), -80)
+            }
+        }
+        return ok
     }
-    base := IsSet(MainScriptDir) ? MainScriptDir : A_ScriptDir
-    exe := Nmer_SearchCenterCoreExe()
-    if !FileExist(exe)
-        return false
-    try {
-        Run('"' exe '" -base "' base '"', base, "Hide")
-        SetTimer((*) => CP_HealthProbeAsync(), -80)
-        return true
-    } catch {
+    if FuncExists("Nmer_StartSearchCenterCoreStatus") {
+        st := Nmer_StartSearchCenterCoreStatus(false, "clipboard")
+        if !(st is Map) || !st.Has("status")
+            return false
+        status := String(st["status"])
+        ok := (status = "healthy" || status = "started" || status = "process_only")
+        if ok {
+            if (status = "healthy") {
+                g_CP_BackendHealth := true
+                g_CP_LastHealthTick := A_TickCount
+            } else {
+                SetTimer((*) => CP_HealthProbeAsync(), -80)
+            }
+        }
+        return ok
     }
+    if FuncExists("Nmer_StartSearchCenterCore")
+        return Nmer_StartSearchCenterCore(false)
     return false
 }
 
@@ -408,9 +426,22 @@ CP_Show() {
         return
     }
 
-    _CP_CenterWindow()
-    g_CP_Gui.Show()
-    try WinMaximize("ahk_id " . g_CP_Gui.Hwnd)
+    if FuncExists("Nmer_EnsureGuiMaximizedOnPopupScreen") {
+        try Nmer_EnsureGuiMaximizedOnPopupScreen(g_CP_Gui)
+        catch {
+            _CP_CenterWindow()
+            g_CP_Gui.Show()
+            try WinMaximize("ahk_id " . g_CP_Gui.Hwnd)
+            catch {
+            }
+        }
+    } else {
+        _CP_CenterWindow()
+        g_CP_Gui.Show()
+        try WinMaximize("ahk_id " . g_CP_Gui.Hwnd)
+        catch {
+        }
+    }
     g_CP_Visible := true
     g_CP_LastShown := A_TickCount
     try LegacyGuard_RequestFocus("ClipboardPanel", g_CP_Gui.Hwnd, 25, "cp_show", 220)
