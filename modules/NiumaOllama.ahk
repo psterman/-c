@@ -15,7 +15,8 @@ NiumaOllama_FindExe() {
             ex := GetPreferredCLIExecutable("ollama_cli")
             if (ex != "" && FileExist(ex))
                 return ex
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     pf := EnvGet("ProgramFiles")

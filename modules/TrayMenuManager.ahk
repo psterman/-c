@@ -56,13 +56,15 @@ TrySetTrayIconHighQuality() {
                     DllCall("DestroyIcon", "ptr", h)
                     return
                 }
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         } else {
             try {
                 TraySetIcon(CustomIconPath)
                 return
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
     }
@@ -72,7 +74,8 @@ TrySetTrayIconHighQuality() {
         try {
             TraySetIcon(icoNiu)
             return
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if FileExist(pngNiu) {
@@ -83,7 +86,8 @@ TrySetTrayIconHighQuality() {
                 DllCall("DestroyIcon", "ptr", h)
                 return
             }
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     chIco := A_ScriptDir "\cursor_helper.ico"
@@ -91,12 +95,14 @@ TrySetTrayIconHighQuality() {
         try {
             TraySetIcon(chIco)
             return
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if FileExist(A_ScriptDir "\favicon.ico") {
         try TraySetIcon(A_ScriptDir "\favicon.ico")
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 }
@@ -137,7 +143,8 @@ Nmer_PrepareToastIconPath(targetPx := 96) {
     try {
         if FileExist(dest)
             FileDelete(dest)
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     pBitmap := 0
     pNew := 0
@@ -161,15 +168,18 @@ Nmer_PrepareToastIconPath(targetPx := 96) {
     } finally {
         if G
             try Gdip_DeleteGraphics(G)
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         if pNew
             try Gdip_DisposeImage(pNew)
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         if pBitmap
             try Gdip_DisposeImage(pBitmap)
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
     }
 }
@@ -198,7 +208,8 @@ Nmer_ShowAppToast(heading, body, severity := "info") {
         g_NmerAppToastBody.SetFont("s9", "Segoe UI")
     } else if (iconPath != "" && FileExist(iconPath) && g_NmerAppToastPic) {
         try g_NmerAppToastPic.Value := iconPath
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     g_NmerAppToastTitle.Opt("c" . accent)
@@ -207,7 +218,8 @@ Nmer_ShowAppToast(heading, body, severity := "info") {
     g_NmerAppToastGui.Show("AutoSize Hide")
     wl := 0, wt := 0, wr := A_ScreenWidth, wb := A_ScreenHeight
     try MonitorGetWorkArea(, &wl, &wt, &wr, &wb)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     g_NmerAppToastGui.GetPos(, , &tw, &th)
     tx := wr - tw - 16
@@ -229,7 +241,8 @@ Nmer_HideAppToast(serial, *) {
     try {
         if g_NmerAppToastGui
             g_NmerAppToastGui.Hide()
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -258,7 +271,8 @@ TrayMenu_Log(msg) {
             NMER_AsyncLog(logPath, line)
         else
             FileAppend(line, logPath, "UTF-8")
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -297,7 +311,8 @@ TRAY_ICON_MESSAGE(wParam, lParam, msg, hwnd) {
                 nativeActive := false
             }
             try TrayMenu_Log("tray_popup_state mode=" . NormalizeAppearanceActivationMode(IsSet(AppearanceActivationMode) ? AppearanceActivationMode : "toolbar") . " search_active=" . (IsSearchCenterActive() ? "1" : "0") . " search_visible=" . (searchVisible ? "1" : "0") . " gdho=" . (gdhoVisible ? "1" : "0") . " gdho_phase=" . (IsSet(g_GDHO_CurrentPhase) ? g_GDHO_CurrentPhase : "") . " gdho_token=" . (IsSet(g_GDHO_CurrentToken) ? g_GDHO_CurrentToken : 0) . " native=" . (nativeActive ? "1" : "0") . " waiting=" . (IsSet(g_SCWV_WaitingUiFinishedReveal) && g_SCWV_WaitingUiFinishedReveal ? "1" : "0") . " phase=" . (IsSet(g_SCWV_LifecyclePhase) ? g_SCWV_LifecyclePhase : "") . " caps=" . (GetCapsLockState() ? "1" : "0"))
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             if (TrayMenuPopupBusy) {
                 if (TrayMenuPopupBusySince > 0 && (A_TickCount - TrayMenuPopupBusySince) > 2500) {
@@ -320,7 +335,8 @@ TRAY_ICON_MESSAGE(wParam, lParam, msg, hwnd) {
             try TrayMenu_Log("custom_popup_return lParam=" . lParam . " elapsed_ms=" . (A_TickCount - trayStart))
             return 0
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -400,6 +416,9 @@ UpdateTrayMenu() {
     A_TrayMenu.Add("剪贴板", ((*) => TrayMenu_RunSceneCmd("tray_show_clipboard")))
     A_TrayMenu.Add("截图", ((*) => TrayMenu_RunSceneCmd("tray_show_screenshot")))
     A_TrayMenu.Add(GetText("open_config_menu"), ((*) => TrayMenu_RunSceneCmd("tray_show_config")))
+    A_TrayMenu.Add("导出诊断包", ((*) => TrayMenu_RunSceneCmd("tray_export_diagnostics")))
+    A_TrayMenu.Add("系统健康", ((*) => TrayMenu_RunSceneCmd("tray_show_health")))
+    A_TrayMenu.Add("健康详情", ((*) => TrayMenu_RunSceneCmd("tray_open_health_settings")))
     A_TrayMenu.Add()
     A_TrayMenu.Add("重启脚本", ((*) => TrayMenu_RunSceneCmd("tray_reload_script")))
     A_TrayMenu.Add("彻底退出重启", ((*) => TrayMenu_RunSceneCmd("tray_restart_clean")))
@@ -543,7 +562,8 @@ TrayMenuApplyItemVisual(ItemIndex, state := "idle") {
         try gh := TrayMenuGUI.Hwnd
         if (gh)
             DllCall("InvalidateRect", "Ptr", gh, "Ptr", 0, "Int", 1)
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -622,7 +642,8 @@ TrayMenuInvokeItem(item, itemIndex, keepOpen := false) {
         try TrayMenu_Log("invoke_ok idx=" . itemIndex . " text=" . (item.HasProp("Text") ? String(item.Text) : ""))
     } catch as err {
         try TrayMenu_Log("invoke_failed idx=" . itemIndex . " msg=" . err.Message)
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -645,14 +666,17 @@ TrayMenu_PrepareUiOpenFromHoleMode() {
     try TrayMenu_Log("prepare_ui_from_hole search_active=" . (IsSearchCenterActive() ? "1" : "0") . " vk_visible=" . (VK_IsHostVisible() ? "1" : "0") . " caps=" . (GetCapsLockState() ? "1" : "0"))
     ; 先跑一次生命周期维护，避免“已关闭但忙碌态残留”的假活状态挡住后续托盘动作。
     try SearchCenter_IsOpeningOrBusy()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     ; In hole mode, proactively neutralize overlay hit-test / drag session interference.
     try TrayMenu_HardenHoleUiTransition("tray_open_ui", 1800)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try NormalizeCapsLockRuntimeForUiOpen()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try TrayMenu_Log("prepare_ui_from_hole_done")
 }
@@ -666,25 +690,31 @@ TrayMenu_ForceBreakSearchCenterStuck(reason := "tray_force_break") {
     try SetTimer((*) => SCWV_RequestHardClose(reason), -10)
     catch {
         try SetTimer((*) => SCWV_SubmitIntent("close", 15, Map("reason", reason . "_fallback_close")), -10)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     try SetTimer((*) => SCWV_RequestHardClose(reason . "_retry"), -80)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try SetTimer((*) => SCWV_RequestHardClose(reason . "_retry2"), -220)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try NativeDropBridge_ResetSessionAsync(reason, 0, true)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try SetTimer((*) => TrayMenu_HideHoleOverlayAsync(reason . "_finalize"), -10)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     ; Re-enable native drop bridge after forced break, otherwise text selection drag
     ; may stay in silent mode and never reveal hole overlay.
     try SetTimer((*) => NativeDropBridge_SetSilentMode(false, reason . "_resume"), -260)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try TrayMenu_Log("force_break_end reason=" . reason)
 }
@@ -694,7 +724,8 @@ TrayMenu_WaitForSearchCenterIdle(timeoutMs := 1500) {
     ; Do not spin/sleep on UI thread: just schedule async force-break fallback.
     try TrayMenu_Log("wait_search_idle_async timeout_ms=" . timeoutMs)
     try SetTimer((*) => TrayMenu_ForceBreakSearchCenterStuck("wait_search_idle_async_timeout"), -Abs(Integer(timeoutMs)))
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return false
 }
@@ -703,7 +734,8 @@ TrayMenu_WaitForHoleUiIdle(timeoutMs := 1800) {
     ; Non-blocking legacy compatibility wrapper.
     try TrayMenu_Log("wait_hole_idle_async timeout_ms=" . timeoutMs)
     try SetTimer((*) => TrayMenu_HideHoleOverlayAsync("wait_hole_idle_async_timeout"), -Abs(Integer(timeoutMs)))
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return false
 }
@@ -723,9 +755,9 @@ TrayMenu_HardenHoleUiTransition(target := "tray_open_ui", timeoutMs := 1800) {
         searchVisible := false
     }
     try TrayMenu_Log("handoff_begin reason=" . target . " search_active=" . (IsSearchCenterActive() ? "1" : "0") . " search_visible=" . (searchVisible ? "1" : "0") . " gdho=" . (GDHO_VISIBLE ? "1" : "0") . " gdho_phase=" . (IsSet(g_GDHO_CurrentPhase) ? g_GDHO_CurrentPhase : "") . " gdho_token=" . (IsSet(g_GDHO_CurrentToken) ? g_GDHO_CurrentToken : 0) . " native=" . (NativeDropSessionActive ? "1" : "0") . " phase=" . (IsSet(g_SCWV_LifecyclePhase) ? g_SCWV_LifecyclePhase : ""))
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
-
     if (!isSearchOpen && (SearchCenter_IsOpeningOrBusy() || IsSearchCenterActive() || searchVisible)) {
         try TrayMenu_Log("handoff_step hard_close_search_center_queued reason=" . target)
         SetTimer((*) => TrayMenu_RequestHardCloseSearchCenter(target), -10)
@@ -733,16 +765,19 @@ TrayMenu_HardenHoleUiTransition(target := "tray_open_ui", timeoutMs := 1800) {
 
     try TrayMenu_Log("handoff_step clickthrough_begin reason=" . target)
     try GDHO_SetClickThrough(true)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try TrayMenu_Log("handoff_step clickthrough_done reason=" . target)
 
     try TrayMenu_Log("handoff_step hide_gui_queue reason=" . target)
     try SetTimer((*) => TrayMenu_HideHoleOverlayAsync(target), -10)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try GDHO_ResetPointerSeed()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     SetTimer((*) => TrayMenu_FinalizeHoleUiTransition(target, token), -200)
     SetTimer((*) => TrayMenu_TransitionWatchdog(token), -2200)
@@ -767,7 +802,8 @@ TrayMenu_TransitionWatchdog(token := 0) {
 TrayMenu_RequestHardCloseSearchCenter(reason := "") {
     Critical "Off"
     try SCWV_RequestHardClose(reason)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -776,7 +812,8 @@ TrayMenu_HideHoleOverlayAsync(reason := "") {
     global NativeDropSessionActive
     try TrayMenu_Log("handoff_step hide_gui_async_begin reason=" . reason)
     try GDHO_RequestClose(reason)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try NativeDropSessionActive := false
     try TrayMenu_Log("handoff_step hide_gui_async_done reason=" . reason)
@@ -793,15 +830,18 @@ TrayMenu_FinalizeHoleUiTransition(reason := "", token := 0) {
     ; Re-arm the bridge in normal mode so the next UI can keep receiving its normal
     ; initialization and clipboard events.
     try NativeDropBridge_ResetSessionAsync(reason, 0, false)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try SetTimer((*) => TrayMenu_HideHoleOverlayAsync(reason . "_finalize"), -10)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     g_IsUIVisibleTransitioning := false
     g_TrayMenuTransitionStartTick := 0
     try TrayMenu_Log("handoff_cleanup_done reason=" . reason . " gdho=" . (GDHO_VISIBLE ? "1" : "0") . " gdho_phase=" . (IsSet(g_GDHO_CurrentPhase) ? g_GDHO_CurrentPhase : "") . " gdho_token=" . (IsSet(g_GDHO_CurrentToken) ? g_GDHO_CurrentToken : 0) . " native=" . (NativeDropSessionActive ? "1" : "0"))
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -878,10 +918,12 @@ TrayMenu_OpenSearchActionRun(*) {
 TrayMenu_PrepareSearchOpenFromHoleMode() {
     try TrayMenu_Log("prepare_search_from_hole search_active=" . (IsSearchCenterActive() ? "1" : "0") . " caps=" . (GetCapsLockState() ? "1" : "0"))
     try TrayMenu_HardenHoleUiTransition("tray_open_search", 1200)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try NormalizeCapsLockRuntimeForUiOpen()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try TrayMenu_Log("prepare_search_from_hole_done")
 }
@@ -917,7 +959,8 @@ ShowSearchCenterFromMenuRun(*) {
             try SearchCenterUnifiedClose("tray_toggle_search", true, true)
             catch {
                 try SearchCenterUnifiedClose("tray_toggle_search_fallback", false, true)
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
             }
             return
@@ -935,7 +978,8 @@ ShowSearchCenterFromMenuRun(*) {
             try SurfaceIntent_OpenSearch("", "search_hotkey")
             return
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if (TrayMenuGUI != 0) {
         try {
@@ -952,7 +996,10 @@ ShowSearchCenterFromMenuRun(*) {
 TrayMenu_OpenClipboardAction(*) {
     try TrayMenu_Log("open_clipboard_from_menu")
     try {
-        SurfaceIntent_Open("clipboard_panel")
+        if FuncExists("SurfaceIntent_OpenClipboardPanel")
+            SurfaceIntent_OpenClipboardPanel(Map("triggerSource", "tray_menu", "reason", "tray_open_clipboard"))
+        else
+            SurfaceIntent_Open("clipboard_panel", Map("triggerSource", "tray_menu", "reason", "tray_open_clipboard"))
         TrayMenu_Log("open_clipboard_from_menu_done")
     } catch as err {
         try TrayMenu_Log("open_clipboard_from_menu_failed msg=" . err.Message)
@@ -1031,6 +1078,9 @@ TrayMenu_AddStableCoreItems(MenuItems, mode, ftVis, bubVis) {
     if (mode != "tray") {
         MenuItems.Push({ Text: "关闭工具栏", Action: ((*) => TrayMenu_RunSceneCmd("tray_hide_toolbar")), Icon: "◼" })
     }
+    MenuItems.Push({ Text: "导出诊断包", Action: ((*) => TrayMenu_RunSceneCmd("tray_export_diagnostics")), Icon: "📦" })
+    MenuItems.Push({ Text: "系统健康", Action: ((*) => TrayMenu_RunSceneCmd("tray_show_health")), Icon: "💚" })
+    MenuItems.Push({ Text: "健康详情", Action: ((*) => TrayMenu_RunSceneCmd("tray_open_health_settings")), Icon: "📋" })
     MenuItems.Push({ Text: "重启脚本", Action: ((*) => TrayMenu_RunSceneCmd("tray_reload_script")), Icon: "↻" })
     MenuItems.Push({ Text: "彻底退出重启", Action: ((*) => TrayMenu_RunSceneCmd("tray_restart_clean")), Icon: "⟲" })
     MenuItems.Push({ Text: "[!] 强制重置搜索中心", Action: ((*) => TrayMenu_RunSceneCmd("tray_force_reinit_search")), Icon: "!" })
@@ -1138,7 +1188,8 @@ ToggleFloatingToolbarFromMenu(*) {
             if FuncExists("FloatingToolbar_CancelReturnToHoleAfterNiuma")
                 FloatingToolbar_CancelReturnToHoleAfterNiuma()
             Nmer_PersistAndApplyActivationMode("toolbar")
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     } else {
         ToggleFloatingToolbar()
@@ -1215,7 +1266,8 @@ ExitFromMenu(*) {
             TrayMenuGUI := 0
             SetTimer(CheckTrayMenuMousePosition, 0)
             SetTimer(CloseTrayMenuIfClickedOutside, 0)
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     try TrayMenu_Log("exit_from_menu begin")
@@ -1237,7 +1289,8 @@ HideFloatingToolbarFromPopupMenu(*) {
     amRaw := IsSet(AppearanceActivationMode) ? AppearanceActivationMode : "toolbar"
     if (NormalizeAppearanceActivationMode(amRaw) = "hole") {
         try HideFloatingBubble()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     } else {
         SurfaceIntent_Close("floating_toolbar")
@@ -1260,7 +1313,8 @@ Nmer_ScheduleCleanRestart() {
     }
     cmd := 'cmd /c ping 127.0.0.1 -n 4 >nul & start "" "' . ahkExe . '" "' . scriptPath . '"'
     try Run(cmd, , "Hide")
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -1272,57 +1326,72 @@ RestartAppCleanFromTrayMenu(*) {
             TrayMenuGUI := 0
             SetTimer(CheckTrayMenuMousePosition, 0)
             SetTimer(CloseTrayMenuIfClickedOutside, 0)
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     try TrayMenu_Log("restart_clean_begin")
     try FloatingToolbarSaveScale()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try SaveFloatingToolbarPosition()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try _Cfg_NormalizeIniEncoding(ConfigFile)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try TrayMenu_ForceBreakSearchCenterStuck("tray_restart_clean")
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try {
         if FuncExists("SCWV_RequestHardClose")
             SCWV_RequestHardClose("tray_restart_clean_sync")
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try {
         if FuncExists("HideFloatingToolbar")
             HideFloatingToolbar()
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try GDHO_HideOverlay()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try NiumaTtyd_StopProcess()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try {
+        if FuncExists("SearchCore_StopWatchdog")
+            SearchCore_StopWatchdog()
         if FuncExists("SearchCore_Shutdown")
             SearchCore_Shutdown("tray_restart_clean")
         else if ProcessExist("SearchCenterCore.exe")
             ProcessClose("SearchCenterCore.exe")
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try {
         if FuncExists("WebView2_PrepareForScriptReload")
             WebView2_PrepareForScriptReload()
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try {
         if FuncExists("Nmer_StopWailsBridge")
             Nmer_StopWailsBridge()
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try NativeDropBridge_Stop()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     Nmer_ScheduleCleanRestart()
     try TrayMenu_Log("restart_clean_exit")
@@ -1337,28 +1406,34 @@ ReloadScriptFromPopupMenu(*) {
             TrayMenuGUI := 0
             SetTimer(CheckTrayMenuMousePosition, 0)
             SetTimer(CloseTrayMenuIfClickedOutside, 0)
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     try FloatingToolbarSaveScale()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try SaveFloatingToolbarPosition()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     ; 重启前先归一化配置文件编码，避免 ThemeMode 被混写 ini 覆盖
     try _Cfg_NormalizeIniEncoding(ConfigFile)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try {
         if FuncExists("Nmer_WailsBridgePrepareForScriptReload")
             Nmer_WailsBridgePrepareForScriptReload()
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try {
         if FuncExists("WebView2_PrepareForScriptReload")
             WebView2_PrepareForScriptReload()
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     ; 等当前进程退出后再拉起，避免与 #SingleInstance Force 抢实例导致 Run(AutoHotkey64) 失败（error -1）
     Nmer_ScheduleCleanRestart()
@@ -1377,7 +1452,8 @@ TrayPopup_GetThemeMode() {
             if (t = "light" || t = "lite" || t = "浅色")
                 return "light"
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try {
         fn := Func("ReadPersistedThemeMode")
@@ -1386,7 +1462,8 @@ TrayPopup_GetThemeMode() {
             if (t2 = "light" || t2 = "lite" || t2 = "浅色")
                 return "light"
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try {
         global ThemeMode
@@ -1395,7 +1472,8 @@ TrayPopup_GetThemeMode() {
             if (t3 = "light" || t3 = "lite" || t3 = "浅色")
                 return "light"
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return "dark"
 }
@@ -1501,7 +1579,8 @@ ShowDarkStylePopupMenuAt(MenuItems, posX, posY) {
         try {
             keepOpen := (item.HasProp("KeepMenuOpen") && item.KeepMenuOpen)
             TrayMenuInvokeItem(item, itemIndex, keepOpen)
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 
@@ -1523,7 +1602,8 @@ ShowDarkStylePopupMenuAt(MenuItems, posX, posY) {
             safeIcon := NormalizeTrayIconValue(Item.Icon)
             if (safeIcon != Item.Icon) {
                 try TrayMenu_Log("icon_sanitized idx=" . Index . " text=" . (Item.HasProp("Text") ? String(Item.Text) : "") . " raw=" . String(Item.Icon) . " safe=" . safeIcon)
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
             }
             IconText := TrayMenuGUI.Add("Text", "x" . IconLeftMargin . " y" . ItemY . " w" . IconSize . " h" . MenuItemHeight . " Center 0x200 c" . iconColor . " BackgroundTrans vMenuItemIcon" . Index, safeIcon)
@@ -1543,7 +1623,8 @@ ShowDarkStylePopupMenuAt(MenuItems, posX, posY) {
         ; 与悬浮工具栏等 +AlwaysOnTop 并存时，仅 AlwaysOnTop 可能仍被压在下方，悬停改色在「看不见」的窗口上
         try {
             DllCall("SetWindowPos", "Ptr", TrayMenuGUI.Hwnd, "Ptr", -1, "Int", 0, "Int", 0, "Int", 0, "Int", 0, "UInt", 0x1 | 0x2)  ; HWND_TOPMOST, SWP_NOMOVE|SWP_NOSIZE
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     SetTimer(CheckTrayMenuMousePosition, 50)
@@ -1564,7 +1645,8 @@ ResolveDarkPopupItemIconFile(Item, size := 18) {
         }
         if (Item.HasProp("IconFile") && Item.IconFile != "" && FileExist(Item.IconFile))
             return Item.IconFile
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return ""
 }
@@ -1621,7 +1703,8 @@ TrayMenu_RunSvgRasterize(svgPath, size, pngPath, renderKey, *) {
         bgColor := (TrayPopup_GetThemeMode() = "light") ? "f7f7f7" : "1a1a1a"
         cmd := '"' . edge . '" --headless --disable-gpu --hide-scrollbars --default-background-color=' . bgColor . ' --window-size=' . size . ',' . size . ' --screenshot="' . pngPath . '" "' . url . '"'
         Run(cmd, , "Hide")
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     SetTimer((*) => TrayMenu_ClearSvgRenderFlag(renderKey), -4000)
 }
@@ -1660,7 +1743,8 @@ CloseDarkStylePopupMenu(*) {
             TrayMenuSelectedItem := 0
             TrayMenuPressedItem := 0
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     SetTimer(CheckTrayMenuMousePosition, 0)
     SetTimer(CloseTrayMenuIfClickedOutside, 0)
@@ -1682,7 +1766,8 @@ FloatingBubbleShowFromMenu(*) {
 
 TrayMenu_DeferCloseSearchAfterHoleShow(*) {
     try SCWV_SubmitIntent("FORCE_CLOSE", 10, Map("reason", "tray_menu_show_hole"))
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -1723,10 +1808,12 @@ FloatingBubbleShowFromMenuRun(*) {
 
 FloatingBubbleHideFromMenu(*) {
     try GDHO_RequestClose("tray_hide_hole")
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try FloatingToolbar_SetActivationMode("tray")
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -1740,7 +1827,8 @@ TrayMenu_RunSceneCmdRun(cmdId) {
     if (c = "")
         return
     try TrayMenu_Log("run_scene_cmd cmd=" . c . " mode=" . NormalizeAppearanceActivationMode(IsSet(AppearanceActivationMode) ? AppearanceActivationMode : "toolbar") . " search_active=" . (IsSearchCenterActive() ? "1" : "0"))
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     ; Hard route for tray commands: avoid dependency on command-dispatch readiness during startup.
     switch c {
@@ -1770,6 +1858,18 @@ TrayMenu_RunSceneCmdRun(cmdId) {
             return
         case "tray_force_reinit_search":
             try SCWV_ForceReinitFromTray()
+            return
+        case "tray_export_diagnostics":
+            if FuncExists("Nmer_ExportDiagnosticsBundle")
+                try Nmer_ExportDiagnosticsBundle()
+            return
+        case "tray_show_health":
+            if FuncExists("Nmer_ShowHealthSnapshotTray")
+                try Nmer_ShowHealthSnapshotTray("tray_refresh")
+            return
+        case "tray_open_health_settings":
+            if FuncExists("Nmer_OpenHealthSettingsPanel")
+                try Nmer_OpenHealthSettingsPanel()
             return
         case "tray_exit_app":
             try ExitFromMenu()
@@ -1840,7 +1940,8 @@ TrayMenu_BuildItemsFromSceneMenuLive(sceneKey := "tray_menu", allowLoad := false
         try {
             if IsSet(_LoadCommands)
                 _LoadCommands()
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if !(IsSet(g_Commands) && g_Commands is Map)
@@ -1859,11 +1960,13 @@ TrayMenu_BuildItemsFromSceneMenuLive(sceneKey := "tray_menu", allowLoad := false
         rawCount := (sm.Has(sceneKey) && sm[sceneKey] is Array) ? sm[sceneKey].Length : -1
         visCount := IsObject(vm) ? vm.Count : -1
         TrayMenu_Log("scene_items_source scene=" . sceneKey . " mode=" . NormalizeAppearanceActivationMode(IsSet(AppearanceActivationMode) ? AppearanceActivationMode : "toolbar") . " raw_count=" . rawCount . " vis_count=" . visCount . " cmd_count=" . (IsObject(cmdList) ? cmdList.Count : 0))
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     items := TrayMenu_BuildItemsFromSceneIds(sm[sceneKey], cmdList, vm)
     try TrayMenu_Log("scene_items_filtered scene=" . sceneKey . " count=" . items.Length)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if (items.Length > 0) {
         try g_LastValidTrayMenu := items.Clone()
@@ -1922,6 +2025,10 @@ TrayMenu_GetSceneFallbackLabel(cmdId, defaultLabel := "") {
             return "彻底退出重启"
         case "tray_force_reinit_search":
             return "[!] 强制重置搜索中心"
+        case "tray_show_health":
+            return "系统健康"
+        case "tray_open_health_settings":
+            return "健康详情"
         case "tray_exit_app":
             return "退出工具"
         case "tray_show_hole_input_panel":
@@ -1991,14 +2098,16 @@ TrayMenu_BuildItemsFromSceneMenuFallback(sceneKey, items := [], cmdList := 0, vm
                 try TrayMenu_Log("scene_items_fallback_shadow count=" . g_LastValidTrayMenu.Length . " mode=" . mode)
                 return g_LastValidTrayMenu.Clone()
             }
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if (!IsObject(cmdList) || !(cmdList is Map) || !cmdList.Count) {
         try {
             if (IsSet(g_Commands) && g_Commands is Map && g_Commands.Has("CommandList") && g_Commands["CommandList"] is Map)
                 cmdList := g_Commands["CommandList"]
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     fallbackIds := []
@@ -2018,7 +2127,8 @@ TrayMenu_BuildItemsFromSceneMenuFallback(sceneKey, items := [], cmdList := 0, vm
             }
         }
         TrayMenu_Log("scene_items_fallback_context scene=" . sceneKey . " hidden_count=" . hiddenCount . " cmd_count=" . (IsObject(cmdList) ? cmdList.Count : 0))
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return TrayMenu_BuildItemsFromSceneIds(fallbackIds, cmdList, vm)
 }
@@ -2056,7 +2166,8 @@ ShowCustomTrayMenu(ItemName := "", ItemPos := "", MyMenu := "") {
         nativeActive := false
     }
     try TrayMenu_Log("custom_popup_state mode=" . mode . " ft_vis=" . (ftVis ? "1" : "0") . " bub_vis=" . (bubVis ? "1" : "0") . " search_active=" . (IsSearchCenterActive() ? "1" : "0") . " search_visible=" . (searchVisible ? "1" : "0") . " gdho=" . (gdhoVisible ? "1" : "0") . " gdho_phase=" . (IsSet(g_GDHO_CurrentPhase) ? g_GDHO_CurrentPhase : "") . " gdho_token=" . (IsSet(g_GDHO_CurrentToken) ? g_GDHO_CurrentToken : 0) . " native=" . (nativeActive ? "1" : "0") . " waiting=" . (g_SCWV_WaitingUiFinishedReveal ? "1" : "0") . " create_inflight=" . (g_SCWV_CreateInFlight ? "1" : "0"))
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try TrayMenu_Log("tray_build_phase=state elapsed_ms=" . (A_TickCount - phaseStart))
     phaseStart := A_TickCount
@@ -2065,7 +2176,8 @@ ShowCustomTrayMenu(ItemName := "", ItemPos := "", MyMenu := "") {
     sceneItems := []
     sceneItems := TrayMenu_BuildItemsFromSceneMenu("tray_menu")
     try TrayMenu_Log("custom_popup_scene_items count=" . sceneItems.Length . " mode=" . mode)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if (sceneItems.Length > 0) {
         ; 黑洞模式也沿用悬浮栏的 scene menu 内容，避免菜单在 hole 运行态被主动降级。
@@ -2102,7 +2214,8 @@ ShowCustomTrayMenu(ItemName := "", ItemPos := "", MyMenu := "") {
             if (it is Map && it.Has("Icon"))
                 it["Icon"] := ""
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try TrayMenu_Log("tray_build_phase=render elapsed_ms=" . (A_TickCount - phaseStart))
     try TrayMenu_Log("custom_popup_build_done items=" . MenuItems.Length . " elapsed_ms=" . (A_TickCount - trayBuildStart))

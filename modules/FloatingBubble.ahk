@@ -45,14 +45,16 @@ FloatingBubble_DestroyCompletely() {
         return
     }
     try SaveFloatingBubblePosition()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     g_FB_WV2_Ctrl := 0
     g_FB_WV2 := 0
     g_FB_WV2_Ready := false
     g_FB_WV2_FrameReady := false
     try FloatingBubbleGUI.Destroy()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     FloatingBubbleGUI := 0
     FloatingBubbleIsVisible := false
@@ -123,7 +125,8 @@ FloatingBubble_PersistModeAndApply(mode) {
     AppearanceActivationMode := NormalizeAppearanceActivationMode(mode)
     cfg := Nmer_ResolveConfigFile()
     try IniWrite(AppearanceActivationMode, cfg, "Appearance", "ActivationMode")
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     ; Apply after the current UI event finishes to avoid mode-switch races.
     SetTimer((*) => ApplyAppearanceActivationMode(), -200)
@@ -131,7 +134,8 @@ FloatingBubble_PersistModeAndApply(mode) {
 
 FloatingBubble_MenuClose(*) {
     try HideFloatingBubble()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -163,7 +167,8 @@ FloatingBubble_ShowModeMenuAt(anchorX := 0, anchorY := 0) {
     MenuItems.Push({ Text: "切换到悬浮栏模式", Icon: "▤", Action: FloatingBubble_MenuToolbarMode })
     MenuItems.Push({ Text: "永久关闭（仅托盘）", Icon: "⊡", Action: FloatingBubble_MenuTrayOnly })
     try ShowDarkStylePopupMenuAt(MenuItems, anchorX, anchorY)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -173,7 +178,8 @@ FloatingBubble_ShowContextMenuDeferred(anchorX := 0, anchorY := 0) {
         MouseGetPos(&anchorX, &anchorY)
     }
     try ShowFloatingToolbarUnifiedContextMenu(anchorX, anchorY)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -209,18 +215,21 @@ FloatingBubble_GetThemeMode() {
             if (Trim(String(raw)) != "")
                 return FloatingBubble_NormalizeThemeToken(raw, "dark")
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try {
         fn := Func("ReadPersistedThemeMode")
         if IsObject(fn)
             return FloatingBubble_NormalizeThemeToken(fn.Call(), "dark")
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try {
         global ThemeMode
         return FloatingBubble_NormalizeThemeToken(ThemeMode, "dark")
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return "dark"
 }
@@ -365,7 +374,8 @@ CreateFloatingBubbleGUI() {
         g_FB_WV2_Ready := false
         g_FB_WV2_FrameReady := false
         try FloatingBubbleGUI.Destroy()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 
@@ -388,7 +398,8 @@ SaveFloatingBubblePosition() {
         ConfigFile := Nmer_ResolveConfigFile()
         IniWrite(String(x), ConfigFile, "WindowPositions", "FloatingBubble_X")
         IniWrite(String(y), ConfigFile, "WindowPositions", "FloatingBubble_Y")
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -446,12 +457,14 @@ FloatingBubble_DragRun(*) {
             FloatingBubbleWindowX := newX
             FloatingBubbleWindowY := newY
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     FloatingBubbleDragging := false
     SaveFloatingBubblePosition()
     try FloatingBubble_ApplyWebViewBounds()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -487,17 +500,20 @@ FloatingBubble_FadeLayered(fromAlpha, toAlpha, durationMs, onDone := "") {
         eased := 1 - (1 - t) ** 3
         g_FB_LayeredAlpha := Round(fromAlpha + (toAlpha - fromAlpha) * eased)
         try FloatingBubble_RenderLayered()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         if (curStep >= steps) {
             g_FB_LayeredAlpha := Round(toAlpha)
             try FloatingBubble_RenderLayered()
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             if (onDone != "") {
                 if (IsObject(onDone))
                     try onDone.Call()
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
             }
             return
@@ -506,7 +522,8 @@ FloatingBubble_FadeLayered(fromAlpha, toAlpha, durationMs, onDone := "") {
     }
     g_FB_LayeredAlpha := Max(0, Min(255, Integer(fromAlpha)))
     try FloatingBubble_RenderLayered()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     SetTimer(FadeStep, -tickMs)
 }
@@ -533,13 +550,15 @@ ShowFloatingBubbleAt(centerX, centerY, sizePx := 0, initialAlpha := 255) {
     FloatingBubbleWindowY := ny
 
     try FloatingBubbleGUI.Show("x" . nx . " y" . ny . " w" . sz . " h" . sz . " NoActivate")
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     FloatingBubble_ApplyWebViewBounds()
     FloatingBubbleIsVisible := true
     try WebView2_NotifyShown(g_FB_WV2)
     try FloatingBubble_RenderLayered()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     SaveFloatingBubblePosition()
     SetTimer(FloatingBubble_PushLogoToWeb, -50)
@@ -550,7 +569,8 @@ FloatingBubble_PlayEnterAnim() {
     if !g_FB_WV2
         return
     try WebView_QueuePayload(g_FB_WV2, Map("type", "bubble_enter"))
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -569,7 +589,8 @@ ShowFloatingBubble() {
     }
 
     try FloatingBubbleGUI.Show("x" . FloatingBubbleWindowX . " y" . FloatingBubbleWindowY . " w" . sz . " h" . sz . " NoActivate")
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     FloatingBubble_ApplyWebViewBounds()
     FloatingBubbleIsVisible := true
@@ -687,7 +708,8 @@ HideFloatingBubble() {
     SaveFloatingBubblePosition()
     try WebView2_NotifyHidden(g_FB_WV2)
     try FloatingBubbleGUI.Hide()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     FloatingBubbleIsVisible := false
 }

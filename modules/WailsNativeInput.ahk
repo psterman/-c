@@ -7,6 +7,52 @@ global g_WailsNative_Gui := 0
 global g_WailsNative_Edit := 0
 global g_WailsNative_SyncTimer := 0
 
+WailsNative_JsonStr(s) {
+    s := StrReplace(String(s), "\", "\\")
+    s := StrReplace(s, '"', '\"')
+    s := StrReplace(s, "`r", "\r")
+    s := StrReplace(s, "`n", "\n")
+    return '"' . s . '"'
+}
+
+WailsNative_RunJsInInputHost(js) {
+    if (IsSet(CommandPaletteUseWebView) && CommandPaletteUseWebView && FuncExists("CommandPalette_ExecScript")) {
+        if FuncExists("CommandPalette_IsVisible") && CommandPalette_IsVisible() {
+            if CommandPalette_ExecScript(js)
+                return true
+        }
+    }
+    global WailsInputWindowTitle, WailsInputWindowExe
+    queries := []
+    if (Trim(WailsInputWindowTitle) != "")
+        queries.Push(Trim(WailsInputWindowTitle))
+    if (Trim(WailsInputWindowExe) != "")
+        queries.Push("ahk_exe " . Trim(WailsInputWindowExe))
+    queries.Push("ahk_exe nmer-wails-input-dev.exe")
+    queries.Push("ahk_exe wails-toolbar-app.exe")
+    for _, q in queries {
+        if !WinExist(q)
+            continue
+        if FuncExists("SCWV_ExecScript") {
+            try {
+                Func("SCWV_ExecScript").Call(q, js)
+                return true
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
+            }
+        }
+        if FuncExists("WebView2_ExecuteScript") {
+            try {
+                Func("WebView2_ExecuteScript").Call(q, js)
+                return true
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
+            }
+        }
+    }
+    return false
+}
+
 WailsNative_GetWailsHwnd() {
     if (IsSet(CommandPaletteUseWebView) && CommandPaletteUseWebView && FuncExists("CommandPalette_GetGuiHwnd")) {
         h := CommandPalette_GetGuiHwnd()
@@ -24,8 +70,7 @@ WailsNative_HideWebInput() {
     if (IsSet(CommandPaletteUseWebView) && CommandPaletteUseWebView)
         return
     js := "document.body.classList.add('native-input-mode')"
-    if FuncExists("WailsWhisper_RunJsInInputHost")
-        WailsWhisper_RunJsInInputHost(js)
+    WailsNative_RunJsInInputHost(js)
 }
 
 WailsNative_SyncToWeb(*) {
@@ -38,11 +83,8 @@ WailsNative_SyncToWeb(*) {
         CommandPalette_SetInputText(text)
         return
     }
-    if !FuncExists("WailsWhisper_JsonStr")
-        return
-    js := "window.nmerVoice?.setInputText?.(" . WailsWhisper_JsonStr(text) . ")"
-    if FuncExists("WailsWhisper_RunJsInInputHost")
-        WailsWhisper_RunJsInInputHost(js)
+    js := "window.nmerVoice?.setInputText?.(" . WailsNative_JsonStr(text) . ")"
+    WailsNative_RunJsInInputHost(js)
 }
 
 WailsNative_ScheduleSync() {
@@ -63,7 +105,8 @@ WailsNative_AlignWailsBelowBar() {
         if (bw < 400)
             bw := 900
         WinMove(bx, by + bh + 6, bw, , "ahk_id " . wailsHwnd)
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -91,9 +134,7 @@ WailsNative_ShowInputBar() {
     g_WailsNative_Gui.BackColor := "0a0a0a"
     g_WailsNative_Gui.SetFont("s11 cF5F5F5", "Segoe UI")
     g_WailsNative_Gui.Add("Text", "x12 y6 w80 h18 cFF9933", "命令输入")
-    g_WailsNative_Edit := g_WailsNative_Gui.Add("Edit", "x12 y26 w776 h36 +WantTab -Wrap vWailsNativeEdit", "")
-    btnVoice := g_WailsNative_Gui.Add("Button", "x800 y28 w88 h32", "🎤 语音")
-    btnVoice.OnEvent("Click", WailsNative_VoiceClick)
+    g_WailsNative_Edit := g_WailsNative_Gui.Add("Edit", "x12 y26 w876 h36 +WantTab -Wrap vWailsNativeEdit", "")
     g_WailsNative_Edit.OnEvent("Change", WailsNative_ScheduleSync)
     g_WailsNative_Gui.OnEvent("Close", WailsNative_HideInputBar)
     g_WailsNative_Gui.Show("x" . barX . " y" . barY . " w" . barW . " h64")
@@ -112,7 +153,8 @@ WailsNative_ApplyIME() {
     try {
         if FuncExists("ApplyChineseIMEConversionToHwnd")
             ApplyChineseIMEConversionToHwnd(g_WailsNative_Gui.Hwnd)
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     SetTimer(WailsNative_ApplyIME, -180)
     SetTimer(WailsNative_ApplyIME, -520)
@@ -124,11 +166,6 @@ WailsNative_HideInputBar(*) {
         try g_WailsNative_Gui.Hide()
     }
     g_WailsNative_Edit := 0
-}
-
-WailsNative_VoiceClick(*) {
-    if FuncExists("WailsWhisper_OnInputActivated")
-        WailsWhisper_OnInputActivated()
 }
 
 WailsNative_OnWailsActivated() {

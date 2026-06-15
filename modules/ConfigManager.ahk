@@ -338,14 +338,16 @@ Nmer_MoveGuiToPopupScreen(gui, forMaximize := false) {
     workH := Max(160, b - t)
     if forMaximize {
         try gui.Move(l, t, workW, workH)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return
     }
     gw := 1180
     gh := 760
     try gui.GetPos(, , &gw, &gh)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if (gw < 200)
         gw := 1180
@@ -370,14 +372,16 @@ Nmer_EnsureGuiMaximizedOnPopupScreen(gui) {
     expr := "ahk_id " . hwnd
     Nmer_MoveGuiToPopupScreen(gui, true)
     try gui.Show()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     maximized := false
     try {
         if (WinGetMinMax(expr) != 1)
             WinMaximize(expr)
         maximized := (WinGetMinMax(expr) = 1)
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if !maximized {
         idx := Nmer_GetPopupScreenIndex()
@@ -882,7 +886,8 @@ InitConfig() {
                 catch as holeTrigErr {
                     if FuncExists("HoleTriggers_DiagLog")
                         try HoleTriggers_DiagLog("[HoleTrigger] init_load_fail msg=" . holeTrigErr.Message)
-                    catch {
+                    catch as _e {
+                        NmerCatch(A_ThisFunc, _e) 
                     }
                 }
             }
@@ -982,7 +987,8 @@ InitConfig() {
         catch as holeTrigErr2 {
             if FuncExists("HoleTriggers_DiagLog")
                 try HoleTriggers_DiagLog("[HoleTrigger] post_init_load_fail msg=" . holeTrigErr2.Message)
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
     }
@@ -1138,13 +1144,15 @@ SetAutoStart(Enable, &errorMsg := "") {
             }
             Loop names.Length - 1 {
                 try RegDelete(RegKey, names[A_Index + 1])
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
             }
         } else {
             for _, legacyName in names {
                 try RegDelete(RegKey, legacyName)
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
             }
         }
@@ -1156,7 +1164,8 @@ SetAutoStart(Enable, &errorMsg := "") {
                 ex := Trim(String(e.Extra))
                 if (ex != "")
                     errorMsg .= " (" . ex . ")"
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
         return false
@@ -1219,7 +1228,8 @@ ImportClipboard(*) {
                     ClipboardDB.Exec("COMMIT")
                 } catch as err {
                     try ClipboardDB.Exec("ROLLBACK")
-                    catch {
+                    catch as _e {
+                        NmerCatch(A_ThisFunc, _e) 
                     }
                     global ClipboardHistory_CapsLockC := ImportedItems
                 }
@@ -1237,4 +1247,41 @@ ImportClipboard(*) {
     } catch as e {
         MsgBox(GetText("import_failed") . ": " . e.Message, GetText("error"), "Iconx")
     }
+}
+
+NmerConfig_Get(section, key, default := "") {
+    sec := Trim(String(section))
+    k := Trim(String(key))
+    if (sec = "" || k = "")
+        return default
+    if (sec = "fulltext" && k = "path") {
+        if FuncExists("Nmer_DataDir")
+            return Nmer_DataDir() . "\fulltext_config.json"
+        return A_ScriptDir . "\Data\fulltext_config.json"
+    }
+    if (sec = "studio" && k = "path") {
+        if FuncExists("Nmer_LocalDir")
+            return Nmer_LocalDir() . "\user_studio.json"
+        return A_ScriptDir . "\local\user_studio.json"
+    }
+    if (sec = "commands" && k = "path") {
+        if FuncExists("Nmer_DataDir")
+            return Nmer_DataDir() . "\Commands.json"
+        return A_ScriptDir . "\Data\Commands.json"
+    }
+    if (sec = "cursor" && k = "shortcut_ini") {
+        if FuncExists("Nmer_LocalDir")
+            return Nmer_LocalDir() . "\CursorShortcut.ini"
+        return A_ScriptDir . "\local\CursorShortcut.ini"
+    }
+    if IsSet(ConfigFile) && ConfigFile != "" {
+        try {
+            v := IniRead(ConfigFile, sec, k, default)
+            if (v != "ERROR")
+                return v
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e)
+        }
+    }
+    return default
 }

@@ -48,7 +48,8 @@ GroundingCache_OpenL2Db() {
     dir := RegExReplace(dbPath, "\\[^\\]+$", "")
     if !DirExist(dir)
       DirCreate(dir)
-  } catch {
+  } catch as _e {
+      NmerCatch(A_ThisFunc, _e) 
   }
   db := SQLiteDB()
   if !db.OpenDB(dbPath, "W", true)
@@ -82,7 +83,8 @@ GroundingCache_LogL2(msg) {
     if !DirExist(dir)
       DirCreate(dir)
     FileAppend("[" . A_Now . "] " . String(msg) . "`r`n", logPath, "UTF-8")
-  } catch {
+  } catch as _e {
+      NmerCatch(A_ThisFunc, _e) 
   }
 }
 
@@ -118,9 +120,9 @@ GroundingCache_Init() {
     Dir := RegExReplace(dbPath, "\\[^\\]+$", "")
     if !DirExist(Dir)
       DirCreate(Dir)
-  } catch {
+  } catch as _e {
+      NmerCatch(A_ThisFunc, _e) 
   }
-
   db := SQLiteDB()
   if !db.OpenDB(dbPath, "W", true) {
     return false

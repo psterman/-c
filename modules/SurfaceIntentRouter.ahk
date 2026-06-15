@@ -45,7 +45,8 @@ SurfaceIntent_ShouldRoute(*) {
     try {
         if FuncExists("Nmer_SurfaceManagerRouteIntents") && Nmer_SurfaceManagerRouteIntents()
             return true
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return false
 }
@@ -54,9 +55,16 @@ SurfaceIntent_ShouldObserveRequest(*) {
     if SurfaceIntent_ShouldRoute()
         return true
     try {
+        if FuncExists("SurfaceManager_IsObservationEnabled") && SurfaceManager_IsObservationEnabled()
+            return true
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e)
+    }
+    try {
         if FuncExists("Nmer_SurfaceManagerInterceptOpenClose") && Nmer_SurfaceManagerInterceptOpenClose()
             return true
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e)
     }
     return false
 }
@@ -181,7 +189,7 @@ SurfaceIntent_Open(surfaceId, meta := 0) {
             SurfaceTransaction_UpdateRequestId(genId, requestId)
         try SurfaceManager_BeforeOpen(sid, "SurfaceIntent_Open", m)
     }
-    if SurfaceIntent_ShouldRoute()
+    if SurfaceIntent_ShouldObserveRequest()
         SurfaceIntent_Record("intent_open", sid, m, requestId)
     global g_SurfaceIntent_InExecute
     prevExec := g_SurfaceIntent_InExecute
@@ -211,7 +219,7 @@ SurfaceIntent_Close(surfaceId, meta := 0) {
     if SurfaceIntent_ShouldObserveRequest() {
         requestId := SurfaceManager_Request(sid, "close", "SurfaceIntent_Close", m)
     }
-    if SurfaceIntent_ShouldRoute()
+    if SurfaceIntent_ShouldObserveRequest()
         SurfaceIntent_Record("intent_close", sid, m, requestId)
     global g_SurfaceIntent_InExecute
     prevExec := g_SurfaceIntent_InExecute
@@ -237,7 +245,7 @@ SurfaceIntent_Dispose(surfaceId, meta := 0) {
     if SurfaceIntent_ShouldObserveRequest() {
         requestId := SurfaceManager_Request(sid, "close", "SurfaceIntent_Dispose", m)
     }
-    if SurfaceIntent_ShouldRoute()
+    if SurfaceIntent_ShouldObserveRequest()
         SurfaceIntent_Record("intent_dispose", sid, m, requestId)
     global g_SurfaceIntent_InExecute
     prevExec := g_SurfaceIntent_InExecute
@@ -258,24 +266,28 @@ SurfaceIntent_PreemptCommandPaletteForSearch(*) {
     try {
         if FuncExists("CommandPalette_IsVisible")
             cpVisible := CommandPalette_IsVisible()
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     cpActive := false
     try {
         if FuncExists("SurfaceManager_HasActivePrimaryConflict")
             cpActive := SurfaceManager_HasActivePrimaryConflict("search_center")
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if !cpVisible && !cpActive
         return
     try {
         pid := DllCall("GetCurrentProcessId", "UInt")
         DllCall("AllowSetForegroundWindow", "UInt", pid)
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if FuncExists("CommandPalette_CancelDeferredFocusTimers")
         try CommandPalette_CancelDeferredFocusTimers()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     preemptMeta := Map("reason", "search_preempt", "skipTransaction", true)
     if FuncExists("SurfaceIntent_Close") {
@@ -288,11 +300,13 @@ SurfaceIntent_PreemptCommandPaletteForSearch(*) {
         CommandPalette_Hide(preemptMeta)
     if FuncExists("FocusBroker_Release")
         try FocusBroker_Release("CommandPalette", "search_preempt")
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     if FuncExists("SurfaceManager_ObserveHide")
         try SurfaceManager_ObserveHide("command_palette", Map("reason", "search_preempt"))
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
 }
 
@@ -300,15 +314,18 @@ SurfaceIntent_OpenSearch(keyword := "", triggerSource := "search_hotkey") {
     try {
         pid := DllCall("GetCurrentProcessId", "UInt")
         DllCall("AllowSetForegroundWindow", "UInt", pid)
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try DllCall("LockSetForegroundWindow", "UInt", 2)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     SurfaceIntent_PreemptCommandPaletteForSearch()
     if FuncExists("SCWV_StartHotkeyForegroundPump")
         try SCWV_StartHotkeyForegroundPump()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     return SurfaceIntent_Open("search_center", Map(
         "mode", "search",
@@ -327,4 +344,32 @@ SurfaceIntent_OpenClipboardUnified(keyword := "", triggerSource := "clipboard_ho
         "unified", 1,
         "reason", "unified_open_clipboard"
     ))
+}
+
+; 打开 WebView 剪贴板面板（非搜索中心 unified 模式）
+SurfaceIntent_OpenClipboardPanel(meta := 0) {
+    m := SurfaceIntent_NormalizeMeta(meta)
+    if !m.Has("reason")
+        m["reason"] := "open_clipboard_panel"
+    if !m.Has("triggerSource")
+        m["triggerSource"] := "open_clipboard_panel"
+    return SurfaceIntent_Open("clipboard_panel", m)
+}
+
+; 打开设置：保留 ShowConfigGUI_Safe 防御逻辑；Core 内再经 SurfaceIntent_Open
+SurfaceIntent_OpenConfig(meta := 0) {
+    m := SurfaceIntent_NormalizeMeta(meta)
+    if !m.Has("reason")
+        m["reason"] := "open_config"
+    if !m.Has("triggerSource")
+        m["triggerSource"] := "open_config"
+    if (m.Has("navigateTab") || m.Has("defaultStartTab")) {
+        global g_ConfigWebView_OneShotDefaultTab
+        tab := m.Has("navigateTab") ? String(m["navigateTab"]) : String(m["defaultStartTab"])
+        if (tab != "")
+            g_ConfigWebView_OneShotDefaultTab := tab
+    }
+    if FuncExists("ShowConfigGUI_Safe")
+        return ShowConfigGUI_Safe()
+    return SurfaceIntent_Open("config_webview", m)
 }

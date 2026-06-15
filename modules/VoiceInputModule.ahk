@@ -1,4 +1,4 @@
-﻿; VoiceInputModule.ahk — 语音输入 / 语音搜索（由 CursorHelper 中枢 #Include）
+; VoiceInputModule.ahk — 语音输入 / 语音搜索（由 CursorHelper 中枢 #Include）
 ; 依赖宿主：GetText、FormatText、HoverBtn、OnWindowSize、RestoreWindowPosition、GetWindowScreenIndex、
 ; GetScreenInfo、GetPanelPosition、HideCursorPanel、QueueWindowPositionSave、FlushPendingWindowPositions、
 ; ArrayContainsValue、ConfigFile、CursorPath、AISleepTime、PanelVisible、UI_Colors、ThemeMode、Language、
@@ -10,14 +10,33 @@ VoiceInput_HideCursorPanelIfNeeded() {
         fn := Func("HideCursorPanel")
         if fn
             fn.Call()
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
 VoiceButtonAction(*) {
-    VoiceInput_HideCursorPanelIfNeeded()
-    StartVoiceInput()
+    return
 }
+
+; CapsLock+Z 语音输入已移除；保留 CapsLock+F 语音搜索
+StartVoiceInput() {
+    return
+}
+
+StopVoiceInput() {
+    return
+}
+
+PauseVoiceInput() {
+    return
+}
+
+ResumeVoiceInput() {
+    return
+}
+
+; --- legacy implementation below (voice search CapsLock+F still uses this file) ---
 
 ; ===================== 保存语音输入面板窗口位置 =====================
 SaveVoiceInputPanelPosition() {
@@ -123,47 +142,7 @@ DetectInputMethod() {
     return "baidu"
 }
 
-; 开始语音输入（仅经 FSM；副作用在 VoiceInputEffects）
-StartVoiceInput() {
-    st := VoiceFSM_State()
-    if (st = "paused") {
-        VoiceFSM_Dispatch("resume_request")
-        return
-    }
-    if (st = "listening" || st = "processing")
-        return
-    if (st = "error")
-        VoiceFSM_Dispatch("reset")
-    VoiceFSM_Dispatch("start_request")
-}
-
-; 结束语音输入并发送（processing 期 stop 优先）
-StopVoiceInput() {
-    if (VoiceFSM_State() = "idle")
-        return
-    VoiceFSM_Dispatch("stop_request")
-}
-
-; 暂停语音输入（processing/error 时 stop 优先）
-PauseVoiceInput() {
-    st := VoiceFSM_State()
-    if (st = "processing" || st = "error") {
-        StopVoiceInput()
-        return
-    }
-    if (st != "listening")
-        return
-    VoiceFSM_Dispatch("pause_request")
-}
-
-; 继续语音输入
-ResumeVoiceInput() {
-    if (VoiceFSM_State() != "paused")
-        return
-    VoiceFSM_Dispatch("resume_request")
-}
-
-; 显示语音输入面板（屏幕中心）
+; 显示语音输入面板（屏幕中心；CapsLock+Z 已禁用，仅供语音搜索复用部分 UI）
 ShowVoiceInputPanel() {
     global GuiID_VoiceInputPanel, VoiceInputActive, VoiceInputScreenIndex, UI_Colors, VoiceInputPaused
     global VoiceInputSendBtn, VoiceInputPauseBtn, VoiceInputAnimationText, VoiceInputStatusText

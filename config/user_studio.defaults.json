@@ -21,7 +21,18 @@
   "options": {
     "niumaAutoInjectContext": true,
     "niumaSystemPrompt": "",
-    "niumaInstallRoot": ""
+    "niumaInstallRoot": "",
+    "llmManagerEnabled": true
   },
+  "promptTemplates": [
+    { "id": "preset_basic_summarize", "title": "内容摘要", "category": "基础", "body": "请用简洁中文总结以下内容，保留关键事实与结论：\n\n{{selection}}" },
+    { "id": "preset_basic_translate", "title": "中英互译", "category": "基础", "body": "将以下文本在中文与英文之间互译，保持专业语气：\n\n{{selection}}" },
+    { "id": "preset_write_polish", "title": "润色改写", "category": "写作", "body": "在不改变原意的前提下润色以下文字，使其更通顺、正式：\n\n{{selection}}" },
+    { "id": "preset_write_outline", "title": "生成大纲", "category": "写作", "body": "根据主题生成结构化大纲（一级/二级标题）：\n\n{{selection}}" },
+    { "id": "preset_code_review", "title": "代码审查", "category": "代码", "body": "审查以下代码，列出 bug、边界情况与可维护性问题，并给出修改建议：\n\n```\n{{selection}}\n```" },
+    { "id": "preset_code_explain", "title": "解释代码", "category": "代码", "body": "用中文分步解释以下代码在做什么，并标注关键函数/变量：\n\n```\n{{selection}}\n```" },
+    { "id": "preset_fix_error", "title": "改错定位", "category": "改错", "body": "根据报错信息与相关代码，分析根因并给出最小修复 diff：\n\n{{selection}}" },
+    { "id": "preset_optimize_perf", "title": "性能优化", "category": "优化", "body": "分析以下实现的时间/空间复杂度，提出可落地的优化方案：\n\n{{selection}}" }
+  ],
   "updatedAt": ""
 }

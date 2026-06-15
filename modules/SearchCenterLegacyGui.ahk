@@ -1053,7 +1053,8 @@ SetSearchCenterControlVisible(Ctrl, IsVisible) {
     }
     try {
         Ctrl.Visible := IsVisible
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -1079,7 +1080,8 @@ SetSearchCenterEngineIconsVisible(IsVisible) {
             if (IconObj.HasProp("Check") && IconObj.Check != 0) {
                 IconObj.Check.Visible := IsVisible
             }
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 }
@@ -1099,7 +1101,8 @@ EnsureSearchCenterCLISession() {
     }
     try {
         ; CLI 页使用普通多行输入框，无需初始化终端欢迎文本
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -1111,7 +1114,8 @@ FocusSearchCenterCLIInput() {
     try {
         SearchCenterSearchEdit.Focus()
         ControlSend("{End}", , SearchCenterSearchEdit)
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -1204,7 +1208,8 @@ BringSearchCenterFilterButtonsToFront() {
                 , "uint", 0x0013)
             FilterBtn.Visible := true
             FilterBtn.Redraw()
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 }
@@ -1231,7 +1236,8 @@ MoveSearchCenterFilterButtons(FilterBarY, Padding := 20, KeepTop := true) {
             FilterButtonWidth := Max(50, StrLen(FilterText) * 10 + 20)
             FilterBtn.Move(CurrentFilterX, FilterButtonY, FilterButtonWidth, FilterButtonHeight)
             CurrentFilterX += FilterButtonWidth + FilterButtonSpacing
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 
@@ -1506,7 +1512,8 @@ AppendSearchCenterCLIOutput(Text, AddBlankLine := true) {
     }
     try {
         SearchCenterCLIOutputEdit.Value := ExistingText
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -1555,9 +1562,9 @@ GetGeminiAPIKey() {
                 return Key
             }
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
-
     return ""
 }
 
@@ -1593,7 +1600,8 @@ ExtractGeminiResponseText(ResponseObj) {
                 }
             }
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return ""
 }
@@ -1710,7 +1718,8 @@ TryGeminiHeadlessDispatch(PromptText, AppendToPanel := true) {
         try {
             AppendSearchCenterCLIOutput("Gemini > " . PromptText, true)
             AppendSearchCenterCLIOutput(ResponseText, true)
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 
@@ -1781,7 +1790,8 @@ UpdateSearchCenterFilterButtons() {
                     if (IsSet(hoverFunc)) {
                         HoverBtnWithAnimation(FilterBtn, BgColor, TagBgActive)
                     }
-                } catch {
+                } catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
                 try FilterBtn.Redraw()
             } catch as err {
@@ -1835,7 +1845,8 @@ UpdateSearchCenterFilterButtons() {
                 if (IsSet(hoverFunc)) {
                     HoverBtnWithAnimation(FilterBtn, BgColor, TagBgActive)
                 }
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         } catch as err {
             OutputDebug("AHK_DEBUG: UpdateSearchCenterFilterButtons - Error: " . err.Message)
@@ -1882,9 +1893,9 @@ SearchCenterFilterClickHandler(FilterType, *) {
         if (GuiID_SearchCenter && IsObject(GuiID_SearchCenter) && GuiID_SearchCenter.HasProp("Hwnd")) {
             WinRedraw(GuiID_SearchCenter.Hwnd)
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
-    
     ; 刷新搜索结果列表（根据过滤类型过滤）
     RefreshSearchCenterResults()
 }
@@ -2114,7 +2125,8 @@ UpdateSearchCenterHighlight() {
     if (SearchCenterCLIOutputEdit != 0) {
         try {
             SearchCenterCLIOutputEdit.Opt("+Background" . UI_Colors.InputBg)
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     
@@ -2566,7 +2578,8 @@ SearchCenter_GetEditTextSafe() {
             txt := ControlGetText("ahk_id " . Integer(SearchCenterSearchEdit))
             return Trim(String(txt))
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return ""
 }
@@ -2652,7 +2665,8 @@ RefreshSearchCenterResults() {
         try {
             if (ShellIcon_EnsureImageList(SearchCenterResultLV, "sc"))
                 iconOpt := "Icon" . ShellIcon_GetPlaceholderIndex("sc")
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         rowTitle := (res.HasProp("DisplayTitle") && res.DisplayTitle != "") ? res.DisplayTitle : res.Title
         rowSubtitle := (res.HasProp("DisplaySubtitle") && res.DisplaySubtitle != "") ? res.DisplaySubtitle : res.Source
@@ -2848,7 +2862,8 @@ SearchCenterCloseHandler(*) {
     try SCWV_Log("legacy_close_handler_begin", "gui=" . (GuiID_SearchCenter ? "1" : "0"))
     ; Keep drag-hole state machine re-entrant across close/reopen cycles.
     try NativeDropBridge_ResetSessionAsync("search_center_exit", 0)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     ; 【关键修复】在关闭窗口前保存当前分类的选择状态
     try {

@@ -15,7 +15,8 @@ CommandPaletteWails_Log(message) {
             CommandPaletteRouter_Log(String(message))
         else if FuncExists("Nmer_WailsBridgeLog")
             Nmer_WailsBridgeLog("cp_wails " . String(message))
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -36,7 +37,8 @@ CommandPaletteWails_FindWindow(*) {
         hwnd := WinExist("ahk_exe nmer-wails.exe")
         if hwnd
             return hwnd
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try {
         return WinExist("NMER Wails POC")
@@ -58,15 +60,18 @@ CommandPaletteWails_ActivateWindow(*) {
     if !hwnd
         return false
     try WinShow("ahk_id " . hwnd)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try WinActivate("ahk_id " . hwnd)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try {
         if WinActive("ahk_id " . hwnd)
             return true
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return hwnd > 0
 }
@@ -121,7 +126,8 @@ CommandPaletteWails_HandleEgressPayload(msg) {
     if FuncExists("CommandPalette_DispatchWebMessage")
         CommandPalette_DispatchWebMessage(msg)
     try SurfaceManager_RecordEvent("cp_shell_egress", "command_palette", Map("type", typ, "host", "wails"))
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -181,7 +187,8 @@ CommandPaletteWails_RetireAhkWebView(reason := "shell_phase2") {
         return false
     ok := false
     try ok := !!CommandPalette_DisposeAhkWebViewIfRetired(reason)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if ok
         CommandPaletteWails_Log("ahk_wv2_retired reason=" . String(reason))
@@ -217,7 +224,8 @@ CommandPaletteWails_Show(*) {
             hwnd := CommandPaletteWails_FindWindow()
             if hwnd {
                 try WinShow("ahk_id " . hwnd)
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
             }
         }
@@ -248,7 +256,8 @@ CommandPaletteWails_Show(*) {
     ))
     if FuncExists("Nmer_WailsBridgePostShellCpInject")
         try Nmer_WailsBridgePostShellCpInject(Map("type", "palette_show"))
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     if FuncExists("CommandPaletteWails_EnsureEgressPump")
         CommandPaletteWails_EnsureEgressPump()
@@ -263,7 +272,8 @@ CommandPaletteWails_Hide(*) {
         CommandPaletteWails_StopEgressPump()
     if FuncExists("Nmer_WailsBridgePostShellCp")
         try Nmer_WailsBridgePostShellCp("hide", "CommandPaletteWails_Hide")
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     g_CmdPalWails_ShellVisible := false
     hwnd := CommandPaletteWails_FindWindow()
@@ -271,7 +281,8 @@ CommandPaletteWails_Hide(*) {
         try WinMinimize("ahk_id " . hwnd)
         catch {
             try WinHide("ahk_id " . hwnd)
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
     }
@@ -286,7 +297,8 @@ CommandPaletteWails_Dispose(reason := "") {
     g_CmdPalWails_ShellVisible := false
     if FuncExists("Nmer_WailsBridgePostShellCp")
         try Nmer_WailsBridgePostShellCp("dispose", "CommandPaletteWails_Dispose", Map("reason", String(reason)))
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     CommandPaletteWails_Hide()
     try SurfaceManager_ObserveClose("command_palette", Map(

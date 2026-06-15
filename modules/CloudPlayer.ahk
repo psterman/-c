@@ -101,7 +101,8 @@ CloudPlayer_Show() {
     try FloatingToolbar_PageDockEnter("cloudplayer")
     if !CloudPlayer_EnsureOpenListRunning() {
         try TrayTip("CloudPlayer", "OpenList 未启动。请确认 openlist.exe 已放到 tools\\openlist\\。", "Icon! 2")
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 
@@ -129,7 +130,8 @@ CloudPlayer_CreateGui() {
 
     if g_CloudPlayerGui {
         try g_CloudPlayerGui.Destroy()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 
@@ -145,9 +147,9 @@ CloudPlayer_CreateGui() {
         global FloatingToolbarGUI
         if IsSet(FloatingToolbarGUI) && FloatingToolbarGUI && FloatingToolbarGUI.Hwnd
             ownerOpt := " +Owner" . FloatingToolbarGUI.Hwnd
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
-
     g_CloudPlayerGui := Gui("+Resize +MinSize960x620 +DPIScale" . ownerOpt, "牛马云")
     g_CloudPlayerGui.BackColor := "121212"
     g_CloudPlayerGui.OnEvent("Size", CloudPlayer_OnGuiSize)
@@ -158,7 +160,8 @@ CloudPlayer_CreateGui() {
     try WebView2_CreateWithSharedEnvAsync(g_CloudPlayerGui.Hwnd, CloudPlayer_OnWebViewCreated, "cloud_player")
     catch as e {
         try MsgBox("CloudPlayer WebView2 创建失败：`n" . e.Message)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 }
@@ -181,7 +184,8 @@ CloudPlayer_ApplyWebViewBounds() {
     try {
         g_CloudPlayerCtrl.Bounds := rc
         g_CloudPlayerCtrl.NotifyParentWindowPositionChanged()
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -204,7 +208,8 @@ CloudPlayer_WM_SYSCOMMAND(wParam, lParam, msg, hwnd) {
             CloudPlayer_OnGuiClose()
             return 0
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -219,7 +224,8 @@ CloudPlayer_OnWebViewCreated(ctrl) {
 
     if !IsObject(ctrl) || !ctrl.HasProp("CoreWebView2") {
         try MsgBox("CloudPlayer WebView2 初始化失败。")
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return
     }
@@ -291,7 +297,8 @@ CloudPlayer_OnWebMessage(sender, args) {
             ab := Trim(String(payload["apiBase"]))
             if (ab != "")
                 g_CloudPlayerApiBase := CloudPlayer_NormalizeApiBase(ab)
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 
@@ -578,7 +585,8 @@ CloudPlayer_SendDockConfig() {
                 ))
             }
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try WebView_QueuePayload(g_CloudPlayerWv2, Map("type", "nmDockConfig", "sceneToolbarLayout", arr))
 }
@@ -594,7 +602,8 @@ CloudPlayer_ExecuteDockCmd(payload) {
     try {
         _ExecuteCommand(cmdId0)
         return
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     m0 := Map(
         "Title", "dock",
@@ -621,12 +630,13 @@ CloudPlayer_ParseWebMessage(args) {
                 m := Jxon_Load(raw)
                 if (m is Map)
                     return m
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
-
     ; Fallback for postMessage(object) and wrapped JSON-string payloads.
     try {
         jsonStr := args.WebMessageAsJson
@@ -635,7 +645,8 @@ CloudPlayer_ParseWebMessage(args) {
             m := Jxon_Load(m)
         if (m is Map)
             return m
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return 0
 }
@@ -961,7 +972,8 @@ CloudPlayer_BuildAliAdditionConfig(rt, targetDriver, opts := 0) {
                 clientSecret := Trim(String(opts["clientSecret"]))
             if (opts.Has("useOnlineApi"))
                 useOnlineApi := CloudPlayer_ToBool(opts["useOnlineApi"], true)
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     additionObj := (targetDriver = "AliyundriveOpen")
@@ -1354,10 +1366,12 @@ CloudPlayer_ImportStorageGenericAsync_OnedriveFallback(taskId, providerKey, tk, 
     try {
         add2["root_folder_path"] := ""
         add2["RootFolderPath"] := ""
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try add2.Delete("root_folder_id")
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     addJson2 := CloudPlayer_JsonForceBoolLiterals(
         Jxon_Dump(add2),
@@ -1494,7 +1508,8 @@ CloudPlayer_FlushUiOutbox(*) {
         try {
             if g_CloudPlayerWv2
                 WebView_QueuePayload(g_CloudPlayerWv2, out)
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if g_CloudPlayerDlThreadRunning
@@ -2095,7 +2110,8 @@ CloudPlayer_ImportAliyunStorage(refreshToken, mountPath := "/aliyun", opts := 0,
                 clientSecret := Trim(String(opts["clientSecret"]))
             if (opts.Has("useOnlineApi"))
                 useOnlineApi := CloudPlayer_ToBool(opts["useOnlineApi"], true)
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 
@@ -2450,7 +2466,8 @@ CloudPlayer_ImportStorageGeneric(provider, token, mountPath := "/", driver := "A
                 targetId := 0
                 saveUrl := g_CloudPlayerApiBase . "/api/admin/storage/create"
                 try bodyObj.Delete("id")
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
                 bodyJson := CloudPlayer_JsonForceBoolLiterals(Jxon_Dump(bodyObj), ["web_proxy", "enable_sign"])
                 ; Re-run current candidate as create, then continue to next fallback if still fails.
@@ -2569,10 +2586,12 @@ CloudPlayer_ImportStorageGeneric(provider, token, mountPath := "/", driver := "A
             try {
                 add2["root_folder_path"] := ""
                 add2["RootFolderPath"] := ""
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             try add2.Delete("root_folder_id")
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             addJson2 := CloudPlayer_JsonForceBoolLiterals(
                 Jxon_Dump(add2),
@@ -2913,7 +2932,8 @@ CloudPlayer_BuildGenericAddition(providerKey, token, opts := 0, driver := "") {
                 quarkBootstrap := opts["__quarkBootstrap"]
             else
                 quarkBootstrap := 0
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     } else {
         skipQuarkBootstrap := false
@@ -2951,7 +2971,8 @@ CloudPlayer_BuildGenericAddition(providerKey, token, opts := 0, driver := "") {
                     clientSecret := qbSign
                 if (qbCookie != "")
                     cookieValue := qbCookie
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         } else if (drv = "quarkopen" && (clientId = "" || clientSecret = "")) {
             ; Only QuarkOpen needs app_id/sign_key bootstrap and x-pan headers.
@@ -3048,7 +3069,8 @@ CloudPlayer_BuildGenericAddition(providerKey, token, opts := 0, driver := "") {
     } else if (p = "onedrive") {
         ; For OneDrive, prefer root folder path and avoid root_folder_id based "root:" addressing.
         try add.Delete("root_folder_id")
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         add["root_folder_path"] := "/"
         add["RootFolderPath"] := "/"
@@ -3249,10 +3271,12 @@ CloudPlayer_OnQuarkCookieBootstrapResp(state, j, cb, doReq) {
     outRefresh := ""
     outAccess := ""
     try outRefresh := Trim(String(payload.Has("refresh_token") ? payload["refresh_token"] : ""))
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try outAccess := Trim(String(payload.Has("access_token") ? payload["access_token"] : ""))
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if (outAccess != "") {
         cookie := "x_pan_client_id=5325; x_pan_access_token=" . outAccess
@@ -3363,16 +3387,20 @@ CloudPlayer_ParseQuarkOpenBootstrapRet(ret) {
     outAppId := ""
     outSignKey := ""
     try outRefresh := Trim(String(payload.Has("refresh_token") ? payload["refresh_token"] : ""))
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try outAccess := Trim(String(payload.Has("access_token") ? payload["access_token"] : ""))
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try outAppId := Trim(String(payload.Has("app_id") ? payload["app_id"] : ""))
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try outSignKey := Trim(String(payload.Has("sign_key") ? payload["sign_key"] : ""))
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if (outAppId = "" || outSignKey = "") {
         msg := ""
@@ -3414,13 +3442,15 @@ CloudPlayer_NormalizeProviderToken(raw) {
                     v := j.Has("refresh_token") ? Trim(String(j["refresh_token"])) : ""
                     if (v != "")
                         return v
-                } catch {
+                } catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
                 try {
                     v2 := j.Has("refreshToken") ? Trim(String(j["refreshToken"])) : ""
                     if (v2 != "")
                         return v2
-                } catch {
+                } catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
                 try {
                     d := j.Has("data") ? j["data"] : 0
@@ -3432,10 +3462,12 @@ CloudPlayer_NormalizeProviderToken(raw) {
                         if (v4 != "")
                             return v4
                     }
-                } catch {
+                } catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
             }
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     return s
@@ -3472,7 +3504,8 @@ CloudPlayer_ToBool(val, defaultVal := false) {
             return true
         if (s = "false" || s = "0" || s = "no" || s = "off")
             return false
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return !!defaultVal
 }
@@ -3609,12 +3642,14 @@ CloudPlayer_AdminTokenPoll(jobId) {
     try {
         while !ex.StdOut.AtEndOfStream
             job["out"] .= ex.StdOut.Read(4096)
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try {
         while !ex.StdErr.AtEndOfStream
             job["err"] .= ex.StdErr.Read(2048)
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if (ex.Status != 0) {
         SetTimer(CloudPlayer_AdminTokenPoll.Bind(jobId), 0)
@@ -3635,7 +3670,8 @@ CloudPlayer_AdminTokenPoll(jobId) {
     if ((A_TickCount - Integer(job["t0"])) > Integer(job["timeoutMs"])) {
         SetTimer(CloudPlayer_AdminTokenPoll.Bind(jobId), 0)
         try ex.Terminate()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         job["lastErr"] := "getting OpenList admin token timed out (" . job["timeoutMs"] . "ms)"
         job["idx"] := job["idx"] + 1
@@ -3675,12 +3711,14 @@ CloudPlayer_ExecCapture(cmd, timeoutMs := 12000) {
         try {
             while !ex.StdOut.AtEndOfStream
                 outText .= ex.StdOut.Read(4096)
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         try {
             while !ex.StdErr.AtEndOfStream
                 errText .= ex.StdErr.Read(2048)
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         if (ex.Status != 0)
             break
@@ -3695,15 +3733,18 @@ CloudPlayer_ExecCapture(cmd, timeoutMs := 12000) {
     try {
         while !ex.StdOut.AtEndOfStream
             outText .= ex.StdOut.Read(4096)
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try {
         while !ex.StdErr.AtEndOfStream
             errText .= ex.StdErr.Read(2048)
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try result["exitCode"] := ex.ExitCode
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     result["stdout"] := outText
     result["stderr"] := errText
@@ -3863,10 +3904,12 @@ CloudPlayer_DownloadJobTick(*) {
         rid := g_CloudPlayerDlJob.Has("reqId") ? String(g_CloudPlayerDlJob["reqId"]) : ""
         name := g_CloudPlayerDlJob.Has("folderName") ? String(g_CloudPlayerDlJob["folderName"]) : ""
         try CloudPlayer_PostDownloadResult(false, e.Message, "", name, rid, "exception")
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         try CloudPlayer_ClearDownloadCancelled(rid)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         CloudPlayer_StopDownloadJob()
     }
@@ -4197,7 +4240,8 @@ CloudPlayer_DownloadJobPhaseDownloadOne(job) {
             d := RegExReplace(CloudPlayer_ToWinLongPath(childLocal), "\\[^\\]*$")
             if (d != "")
                 DirCreate(d)
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         job["dlData"] := CloudPlayer_FetchFsGetDataSync(childRemote, headers, rid)
         job["dlStep"] := "save"
@@ -4324,7 +4368,8 @@ CloudPlayer_DownloadJobPhaseDownloadAsync(job) {
         d := RegExReplace(CloudPlayer_ToWinLongPath(childLocal), "\\[^\\]*$")
         if (d != "")
             DirCreate(d)
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     listSign := ""
     try listSign := Trim(String(item.Has("sign") ? item["sign"] : ""))
@@ -4389,7 +4434,8 @@ CloudPlayer_DownloadResolve_OnDone(reqId, jobUid, idx, remotePath, ret) {
         cache[idx] := data
         g_CloudPlayerDlJob["resolveCache"] := cache
         g_CloudPlayerDlJob["nextAt"] := 0
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -4817,7 +4863,8 @@ CloudPlayer_DownloadScan_OnListed(reqId, jobUid, remotePath, ret) {
         g_CloudPlayerDlJob["scanItems"] := (ret is Map && ret.Has("items") && ret["items"] is Array) ? ret["items"] : []
         g_CloudPlayerDlJob["scanErr"] := (ret is Map && ret.Has("error")) ? String(ret["error"]) : ""
         g_CloudPlayerDlJob["nextAt"] := 0
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -4932,7 +4979,8 @@ CloudPlayer_ListFolderItemsAsync_Finish(state, ok, items, err := "") {
     try {
         if cb
             cb.Call(out)
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -4975,7 +5023,8 @@ CloudPlayer_FetchFsGetDataSync(remotePath, headers, reqId := "") {
             try {
                 if (ret["json"] is Map && ret["json"].Has("data"))
                     return ret["json"]["data"]
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
         if (A_Index = 2)
@@ -5014,7 +5063,8 @@ CloudPlayer_DownloadManifestFiles(files, stageRoot, headers, token, stats, reqId
             d := RegExReplace(CloudPlayer_ToWinLongPath(childLocal), "\\[^\\]*$")
             if (d != "")
                 DirCreate(d)
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         listSign := ""
         try listSign := Trim(String(item.Has("sign") ? item["sign"] : ""))
@@ -5207,7 +5257,8 @@ CloudPlayer_WalkItemIsDir(item, name := "") {
                     return false
             }
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try {
         if item.Has("is_dir") {
@@ -5223,7 +5274,8 @@ CloudPlayer_WalkItemIsDir(item, name := "") {
             }
             return !!v
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try {
         if item.Has("type") {
@@ -5233,13 +5285,15 @@ CloudPlayer_WalkItemIsDir(item, name := "") {
             if (tp = "file" || tp = "f")
                 return false
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try {
         p := Trim(String(item.Has("path") ? item["path"] : ""))
         if (p != "" && SubStr(p, -1) = "/")
             return true
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return false
 }
@@ -5319,7 +5373,8 @@ CloudPlayer_WriteHttpBodyToFile(whr, outPath, expectedSize := 0) {
         }
         if (ct != "" && RegExMatch(ct, "i)text/html|application/json|text/plain"))
             return false
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     saved := false
     try {
@@ -5328,7 +5383,8 @@ CloudPlayer_WriteHttpBodyToFile(whr, outPath, expectedSize := 0) {
         ado.Open()
         ado.Write(whr.ResponseBody)
         try FileDelete(checkPath)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         ado.SaveToFile(longPath, 2)
         ado.Close()
@@ -5342,7 +5398,8 @@ CloudPlayer_WriteHttpBodyToFile(whr, outPath, expectedSize := 0) {
             ext := mExt[0]
         tempPath := A_Temp . "\nd" . A_TickCount . "_" . Random(100000, 999999) . ext
         try FileDelete(tempPath)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         try {
             body := whr.ResponseBody
@@ -5357,7 +5414,8 @@ CloudPlayer_WriteHttpBodyToFile(whr, outPath, expectedSize := 0) {
         }
         if saved {
             try FileDelete(checkPath)
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             if !FileMove(tempPath, longPath, 1)
                 saved := FileMove(tempPath, checkPath, 1)
@@ -5390,7 +5448,8 @@ CloudPlayer_NormalizeHttpHeaders(hdr) {
         if (IsObject(v) && !(v is Map))
             continue
         try out[String(k)] := String(v)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     return out
@@ -5458,7 +5517,8 @@ CloudPlayer_AppendDownloadUrlFromData(&out, &seen, data, fullHdr, cdnHdr, proxyO
                 CloudPlayer_PushDownloadCandidate(&out, &seen, u2, hdr2)
             }
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -5476,7 +5536,8 @@ CloudPlayer_BuildDownloadCandidates(data, remotePath, listSign := "", proxyOnly 
                     hdr0 := CloudPlayer_NormalizeHttpHeaders(manifestItem["downloadHeaders"])
                 CloudPlayer_PushDownloadCandidate(&out, &seen, u0, hdr0)
             }
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     fullHdr := Map()
@@ -5683,7 +5744,8 @@ CloudPlayer_ParseFsGetUrlInfo(data, remotePath := "") {
             if (u2 != "" && RegExMatch(u2, "i)^https?://") && !RegExMatch(u2, "i)/@manage(?:[/?#]|$)"))
                 return Map("url", u2, "headers", extraHeaders)
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     sign := CloudPlayer_ParseFsGetSign(data)
     return Map("url", CloudPlayer_MakeDirectDUrl(remotePath, sign), "headers", extraHeaders)
@@ -5731,7 +5793,8 @@ CloudPlayer_DownloadBinaryEx(url, outPath, token := "", extraHeaders := 0, expec
                 return res
             }
             try CoreAsyncHttp_Log("cloudplayer_dl_urlmon_fallback", "url=" . u . " out=" . outPath)
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
         whr := ComObject("WinHttp.WinHttpRequest.5.1")
@@ -5739,10 +5802,12 @@ CloudPlayer_DownloadBinaryEx(url, outPath, token := "", extraHeaders := 0, expec
         whr.Open("GET", u, false)
         whr.SetTimeouts(10000, 10000, 30000, 120000)
         try whr.Option[9] := 2048
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         try whr.SetRequestHeader("Accept-Encoding", "identity")
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         localProxy := CloudPlayer_IsLocalOpenListProxyUrl(u)
         CloudPlayer_ApplyDownloadRequestHeaders(whr, token, extraHeaders, localProxy)
@@ -5798,7 +5863,8 @@ CloudPlayer_DownloadViaUrlMon(url, outPath, expectedSize := 0) {
     if (dir != "")
         DirCreate(dir)
     try FileDelete(p)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     hr := DllCall("urlmon\URLDownloadToFileW"
         , "ptr", 0
@@ -5849,7 +5915,8 @@ CloudPlayer_DeferredUploadPick(reqId, remoteDir, token := "") {
     try {
         if (wasTopMost && g_CloudPlayerGui && g_CloudPlayerGui.Hwnd)
             WinSetAlwaysOnTop(1, "ahk_id " . g_CloudPlayerGui.Hwnd)
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if !selected {
         CloudPlayer_QueuePayload(Map(
@@ -5977,7 +6044,8 @@ CloudPlayer_UploadFileViaFsPut(localPath, remoteDir, token := "") {
                         ret["ok"] := false
                         ret["error"] := j.Has("message") ? String(j["message"]) : ("code " . Integer(j["code"]))
                     }
-                } catch {
+                } catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
             }
         } else {
@@ -6003,12 +6071,14 @@ CloudPlayer_ReadFileBinaryVariant(path) {
         ado.Position := 0
         data := ado.Read()
         try ado.Close()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return data
     } catch {
         try ado.Close()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return 0
     }
@@ -6022,7 +6092,8 @@ CloudPlayer_TryExtractBodyUrl(whr) {
         ; Some providers return a one-line direct URL instead of binary bytes.
         if RegExMatch(txt, "i)^https?://[^\s]+$")
             return txt
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return ""
 }
@@ -6318,7 +6389,8 @@ CloudPlayer_ResolveAsyncSender() {
             g_CloudPlayerAsyncSenderKind := "HttpJsonAsync"
             return true
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try {
         fn := Func("CoreAsyncHttp_SendAsync")
@@ -6327,7 +6399,8 @@ CloudPlayer_ResolveAsyncSender() {
             g_CloudPlayerAsyncSenderKind := "CoreAsyncHttp_SendAsync"
             return true
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return false
 }
@@ -6419,7 +6492,8 @@ CloudPlayer_HttpJsonAwait(method, url, headers := 0, body := "", reqId := "") {
                     bucket["ret"]["error"] := "cancelled"
                     return bucket["ret"]
                 }
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             Sleep(10)
         }
@@ -6603,14 +6677,15 @@ CloudPlayer_OpenExternalUrl(url) {
             , "ptr")
         if (r > 32)
             return true
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
-
     ; Fallback to Run if ShellExecute fails for any reason.
     try {
         Run(u)
         return true
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return false
 }

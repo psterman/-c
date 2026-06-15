@@ -237,7 +237,8 @@ SCProvider_RouteSearch(ctx) {
             try {
                 if SCProvider_FuncExists("SCWV_Log")
                     SCWV_Log("provider_route", "name=" . String(name) . " filter=" . SCProvider_CtxFilter(ctx) . " kw=" . SubStr(SCProvider_CtxKeyword(ctx), 1, 40))
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             SCProvider_FetchByName(name, ctx)
             return String(name)

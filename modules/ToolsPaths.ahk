@@ -6,7 +6,8 @@ Nmer_InstallRoot(*) {
             r := Trim(String(MainScriptDir))
             if (r != "")
                 return r
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     return A_ScriptDir
@@ -47,7 +48,8 @@ Nmer_SearchCoreLog(message) {
         if !DirExist(dir)
             DirCreate(dir)
         FileAppend("[" . FormatTime(, "yyyy-MM-dd HH:mm:ss") . "] " . String(message) . "`n", dir . "\searchcore_launch.log", "UTF-8")
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -69,6 +71,7 @@ Nmer_SearchCenterCoreHealthy(*) {
 
 #Include SearchCoreLifecycle.ahk
 #Include NmerServiceRegistry.ahk
+#Include NmerPanelChrome.ahk
 
 Nmer_TtydExe(*) {
     root := A_ScriptDir
@@ -209,7 +212,8 @@ Nmer_MigrateRootLayout(*) {
         try {
             if (FileGetSize(root . "\CursorShortcut.ini") < 4096)
                 FileDelete(root . "\CursorShortcut.ini")
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 }

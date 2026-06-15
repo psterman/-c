@@ -1,7 +1,16 @@
 ; LocalPaths.ahk — 用户私有数据目录（API Key、主配置、OpenClaw 状态）
 
+Nmer_RepoRoot(*) {
+    try {
+        r := Trim(EnvGet("NMRE_ROOT"))
+        if (r != "")
+            return RTrim(r, "\/")
+    }
+    return A_ScriptDir
+}
+
 Nmer_LocalDir(*) {
-    return A_ScriptDir . "\local"
+    return Nmer_RepoRoot() . "\local"
 }
 
 Nmer_EnsureLocalDir(*) {
@@ -39,7 +48,9 @@ Nmer_ResolveConfigFile(*) {
     try {
         if IsSet(ConfigFile) && ConfigFile != ""
             return ConfigFile
-    } catch as _e { NmerCatch(A_ThisFunc, _e) }
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e)
+    }
     return Nmer_MainConfigFile()
 }
 
@@ -47,7 +58,9 @@ Nmer_ResolvePromptTemplatesFile(*) {
     try {
         if IsSet(PromptTemplatesFile) && PromptTemplatesFile != ""
             return PromptTemplatesFile
-    } catch as _e { NmerCatch(A_ThisFunc, _e) }
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e)
+    }
     return Nmer_PromptTemplatesFile()
 }
 
@@ -60,7 +73,7 @@ Nmer_ResolvePromptTemplatesFile(*) {
 ; 可重建的大文件在 Cache/（见 Nmer_UserCacheRoot）
 
 Nmer_DataDir(*) {
-    return A_ScriptDir . "\Data"
+    return Nmer_RepoRoot() . "\Data"
 }
 
 Nmer_EnsureDataDir(*) {
@@ -166,7 +179,9 @@ Nmer_UserCacheRoot(*) {
     ini := Nmer_MainConfigFile()
     custom := ""
     try custom := Trim(IniRead(ini, "Paths", "UserCacheRoot", ""))
-    catch as _e { NmerCatch(A_ThisFunc, _e) }
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e)
+    }
     if (custom != "") {
         if !DirExist(custom)
             try DirCreate(custom)
@@ -193,7 +208,9 @@ Nmer_SetUserCacheRoot(newRoot) {
             if (custom != "")
                 old := custom
         }
-    } catch as _e { NmerCatch(A_ThisFunc, _e) }
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e)
+    }
     if (StrLower(old) != StrLower(newRoot))
         Nmer_MigrateTreeIfMissing(old, newRoot)
     Nmer_EnsureLocalDir()
@@ -250,6 +267,21 @@ Nmer_EnsureDebugDir(*) {
 
 Nmer_DebugPath(fileName) {
     return Nmer_DebugDir() . "\" . fileName
+}
+
+Nmer_OpenDebugDir(*) {
+  if FuncExists("Nmer_OpenPathInExplorer")
+        return Nmer_OpenPathInExplorer(Nmer_DebugDir())
+    try {
+        Run('explorer.exe "' . Nmer_DebugDir() . '"')
+        return true
+    } catch {
+        return false
+    }
+}
+
+Nmer_TraceLogPath(*) {
+    return Nmer_DebugPath("nmer_trace.log")
 }
 
 Nmer_OpenClawTimelinePath(*) {
@@ -379,7 +411,9 @@ Nmer_EnsureSqliteDbIni(*) {
         }
         FileDelete(ini)
         FileAppend(want, ini, "UTF-8")
-    } catch as _e { NmerCatch(A_ThisFunc, _e) }
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e)
+    }
 }
 
 Nmer_MigrateDbSetIfMissing(oldDbPath, newDbPath) {
@@ -398,7 +432,9 @@ Nmer_MigrateFileIfMissing(oldPath, newPath) {
         if (dir != "" && !DirExist(dir))
             DirCreate(dir)
         FileMove(oldPath, newPath, 1)
-    } catch as _e { NmerCatch(A_ThisFunc, _e) }
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e)
+    }
 }
 
 Nmer_MigrateTreeIfMissing(oldDir, newDir) {
@@ -418,7 +454,9 @@ Nmer_MigrateTreeIfMissing(oldDir, newDir) {
             if (parent != "" && !DirExist(parent))
                 DirCreate(parent)
             FileMove(A_LoopFileFullPath, dest, 0)
-        } catch as _e { NmerCatch(A_ThisFunc, _e) }
+        } catch as _e {
+        NmerCatch(A_ThisFunc, _e)
+    }
     }
 }
 
@@ -567,7 +605,9 @@ Nmer_MigrateFullTextSettingsIndexDir(*) {
     try {
         FileDelete(path)
         FileAppend(newRaw, path, "UTF-8")
-    } catch as _e { NmerCatch(A_ThisFunc, _e) }
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e)
+    }
 }
 
 Nmer_ResetFullTextSettingsIndexDir(*) {
@@ -581,7 +621,9 @@ Nmer_ResetFullTextSettingsIndexDir(*) {
             return
         FileDelete(path)
         FileAppend(newRaw, path, "UTF-8")
-    } catch as _e { NmerCatch(A_ThisFunc, _e) }
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e)
+    }
 }
 
 Nmer_DirSizeBytes(dir) {
@@ -593,7 +635,9 @@ Nmer_DirSizeBytes(dir) {
         if (A_LoopFileAttrib ~= "D")
             continue
         try total += A_LoopFileSize
-        catch as _e { NmerCatch(A_ThisFunc, _e) }
+        catch as _e {
+        NmerCatch(A_ThisFunc, _e)
+    }
     }
     return total
 }
@@ -678,7 +722,9 @@ Nmer_DeleteDirContents(dir) {
                 DirDelete(A_LoopFileFullPath, 1)
             else
                 FileDelete(A_LoopFileFullPath)
-        } catch as _e { NmerCatch(A_ThisFunc, _e) }
+        } catch as _e {
+        NmerCatch(A_ThisFunc, _e)
+    }
     }
 }
 
@@ -780,7 +826,9 @@ Nmer_IsDirRemovableLegacy(dir) {
         att := FileExist(dir)
         if (att != "" && InStr(att, "D") && InStr(att, "L"))
             return true
-    } catch as _e { NmerCatch(A_ThisFunc, _e) }
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e)
+    }
     empty := true
     Loop Files dir . "\*", "R" {
         if (A_LoopFileName = ".gitkeep")

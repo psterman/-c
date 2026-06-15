@@ -34,7 +34,8 @@ SearchCore_LifecycleLogJson(event, fields := 0) {
         FileAppend(line, dir . "\searchcore_lifecycle.jsonl", "UTF-8")
     } catch as e {
         try Nmer_SearchCoreLog("lifecycle_json_fail " . e.Message)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 }
@@ -66,6 +67,28 @@ SearchCore_ProcessPresent(*) {
 
 SearchCore_IsHealthy(*) {
     return Nmer_SearchCenterCoreHealthy()
+}
+
+; HTTP/全文路径：仅 healthy 或刚启动（started）；process_only 不算 ready
+SearchCore_StatusHttpReady(st) {
+    if !(st is Map)
+        return false
+    if st.Has("healthOk") && st["healthOk"]
+        return true
+    status := st.Has("status") ? String(st["status"]) : ""
+    return (status = "healthy" || status = "started")
+}
+
+SearchCore_EnsureHttpReady(caller := "http") {
+    st := SearchCore_EnsureStatus(false, caller)
+    if SearchCore_StatusHttpReady(st)
+        return true
+    status := (st is Map && st.Has("status")) ? String(st["status"]) : ""
+    if (status = "process_only" && FuncExists("SearchCore_ForceRestart")) {
+        st2 := SearchCore_ForceRestart(caller . "_process_only")
+        return SearchCore_StatusHttpReady(st2)
+    }
+    return false
 }
 
 SearchCore_EnsureStatus(forceRestart := false, caller := "") {
@@ -138,7 +161,8 @@ Nmer_StartSearchCenterCoreStatus(forceRestart := false, caller := "") {
     g_Nmer_SearchCoreLastLaunchTick := now
     if FuncExists("_SCWV_ApplySearchCoreDefaults") {
         try _SCWV_ApplySearchCoreDefaults()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     cmd := '"' . exe . '" -base "' . root . '"'
@@ -178,6 +202,8 @@ Nmer_AutoStartSearchCenterCore(*) {
 global g_SearchCore_WatchdogEnabled := false
 global g_SearchCore_WatchdogLastPhase := ""
 global g_SearchCore_WatchdogIntervalMs := 60000
+global g_SearchCore_WatchdogBadTicks := 0
+global g_SearchCore_WatchdogBadThreshold := 3
 
 SearchCore_StartWatchdog(intervalMs := 60000) {
     global g_SearchCore_WatchdogEnabled, g_SearchCore_WatchdogIntervalMs
@@ -188,14 +214,16 @@ SearchCore_StartWatchdog(intervalMs := 60000) {
 }
 
 SearchCore_StopWatchdog(*) {
-    global g_SearchCore_WatchdogEnabled
+    global g_SearchCore_WatchdogEnabled, g_SearchCore_WatchdogBadTicks
     g_SearchCore_WatchdogEnabled := false
+    g_SearchCore_WatchdogBadTicks := 0
     SetTimer(SearchCore_WatchdogTick, 0)
     SearchCore_LifecycleLogJson("watchdog_stopped", Map())
 }
 
 SearchCore_WatchdogTick(*) {
     global g_SearchCore_WatchdogEnabled, g_SearchCore_WatchdogLastPhase, g_SearchCore_WatchdogIntervalMs
+    global g_SearchCore_WatchdogBadTicks, g_SearchCore_WatchdogBadThreshold
     if !g_SearchCore_WatchdogEnabled
         return
     pid := ProcessExist("SearchCenterCore.exe")
@@ -208,6 +236,21 @@ SearchCore_WatchdogTick(*) {
         SearchCore_LifecycleLogJson("watchdog_phase", Map(
             "phase", phase, "pid", pid ? pid : 0, "healthOk", healthOk ? 1 : 0))
         Nmer_SearchCoreLog("watchdog_phase=" . phase . " pid=" . (pid ? pid : 0))
+    }
+    if (phase = "healthy") {
+        g_SearchCore_WatchdogBadTicks := 0
+    } else {
+        g_SearchCore_WatchdogBadTicks += 1
+        if (g_SearchCore_WatchdogBadTicks >= g_SearchCore_WatchdogBadThreshold) {
+            g_SearchCore_WatchdogBadTicks := 0
+            reason := "watchdog_" . phase
+            SearchCore_LifecycleLogJson("watchdog_restart", Map("reason", reason, "pid", pid ? pid : 0))
+            Nmer_SearchCoreLog("watchdog_restart reason=" . reason)
+            if FuncExists("NmerService_Ensure")
+                NmerService_Ensure("searchcore", reason, true)
+            else
+                SearchCore_ForceRestart(reason)
+        }
     }
     SetTimer(SearchCore_WatchdogTick, -g_SearchCore_WatchdogIntervalMs)
 }

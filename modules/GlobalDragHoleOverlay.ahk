@@ -312,7 +312,8 @@ GDHO_FlushReleaseCoalesce(*) {
                         skipSuck := true
                     else if FuncExists("GDHO_IsPostSuckProtected") && GDHO_IsPostSuckProtected()
                         skipSuck := true
-                } catch {
+                } catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
             }
             if skipSuck {
@@ -342,7 +343,8 @@ GDHO_FlushReleaseCoalesce(*) {
                         skipDragReleaseClose := true
                     else if FuncExists("HoleActivation_IsGestureGraceActive") && HoleActivation_IsGestureGraceActive()
                         skipDragReleaseClose := true
-                } catch {
+                } catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
             }
             if skipDragReleaseClose {
@@ -362,7 +364,8 @@ GDHO_FlushReleaseCoalesce(*) {
                             skipIdleFlush := true
                         else if FuncExists("HoleActivation_IsGestureGraceActive") && HoleActivation_IsGestureGraceActive()
                             skipIdleFlush := true
-                    } catch {
+                    } catch as _e {
+                        NmerCatch(A_ThisFunc, _e) 
                     }
                 }
                 if !skipIdleFlush
@@ -386,14 +389,16 @@ GDHO_FlushReleaseCoalesce(*) {
                 try {
                     if GDHO_IsTextHoleUserPanelActive()
                         skipSeed := true
-                } catch {
+                } catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
             }
             if (IsSet(GDHO_DECOUPLED_TOPOLOGY) && GDHO_DECOUPLED_TOPOLOGY && FuncExists("GDHO_IsTextSelectionPreviewReady")) {
                 try {
                     if GDHO_IsTextSelectionPreviewReady()
                         skipSeed := true
-                } catch {
+                } catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
             }
             if !skipSeed {
@@ -415,7 +420,8 @@ GDHO_FlushReleaseCoalesce(*) {
                 flushPreview := true
             else if FuncExists("GDHO_ShouldDeferStarryCloseForTextHole") && GDHO_ShouldDeferStarryCloseForTextHole("release_coalesce")
                 flushPreview := true
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if flushPreview {
@@ -654,7 +660,8 @@ GDHO_ApplyManualPanelInteractive(reason := "") {
     try {
         if IsObject(GDHO_WV2_CTRL)
             GDHO_WV2_CTRL.Focus()
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try WinActivate("ahk_id " GDHO_GUI.Hwnd)
     ; 强制输入面板可点击：取消「面板穿透」、关闭 ole-passthrough
@@ -813,14 +820,16 @@ GDHO_ShouldAllowTextHole() {
         try {
             if SelectionSense_IsTextReadyForHole()
                 return true
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if FuncExists("SelectionSense_IsTextCapturedForHole") {
         try {
             if SelectionSense_IsTextCapturedForHole()
                 return true
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     return true
@@ -853,21 +862,24 @@ GDHO_ManageTextDragOverlay(mx, my) {
         try {
             if GDHO_ShouldBlockStarryReentry()
                 return
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if (GDHO_IsDecoupled() && FuncExists("GDHO_IsTextSelectionPreviewReady")) {
         try {
             if GDHO_IsTextSelectionPreviewReady()
                 return
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if !GDHO_ShouldAllowTextHole()
         return
     if FuncExists("SelectionSense_HideDragHintToast") {
         try SelectionSense_HideDragHintToast("text_drag_manage")
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if !(GDHO_IsTextDragSession() || NativeDropSessionPayload = "text" || GDHO_PAYLOAD = "text")
@@ -1048,7 +1060,8 @@ GDHO_RoutePayload(payloadType, data) {
                     try NativeDropDiag_Log("[HoleRouter] text_skip_panel_locked len=" . StrLen(t))
                     return
                 }
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
         sig := StrLen(t) . ":" . SubStr(t, 1, 24)
@@ -1062,7 +1075,8 @@ GDHO_RoutePayload(payloadType, data) {
                 try {
                     if GDHO_IsTextSelectionPreviewReady()
                         return
-                } catch {
+                } catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
             }
             if g_GDHO_TextHoleCommitDone {
@@ -1079,8 +1093,6 @@ GDHO_RoutePayload(payloadType, data) {
         GDHO_TriggerSearchCenter(t)
     } else if (pt = "file") {
         if !(data is Array) || data.Length = 0
-            return
-        if FuncExists("HoleWhisper_TryRouteAudioFiles") && HoleWhisper_TryRouteAudioFiles(data)
             return
         if FuncExists("FloatingToolbar_HandleDroppedFiles")
             try FloatingToolbar_HandleDroppedFiles(data)
@@ -1125,7 +1137,8 @@ GDHO_HardRecycleHost(reason := "") {
     } else {
         if IsObject(GDHO_WV2_CTRL) {
             try GDHO_WV2_CTRL.Close()
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
         GDHO_WV2_CTRL := 0
@@ -1134,7 +1147,8 @@ GDHO_HardRecycleHost(reason := "") {
         if IsObject(GDHO_GUI) {
             try {
                 GDHO_GUI.Destroy()
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
         GDHO_GUI := 0
@@ -1283,14 +1297,16 @@ GDHO_ShowTextDragAt(mx, my, weakPreview := false, forGesture := false) {
         try {
             if GDHO_IsStarryOpenIntentBlocked("text_drag_preview")
                 return false
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if !GDHO_ShouldAllowTextHole()
         return false
     if FuncExists("SelectionSense_HideDragHintToast") {
         try SelectionSense_HideDragHintToast("text_drag_show")
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     GDHO_BeginTransitionAllow()
@@ -1377,7 +1393,8 @@ GDHO_ShouldShowDecoupledPanel(reason := "") {
         try {
             if GDHO_IsTextHoleUserPanelActive()
                 return true
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if FuncExists("GDHO_IsTextHolePanelOpen") && GDHO_IsTextHolePanelOpen()
@@ -1402,7 +1419,8 @@ GDHO_ShouldShowDecoupledPanel(reason := "") {
         try {
             if SelectionSense_IsSelectionHolePreviewActive()
                 return false
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if (GDHO_PANEL_PINNED || GDHO_MANUAL_PANEL_MODE)
@@ -1426,7 +1444,8 @@ GDHO_OpenSelectionTextPreview(mx, my) {
                 try NativeDropDiag_Log("[TextHole] preview_open_skip reason=not_hole_mode")
                 return
             }
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if FuncExists("GDHO_CanOpenWeakPreview") {
@@ -1435,7 +1454,8 @@ GDHO_OpenSelectionTextPreview(mx, my) {
                 try NativeDropDiag_Log("[TextHole] preview_open_skip reason=phase_not_idle phase=" . GDHO_GetInteractionPhase())
                 return
             }
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     newT := ""
@@ -1447,7 +1467,8 @@ GDHO_OpenSelectionTextPreview(mx, my) {
                 try NativeDropDiag_Log("[TextHole] preview_open_skip reason=panel_active len=" . StrLen(newT))
                 return
             }
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if FuncExists("GDHO_ShouldBlockStarryReentry") {
@@ -1456,14 +1477,16 @@ GDHO_OpenSelectionTextPreview(mx, my) {
                 try NativeDropDiag_Log("[TextHole] preview_open_blocked reason=user_panel_until_exit")
                 return
             }
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     try NativeDropDiag_Log("[TextHole] preview_open_begin x=" . Integer(mx) . " y=" . Integer(my) . " decoupled=" . (GDHO_IsDecoupled() ? "1" : "0"))
     g_SelSense_AllowTextHoleGesture := true
     if FuncExists("GDHO_AbortTextHoleCommit")
         try GDHO_AbortTextHoleCommit("new_selection_preview")
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     if FuncExists("GDHO_ResetTextHoleSession")
         GDHO_ResetTextHoleSession()
@@ -1480,12 +1503,14 @@ GDHO_OpenSelectionTextPreview(mx, my) {
     }
     if FuncExists("GDHO_StampTextHoleCapturedText") {
         try GDHO_StampTextHoleCapturedText(SelectionSense_GetLastSelectedText())
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if FuncExists("GDHO_TextHole_OnSelectionPreviewStart") {
         try GDHO_TextHole_OnSelectionPreviewStart(SelectionSense_GetLastSelectedText(), mx, my)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if GDHO_IsDecoupled() {
@@ -1568,7 +1593,8 @@ GDHO_RequestClose(reason := "") {
                 try NativeDropDiag_Log("gdho request_close skip launcher_cmd_in_flight reason=" . r)
                 return
             }
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     GDHO_SubmitIntent("CLOSE", 30, Map("reason", r != "" ? r : "request_close"))
@@ -1597,7 +1623,8 @@ GDHO_SubmitIntent(intent, priority := 50, payload := 0) {
                     try GDHO_Trace("gdho_intent_drop_open policy=user_panel_until_exit reason=" . rBlock)
                     return
                 }
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
     }
@@ -1711,7 +1738,8 @@ GDHO_TransitionTo(targetPhase, reason := "", payload := 0, priority := 50) {
                     try GDHO_Trace("gdho_open_skip policy=user_panel_until_exit reason=" . rOpen)
                     return false
                 }
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
         if (rOpen = "selection_copy" || rOpen = "selection_copy_timeout" || rOpen = "selection_release"
@@ -1762,7 +1790,8 @@ GDHO_TransitionTo(targetPhase, reason := "", payload := 0, priority := 50) {
                     try GDHO_Trace("gdho_close_skip_text_hole_panel reason=" . reason)
                 return true
             }
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if (FuncExists("GDHO_IsTextHolePanelOpen") && GDHO_IsTextHolePanelOpen()) {
@@ -1784,7 +1813,8 @@ GDHO_TransitionTo(targetPhase, reason := "", payload := 0, priority := 50) {
                 try GDHO_Trace("gdho_close_skip_text_hole_expand reason=" . reason)
                 return true
             }
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     g_GDHO_CurrentToken += 1
@@ -1818,7 +1848,8 @@ GDHO_RevealIfReady(token := 0, reason := "") {
                 try GDHO_Trace("gdho_reveal_skip policy=user_panel_until_exit reason=" . String(reason))
                 return false
             }
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if (token && !GDHO_IsCurrentToken(token))
@@ -1867,7 +1898,8 @@ GDHO_InternalClose(reason := "", token := 0) {
     try {
         if FuncExists("NativeDrop_StopHitTestGuard")
             NativeDrop_StopHitTestGuard()
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     g_GDHO_TransitionCtx["allow"] := true
     try {
@@ -1906,10 +1938,12 @@ GDHO_ForceReset(reason := "") {
     try {
         if FuncExists("NativeDrop_StopHitTestGuard")
             NativeDrop_StopHitTestGuard()
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try GDHO_SetClickThrough(true, "force_reset")
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     g_GDHO_WaitingReadyReveal := false
     g_GDHO_CreateInFlight := false
@@ -2170,7 +2204,8 @@ GDHO_SetProximity(prox) {
         try {
             if GDHO_ShouldBlockStarryReentry()
                 return
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     global GDHO_LAST_PROXIMITY_SENT
@@ -2190,7 +2225,8 @@ GDHO_OnWebViewCreated(ctrl) {
         try {
             if IsObject(ctrl)
                 ctrl.Close()
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return
     }
@@ -2200,7 +2236,8 @@ GDHO_OnWebViewCreated(ctrl) {
         try {
             if IsObject(ctrl)
                 ctrl.Close()
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return
     }
@@ -2248,7 +2285,8 @@ GDHO_ApplyHostMapping() {
             ApplyUnifiedWebViewAssets(GDHO_WV2)
             return
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try GDHO_WV2.SetVirtualHostNameToFolderMapping("app.local", A_ScriptDir, 0)
 }
@@ -2264,10 +2302,12 @@ GDHO_OnWebMessage(sender, args) {
                 m := Jxon_Load(raw)
                 if (m is Map)
                     msg := m
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     ; 2) Fallback path: WebMessageAsJson (object or quoted string).
     if !(msg is Map) {
@@ -2280,7 +2320,8 @@ GDHO_OnWebMessage(sender, args) {
                 if (m is Map)
                     msg := m
             }
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if !(msg is Map)
@@ -2296,7 +2337,8 @@ GDHO_OnWebMessage(sender, args) {
             try {
                 if GDHO_P2_IsEnabled()
                     GDHO_ApplyWindowPolicyFromGo(msg)
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
         return
@@ -2322,7 +2364,8 @@ GDHO_OnWebMessage(sender, args) {
             try {
                 if FuncExists("NativeDrop_HandlePanelRectsMessage")
                     NativeDrop_HandlePanelRectsMessage(args.WebMessageAsJson)
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
         return
@@ -2339,7 +2382,8 @@ GDHO_OnWebMessage(sender, args) {
                 try {
                     if GDHO_ShouldBlockStarryReentry()
                         return
-                } catch {
+                } catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
             }
             CoordMode("Mouse", "Screen")
@@ -2348,7 +2392,8 @@ GDHO_OnWebMessage(sender, args) {
                 try {
                     if GDHO_TryCommitTextHoleOnClick(mx, my)
                         return
-                } catch {
+                } catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
             }
         }
@@ -2531,12 +2576,11 @@ GDHO_HandleDropPayload(payload) {
             try {
                 if FloatingToolbar_HandleDroppedPayloadItems(items)
                     return
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
         if (files.Length > 0) {
-            if FuncExists("HoleWhisper_TryRouteAudioFiles") && HoleWhisper_TryRouteAudioFiles(files)
-                return
             try FloatingToolbar_HandleDroppedFiles(files)
             return
         }
@@ -2555,25 +2599,32 @@ GDHO_OnNavigationCompleted(sender, args) {
     failInfo := ""
     if !GDHO_READY {
         try failInfo .= " navErr=" . args.WebErrorStatus
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         try failInfo .= " isSuccess=" . (args.IsSuccess ? "1" : "0")
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         try failInfo .= " isHttp=" . (args.IsHttpStatusCodeSuccess ? "1" : "0")
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         try failInfo .= " status=" . args.HttpStatusCode
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         try failInfo .= " uri=" . args.Uri
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         try failInfo .= " page=" . GDHO_PAGE_URL
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         try failInfo .= " fallback=" . GDHO_FALLBACK_URL
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     GDHO_Trace("navigation_completed ok=" . (GDHO_READY ? "1" : "0") . failInfo)
@@ -2604,7 +2655,8 @@ GDHO_OnNavigationCompleted(sender, args) {
             try {
                 if FuncExists("NativeDrop_StartHitTestGuard")
                     NativeDrop_StartHitTestGuard()
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
         return
@@ -2633,7 +2685,8 @@ GDHO_ResizeToVirtualScreen() {
     rc.left := 0, rc.top := 0, rc.right := hostW, rc.bottom := hostH
     try
         GDHO_WV2_CTRL.Bounds := rc
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -2683,7 +2736,8 @@ GDHO_Trace(msg) {
     try NativeDropDiag_Log("gdho " . String(msg))
     catch {
         try OutputDebug("[GDHO] " . String(msg))
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 }
@@ -2741,7 +2795,8 @@ GDHO_ShowOverlay() {
                 try GDHO_Trace("show_overlay_skip policy=user_panel_until_exit")
                 return
             }
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     gui := GDHO_IsDecoupled() ? GDHO_GetStarryGui() : GDHO_GUI
@@ -2761,7 +2816,8 @@ GDHO_ShowOverlay() {
                     showOpt := "x" Integer(GDHO_LAST_HOST_X) " y" Integer(GDHO_LAST_HOST_Y) " w" Integer(GDHO_HOST_W) " h" Integer(GDHO_HOST_H) . " NoActivate"
                     gui.Show(showOpt)
                     GDHO_SetStarryClickThrough(true, "show_overlay_wait_ready")
-                } catch {
+                } catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
             }
         }
@@ -2845,14 +2901,16 @@ GDHO_KeepBelowToolbar() {
         if (IsSet(FloatingToolbarGUI) && IsObject(FloatingToolbarGUI) && (FloatingToolbarGUI is Gui)
             && (!IsSet(FloatingToolbarIsVisible) || FloatingToolbarIsVisible))
             anchorGui := FloatingToolbarGUI
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if !anchorGui {
         try {
             if (IsSet(FloatingBubbleGUI) && IsObject(FloatingBubbleGUI) && (FloatingBubbleGUI is Gui)
                 && IsSet(FloatingBubbleIsVisible) && FloatingBubbleIsVisible)
                 anchorGui := FloatingBubbleGUI
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if !anchorGui
@@ -2878,14 +2936,16 @@ GDHO_AnchorHoleUnderToolbar() {
         if (IsSet(FloatingToolbarGUI) && IsObject(FloatingToolbarGUI) && (FloatingToolbarGUI is Gui)
             && (!IsSet(FloatingToolbarIsVisible) || FloatingToolbarIsVisible))
             anchorGui := FloatingToolbarGUI
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if !anchorGui {
         try {
             if (IsSet(FloatingBubbleGUI) && IsObject(FloatingBubbleGUI) && (FloatingBubbleGUI is Gui)
                 && IsSet(FloatingBubbleIsVisible) && FloatingBubbleIsVisible)
                 anchorGui := FloatingBubbleGUI
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if !anchorGui
@@ -3016,7 +3076,8 @@ GDHO_HideOverlay() {
                 try GDHO_Trace("hide_overlay_skip text_hole_expand")
                 return
             }
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if FuncExists("GDHO_IsTextSelectionPreviewReady") && GDHO_IsTextSelectionPreviewReady() {
@@ -3033,7 +3094,8 @@ GDHO_HideOverlay() {
                 try GDHO_Trace("hide_overlay_skip panel_drag")
                 return
             }
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if FuncExists("GDHO_IsTextHoleUserPanelActive") {
@@ -3042,7 +3104,8 @@ GDHO_HideOverlay() {
                 try GDHO_Trace("hide_overlay_skip text_hole_panel")
                 return
             }
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if !GDHO_InternalCallAllowed() {
@@ -3069,12 +3132,14 @@ GDHO_HideOverlay() {
         skipPanelHide := false
         if FuncExists("GDHO_IsTextHoleUserPanelActive") {
             try skipPanelHide := GDHO_IsTextHoleUserPanelActive()
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
         if FuncExists("GDHO_IsPanelDragProtected") {
             try skipPanelHide := (skipPanelHide || GDHO_IsPanelDragProtected())
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
         if !skipPanelHide
@@ -3155,7 +3220,8 @@ GDHO_PushThemeToWeb() {
             if (m = "light")
                 tm := "light"
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     GDHO_RunJS("window.HoleOverlay?.setTheme({ themeMode: '" tm "', visualStyle: '" GDHO_VISUAL_STYLE "' })")
 }
@@ -3239,7 +3305,8 @@ GDHO_Update(payload := "file", x := "", y := "") {
         try {
             if GDHO_ShouldBlockStarryReentry()
                 return
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     nowTick := A_TickCount
@@ -3297,7 +3364,8 @@ GDHO_Update(payload := "file", x := "", y := "") {
                         return
                     if FuncExists("SelectionSense_IsSelectionHolePreviewActive") && SelectionSense_IsSelectionHolePreviewActive()
                         return
-                } catch {
+                } catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
             }
             try NativeDropDiag_Log("[Physical_Suck_UpdateFallback] dist=" . Format("{:.1f}", distToCenter))
@@ -3428,11 +3496,13 @@ GDHO_Start() {
     ; Text drags can be blocked before WebView/native Drop sees them, so keep the
     ; lightweight physical poller armed while hole mode is enabled.
     try GDHO_PrewarmOffscreen()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if FuncExists("GDHO_UseLauncherLayer") && GDHO_UseLauncherLayer() {
         try SetTimer(GDHO_PrewarmLauncherLayerHost, -180)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     GDHO_ArmPolling()
@@ -3470,7 +3540,8 @@ GDHO_Stop() {
                 try NativeDropDiag_Log("gdho stop skip launcher_cmd_in_flight")
                 return
             }
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     try NativeDropDiag_Log("gdho stop begin")
@@ -3480,7 +3551,8 @@ GDHO_Stop() {
     try {
         if FuncExists("NativeDrop_StopHitTestGuard")
             NativeDrop_StopHitTestGuard()
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     g_GDHO_TransitionCtx["allow"] := true
     try {
@@ -3590,17 +3662,20 @@ GDHO_ShouldBlockDecoupledPhysicalTextSuck() {
     try {
         if FuncExists("GDHO_IsTextSelectionPreviewReady") && GDHO_IsTextSelectionPreviewReady()
             return true
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try {
         if FuncExists("SelectionSense_IsSelectionHolePreviewActive") && SelectionSense_IsSelectionHolePreviewActive()
             return true
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try {
         if FuncExists("GDHO_IsTextHolePanelOpen") && GDHO_IsTextHolePanelOpen()
             return true
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     global g_GDHO_TextHoleCommitDone, g_GDHO_TextHoleAwaitingExpand
     if (g_GDHO_TextHoleAwaitingExpand && !(FuncExists("GDHO_IsTextHolePanelOpen") && GDHO_IsTextHolePanelOpen()))
@@ -3617,7 +3692,8 @@ GDHO_ForceSuckAction() {
                 try NativeDropDiag_Log("[Physical_Suck] blocked panel_active=1")
                 return
             }
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if (GDHO_PAYLOAD = "text" && FuncExists("GDHO_ShouldBlockDecoupledPhysicalTextSuck") && GDHO_ShouldBlockDecoupledPhysicalTextSuck()) {
@@ -3628,14 +3704,16 @@ GDHO_ForceSuckAction() {
             try {
                 if GDHO_TryCommitTextHoleOnClick(mxB, myB)
                     return
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
         if FuncExists("GDHO_CommitTextHoleToPanel") && FuncExists("GDHO_IsTextSelectionPreviewReady") {
             try {
                 if GDHO_IsTextSelectionPreviewReady() && GDHO_CommitTextHoleToPanel("physical_blocked", mxB, myB)
                     return
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
         return
@@ -3680,7 +3758,8 @@ GDHO_BeginTextSuckCapture(ticket, *) {
     skipSrcActivate := false
     if FuncExists("GDHO_IsTextHoleUserPanelActive") {
         try skipSrcActivate := GDHO_IsTextHoleUserPanelActive()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if (src > 0 && WinExist("ahk_id " src) && !skipSrcActivate) {
@@ -3731,7 +3810,8 @@ GDHO_FinishSuckSession(*) {
                 skipPostSuck := true
             else if FuncExists("GDHO_IsTextHoleAwaitingExpand") && GDHO_IsTextHoleAwaitingExpand()
                 skipPostSuck := true
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         if !skipPostSuck && !(FuncExists("GDHO_IsPostSuckProtected") && GDHO_IsPostSuckProtected())
             GDHO_ArmPostSuckPanelTimer("finish_suck_fallback")
@@ -3751,7 +3831,8 @@ GDHO_ResetSession(*) {
                 keepSessionText := true
             else if FuncExists("SelectionSense_IsSelectionHolePreviewActive") && SelectionSense_IsSelectionHolePreviewActive()
                 keepSessionText := true
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if FuncExists("GDHO_ClearTextDragHandoff")
@@ -3815,7 +3896,8 @@ GDHO_PinToDesktop(payload := "text") {
                     try GDHO_Trace("desktop_pin_skip_starry policy=user_panel_until_exit")
                     return
                 }
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
         if !(FuncExists("GDHO_IsTextHoleUserPanelActive") && GDHO_IsTextHoleUserPanelActive())
@@ -3854,10 +3936,12 @@ GDHO_CaptureSelectedTextViaCopy() {
         oldClip := ""
     }
     try A_Clipboard := ""
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try Send("^c")
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try out := Trim(String(A_Clipboard))
     catch {
@@ -3866,7 +3950,8 @@ GDHO_CaptureSelectedTextViaCopy() {
     try {
         if hadOld
             A_Clipboard := oldClip
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return out
 }
@@ -3983,7 +4068,8 @@ GDHO_PollDrag(*) {
                         skipMouseReleaseClose := true
                     else if FuncExists("SelectionSense_IsSelectionHolePreviewActive") && SelectionSense_IsSelectionHolePreviewActive()
                         skipMouseReleaseClose := true
-                } catch {
+                } catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
             }
             if skipMouseReleaseClose {
@@ -4002,7 +4088,8 @@ GDHO_PollDrag(*) {
                             skipIdleClose := true
                         else if FuncExists("GDHO_IsTextHolePanelOpen") && GDHO_IsTextHolePanelOpen()
                             skipIdleClose := true
-                    } catch {
+                    } catch as _e {
+                        NmerCatch(A_ThisFunc, _e) 
                     }
                 }
                 if !skipIdleClose
@@ -4378,7 +4465,8 @@ GDHO_IsOwnProcessHwnd(hwnd) {
         pname := StrLower(WinGetProcessName("ahk_id " hwnd))
         if InStr(pname, "autohotkey")
             return true
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return false
 }
@@ -4455,8 +4543,6 @@ GDHO_TryHandleExplorerDrop() {
         }
     }
     if (files.Length > 0) {
-        if FuncExists("HoleWhisper_TryRouteAudioFiles") && HoleWhisper_TryRouteAudioFiles(files)
-            return
         try FloatingToolbar_HandleDroppedFiles(files)
     }
 }

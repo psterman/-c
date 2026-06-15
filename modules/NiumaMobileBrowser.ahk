@@ -134,7 +134,8 @@ NiumaMobileBrowser_Log(prefix, reqId, msg) {
         if !DirExist(dir)
             DirCreate(dir)
         FileAppend(line, NIUMA_MOBILE_SNAPSHOT_DEBUG_LOG, "UTF-8")
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -203,7 +204,8 @@ NiumaMobileBrowser_LoadScriptFile(name, &out) {
     path := NiumaMobileBrowser_ModuleDir() . name
     if !FileExist(path) {
         try OutputDebug("[NiumaMobile] missing script: " . path)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return false
     }
@@ -340,7 +342,8 @@ NiumaMobileBrowser_ChatWv2() {
         wv2 := Func("FloatingToolbar_GetChatWv2").Call()
         if IsObject(wv2)
             return wv2
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     ; 兜底回退：使用全局 g_FTB_WV2（同一脚本进程共享），并在日志里记录
     global g_FTB_WV2
@@ -567,7 +570,8 @@ NiumaMobileBrowser_EnsureReactInputInjected() {
         ).await(2000)
         if (InStr(String(raw), "true"))
             return true
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try g_NiumaMobile_WV2.ExecuteScriptAsync(JS_MOBILE_REACT_INPUT).await(3000)
     catch {
@@ -600,7 +604,8 @@ NiumaMobileBrowser_OnChromeWebMessageRawFallback(raw) {
             NiumaMobileBrowser_DispatchChromeBrowserMessage(msg)
             return
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if InStr(r, "niuma_browser_chrome_sheet") {
         NiumaMobileBrowser_SetChromeSheetOpen(InStr(r, '"open":1') || InStr(r, '"open":true'))
@@ -660,7 +665,8 @@ NiumaMobileBrowser_OnChromeWebMessageRawFallback(raw) {
             msg := (%"Jxon_Load"%).Call(r)
             if (msg is Map)
                 NiumaMobileBrowser_HandleContextMenuWebMessage(msg)
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return
     }
@@ -701,10 +707,12 @@ NiumaMobileBrowser_ParseChromeWebMessage(args) {
                 m := (%"Jxon_Load"%).Call(raw)
                 if (m is Map)
                     return m
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try {
         jsonStr := args.WebMessageAsJson
@@ -715,7 +723,8 @@ NiumaMobileBrowser_ParseChromeWebMessage(args) {
             if (m is Map)
                 return m
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return 0
 }
@@ -735,7 +744,8 @@ NiumaMobileBrowser_OnControllerReady(ctrl) {
     try g_NiumaMobile_WV2 := ctrl.CoreWebView2
     if !IsObject(g_NiumaMobile_WV2) {
         try ctrl.Close()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         g_NiumaMobile_Ctrl := 0
         NiumaMobileBrowser_Log("GUARD", "", "OPEN OnControllerReady abort: CoreWebView2 为空")
@@ -750,12 +760,13 @@ NiumaMobileBrowser_OnControllerReady(ctrl) {
     try ctrl.DefaultBackgroundColor := 0xFF0A0A0A
     try ctrl.IsVisible := true
     try ctrl.ZoomFactor := 1.0
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try NiumaMobileBrowser_ApplyBounds(g_NiumaMobile_ParentHwnd)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
-
     NiumaMobileBrowser_EnsureChromeHostGui(g_NiumaMobile_ParentHwnd)
     NiumaMobileBrowser_EnsureContentHostGui(g_NiumaMobile_ParentHwnd)
     NiumaMobileBrowser_EnsureChromeBottomHostGui(g_NiumaMobile_ParentHwnd)
@@ -772,10 +783,12 @@ NiumaMobileBrowser_OnControllerReady(ctrl) {
             s.IsWebMessageEnabled := true
             s.AreHostObjectsAllowed := true
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try NiumaMobileBrowser_TryCallFunc("WebView2_RegisterHostBridge", g_NiumaMobile_WV2)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     NiumaMobileBrowser_PushChromeState()
     if NiumaMobileBrowser_EnsureLabelScripts()
@@ -813,9 +826,9 @@ NiumaMobileBrowser_OnControllerReady(ctrl) {
     if (url = "")
         url := "about:blank"
     try g_NiumaMobile_WV2.Navigate(url)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
-
     NiumaMobileBrowser_Log("GUARD", "", "OPEN 完成 Navigate=" . url)
     NiumaMobileBrowser_NotifyState(true, url)
     NiumaMobileBrowser_TryCallFunc("FloatingToolbar_AfterMobileBrowserOpen")
@@ -838,7 +851,8 @@ NiumaMobileBrowser_DeferredLayout(hwnd, *) {
     if !IsObject(g_NiumaMobile_ChromeBottomWV2)
         NiumaMobileBrowser_EnsureChromeBottomWebView()
     try NiumaMobileBrowser_ApplyBounds(hwnd)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if !NiumaMobileBrowser_IsMouseInMobileArea()
         NiumaMobileBrowser_RequestChromeCollapseAnimated()
@@ -864,13 +878,15 @@ NiumaMobileBrowser_OnNavigationCompleted(sender, args) {
     try {
         if IsObject(args) && args.HasProp("IsSuccess") && !args.IsSuccess
             navOk := false
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try {
         uNav := g_NiumaMobile_WV2.SourceUri
         if (uNav != "")
             g_NiumaMobile_LastKnownUrl := String(uNav)
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     NiumaMobileBrowser_PushChromeState()
     if (g_NiumaMobile_NavigateWatchdogActive && String(g_NiumaMobile_NavigateAckReqId) != "") {
@@ -879,10 +895,12 @@ NiumaMobileBrowser_OnNavigationCompleted(sender, args) {
         NiumaMobileBrowser_FireNavigateAckOnce(g_NiumaMobile_NavigateAckReqId, navOk, navOk ? "" : "navigation_failed")
     }
     try g_NiumaMobile_WV2.ExecuteScriptAsync(NIUMA_MOBILE_INJECT_JS)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try g_NiumaMobile_WV2.ExecuteScriptAsync(NiumaMobileBrowser_BuildContextMenuScript())
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if (JS_MOBILE_REACT_INPUT != "") {
         if NiumaMobileBrowser_EnsureLabelScripts()
@@ -890,11 +908,13 @@ NiumaMobileBrowser_OnNavigationCompleted(sender, args) {
     }
     ; 注入调试悬浮窗（右侧浏览器）
     try NiumaMobileBrowser_EnsureTraceOverlayInjected()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if (JS_MOBILE_SETTLE != "") {
         try g_NiumaMobile_WV2.ExecuteScriptAsync(JS_MOBILE_SETTLE)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if g_NiumaMobile_SettleNavPending {
@@ -919,10 +939,12 @@ NiumaMobileBrowser_OnNavigationCompleted(sender, args) {
         }
     }
     try NiumaMobileBrowser_InjectMobileZoneTracker()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try NiumaMobileBrowser_InjectContextMenuScript()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -945,7 +967,8 @@ NiumaMobileBrowser_RegisterMobileZoneDocumentScript() {
     try {
         g_NiumaMobile_WV2.AddScriptToExecuteOnDocumentCreatedAsync(NiumaMobileBrowser_BuildMobileZoneTrackerScript("content"))
         g_NiumaMobile_ZoneDocScriptRegistered := true
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -954,10 +977,12 @@ NiumaMobileBrowser_InjectMobileZoneTracker() {
     if !g_NiumaMobile_WV2
         return
     try g_NiumaMobile_WV2.ExecuteScriptAsync(NiumaMobileBrowser_BuildMobileZoneTrackerScript("content"))
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try g_NiumaMobile_WV2.ExecuteScriptAsync(NiumaMobileBrowser_BuildContextMenuScript())
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -998,7 +1023,8 @@ NiumaMobileBrowser_RegisterContextMenuDocumentScript() {
     try {
         g_NiumaMobile_WV2.AddScriptToExecuteOnDocumentCreatedAsync(NiumaMobileBrowser_BuildContextMenuScript())
         g_NiumaMobile_CtxDocScriptRegistered := true
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -1007,7 +1033,8 @@ NiumaMobileBrowser_InjectContextMenuScript() {
     if !g_NiumaMobile_WV2
         return
     try g_NiumaMobile_WV2.ExecuteScriptAsync(NiumaMobileBrowser_BuildContextMenuScript())
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -1079,7 +1106,8 @@ NiumaMobileBrowser_EnsureTraceOverlayInjected() {
         return false
     ; 版本戳：用于确认右侧悬浮窗是否加载到最新脚本
     try g_NiumaMobile_WV2.ExecuteScriptAsync("window.__NIUMA_TRACE_OVERLAY_VER__='" . NiumaMobileBrowser_EscapeJsSingle(A_Now) . "';")
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try g_NiumaMobile_WV2.ExecuteScriptAsync(JS_MOBILE_TRACE_OVERLAY)
     catch {
@@ -1093,7 +1121,8 @@ NiumaMobileBrowser_TraceOverlayPush(line, level := "") {
     if !g_NiumaMobile_WV2
         return false
     try NiumaMobileBrowser_EnsureTraceOverlayInjected()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     s := NiumaMobileBrowser_EscapeJsSingle(String(line))
     lv := NiumaMobileBrowser_EscapeJsSingle(String(level))
@@ -1119,11 +1148,13 @@ NiumaMobileBrowser_CheckChatInjectConsumed(reqId, *) {
     }
     _seen[rid] := A_TickCount
     try NiumaMobileBrowser_TraceOverlayPush("CHAT 消费检查 start rid=" . rid, "warn")
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if !wv2 {
         try NiumaMobileBrowser_TraceOverlayPush("CHAT 消费检查 abort: ChatWv2 为空 rid=" . rid, "err")
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return
     }
@@ -1136,10 +1167,12 @@ NiumaMobileBrowser_CheckChatInjectConsumed(reqId, *) {
         s2 := Trim(String(s))
         if (s2 = "" || s2 = "null") {
             try NiumaMobileBrowser_TraceOverlayPush("CHAT 注入未被消费 rid=" . rid . " (var=null)，改走 HostObject 注入", "warn")
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             try NiumaMobileBrowser_InjectCachedSnapshotViaHostObject(wv2, rid)
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             return
         }
@@ -1149,11 +1182,13 @@ NiumaMobileBrowser_CheckChatInjectConsumed(reqId, *) {
             if RegExMatch(s2, '"err"\s*:\s*"((?:[^"\\]|\\.)*)"', &mE2)
                 em := mE2[1]
             try NiumaMobileBrowser_TraceOverlayPush("CHAT 注入解析失败 rid=" . rid . " err=" . SubStr(em, 1, 140), "err")
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             ; parse_error 时无法确认是否消费成功：走 HostObject 补注入
             try NiumaMobileBrowser_InjectCachedSnapshotViaHostObject(wv2, rid)
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             return
         }
@@ -1162,16 +1197,19 @@ NiumaMobileBrowser_CheckChatInjectConsumed(reqId, *) {
             _seen[rid] := "ok"
         } else {
             try NiumaMobileBrowser_TraceOverlayPush("CHAT 注入已消费但 rid 不匹配 rid=" . rid . " raw=" . SubStr(s2, 1, 80), "warn")
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             ; 很可能是别的 rid 覆盖了 __NIUMA_LAST_HOSTINJECT__：走 HostObject 补注入兜底
             try NiumaMobileBrowser_InjectCachedSnapshotViaHostObject(wv2, rid)
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
     } catch as e {
         try NiumaMobileBrowser_TraceOverlayPush("CHAT 注入消费检查失败 rid=" . rid . " err=" . e.Message, "warn")
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 }
@@ -1211,7 +1249,8 @@ NiumaMobileBrowser_EnsureLabelDebugOnPage(on := true) {
     flag := on ? "true" : "false"
     script := "(function(){try{window.__NIUMA_LABEL_DEBUG__=" . flag . ";return 'ok';}catch(e){return '';}})()"
     try g_NiumaMobile_WV2.ExecuteScriptAsync(script)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -1246,11 +1285,13 @@ NiumaMobileBrowser_OnNewWindowRequested(sender, args) {
     try {
         args.Handled := true
         uri := args.Uri
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if (uri != "" && g_NiumaMobile_WV2) {
         try g_NiumaMobile_WV2.Navigate(uri)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 }
@@ -1329,7 +1370,8 @@ NiumaMobileBrowser_ApplyBounds(parentHwnd := 0) {
             g_NiumaMobile_Ctrl.Bounds := rc
             g_NiumaMobile_Ctrl.NotifyParentWindowPositionChanged()
             g_NiumaMobile_Ctrl.IsVisible := true
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if expanded {
@@ -1346,7 +1388,8 @@ NiumaMobileBrowser_HideChromeCtrls() {
         if !IsObject(ctrl)
             continue
         try ctrl.IsVisible := false
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 }
@@ -1356,7 +1399,8 @@ NiumaMobileBrowser_ApplyChromeCtrlBounds(ctrl, hostHwnd, w, h) {
         return
     if (h < 1) {
         try ctrl.IsVisible := false
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return
     }
@@ -1378,7 +1422,8 @@ NiumaMobileBrowser_ApplyChromeCtrlBounds(ctrl, hostHwnd, w, h) {
         ctrl.Bounds := rc
         ctrl.NotifyParentWindowPositionChanged()
         ctrl.IsVisible := true
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -1389,7 +1434,8 @@ NiumaMobileBrowser_ApplyChromeSheetVisual(open := false) {
     flag := open ? "true" : "false"
     script := "(function(){try{if(window.__niumaChromeSheetVisual)window.__niumaChromeSheetVisual(" . flag . ");}catch(e){}})()"
     try g_NiumaMobile_ChromeWV2.ExecuteScriptAsync(script)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -1415,7 +1461,8 @@ NiumaMobileBrowser_SetChromeExpanded(expanded, force := false) {
     }
     NiumaMobileBrowser_ResetChromeLayoutCache()
     try NiumaMobileBrowser_ApplyBounds(g_NiumaMobile_ParentHwnd)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     NiumaMobileBrowser_PushChromeState(true)
     NiumaMobileBrowser_SyncChromeLayoutScript()
@@ -1427,7 +1474,8 @@ NiumaMobileBrowser_SyncChromeLayoutScript() {
         if !IsObject(wv2)
             continue
         try wv2.ExecuteScriptAsync("try{if(typeof syncUi==='function')syncUi();}catch(e){}")
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 }
@@ -1507,10 +1555,12 @@ NiumaMobileBrowser_PushChromeMenuState(expanded) {
             if !IsObject(wv2)
                 continue
             try wv2.PostWebMessageAsJson(json)
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -1521,7 +1571,8 @@ NiumaMobileBrowser_InvokeChromeHideScript() {
         if !IsObject(wv2)
             continue
         try wv2.ExecuteScriptAsync(js)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 }
@@ -1660,7 +1711,8 @@ NiumaMobileBrowser_RaiseChromeHosts() {
         if !hwnd
             continue
         try DllCall("SetWindowPos", "Ptr", hwnd, "Ptr", 0, "Int", 0, "Int", 0, "Int", 0, "Int", 0, "UInt", 0x0013)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 }
@@ -1690,7 +1742,8 @@ NiumaMobileBrowser_DestroyChromeHostGui() {
     if !IsObject(g_NiumaMobile_ChromeGui)
         return
     try g_NiumaMobile_ChromeGui.Destroy()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     g_NiumaMobile_ChromeGui := 0
 }
@@ -1701,7 +1754,8 @@ NiumaMobileBrowser_DestroyContentHostGui() {
     if !IsObject(g_NiumaMobile_ContentGui)
         return
     try g_NiumaMobile_ContentGui.Destroy()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     g_NiumaMobile_ContentGui := 0
 }
@@ -1719,7 +1773,8 @@ NiumaMobileBrowser_CreateChildHostGui(parentHwnd, bgColor := "16181d") {
         DllCall("SetWindowLongPtr", "Ptr", hwnd, "Int", -16, "Ptr", style, "Ptr")
         if !DllCall("SetParent", "Ptr", hwnd, "Ptr", parentHwnd, "Ptr") {
             try g.Destroy()
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             return 0
         }
@@ -1739,7 +1794,8 @@ NiumaMobileBrowser_EnsureContentHostGui(parentHwnd := 0) {
     try {
         if IsObject(g_NiumaMobile_ContentGui)
             g_NiumaMobile_ContentGui.Destroy()
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     g_NiumaMobile_ContentGui := 0
     g_NiumaMobile_ContentHostHwnd := 0
@@ -1789,7 +1845,8 @@ NiumaMobileBrowser_ChromeNavigateFromEdit(*) {
     if (u = "")
         return
     try g_NiumaMobile_ChromeUrlEdit.Value := u
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     NiumaMobileBrowser_Log("CHROME", "", "navigate edit -> " . SubStr(u, 1, 96))
     NiumaMobileBrowser_Navigate(u)
@@ -1803,16 +1860,19 @@ NiumaMobileBrowser_StartChromeUrlEnterHook(*) {
     try {
         Hotkey("IfWinActive", "ahk_id " . g_NiumaMobile_ChromeUrlEdit.Hwnd)
         Hotkey("Enter", NiumaMobileBrowser_ChromeNavigateFromEdit, "On")
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
 NiumaMobileBrowser_StopChromeUrlEnterHook(*) {
     try Hotkey("Enter", "Off")
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try Hotkey("IfWinActive")
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -1874,7 +1934,8 @@ NiumaMobileBrowser_ShowChromeMenu(*) {
         m.Show(wx + bx, wy + by + bh)
     } catch {
         try m.Show()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 }
@@ -1885,22 +1946,26 @@ NiumaMobileBrowser_DisposeLegacyChromeWebView() {
     g_NiumaMobile_ChromeCreatePending := false
     if IsObject(g_NiumaMobile_ChromeWV2) && g_NiumaMobile_ChromeTokenMsg {
         try g_NiumaMobile_ChromeWV2.remove_WebMessageReceived(g_NiumaMobile_ChromeTokenMsg)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if IsObject(g_NiumaMobile_ChromeWV2) && g_NiumaMobile_ChromeTokenCtxMenu {
         try g_NiumaMobile_ChromeWV2.remove_ContextMenuRequested(g_NiumaMobile_ChromeTokenCtxMenu)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     g_NiumaMobile_ChromeTokenMsg := 0
     g_NiumaMobile_ChromeTokenCtxMenu := 0
     if g_NiumaMobile_ChromeCtrl {
         try g_NiumaMobile_ChromeCtrl.IsVisible := false
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         try g_NiumaMobile_ChromeCtrl.Close()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     g_NiumaMobile_ChromeCtrl := 0
@@ -1941,7 +2006,8 @@ NiumaMobileBrowser_PositionChildHost(hostHwnd, x, y, w, h, show := true) {
         h := 0
     }
     try DllCall("SetWindowPos", "Ptr", hostHwnd, "Ptr", 0, "Int", x, "Int", y, "Int", w, "Int", h, "UInt", flags)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -2052,7 +2118,8 @@ NiumaMobileBrowser_NavigateChromeHtml(pane := "top") {
             wv2.Navigate(chromeUrl)
             NiumaMobileBrowser_Log("CHROME", "", "Navigate pane=" . paneQ . " " . SubStr(chromeUrl, 1, 96))
             return true
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if !FileExist(htmlPath) {
@@ -2096,22 +2163,26 @@ NiumaMobileBrowser_DisposeChromeBottomWebView() {
     g_NiumaMobile_ChromeBottomCreatePending := false
     if IsObject(g_NiumaMobile_ChromeBottomWV2) && g_NiumaMobile_ChromeBottomTokenMsg {
         try g_NiumaMobile_ChromeBottomWV2.remove_WebMessageReceived(g_NiumaMobile_ChromeBottomTokenMsg)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if IsObject(g_NiumaMobile_ChromeBottomWV2) && g_NiumaMobile_ChromeBottomTokenCtxMenu {
         try g_NiumaMobile_ChromeBottomWV2.remove_ContextMenuRequested(g_NiumaMobile_ChromeBottomTokenCtxMenu)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     g_NiumaMobile_ChromeBottomTokenMsg := 0
     g_NiumaMobile_ChromeBottomTokenCtxMenu := 0
     if g_NiumaMobile_ChromeBottomCtrl {
         try g_NiumaMobile_ChromeBottomCtrl.IsVisible := false
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         try g_NiumaMobile_ChromeBottomCtrl.Close()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     g_NiumaMobile_ChromeBottomCtrl := 0
@@ -2124,7 +2195,8 @@ NiumaMobileBrowser_DestroyChromeBottomHostGui() {
     if !IsObject(g_NiumaMobile_ChromeBottomGui)
         return
     try g_NiumaMobile_ChromeBottomGui.Destroy()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     g_NiumaMobile_ChromeBottomGui := 0
 }
@@ -2160,7 +2232,8 @@ NiumaMobileBrowser_EnsureChromeBottomWebView() {
 
 NiumaMobileBrowser_OnChromeNavigationCompleted(sender, args) {
     try NiumaMobileBrowser_TryCallFunc("WebView2_RegisterHostBridge", sender)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     NiumaMobileBrowser_PushChromeState(true)
 }
@@ -2178,7 +2251,8 @@ NiumaMobileBrowser_SetupChromeController(ctrl, pane := "top") {
     try wv2 := ctrl.CoreWebView2
     if !IsObject(wv2) {
         try ctrl.Close()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return false
     }
@@ -2191,7 +2265,8 @@ NiumaMobileBrowser_SetupChromeController(ctrl, pane := "top") {
     }
     try ctrl.DefaultBackgroundColor := 0x00000000
     try ctrl.ZoomFactor := 1.0
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try NiumaMobileBrowser_TryCallFunc("WebView2_RegisterHostBridge", wv2)
     try {
@@ -2199,17 +2274,20 @@ NiumaMobileBrowser_SetupChromeController(ctrl, pane := "top") {
             g_NiumaMobile_ChromeBottomTokenMsg := wv2.add_WebMessageReceived(NiumaMobileBrowser_OnChromeWebMessage)
         else
             g_NiumaMobile_ChromeTokenMsg := wv2.add_WebMessageReceived(NiumaMobileBrowser_OnChromeWebMessage)
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try wv2.add_NavigationCompleted(NiumaMobileBrowser_OnChromeNavigationCompleted)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try {
         if isBottom
             g_NiumaMobile_ChromeBottomTokenCtxMenu := wv2.add_ContextMenuRequested(NiumaMobileBrowser_OnContextMenuRequested)
         else
             g_NiumaMobile_ChromeTokenCtxMenu := wv2.add_ContextMenuRequested(NiumaMobileBrowser_OnContextMenuRequested)
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try {
         s := wv2.Settings
@@ -2220,13 +2298,15 @@ NiumaMobileBrowser_SetupChromeController(ctrl, pane := "top") {
             s.IsWebMessageEnabled := true
             s.AreHostObjectsAllowed := true
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     NiumaMobileBrowser_ApplyWv2Assets(wv2)
     NiumaMobileBrowser_NavigateChromeHtml(pane)
     NiumaMobileBrowser_ResetChromeLayoutCache()
     try NiumaMobileBrowser_ApplyBounds(g_NiumaMobile_ParentHwnd)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if isBottom && !NiumaMobileBrowser_IsMouseInMobileArea()
         NiumaMobileBrowser_RequestChromeCollapseAnimated()
@@ -2249,11 +2329,13 @@ NiumaMobileBrowser_OnChromeWebMessage(sender, args) {
     if !(msg is Map) || !msg.Has("type") {
         raw := ""
         try raw := args.TryGetWebMessageAsString()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         if (raw = "") {
             try raw := args.WebMessageAsJson
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
         NiumaMobileBrowser_OnChromeWebMessageRawFallback(String(raw))
@@ -2387,7 +2469,8 @@ NiumaMobileBrowser_PushChromeState(force := false) {
             u2 := g_NiumaMobile_WV2.SourceUri
             if (u2 != "")
                 u := String(u2)
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     tm := NiumaMobileBrowser_GetThemeMode()
@@ -2415,10 +2498,12 @@ NiumaMobileBrowser_PushChromeState(force := false) {
             if !IsObject(wv2)
                 continue
             try wv2.PostWebMessageAsJson(json)
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -2446,7 +2531,8 @@ NiumaMobileBrowser_Back() {
             g_NiumaMobile_WV2.GoBack()
             return true
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return false
 }
@@ -2458,7 +2544,8 @@ NiumaMobileBrowser_Reload() {
     try {
         g_NiumaMobile_WV2.Reload()
         return true
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return false
 }
@@ -2468,7 +2555,8 @@ NiumaMobileBrowser_CanGoBack() {
     if !g_NiumaMobile_WV2
         return false
     try return !!g_NiumaMobile_WV2.CanGoBack
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return false
 }
@@ -2478,7 +2566,8 @@ NiumaMobileBrowser_CanGoForward() {
     if !g_NiumaMobile_WV2
         return false
     try return !!g_NiumaMobile_WV2.CanGoForward
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return false
 }
@@ -2492,7 +2581,8 @@ NiumaMobileBrowser_Forward() {
             g_NiumaMobile_WV2.GoForward()
             return true
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return false
 }
@@ -2651,44 +2741,54 @@ NiumaMobileBrowser_ParseContextMenuTarget(args) {
         if IsObject(t) {
             kindNum := 0
             try kindNum := Integer(t.Kind)
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             kindMap := Map(0, "page", 1, "image", 2, "selection", 3, "audio", 4, "video")
             tgt["kind"] := kindMap.Has(kindNum) ? kindMap[kindNum] : "page"
             try tgt["hasLink"] := !!t.HasLinkUri
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             try tgt["linkUri"] := String(t.LinkUri)
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             try tgt["linkText"] := String(t.LinkText)
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             try tgt["hasSelection"] := !!t.HasSelection
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             try tgt["selection"] := String(t.Selection)
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             try tgt["isEditable"] := !!t.IsEditable
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             try tgt["pageUri"] := String(t.PageUri)
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             try {
                 if t.HasSourceUri {
                     tgt["hasMedia"] := true
                     tgt["mediaUri"] := String(t.SourceUri)
                 }
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             if (tgt["hasLink"])
                 tgt["kind"] := "link"
             else if (tgt["hasMedia"] && tgt["kind"] = "page")
                 tgt["kind"] := "image"
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return tgt
 }
@@ -2710,7 +2810,8 @@ NiumaMobileBrowser_HandleContextMenuWebMessage(msg) {
     sx := msg.Has("screenX") ? Integer(msg["screenX"]) : 0
     sy := msg.Has("screenY") ? Integer(msg["screenY"]) : 0
     try NiumaMobileBrowser_Log("CTX", "", "context_menu kind=" . NiumaMobileBrowser_CtxKindOf(tgt) . " xy=" . sx . "," . sy)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     NiumaMobileBrowser_OpenContextMenuFromTarget(tgt, sx, sy)
 }
@@ -2759,10 +2860,12 @@ NiumaMobileBrowser_ResolveContextMenuIds(tgt := "") {
 NiumaMobileBrowser_OnContextMenuRequested(sender, args) {
     deferral := 0
     try args.Handled := true
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try deferral := args.GetDeferral()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     tgt := NiumaMobileBrowser_ParseContextMenuTarget(args)
     sx := 0
@@ -2793,12 +2896,14 @@ NiumaMobileBrowser_OnContextMenuRequested(sender, args) {
                 }
             }
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try {
         if IsObject(deferral)
             deferral.Complete()
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     NiumaMobileBrowser_OpenContextMenuFromTarget(tgt, sx, sy)
 }
@@ -2816,7 +2921,8 @@ NiumaMobileBrowser_CopyTextToClipboard(text) {
         A_Clipboard := ""
         A_Clipboard := txt
         return ClipWait(1)
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return false
 }
@@ -2876,7 +2982,8 @@ NiumaMobileBrowser_ExecuteCtxCmd(cmdId) {
                 s2 := NiumaMobileBrowser_UnquoteScriptResult(raw)
                 if (s2 != "")
                     NiumaMobileBrowser_CopyTextToClipboard(s2)
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
         return
@@ -2885,7 +2992,8 @@ NiumaMobileBrowser_ExecuteCtxCmd(cmdId) {
         u := tgt.Has("pageUri") ? String(tgt["pageUri"]) : ""
         if (u = "" && g_NiumaMobile_WV2) {
             try u := g_NiumaMobile_WV2.SourceUri
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
         if (u != "")
@@ -2907,7 +3015,8 @@ NiumaMobileBrowser_ExecuteCtxCmd(cmdId) {
             . "else{el.value=(el.value||'')+t;}"
             . "el.dispatchEvent(new Event('input',{bubbles:true}));return true;}catch(e){return false;}})();"
         try g_NiumaMobile_WV2.ExecuteScriptAsync(js)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return
     }
@@ -2919,7 +3028,8 @@ NiumaMobileBrowser_ExecuteCtxCmd(cmdId) {
                 . "if(el&&el.isContentEditable){el.focus();document.execCommand('selectAll',false,null);return true;}"
                 . "document.execCommand('selectAll',false,null);return true;}catch(e){return false;}})();"
             try g_NiumaMobile_WV2.ExecuteScriptAsync(js)
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
         return
@@ -2928,12 +3038,14 @@ NiumaMobileBrowser_ExecuteCtxCmd(cmdId) {
         u := NiumaMobileBrowser_CtxPrimaryUri(tgt)
         if (u = "" && g_NiumaMobile_WV2) {
             try u := g_NiumaMobile_WV2.SourceUri
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
         if (u != "")
             try Run(u)
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         return
     }
@@ -2959,7 +3071,8 @@ NiumaMobileBrowser_ExecuteCtxCmd(cmdId) {
         u := tgt.Has("mediaUri") ? Trim(String(tgt["mediaUri"])) : ""
         if (u != "")
             try Run(u)
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         return
     }
@@ -2967,7 +3080,8 @@ NiumaMobileBrowser_ExecuteCtxCmd(cmdId) {
         u := NiumaMobileBrowser_CtxPrimaryUri(tgt)
         if (u = "" && g_NiumaMobile_WV2) {
             try u := g_NiumaMobile_WV2.SourceUri
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
         if (u != "")
@@ -2991,7 +3105,8 @@ NiumaMobileBrowser_ExecuteCtxCmd(cmdId) {
         NiumaMobileBrowser_PushChromeState(true)
         NiumaMobileBrowser_NotifyState(NiumaMobileBrowser_IsOpen())
         try NiumaMobileBrowser_TraceOverlayPush(g_NiumaMobile_AiPaused ? "AI 操控已暂停" : "AI 操控已恢复", "success")
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return
     }
@@ -3002,7 +3117,8 @@ NiumaMobileBrowser_ExecuteCtxCmd(cmdId) {
     try {
         if IsSet(_ExecuteCommand)
             _ExecuteCommand(c)
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -3042,7 +3158,8 @@ NiumaMobileBrowser_ShowContextMenuAt(posX, posY) {
     try {
         if IsSet(_VK_EnsureSceneMenus)
             _VK_EnsureSceneMenus()
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     MenuItems := []
     cmdList := Map()
@@ -3078,10 +3195,12 @@ NiumaMobileBrowser_ShowContextMenuAt(posX, posY) {
             NiumaMobileBrowser_ShowContextMenuFallback(MenuItems, px + 2, py + 2)
     } catch as e {
         try NiumaMobileBrowser_Log("CTX", "", "ShowContextMenu: " . e.Message)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         try NiumaMobileBrowser_ShowContextMenuFallback(MenuItems, px + 2, py + 2)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 }
@@ -3099,7 +3218,8 @@ NiumaMobileBrowser_ShowContextMenuFallback(MenuItems, posX, posY) {
             m.Add(lbl)
     }
     try m.Show(posX, posY)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -3115,7 +3235,8 @@ NiumaMobileBrowser_StartNavigateAction(actionType, reqId := "") {
     g_NiumaMobile_NavigateAckAction := String(actionType)
     g_NiumaMobile_NavigateWatchdogActive := true
     try g_NiumaMobile_NavigateCoreEventFired.Delete(rid)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     g_NiumaMobile_NavigateCoreEventFired[rid] := false
     SetTimer(NiumaMobileBrowser_NavigateWatchdogTimeout, -3500)
@@ -3266,7 +3387,8 @@ NiumaMobileBrowser_QueueActToChat(typ, reqId, ok := false, err := "", action := 
     try {
         lvl := (typ = "host_browser_act_error" || !ok) ? "err" : (cancelled ? "warn" : "success")
         NiumaMobileBrowser_TraceOverlayPush("ACT " . String(action) . " #" . Integer(elementId) . " ok=" . (ok ? 1 : 0) . " stage=" . st . " err=" . String(err), lvl)
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     json := '{"type":"' . typ . '","reqId":"' . NiumaMobileBrowser_EscapeJsonStr(rid) . '"'
         . ',"ok":' . (ok ? "true" : "false")
@@ -3299,7 +3421,8 @@ NiumaMobileBrowser_QueueActToChat(typ, reqId, ok := false, err := "", action := 
         try {
             if !NiumaMobileBrowser_TryCallFunc("WebView_QueueJson", wv2, legacy)
                 wv2.PostWebMessageAsJson(legacy)
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         NiumaMobileBrowser_TryCallFunc("FloatingToolbar_CompatOnActAck", rid)
     }
@@ -3354,7 +3477,8 @@ NiumaMobileBrowser_OnScriptResult(jobId, rawResult, ok := true, err := "") {
     g_NiumaMobile_Jobs.Delete(jobId)
     if card.Has("watchdog") {
         try SetTimer(card["watchdog"], 0)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     reqLog := card.Has("reqId") ? String(card["reqId"]) : ""
@@ -3440,7 +3564,8 @@ NiumaMobileBrowser_UnquoteScriptResult(raw) {
             obj := NiumaMobileBrowser_CallFunc("Jxon_Load", wrapped)
             if (obj is Map && obj.Has("v"))
                 return String(obj["v"])
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         s := SubStr(s, 2, StrLen(s) - 2)
         s := StrReplace(s, '\\n', "`n")
@@ -3519,7 +3644,8 @@ NiumaMobileBrowser_NotifyStateLive(url := "") {
     global g_NiumaMobile_WV2
     if (u = "" && NiumaMobileBrowser_IsOpen() && g_NiumaMobile_WV2) {
         try u := g_NiumaMobile_WV2.SourceUri
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     NiumaMobileBrowser_NotifyState(NiumaMobileBrowser_IsOpen(), u)
@@ -3541,7 +3667,8 @@ NiumaMobileBrowser_SetAiBusy(busy, blockPage := true) {
         NiumaMobileBrowser_SetInputBlocked(next, true)
     NiumaMobileBrowser_ResetChromeLayoutCache()
     try NiumaMobileBrowser_ApplyBounds(g_NiumaMobile_ParentHwnd)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     NiumaMobileBrowser_PushChromeState(true)
 }
@@ -3556,7 +3683,8 @@ NiumaMobileBrowser_SetInputBlocked(block, waitDone := false) {
             g_NiumaMobile_WV2.ExecuteScriptAsync(script).await(1500)
         else
             g_NiumaMobile_WV2.ExecuteScriptAsync(script)
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -3608,7 +3736,8 @@ NiumaMobileBrowser_IsChatBridgeReady() {
             ok := !!g_NiumaChatFrontReady && IsObject(w)
             NiumaMobileBrowser_TraceOverlayPush("BRIDGE check exception: " . e.Message . " fallback=" . (ok ? 1 : 0), "warn")
             return ok
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     try {
@@ -3650,9 +3779,11 @@ NiumaMobileBrowser_SnapshotDispatcher(finalSafePayload, reqId, arrLen := 0, url 
                 . " wv2Ready=" . (g_FTB_WV2_Ready ? 1 : 0),
                 "warn"
             )
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         if !wv2
             NiumaMobileBrowser_ScheduleSnapshotRetry(reqId)
@@ -3668,18 +3799,21 @@ NiumaMobileBrowser_SnapshotDispatcher(finalSafePayload, reqId, arrLen := 0, url 
             NiumaMobileBrowser_InjectHostJsonToChat(wv2, j, rid)
             NiumaMobileBrowser_TraceOverlayPush("SNAP delivered rid=" . rid . " n=" . n . " err=" . String(err) . " meta=" . String(meta) . " inject=1", "success")
             try SetTimer(NiumaMobileBrowser_CheckChatInjectConsumed.Bind(rid), -220)
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         } catch {
             try NiumaMobileBrowser_TraceOverlayPush("SNAP delivered rid=" . rid . " n=" . n . " err=" . String(err) . " meta=" . String(meta) . " inject=0", "warn")
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
         return "delivered"
     }
     NiumaMobileBrowser_Log("CHAT_OUT", rid, "快照直投失败 inject_async meta=" . String(meta))
     try NiumaMobileBrowser_TraceOverlayPush("SNAP post_failed rid=" . rid . " n=" . n . " meta=" . String(meta), "err")
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     NiumaMobileBrowser_InjectHostJsonToChat(wv2, j, rid)
     NiumaMobileBrowser_ScheduleSnapshotRetry(reqId)
@@ -3711,7 +3845,8 @@ NiumaMobileBrowser_FlushDeferredSnapshotToChat() {
         err := mE[1]
     NiumaMobileBrowser_Log("HANDSHAKE", rid, "flush deferred len=" . StrLen(j))
     try NiumaMobileBrowser_TraceOverlayPush("HANDSHAKE flush deferred rid=" . rid . " n=" . arrLen . " err=" . String(err), "warn")
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return NiumaMobileBrowser_SnapshotDispatcher(j, rid, arrLen, url, err, "flush") = "delivered"
 }
@@ -3728,7 +3863,8 @@ NiumaMobileBrowser_QueueSnapshotToChat(items, url := "", err := "", truncated :=
             global g_NiumaMobile_WV2
             if g_NiumaMobile_WV2
                 url := String(g_NiumaMobile_WV2.SourceUri)
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         if (String(url) = "" && String(g_NiumaMobile_LastKnownUrl) != "")
             url := String(g_NiumaMobile_LastKnownUrl)
@@ -3815,7 +3951,8 @@ NiumaMobileBrowser_ParseItemsArrayJson(itemsJson) {
             if (items.Length > 0)
                 return items
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return NiumaMobileBrowser_ParseCompactItemsJson(j)
 }
@@ -3886,7 +4023,8 @@ NiumaMobileBrowser_ScheduleSnapshotRetry(reqId := "") {
     NiumaMobileBrowser_Log("CHAT_OUT", rid, "host_browser_snapshot retry count=" . g_NiumaMobile_SnapshotRetryCount)
     ; 使用缓存快照（g_NiumaMobile_LastSnapshot），避免把很大的 items 再次序列化
     try SetTimer(NiumaMobileBrowser_PushCachedSnapshot.Bind(reqId), -800)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return true
 }
@@ -3900,7 +4038,8 @@ NiumaMobileBrowser_EscapeJsonStr(s) {
     ; JSON 字符串禁止未转义的控制字符（0x00-0x1F）
     try {
         esc := RegExReplace(esc, "[\x00-\x1F]", NiumaMobileBrowser_JsonEscapeCtl)
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return esc
 }
@@ -3936,10 +4075,12 @@ NiumaMobileBrowser_InjectHostJsonToChat(wv2, jsonStr, reqId := "") {
         p := Trim(String(probe))
         if (p != "" && p != "null") {
             try NiumaMobileBrowser_TraceOverlayPush("INJECT probe rid=" . String(reqId) . " typeof __niumaHostInject=" . p, (InStr(p, "function") ? "success" : "warn"))
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     js := "(function(){try{var ok=0,why='';" .
         "if(window.__niumaHostInject){" .
@@ -3958,7 +4099,8 @@ NiumaMobileBrowser_InjectHostJsonToChat(wv2, jsonStr, reqId := "") {
     } catch as e {
         NiumaMobileBrowser_Log("CHAT_OUT", reqId, "host_inject_async failed err=" . String(e.Message))
         try NiumaMobileBrowser_TraceOverlayPush("INJECT ExecuteScriptAsync failed rid=" . String(reqId) . " err=" . String(e.Message), "err")
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     return false
@@ -4016,16 +4158,19 @@ NiumaMobileBrowser_InjectCachedSnapshotViaHostObject(wv2, reqId := "") {
         okStart := true
     } catch as e {
         try NiumaMobileBrowser_TraceOverlayPush("INJECT hostobj start failed rid=" . String(reqId) . " err=" . e.Message, "err")
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return false
     }
     if okStart {
         try NiumaMobileBrowser_TraceOverlayPush("INJECT hostobj dispatch rid=" . String(reqId) . " ret=dispatch", "warn")
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         try SetTimer(NiumaMobileBrowser_CheckHostObjInjectStatus.Bind(String(reqId), 0), -520)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return true
     }
@@ -4039,7 +4184,8 @@ NiumaMobileBrowser_CheckHostObjInjectStatus(reqId, attempt, *) {
     rid := String(reqId)
     if !wv2 {
         try NiumaMobileBrowser_TraceOverlayPush("INJECT hostobj status abort: ChatWv2 为空 rid=" . rid, "err")
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return
     }
@@ -4055,12 +4201,14 @@ NiumaMobileBrowser_CheckHostObjInjectStatus(reqId, attempt, *) {
             try {
                 s2 := StrReplace(s2, "\\\\", "\")
                 s2 := StrReplace(s2, '\"', '"')
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
         if (s2 = "" || s2 = "null") {
             try SetTimer(NiumaMobileBrowser_CheckHostObjInjectStatus.Bind(rid, attempt + 1), -260)
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             return
         }
@@ -4077,32 +4225,38 @@ NiumaMobileBrowser_CheckHostObjInjectStatus(reqId, attempt, *) {
         if (srid != "" && srid != rid) {
             ; 旧状态，继续等本次 rid
             try SetTimer(NiumaMobileBrowser_CheckHostObjInjectStatus.Bind(rid, attempt + 1), -220)
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             return
         }
         if (st = "") {
             try NiumaMobileBrowser_TraceOverlayPush("INJECT hostobj status rid=" . rid . " parse_failed raw=" . SubStr(s2, 1, 140), "warn")
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             try SetTimer(NiumaMobileBrowser_CheckHostObjInjectStatus.Bind(rid, attempt + 1), -220)
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             return
         }
         lvl := (st = "ok") ? "success" : (st = "started" ? "warn" : (InStr(st, "err") ? "err" : "warn"))
         try NiumaMobileBrowser_TraceOverlayPush("INJECT hostobj status rid=" . rid . " state=" . st . (eMsg != "" ? (" err=" . SubStr(eMsg, 1, 120)) : ""), lvl)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         if (st = "ok") {
             try SetTimer(NiumaMobileBrowser_CheckChatInjectConsumedHostObj.Bind(rid), -220)
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             return
         }
         if (st = "started") {
             try SetTimer(NiumaMobileBrowser_CheckHostObjInjectStatus.Bind(rid, attempt + 1), -260)
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             return
         }
@@ -4110,10 +4264,12 @@ NiumaMobileBrowser_CheckHostObjInjectStatus(reqId, attempt, *) {
         return
     } catch as e {
         try NiumaMobileBrowser_TraceOverlayPush("INJECT hostobj status check failed rid=" . rid . " err=" . e.Message, "warn")
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         try SetTimer(NiumaMobileBrowser_CheckHostObjInjectStatus.Bind(rid, attempt + 1), -260)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 }
@@ -4123,7 +4279,8 @@ NiumaMobileBrowser_CheckChatInjectConsumedHostObj(reqId, *) {
     rid := String(reqId)
     if !wv2 {
         try NiumaMobileBrowser_TraceOverlayPush("CHAT HostObj 消费检查 abort: ChatWv2 为空 rid=" . rid, "err")
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return
     }
@@ -4136,7 +4293,8 @@ NiumaMobileBrowser_CheckChatInjectConsumedHostObj(reqId, *) {
         s2 := Trim(String(s))
         if (s2 = "" || s2 = "null") {
             try NiumaMobileBrowser_TraceOverlayPush("CHAT HostObj 注入仍未被消费 rid=" . rid . " (var=null)", "err")
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             return
         }
@@ -4144,7 +4302,8 @@ NiumaMobileBrowser_CheckChatInjectConsumedHostObj(reqId, *) {
         ; 此时不应再用它判定 rid，否则会产生误报。
         if InStr(s2, "host_inject_parse_error") {
             try NiumaMobileBrowser_TraceOverlayPush("CHAT HostObj 拉取已完成 rid=" . rid . " (last_inject=parse_error)", "success")
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             return
         }
@@ -4152,12 +4311,14 @@ NiumaMobileBrowser_CheckChatInjectConsumedHostObj(reqId, *) {
             NiumaMobileBrowser_TraceOverlayPush("CHAT HostObj 注入已消费 rid=" . rid, "success")
         } else {
             try NiumaMobileBrowser_TraceOverlayPush("CHAT HostObj 已消费但 rid 不匹配 rid=" . rid . " raw=" . SubStr(s2, 1, 80), "warn")
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
     } catch as e {
         try NiumaMobileBrowser_TraceOverlayPush("CHAT HostObj 消费检查失败 rid=" . rid . " err=" . e.Message, "warn")
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 }
@@ -4189,7 +4350,8 @@ NiumaMobileBrowser_PushCachedSnapshot(reqId := "") {
     url := ""
     if g_NiumaMobile_WV2 {
         try url := g_NiumaMobile_WV2.SourceUri
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if cnt < 1 {
@@ -4335,11 +4497,13 @@ NiumaMobileBrowser_ParseScriptJson(raw) {
                         return NiumaMobileBrowser_NormalizeActBoolMap(obj2)
                     if (obj2 is Array)
                         return Map("ok", true, "items", obj2)
-                } catch {
+                } catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
             }
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     inferred := NiumaMobileBrowser_InferActMapFromRaw(raw)
     if (IsObject(inferred))
@@ -4357,14 +4521,16 @@ NiumaMobileBrowser_AnalyzePage(callback := 0, silent := false) {
     if !g_NiumaMobile_WV2 {
         if IsObject(callback)
             try callback.Call([], "", "browser_not_open")
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return false
     }
     if !NiumaMobileBrowser_EnsureLabelScript() {
         if IsObject(callback)
             try callback.Call([], "", "label_script_missing")
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return false
     }
@@ -4377,7 +4543,8 @@ NiumaMobileBrowser_AnalyzePage(callback := 0, silent := false) {
     try {
         if g_NiumaMobile_AnalyzeWatchdog
             SetTimer(g_NiumaMobile_AnalyzeWatchdog, 0)
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     g_NiumaMobile_AnalyzeWatchdog := NiumaMobileBrowser_OnAnalyzeWatchdog.Bind(callback)
     SetTimer(g_NiumaMobile_AnalyzeWatchdog, -22000)
@@ -4393,14 +4560,16 @@ NiumaMobileBrowser_AnalyzePage(callback := 0, silent := false) {
                 NiumaMobileBrowser_DeliverErrorToChat("analyze_done_failed: " . eDone.Message, obsRid, "label")
             if IsObject(callback)
                 try callback.Call([], "", eDone.Message)
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
             return false
         }
         return true
     } catch as e {
         try SetTimer(g_NiumaMobile_AnalyzeWatchdog, 0)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         g_NiumaMobile_AnalyzeWatchdog := 0
         g_NiumaMobile_PendingAnalyzeCb := 0
@@ -4409,7 +4578,8 @@ NiumaMobileBrowser_AnalyzePage(callback := 0, silent := false) {
             NiumaMobileBrowser_DeliverErrorToChat("script_exec_failed: " . e.Message, obsRid, "label")
         if IsObject(callback)
             try callback.Call([], "", e.Message)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return false
     }
@@ -4423,7 +4593,8 @@ NiumaMobileBrowser_OnAnalyzeWatchdog(callback, *) {
     g_NiumaMobile_PendingAnalyzeCb := 0
     if IsObject(callback) {
         try callback.Call([], "", "analyze_timeout")
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 }
@@ -4434,7 +4605,8 @@ NiumaMobileBrowser_OnAnalyzeDone(result) {
     try {
         if g_NiumaMobile_AnalyzeWatchdog
             SetTimer(g_NiumaMobile_AnalyzeWatchdog, 0)
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     g_NiumaMobile_AnalyzeWatchdog := 0
     cb := g_NiumaMobile_PendingAnalyzeCb
@@ -4501,7 +4673,8 @@ NiumaMobileBrowser_OnAnalyzeDone(result) {
     if (obsReqId != "" && !silent) {
         urlObs := ""
         try urlObs := g_NiumaMobile_WV2.SourceUri
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         totObs := g_NiumaMobile_LastElementsCount > 0 ? g_NiumaMobile_LastElementsCount
             : (items.Length > 0 ? items.Length : 0)
@@ -4518,14 +4691,16 @@ NiumaMobileBrowser_OnAnalyzeDone(result) {
 
     if IsObject(cb) {
         try cb.Call(items, rawJson, err)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 
     if !silent && !IsObject(cb) {
         url := ""
         try url := g_NiumaMobile_WV2.SourceUri
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         NiumaMobileBrowser_QueueSnapshotToChat(items, url, err, truncatedFlag,
             totalCandidates > 0 ? totalCandidates : items.Length, obsReqId)
@@ -4539,7 +4714,8 @@ NiumaMobileBrowser_RefreshLabels(delayMs := 500) {
     try {
         if g_NiumaMobile_LabelRefreshTimer
             SetTimer(g_NiumaMobile_LabelRefreshTimer, 0)
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     g_NiumaMobile_LabelRefreshTimer := NiumaMobileBrowser_DoRefreshLabels.Bind(delayMs)
     SetTimer(g_NiumaMobile_LabelRefreshTimer, -Max(50, Integer(delayMs)))
@@ -4634,7 +4810,8 @@ NiumaMobileBrowser_DismissOpenFileDialog() {
                 return true
             }
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return false
 }
@@ -4799,7 +4976,8 @@ NiumaMobileBrowser_ExecuteChatPlanPipe(elementId, text, platform, rid, *) {
             try {
                 rawAct := g_NiumaMobile_WV2.ExecuteScriptAsync(activateScript).await(8000)
                 NiumaMobileBrowser_Log("PLAN_PIPE", rid, "activate " . SubStr(NiumaMobileBrowser_NormalizeScriptRaw(String(rawAct)), 1, 80))
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
         Sleep(200)
@@ -4815,7 +4993,8 @@ NiumaMobileBrowser_ExecuteChatPlanPipe(elementId, text, platform, rid, *) {
                     NiumaMobileBrowser_Log("PLAN_PIPE", rid, "fill " . SubStr(normFill, 1, 100))
                     result := normFill
                 }
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             NiumaMobileBrowser_DoubaoLoadParsed(result, &parsed, &methodsTag)
             inputOk := (parsed is Map) && parsed.Has("inputOk") && parsed["inputOk"]
@@ -4831,7 +5010,8 @@ NiumaMobileBrowser_ExecuteChatPlanPipe(elementId, text, platform, rid, *) {
                     normSend := NiumaMobileBrowser_NormalizeScriptRaw(String(rawSend))
                     if (normSend != "")
                         result := normSend
-                } catch {
+                } catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
                 NiumaMobileBrowser_DoubaoLoadParsed(result, &parsed, &methodsTag)
                 sendOk := (parsed is Map) && parsed.Has("sendOk") && parsed["sendOk"]
@@ -4848,7 +5028,8 @@ NiumaMobileBrowser_ExecuteChatPlanPipe(elementId, text, platform, rid, *) {
                     normFull := NiumaMobileBrowser_NormalizeScriptRaw(String(rawFull))
                     if (normFull != "")
                         result := normFull
-                } catch {
+                } catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
                 NiumaMobileBrowser_DoubaoLoadParsed(result, &parsed, &methodsTag)
                 inputOk := (parsed is Map) && parsed.Has("inputOk") && parsed["inputOk"]
@@ -5051,7 +5232,8 @@ NiumaMobileBrowser_PhysicalSendEnter() {
     }
     if g_NiumaMobile_Ctrl {
         try g_NiumaMobile_Ctrl.Focus()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         Sleep(60)
     }
@@ -5088,7 +5270,8 @@ NiumaMobileBrowser_ClientCoordsToScreen(cx, cy) {
     ctrlHwnd := 0
     if IsObject(g_NiumaMobile_Ctrl) {
         try ctrlHwnd := g_NiumaMobile_Ctrl.Hwnd
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if (ctrlHwnd) {
@@ -5103,7 +5286,8 @@ NiumaMobileBrowser_ClientCoordsToScreen(cx, cy) {
     if !hwnd
         return Map("ok", false, "error", "browser_not_ready")
     try NiumaMobileBrowser_ApplyBounds(hwnd)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try WinGetClientPos(, , &cw, &ch, hwnd)
     catch {
@@ -5193,7 +5377,8 @@ NiumaMobileBrowser_GetDoubaoEditorScreenPoint(elementId, activateJson := "") {
             ptAct2 := NiumaMobileBrowser_PointFromActivateJson(norm)
             if NiumaMobileBrowser_IsValidPasteScreenPoint(ptAct2)
                 return ptAct2
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     ptEl := NiumaMobileBrowser_GetElementScreenPoint(elementId)
@@ -5212,7 +5397,8 @@ NiumaMobileBrowser_FocusBrowserForPhysical() {
     }
     if g_NiumaMobile_Ctrl {
         try g_NiumaMobile_Ctrl.Focus()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         Sleep(100)
     }
@@ -5250,7 +5436,8 @@ NiumaMobileBrowser_PhysicalPasteAtScreenPoint(x, y, text) {
             Sleep(450)
             pasted := true
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try A_Clipboard := clipSaved
     catch {
@@ -5314,7 +5501,8 @@ NiumaMobileBrowser_RunDoubaoVerifySend(text, methodsPrefix := "", elementId := 0
                 loaded := NiumaMobileBrowser_CallFunc("Jxon_Load", norm)
                 if (loaded is Map)
                     parsed := loaded
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             if (parsed is Map) && parsed.Has("inputOk") && parsed["inputOk"] {
                 if (methodsPrefix != "") {
@@ -5324,7 +5512,8 @@ NiumaMobileBrowser_RunDoubaoVerifySend(text, methodsPrefix := "", elementId := 0
                 return NiumaMobileBrowser_CallFunc("Jxon_Dump", parsed)
             }
             best := norm
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         Sleep(280)
     }
@@ -5336,7 +5525,8 @@ NiumaMobileBrowser_RunDoubaoVerifySend(text, methodsPrefix := "", elementId := 0
                 parsed["methods"] := methodsPrefix . (m1 != "" ? "," . m1 : "")
                 return NiumaMobileBrowser_CallFunc("Jxon_Dump", parsed)
             }
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     return best
@@ -5350,7 +5540,8 @@ NiumaMobileBrowser_GetPageUrl() {
             url := g_NiumaMobile_WV2.SourceUri
             if (url = "")
                 url := g_NiumaMobile_WV2.Source
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if (url = "" && g_NiumaMobile_LastKnownUrl != "")
@@ -5375,7 +5566,8 @@ NiumaMobileBrowser_ClearVpThrottle(*) {
     if !g_NiumaMobile_WV2
         return
     try g_NiumaMobile_WV2.ExecuteScriptAsync("try{window.__NIUMA_VP_THROTTLE__=false;}catch(e){}").await(1500)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -5384,7 +5576,8 @@ NiumaMobileBrowser_DoubaoLoadParsed(result, &parsed, &methodsTag) {
         loaded := NiumaMobileBrowser_CallFunc("Jxon_Load", result)
         if (loaded is Map)
             parsed := loaded
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if (parsed is Map) && parsed.Has("methods")
         methodsTag := String(parsed["methods"])
@@ -5398,14 +5591,16 @@ NiumaMobileBrowser_InputDoubaoHybrid(elementId, text, callback := 0) {
         NiumaMobileBrowser_DeliverErrorToChat("plan_pipe_busy", rid, "action_input")
         if IsObject(callback)
             try callback.Call(Map("ok", false, "error", "plan_pipe_busy"))
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         return false
     }
     if g_NiumaMobile_AiPaused {
         if IsObject(callback)
             try callback.Call(Map("ok", false, "error", "ai_paused"))
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return false
     }
@@ -5471,7 +5666,8 @@ NiumaMobileBrowser_InputDoubaoWorker(elementId, text, rid, *) {
                     normJs := NiumaMobileBrowser_NormalizeScriptRaw(String(rawJs))
                     if (normJs != "")
                         result := normJs
-                } catch {
+                } catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
                 NiumaMobileBrowser_DoubaoLoadParsed(result, &parsed, &methodsTag)
             }
@@ -5496,7 +5692,8 @@ NiumaMobileBrowser_InputDoubaoWorker(elementId, text, rid, *) {
                 rawAct := g_NiumaMobile_WV2.ExecuteScriptAsync(activateScript).await(8000)
                 normAct := NiumaMobileBrowser_NormalizeScriptRaw(String(rawAct))
                 NiumaMobileBrowser_Log("JOB_STEP", rid, "doubao_activate " . SubStr(normAct, 1, 120))
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
         Sleep(200)
@@ -5533,7 +5730,8 @@ NiumaMobileBrowser_InputDoubaoWorker(elementId, text, rid, *) {
                         NiumaMobileBrowser_Log("JOB_STEP", rid, "doubao_fill_label " . SubStr(normFill, 1, 120))
                         result := normFill
                     }
-                } catch {
+                } catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
                 NiumaMobileBrowser_DoubaoLoadParsed(result, &parsed, &methodsTag)
                 inputOk := (parsed is Map) && parsed.Has("inputOk") && parsed["inputOk"]
@@ -5556,7 +5754,8 @@ NiumaMobileBrowser_InputDoubaoWorker(elementId, text, rid, *) {
                         norm0 := NiumaMobileBrowser_NormalizeScriptRaw(String(raw0))
                         if (norm0 != "")
                             result := norm0
-                    } catch {
+                    } catch as _e {
+                        NmerCatch(A_ThisFunc, _e) 
                     }
                     NiumaMobileBrowser_DoubaoLoadParsed(result, &parsed, &methodsTag)
                     sendOk := (parsed is Map) && parsed.Has("sendOk") && parsed["sendOk"]
@@ -5597,7 +5796,8 @@ NiumaMobileBrowser_InputDoubaoWorker(elementId, text, rid, *) {
                     norm1 := NiumaMobileBrowser_NormalizeScriptRaw(String(raw1))
                     if (norm1 != "")
                         result := norm1
-                } catch {
+                } catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
                 NiumaMobileBrowser_DoubaoLoadParsed(result, &parsed, &methodsTag)
                 inputOk := (parsed is Map) && parsed.Has("inputOk") && parsed["inputOk"]
@@ -5724,7 +5924,8 @@ NiumaMobileBrowser_CancelSettleWatchdog() {
     try {
         if g_NiumaMobile_SettleWatchdog
             SetTimer(g_NiumaMobile_SettleWatchdog, 0)
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     g_NiumaMobile_SettleWatchdog := 0
 }
@@ -5812,7 +6013,8 @@ NiumaMobileBrowser_ClickLabeledElement(elementId, callback := 0) {
     if g_NiumaMobile_AiPaused {
         if IsObject(callback)
             try callback.Call(Map("ok", false, "error", "ai_paused"))
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return false
     }
@@ -5841,7 +6043,8 @@ NiumaMobileBrowser_ScrollLabeledElement(elementId, direction, callback := 0) {
     if g_NiumaMobile_AiPaused {
         if IsObject(callback)
             try callback.Call(Map("ok", false, "error", "ai_paused"))
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return false
     }
@@ -5874,7 +6077,8 @@ NiumaMobileBrowser_OnScrollDone(elementId, result) {
     NiumaMobileBrowser_NotifyActResult(parsed, "scroll", elementId)
     if IsObject(cb) {
         try cb.Call(parsed)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if !(parsed is Map) || !parsed.Has("ok") || !parsed["ok"]
@@ -5893,7 +6097,8 @@ NiumaMobileBrowser_OnClickDone(elementId, result) {
     NiumaMobileBrowser_NotifyActResult(parsed, "click", elementId)
     if IsObject(cb) {
         try cb.Call(parsed)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if !(parsed is Map) || !parsed.Has("ok") || !parsed["ok"]
@@ -5938,13 +6143,15 @@ NiumaMobileBrowser_ScheduleSearchNavigateFallback(*) {
         return
     if RegExMatch(u, "i)^https?://([a-z0-9-]+\.)*google\.") {
         try g_NiumaMobile_WV2.Navigate("https://www.google.com/search?q=" . enc . "&oq=" . enc)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return
     }
     if RegExMatch(u, "i)^https?://([a-z0-9-]+\.)*baidu\.") {
         try g_NiumaMobile_WV2.Navigate("https://www.baidu.com/s?wd=" . enc)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 }
@@ -5957,7 +6164,8 @@ NiumaMobileBrowser_InputLabeledElement(elementId, text, callback := 0) {
     if g_NiumaMobile_AiPaused {
         if IsObject(callback)
             try callback.Call(Map("ok", false, "error", "ai_paused"))
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return false
     }
@@ -5994,7 +6202,8 @@ NiumaMobileBrowser_OnInputDone(elementId, result) {
     NiumaMobileBrowser_NotifyActResult(parsed, "input", elementId)
     if IsObject(cb) {
         try cb.Call(parsed)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if !(parsed is Map) || !parsed.Has("ok") || !parsed["ok"]
@@ -6049,7 +6258,8 @@ NiumaMobileBrowser_PauseAiControl() {
     try {
         if g_NiumaMobile_LabelRefreshTimer
             SetTimer(g_NiumaMobile_LabelRefreshTimer, 0)
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     g_NiumaMobile_LabelRefreshTimer := 0
     g_NiumaMobile_PendingAnalyzeCb := 0
@@ -6093,7 +6303,8 @@ NiumaMobileBrowser_CancelAutoHideLabelsTimer() {
     try {
         if g_NiumaMobile_LabelAutoHideTimer
             SetTimer(g_NiumaMobile_LabelAutoHideTimer, 0)
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     g_NiumaMobile_LabelAutoHideTimer := 0
 }
@@ -6124,7 +6335,8 @@ NiumaMobileBrowser_PageHasChatReplyVisible(expectedText := "") {
         parsed := NiumaMobileBrowser_ParseScriptJson(String(raw))
         if (parsed is Map) && parsed.Has("hasReply") && parsed["hasReply"]
             return true
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return false
 }
@@ -6160,7 +6372,8 @@ NiumaMobileBrowser_HideLabels() {
     g_NiumaMobile_LabelDebug := false
     try {
         g_NiumaMobile_WV2.ExecuteScriptAsync("(function(){try{window.__NIUMA_LABEL_DEBUG__=false;var r=document.getElementById('niuma-mobile-label-root');if(r)r.remove();var badges=document.querySelectorAll('.niuma-label-badge');for(var i=0;i<badges.length;i++)badges[i].remove();var els=document.querySelectorAll('[data-niuma-label-id]');for(var j=0;j<els.length;j++){els[j].removeAttribute('data-niuma-label-id');els[j].classList.remove('niuma-label-target');els[j].style.outline='';els[j].style.outlineOffset='';}return JSON.stringify({ok:true});}catch(e){return JSON.stringify({ok:false});}})();")
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     NiumaMobileBrowser_EnsureLabelDebugOnPage(false)
     NiumaMobileBrowser_NotifyState(NiumaMobileBrowser_IsOpen())
@@ -6235,7 +6448,8 @@ NiumaMobileBrowser_ObserveForChat(reqId := "") {
     NiumaMobileBrowser_Log("GUARD", reqId, "observe 开始 ObserveReqId 已锁定")
     url := ""
     try url := g_NiumaMobile_WV2.SourceUri
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     global g_NiumaMobile_LastElementsCount
     cnt := g_NiumaMobile_LastElementsCount > 0 ? g_NiumaMobile_LastElementsCount
@@ -6255,7 +6469,8 @@ NiumaMobileBrowser_OnObserveForChatDone(items, rawJson, err) {
     ; 勿过早清空 ObserveReqId，避免与 OnAnalyzeDone 竞态导致快照无 reqId
     url := ""
     try url := g_NiumaMobile_WV2.SourceUri
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     truncated := false
     total := g_NiumaMobile_LastElementsCount > 0 ? g_NiumaMobile_LastElementsCount : items.Length
@@ -6268,7 +6483,8 @@ NiumaMobileBrowser_OnObserveForChatDone(items, rawJson, err) {
             if p.Has("totalCandidates")
                 total := Integer(p["totalCandidates"])
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     NiumaMobileBrowser_QueueSnapshotToChat(items, url, err, truncated, total, reqId)
     g_NiumaMobile_ObserveReqId := ""
@@ -6288,7 +6504,8 @@ NiumaMobileBrowser_ActFromChat(action, elementId := 0, value := "") {
     ; 刚性防御：elementId 非法时 0ms 回包，避免前端长等超时
     if ((act = "click" || act = "input" || act = "fill") && (Integer(elementId) <= 0)) {
         try NiumaMobileBrowser_DeliverErrorToChat("invalid_element_id", rid, "action_" . act)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return false
     }
@@ -6338,19 +6555,22 @@ NiumaMobileBrowser_PreCloseCleanup() {
     try {
         if g_NiumaMobile_AnalyzeWatchdog
             SetTimer(g_NiumaMobile_AnalyzeWatchdog, 0)
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     g_NiumaMobile_AnalyzeWatchdog := 0
     try {
         if g_NiumaMobile_LabelRefreshTimer
             SetTimer(g_NiumaMobile_LabelRefreshTimer, 0)
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     g_NiumaMobile_LabelRefreshTimer := 0
     NiumaMobileBrowser_CancelSettleWatchdog()
     for jobId, card in g_NiumaMobile_Jobs.Clone() {
         try NiumaMobileBrowser_OnScriptResult(jobId, "", false, "cancelled_close")
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if g_NiumaMobile_WV2 {
@@ -6360,7 +6580,8 @@ NiumaMobileBrowser_PreCloseCleanup() {
                 . "var els=document.querySelectorAll('.niuma-label-badge');"
                 . "for(var i=0;i<els.length;i++)els[i].remove();}catch(e){}"
             )
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 }
@@ -6387,7 +6608,8 @@ NiumaMobileBrowser_Close() {
     try {
         if g_NiumaMobile_LabelRefreshTimer
             SetTimer(g_NiumaMobile_LabelRefreshTimer, 0)
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     g_NiumaMobile_LabelRefreshTimer := 0
     g_NiumaMobile_AiBusy := false
@@ -6397,27 +6619,32 @@ NiumaMobileBrowser_Close() {
         try {
             if g_NiumaMobile_TokenNav
                 g_NiumaMobile_WV2.remove_NavigationCompleted(g_NiumaMobile_TokenNav)
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         try {
             if g_NiumaMobile_TokenNavStart
                 g_NiumaMobile_WV2.remove_NavigationStarting(g_NiumaMobile_TokenNavStart)
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         try {
             if g_NiumaMobile_TokenNewWin
                 g_NiumaMobile_WV2.remove_NewWindowRequested(g_NiumaMobile_TokenNewWin)
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         try {
             if g_NiumaMobile_TokenMsg
                 g_NiumaMobile_WV2.remove_WebMessageReceived(g_NiumaMobile_TokenMsg)
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         try {
             if g_NiumaMobile_TokenCtxMenu
                 g_NiumaMobile_WV2.remove_ContextMenuRequested(g_NiumaMobile_TokenCtxMenu)
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     g_NiumaMobile_TokenNav := 0
@@ -6430,10 +6657,12 @@ NiumaMobileBrowser_Close() {
 
     if g_NiumaMobile_Ctrl {
         try g_NiumaMobile_Ctrl.IsVisible := false
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         try g_NiumaMobile_Ctrl.Close()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 

@@ -27,9 +27,14 @@
 }
 ```
 
+## PR / 架构纪律
+
+改 Hub、命令面板 A2UI、WebView 消息协议时，见 [docs/pr-architecture-discipline.md](../docs/pr-architecture-discipline.md)（**禁止 Go/TS 双写 Surface 状态**）。
+
 ## 约束
 
 - 不要修改 `牛马.ahk` 或 `modules/*.ahk`，除非用户明确要求高级钩子。
+- **例外**：治理 plan 档 **§1–§3**（路径清单、运维脚本、约定文档）范围内的新增/修改，或用户显式列出的必做项，可改 `modules/` 与 `tools/`。
 - 保存 `user_studio.json` 前会自动备份到 `local/user_studio.backup.json`。
 - 「还原默认定制」仅重置 `user_studio.json`，不重置整个 `local/CursorShortcut.ini`。
 

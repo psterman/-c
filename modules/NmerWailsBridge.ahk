@@ -435,7 +435,8 @@ Nmer_WailsBridgeLog(message) {
             dir . "\wails_bridge.log",
             "UTF-8"
         )
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -558,7 +559,8 @@ Nmer_WailsBridgePostShellFtb(action, entry := "", extra := 0) {
                 parsed := Nmer_WailsBridgeParseShellFtbJson(text)
                 if parsed.Get("ok", false)
                     out["statusObj"] := parsed
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
         return out
@@ -629,7 +631,8 @@ Nmer_WailsBridgeDrainShellFtbInject(*) {
                     m := Jxon_Load(item)
                     if (m is Map)
                         out.Push(m)
-                } catch {
+                } catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
             }
         }
@@ -670,7 +673,8 @@ Nmer_WailsBridgeDrainShellFtbEgress(*) {
                     m := Jxon_Load(item)
                     if (m is Map)
                         out.Push(m)
-                } catch {
+                } catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
             }
         }
@@ -748,7 +752,8 @@ Nmer_WailsBridgePostShellCp(action, entry := "", extra := 0) {
                 parsed := Nmer_WailsBridgeParseShellCpJson(text)
                 if parsed.Get("ok", false)
                     out["statusObj"] := parsed
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
         return out
@@ -819,7 +824,8 @@ Nmer_WailsBridgeDrainShellCpInject(*) {
                     m := Jxon_Load(item)
                     if (m is Map)
                         out.Push(m)
-                } catch {
+                } catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
             }
         }
@@ -860,7 +866,8 @@ Nmer_WailsBridgeDrainShellCpEgress(*) {
                     m := Jxon_Load(item)
                     if (m is Map)
                         out.Push(m)
-                } catch {
+                } catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
             }
         }
@@ -1003,17 +1010,21 @@ Nmer_WailsBridgePrepareForScriptReload(*) {
     g_Nmer_HybridSignoffDrainOn := false
     g_Nmer_WailsBridgeHealthBusy := false
     try SetTimer(Nmer_HybridManualProbePoll, 0)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try SetTimer(Nmer_HybridSignoffDrainBootstrap, 0)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if FuncExists("FloatingToolbarWails_StopInjectPump")
         try FloatingToolbarWails_StopInjectPump()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try Nmer_WailsBridgeLog("prepare_reload timers_off")
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -1030,7 +1041,8 @@ Nmer_WailsBridgeHealthyHttp(*) {
         whr.Send()
         if (Integer(whr.Status) = 200 && InStr(whr.ResponseText, "ok") > 0)
             return true
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return false
 }
@@ -1070,7 +1082,8 @@ Nmer_WailsBridgeKillStale(*) {
             if !pid
                 break
             try ProcessClose(pid)
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             Sleep(200)
         }
@@ -1094,7 +1107,8 @@ Nmer_WailsBridge_WriteScriptDirMarker(root) {
     try {
         if !DirExist(markerDir)
             DirCreate(markerDir)
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     markerPath := markerDir . "\nmer_script_dir.utf8.txt"
     try {
@@ -1127,7 +1141,8 @@ Nmer_WailsBridgeIsHybridHost(*) {
 Nmer_HybridManualProbeMaybeEnsure(*) {
     if FuncExists("Nmer_HybridSignoffBootstrapEnsure")
         try Nmer_HybridSignoffBootstrapEnsure()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
 }
 
@@ -1150,7 +1165,8 @@ Nmer_WailsBridgeSyncOpenClawTokenToEnv(*) {
                 if (p != "")
                     port := String(p)
             }
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if (token = "")
@@ -1241,7 +1257,8 @@ Nmer_StartWailsBridge(*) {
     g_Nmer_WailsBridgeLastLaunchTick := now
     g_Nmer_WailsBridgeLaunching := true
     try Nmer_WailsBridgeSyncOpenClawTokenToEnv()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     rootForChild := Nmer_WailsBridge_ToShortPath(root)
     markerPath := Nmer_WailsBridge_WriteScriptDirMarker(root)
@@ -1262,6 +1279,8 @@ Nmer_StartWailsBridge(*) {
     } else {
         try EnvSet("NMER_FTB_PRESENTATION", "")
     }
+    if FuncExists("Nmer_EnsureWsHubTokenEnv")
+        try Nmer_EnsureWsHubTokenEnv()
     cmd := '"' . exe . '"'
     workDir := rootForChild != "" ? rootForChild : root
     try {
@@ -1308,7 +1327,8 @@ Nmer_AutoStartWailsBridge(*) {
 Nmer_StopWailsBridge(*) {
     if FuncExists("Nmer_WailsBridgePrepareForScriptReload")
         try Nmer_WailsBridgePrepareForScriptReload()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     Nmer_WailsBridgeLog("stop_begin sidecar=" . Nmer_BridgeSidecarMode() . " pid=" . ProcessExist(Nmer_BridgeSidecarProcessName()))
     Nmer_WailsBridgeKillStale()
@@ -1394,7 +1414,8 @@ Nmer_HybridSignoffStartupEnsure(*) {
     g_Nmer_WailsBridgeHealthCacheTick := 0
     if FuncExists("Nmer_HybridSignoffBootstrapEnsure")
         try Nmer_HybridSignoffBootstrapEnsure()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
 }
 
@@ -1429,7 +1450,8 @@ Nmer_HybridManualProbeIsHybridHost(*) {
             if (wb is Map) && (StrLower(Trim(String(wb.Get("floatingToolbarHost", "")))) = "hybrid")
                 return true
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return false
 }
@@ -1444,7 +1466,8 @@ Nmer_HybridManualProbeEnsure(*) {
     SetTimer(Nmer_HybridManualProbePoll, 350)
     Nmer_HybridManualProbeLog("probe_timer_on")
     try Nmer_HybridManualProbePoll()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -1482,7 +1505,8 @@ Nmer_HybridSignoffWriteInjectResult(probeId, ok, pass, code, detail := "", extra
             f.Write(Jxon_Dump(body))
             f.Close()
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     Nmer_HybridManualProbeLog("inject_result id=" . probeId . " code=" . code . " pass=" . (pass ? 1 : 0))
 }
@@ -1527,37 +1551,45 @@ Nmer_HybridSignoffRecoverFtbAfterStress() {
     global g_FTB_WV2, g_FTB_WV2_Ready, g_FTB_WV2_FrameReady, g_FTB_WaitingUiFinishedReveal
     if FuncExists("FloatingToolbarWails_EnsureHybridBridge")
         try FloatingToolbarWails_EnsureHybridBridge()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     if FuncExists("ShowFloatingToolbar")
         try ShowFloatingToolbar()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     if IsObject(g_FTB_WV2) {
         if g_FTB_WaitingUiFinishedReveal && FuncExists("FloatingToolbar_FinishRevealBoot")
             try FloatingToolbar_FinishRevealBoot()
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         if FuncExists("FloatingToolbarPushButtonConfigToWeb")
             try FloatingToolbarPushButtonConfigToWeb()
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         if FuncExists("FloatingToolbar_PushLogoToWeb")
             try FloatingToolbar_PushLogoToWeb()
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         if FuncExists("FloatingToolbar_RequestWebRevealSafe")
             try FloatingToolbar_RequestWebRevealSafe()
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         else if FuncExists("FloatingToolbar_RequestWebReveal")
             try FloatingToolbar_RequestWebReveal()
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
     }
     if (g_FTB_WV2_Ready && g_FTB_WV2_FrameReady) && FuncExists("FloatingToolbarWails_RegisterExternalReady")
         try FloatingToolbarWails_RegisterExternalReady()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     Nmer_HybridManualProbeLog("recover_ftb_after_stress wv2=" . (IsObject(g_FTB_WV2) ? 1 : 0)
         . " ready=" . (g_FTB_WV2_Ready ? 1 : 0) . " frame=" . (g_FTB_WV2_FrameReady ? 1 : 0)
@@ -1570,7 +1602,8 @@ Nmer_HybridSignoffInjectUiCycleRun(probeId, rounds, pauseMs) {
     Nmer_HybridSignoffWriteInjectResult(probeId, true, pass, pass ? "UI_CYCLE_OK" : "UI_CYCLE_FAIL",
         "rounds=" . res.Get("okRounds", 0) . "/" . res.Get("rounds", rounds), res)
     try Nmer_HybridSignoffRecoverFtbAfterStress()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -1619,7 +1652,8 @@ Nmer_HybridSignoffHandleInjectPayload(payload) {
                             Nmer_HybridSignoffWriteInjectResult(probeId, true, ok, code, detail)
                             return true
                         }
-                    } catch {
+                    } catch as _e {
+                        NmerCatch(A_ThisFunc, _e) 
                     }
                 }
             }
@@ -1679,7 +1713,8 @@ Nmer_WailsBridgeDrainInjectToFtb(*) {
         handled := false
         if FuncExists("Nmer_HybridSignoffHandleInjectPayload") && FuncExists("Nmer_HybridSignoffIsActive") && Nmer_HybridSignoffIsActive() {
             try handled := Nmer_HybridSignoffHandleInjectPayload(payload)
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
         if handled
@@ -1691,7 +1726,8 @@ Nmer_WailsBridgeDrainInjectToFtb(*) {
                     delivered += 1
                     continue
                 }
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
         if !wvReady
@@ -1702,7 +1738,8 @@ Nmer_WailsBridgeDrainInjectToFtb(*) {
             else
                 g_FTB_WV2.PostWebMessageAsJson(Jxon_Dump(payload))
             delivered += 1
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     return delivered
@@ -1715,14 +1752,16 @@ Nmer_HybridSignoffDrainInjectQueue(*) {
         try FloatingToolbarWails_EnsureInjectPump()
     if FuncExists("Nmer_WailsBridgeDrainInjectToFtb")
         try Nmer_WailsBridgeDrainInjectToFtb()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
 }
 
 Nmer_HybridManualProbeLog(line) {
     paths := Nmer_HybridManualProbePaths()
     try FileAppend("[" . A_Now . "] " . String(line) . "`n", paths["log"], "UTF-8")
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -1743,10 +1782,12 @@ Nmer_HybridManualProbeWriteResult(id, ok, pass, code, detail := "", extra := 0) 
     try {
         if FileExist(paths["req"])
             FileDelete(paths["req"])
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try FileAppend(Jxon_Dump(body), paths["res"], "UTF-8")
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -1770,14 +1811,16 @@ Nmer_HybridManualProbePoll(*) {
     if (raw = "" || StrLen(raw) > 131072) {
         Nmer_HybridManualProbeWriteResult("", false, false, "PROBE_JSON_INVALID", "empty_or_oversize")
         try FileDelete(reqPath)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return
     }
     if (SubStr(raw, 1, 1) != "{" && SubStr(raw, 1, 1) != "[") {
         Nmer_HybridManualProbeWriteResult("", false, false, "PROBE_JSON_INVALID", "not_json_object")
         try FileDelete(reqPath)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return
     }
@@ -1786,12 +1829,14 @@ Nmer_HybridManualProbePoll(*) {
     catch as errJson {
         Nmer_HybridManualProbeWriteResult("", false, false, "PROBE_JSON_INVALID", SubStr(String(errJson.Message), 1, 120))
         try FileDelete(reqPath)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return
     }
     try FileDelete(reqPath)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if !(root is Map) {
         Nmer_HybridManualProbeWriteResult("", false, false, "PROBE_JSON_INVALID", "expected object")
@@ -1921,7 +1966,8 @@ Nmer_HybridManualProbeLogHas(needle, pattern) {
                 if InStr(line, needle) && InStr(line, pattern)
                     return true
             }
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     return false
@@ -1932,15 +1978,18 @@ Nmer_HybridManualProbeEnsureFtb(id) {
     detail := ""
     if FuncExists("FloatingToolbarWails_EnsureHybridBridge")
         try ok := !!FloatingToolbarWails_EnsureHybridBridge()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     if FuncExists("FloatingToolbarWails_RegisterExternalFtb")
         try FloatingToolbarWails_RegisterExternalFtb("signoff_baseline")
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     if FuncExists("ShowFloatingToolbar")
         try ok := !!ShowFloatingToolbar() || ok
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     vis := false
     mode := ""
@@ -1951,7 +2000,8 @@ Nmer_HybridManualProbeEnsureFtb(id) {
                 vis := !!st.Get("visible", false)
                 mode := String(st.Get("presentationMode", ""))
             }
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if (mode = "external" || vis)
@@ -1972,7 +2022,8 @@ Nmer_HybridManualProbeUiCycle(id, root) {
     Nmer_HybridManualProbeWriteResult(id, true, pass, pass ? "UI_CYCLE_OK" : "UI_CYCLE_FAIL",
         "rounds=" . res.Get("okRounds", 0) . "/" . res.Get("rounds", rounds), res)
     try Nmer_HybridSignoffRecoverFtbAfterStress()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 

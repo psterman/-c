@@ -17,7 +17,8 @@ Nmer_MultiCardMemoryProbePaths(*) {
 Nmer_MultiCardMemoryProbeLog(line) {
     paths := Nmer_MultiCardMemoryProbePaths()
     try FileAppend("[" . A_Now . "] " . String(line) . "`n", paths["log"], "UTF-8")
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -47,7 +48,8 @@ Nmer_MultiCardMemoryProbeWriteResult(id, ok, pass, code, detail := "", extra := 
     try {
         if FileExist(paths["req"])
             FileDelete(paths["req"])
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try {
         if FileExist(paths["res"])
@@ -57,7 +59,8 @@ Nmer_MultiCardMemoryProbeWriteResult(id, ok, pass, code, detail := "", extra := 
             f.Write(Jxon_Dump(body))
             f.Close()
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -143,7 +146,8 @@ Nmer_MultiCardMemoryProbePrepareTier(cardCount, settleMs) {
     try {
         if FuncExists("Nmer_CommandPaletteHost")
             wailsHost := Nmer_CommandPaletteHost() = "wails"
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if wailsHost {
         if (settleMs > 4000)
@@ -183,19 +187,22 @@ Nmer_MultiCardMemoryProbeCpMemorySnapshot() {
     try {
         if FuncExists("Nmer_CommandPaletteHost")
             host := Nmer_CommandPaletteHost()
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     ahvGui := false
     try {
         if FuncExists("CommandPaletteRouter_AhkGuiExists")
             ahvGui := CommandPaletteRouter_AhkGuiExists()
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     global g_CmdPal_WV2
     wv2 := IsObject(g_CmdPal_WV2)
     cpHwnd := 0
     try cpHwnd := WinExist("NMER Command Palette")
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return Map(
         "host", host,
@@ -242,7 +249,8 @@ Nmer_MultiCardMemoryProbePoll(*) {
     if (raw = "" || StrLen(raw) > 65536) {
         Nmer_MultiCardMemoryProbeWriteResult("", false, false, "PROBE_JSON_INVALID", "empty_or_oversize")
         try FileDelete(reqPath)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return
     }
@@ -251,12 +259,14 @@ Nmer_MultiCardMemoryProbePoll(*) {
     catch as errJson {
         Nmer_MultiCardMemoryProbeWriteResult("", false, false, "PROBE_JSON_INVALID", SubStr(String(errJson.Message), 1, 120))
         try FileDelete(reqPath)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return
     }
     try FileDelete(reqPath)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if !(root is Map) {
         Nmer_MultiCardMemoryProbeWriteResult("", false, false, "PROBE_JSON_INVALID", "expected_object")
@@ -281,13 +291,15 @@ Nmer_MultiCardMemoryProbePoll(*) {
             try {
                 if FuncExists("Nmer_CommandPaletteHost")
                     host := Nmer_CommandPaletteHost()
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             ahvGui := false
             try {
                 if FuncExists("CommandPaletteRouter_AhkGuiExists")
                     ahvGui := CommandPaletteRouter_AhkGuiExists()
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             global g_CmdPal_WV2
             wv2 := IsObject(g_CmdPal_WV2)
@@ -302,7 +314,8 @@ Nmer_MultiCardMemoryProbePoll(*) {
                         shellReady := !!st.Get("ready", false)
                         shellPhase := Integer(st.Get("phase", 0))
                     }
-                } catch {
+                } catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
             }
             ok := (host = "wails") && !ahvGui && !wv2 && shellMounted
@@ -324,13 +337,15 @@ Nmer_MultiCardMemoryProbePoll(*) {
             try {
                 if FuncExists("Nmer_CommandPaletteHost")
                     host := Nmer_CommandPaletteHost()
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             ahvGui := false
             try {
                 if FuncExists("CommandPaletteRouter_AhkGuiExists")
                     ahvGui := CommandPaletteRouter_AhkGuiExists()
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             global g_CmdPal_WV2
             wv2 := IsObject(g_CmdPal_WV2)
@@ -345,7 +360,8 @@ Nmer_MultiCardMemoryProbePoll(*) {
                         shellReady := !!st.Get("ready", false)
                         shellPhase := Integer(st.Get("phase", 0))
                     }
-                } catch {
+                } catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
             }
             if FuncExists("CommandPaletteWails_EnsureEgressPump")
@@ -361,7 +377,8 @@ Nmer_MultiCardMemoryProbePoll(*) {
                 try {
                     eg := Nmer_WailsBridgePostShellCpEgress(Map("type", "palette_query", "input", "cp2c_smoke", "seq", 1))
                     egressPostOk := (eg is Map) && eg.Get("ok", false)
-                } catch {
+                } catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
             }
             if FuncExists("CommandPaletteWails_DrainEgressOnce")
@@ -371,7 +388,8 @@ Nmer_MultiCardMemoryProbePoll(*) {
                 try {
                     eg2 := Nmer_WailsBridgePostShellCpEgress(Map("type", "palette_turbo_search", "query", "cp2c", "limit", 5, "seq", 2))
                     agentPostOk := (eg2 is Map) && eg2.Get("ok", false)
-                } catch {
+                } catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
             }
             if FuncExists("CommandPaletteWails_DrainEgressOnce")
@@ -456,7 +474,8 @@ Nmer_MultiCardMemoryProbePoll(*) {
             try {
                 if FuncExists("Nmer_CommandPaletteHost")
                     host := Nmer_CommandPaletteHost()
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             Nmer_MultiCardMemoryProbeShowCp()
             Sleep(500)
@@ -464,7 +483,8 @@ Nmer_MultiCardMemoryProbePoll(*) {
                 CommandPaletteWails_EnsureEgressPump()
             if FuncExists("CommandPalette_PushToWeb") {
                 try CommandPalette_PushToWeb(Map("type", "palette_set_intent", "intent", "action"))
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
                 Sleep(200)
             }
@@ -480,7 +500,8 @@ Nmer_MultiCardMemoryProbePoll(*) {
                         "probe", true
                     ))
                     submitOk := (eg is Map) && eg.Get("ok", false)
-                } catch {
+                } catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
             }
             if FuncExists("CommandPaletteWails_DrainEgressOnce")
@@ -496,7 +517,8 @@ Nmer_MultiCardMemoryProbePoll(*) {
         case "cp_wails_agent_status":
             if FuncExists("CommandPaletteWails_DrainEgressOnce")
                 try CommandPaletteWails_DrainEgressOnce()
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
             snap := Nmer_MultiCardMemoryProbeCpMemorySnapshot()
             cardCount := FuncExists("CommandPalette_AgentCardCount") ? CommandPalette_AgentCardCount() : 0
@@ -523,7 +545,8 @@ Nmer_MultiCardMemoryProbePoll(*) {
             try {
                 if FuncExists("Nmer_CommandPaletteHost")
                     host := Nmer_CommandPaletteHost()
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             try {
                 if FuncExists("Nmer_PaletteAgentTransport")
@@ -534,7 +557,8 @@ Nmer_MultiCardMemoryProbePoll(*) {
                     if (pal is Map)
                         agentTransport := String(pal.Get("agentTransport", "?"))
                 }
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             Nmer_MultiCardMemoryProbeShowCp()
             Sleep(600)
@@ -542,7 +566,8 @@ Nmer_MultiCardMemoryProbePoll(*) {
                 CommandPaletteWails_EnsureEgressPump()
             if FuncExists("CommandPalette_PushToWeb") {
                 try CommandPalette_PushToWeb(Map("type", "palette_set_intent", "intent", "action"))
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
                 Sleep(200)
             }
@@ -558,7 +583,8 @@ Nmer_MultiCardMemoryProbePoll(*) {
                         "probe", true
                     ))
                     submitOk := (eg is Map) && eg.Get("ok", false)
-                } catch {
+                } catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
             }
             if FuncExists("CommandPaletteWails_DrainEgressOnce")
@@ -569,7 +595,8 @@ Nmer_MultiCardMemoryProbePoll(*) {
             while (A_TickCount < deadline) {
                 if FuncExists("CommandPaletteWails_DrainEgressOnce")
                     try CommandPaletteWails_DrainEgressOnce()
-                    catch {
+                    catch as _e {
+                        NmerCatch(A_ThisFunc, _e) 
                     }
                 cardCount := FuncExists("CommandPalette_AgentCardCount") ? CommandPalette_AgentCardCount() : 0
                 if Nmer_MultiCardMemoryProbeAgentHasLiveAnswer()
@@ -583,7 +610,8 @@ Nmer_MultiCardMemoryProbePoll(*) {
                 try {
                     CommandPalette_AgentPushCardSync()
                     syncOk := !!g_CmdPalWails_InjectPushOk
-                } catch {
+                } catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
             }
             tier := Nmer_MultiCardMemoryProbePrepareTier(1, 2500)
@@ -619,7 +647,8 @@ Nmer_MultiCardMemoryProbePoll(*) {
                 try {
                     CommandPalette_PushToWeb(Map("type", "palette_set_intent", "intent", "action"))
                     Sleep(400)
-                } catch {
+                } catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
             }
             adpCode := "ADP_PROBE_UNAVAILABLE"

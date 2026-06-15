@@ -97,19 +97,18 @@ HandleDynamicHotkey(PressedKey, ActionType) {
                 SurfaceIntent_Open("clipboard_panel")
             case "Q":
                 CapsLock2 := false
-                ShowConfigGUI()
+                try {
+                    if FuncExists("SurfaceIntent_OpenConfig")
+                        SurfaceIntent_OpenConfig(Map("triggerSource", "capslock_hotkey", "reason", "capslock_open_config"))
+                    else
+                        ShowConfigGUI()
+                } catch as _e {
+                    NmerCatch(A_ThisFunc, _e)
+                    try ShowConfigGUI()
+                }
             case "Z":
                 CapsLock2 := false
-                if (VoiceInputActive) {
-                    ; 如果正在语音输入，直接发送
-                    if (CapsLock) {
-                        CapsLock := false
-                    }
-                    StopVoiceInput()
-                } else {
-                    ; 如果未在语音输入，开始语音输入
-                    StartVoiceInput()
-                }
+                ; CapsLock+Z 语音输入已移除（原依赖输入法，使用率低）
             case "F":
                 CapsLock2 := false
                 global VoiceSearchActive

@@ -5,6 +5,7 @@ global ConfigWebViewNavFallbackTried := false
 ; 由搜索中心等单次打开设置时覆盖首屏标签，不写入 INI
 global g_ConfigWebView_OneShotDefaultTab := ""
 global g_ConfigWebView_PendingStudioSync := false
+global g_ConfigWebView_PendingLlmTestResult := 0
 ; 每次打开设置窗仅允许一次「跳到默认启动页」，避免 ready 与延迟 initData 重复抢导航
 global g_ConfigWebView_StartTabNavigated := false
 
@@ -40,7 +41,8 @@ ConfigWebView_IsVkAvailable() {
         try {
             if IsObject(Func(name))
                 return true
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     return false
@@ -110,7 +112,8 @@ ConfigWebView_CreateHost() {
             return
         try {
             WMActivateChain_Unregister(ConfigWebView_WM_ACTIVATE)
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         GuiID_ConfigGUI := 0
         ConfigWebViewMode := false
@@ -172,6 +175,7 @@ ShowConfigWebViewGUI() {
     ConfigWebView_CreateHost()
     if !GuiID_ConfigGUI
         return
+    NmerPanel_RestoreGui(GuiID_ConfigGUI)
     HideClipboardPanelsForConfigConflict()
 
     ScreenInfo := GetScreenInfo(ConfigPanelScreenIndex)
@@ -182,10 +186,12 @@ ShowConfigWebViewGUI() {
 
     GuiID_ConfigGUI.Show("w" . WinW . " h" . WinH . " x" . PosX . " y" . PosY)
     try WinSetAlwaysOnTop(true, "ahk_id " . GuiID_ConfigGUI.Hwnd)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try LegacyGuard_RequestFocus("ConfigWebView", GuiID_ConfigGUI.Hwnd, 20, "show_config_webview", 220)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     g_ConfigWebView_LastShown := A_TickCount
     WMActivateChain_Register(ConfigWebView_WM_ACTIVATE)
@@ -212,16 +218,19 @@ ConfigWebView_EnsureVisibleOrRecover(*) {
     }
     if ConfigWebView_HostAlive() {
         try ConfigWebView_RefocusAfterThemeChange()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return
     }
     if !ConfigWebView_HostAlive() {
         try ConfigWebView_ReleaseSettingsDock("host_dead")
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         try SetTimer(ShowConfigGUI_FallbackCheck, -10)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 }
@@ -272,7 +281,8 @@ ConfigWebView_OnNavigationCompleted(sender, args) {
         try {
             sender.Navigate(fileUrl)
             return
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     try {
@@ -282,8 +292,42 @@ ConfigWebView_OnNavigationCompleted(sender, args) {
     }
 }
 
-ConfigWebView_OnSize(*) {
+ConfigWebView_OnSize(GuiObj, MinMax, Width, Height) {
+    static cfgWasMin := false
+    if (MinMax = -1) {
+        cfgWasMin := true
+        NmerPanel_OnGuiMinimized(MinMax, "settings")
+        return
+    }
+    if (MinMax >= 0) {
+        NmerPanel_OnGuiRestoredFromMinimize(MinMax, cfgWasMin, "settings")
+        cfgWasMin := false
+    }
     ConfigWebView_ApplyBounds()
+}
+
+ConfigWebView_Minimize(*) {
+    global GuiID_ConfigGUI
+    if !GuiID_ConfigGUI
+        return false
+    return NmerPanel_MinimizeGui(GuiID_ConfigGUI, "settings")
+}
+
+ConfigWebView_RestoreFromMinimize(*) {
+    global GuiID_ConfigGUI
+    if !GuiID_ConfigGUI
+        return false
+    if !NmerPanel_RestoreGui(GuiID_ConfigGUI)
+        return false
+    try FloatingToolbar_PageDockEnter("settings")
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
+    }
+    try ConfigWebView_RefreshWebViewComposition()
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
+    }
+    return true
 }
 
 ConfigWebView_ApplyBounds() {
@@ -345,19 +389,23 @@ ConfigWebView_RefocusAfterThemeChange(*) {
     if !ConfigWebView_HostAlive()
         return
     try WinSetAlwaysOnTop(true, "ahk_id " . GuiID_ConfigGUI.Hwnd)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try LegacyGuard_RequestFocus("ConfigWebView", GuiID_ConfigGUI.Hwnd, 20, "refocus_after_theme", 220)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try WebView2_MoveFocusProgrammatic(ConfigWV2Ctrl)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
 ConfigWebView_ReleaseSettingsDock(reason := "") {
     try FloatingToolbar_PageDockLeave("settings")
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -369,12 +417,14 @@ ConfigWebView_WM_ACTIVATE(wParam, lParam, msg, hwnd) {
         try {
             if ThemeApply_IsInProgress()
                 return
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         try {
             if (FloatingToolbar_IsForegroundToolbarOrChild())
                 return
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         ; 鍒?Show 鍚庣煭鏃堕棿鍐呭彲鑳芥敹鍒板け鐒︼紙涓庣疆椤舵偓娴潯鎶㈢劍鐐癸級锛屽嬁绔嬪嵆鍏抽棴
         if (g_ConfigWebView_LastShown && (A_TickCount - g_ConfigWebView_LastShown < 500))
@@ -390,6 +440,55 @@ ConfigWebView_Send(msgMap) {
     WebView_QueuePayload(ConfigWV2, msgMap)
 }
 
+ConfigWebView_SendImmediate(msgMap) {
+    global ConfigWV2
+    if !ConfigWV2
+        return false
+    try {
+        json := WebView_DumpJson(msgMap)
+        if (json = "")
+            return false
+        ConfigWV2.PostWebMessageAsJson(json)
+        return true
+    } catch as e {
+        NmerCatch(A_ThisFunc, e)
+        return false
+    }
+}
+
+ConfigWebView_SendLlmTestResult(msgMap) {
+    global ConfigWV2, ConfigWV2Ready, g_ConfigWebView_PendingLlmTestResult
+    if ConfigWV2 && ConfigWV2Ready {
+        if ConfigWebView_SendImmediate(msgMap)
+            return
+        try WebView_QueuePayload(ConfigWV2, msgMap)
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e)
+            g_ConfigWebView_PendingLlmTestResult := msgMap
+            SetTimer(ConfigWebView_FlushPendingLlmTestResult, -80)
+        }
+        return
+    }
+    g_ConfigWebView_PendingLlmTestResult := msgMap
+    SetTimer(ConfigWebView_FlushPendingLlmTestResult, -80)
+    SetTimer(ConfigWebView_FlushPendingLlmTestResult, -300)
+    SetTimer(ConfigWebView_FlushPendingLlmTestResult, -800)
+}
+
+ConfigWebView_FlushPendingLlmTestResult(*) {
+    global ConfigWV2, ConfigWV2Ready, g_ConfigWebView_PendingLlmTestResult
+    if !(g_ConfigWebView_PendingLlmTestResult is Map) || g_ConfigWebView_PendingLlmTestResult.Count = 0
+        return
+    if !ConfigWV2 || !ConfigWV2Ready
+        return
+    try WebView_QueuePayload(ConfigWV2, g_ConfigWebView_PendingLlmTestResult)
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e)
+        return
+    }
+    g_ConfigWebView_PendingLlmTestResult := 0
+}
+
 ConfigWebView_NotifyStudioLlmSynced(*) {
     global g_ConfigWebView_PendingStudioSync
     if !IsSet(g_ConfigWebView_PendingStudioSync) || !g_ConfigWebView_PendingStudioSync
@@ -402,21 +501,27 @@ ConfigWebView_NotifyStudioLlmSynced(*) {
 }
 
 ConfigWebView_EnsureSearchCoreRunning() {
+    if FuncExists("SearchCore_EnsureHttpReady")
+        return SearchCore_EnsureHttpReady("config")
     if FuncExists("NmerService_Ensure") {
         st := NmerService_Ensure("searchcore", "config", false)
+        if FuncExists("SearchCore_StatusHttpReady")
+            return SearchCore_StatusHttpReady(st)
     } else if FuncExists("SearchCore_EnsureStatus") {
         st := SearchCore_EnsureStatus(false, "config")
+        if FuncExists("SearchCore_StatusHttpReady")
+            return SearchCore_StatusHttpReady(st)
         if !(st is Map) || !st.Has("status")
             return false
         status := String(st["status"])
-        return (status = "healthy" || status = "started" || status = "process_only")
+        return (status = "healthy" || status = "started")
     }
     if FuncExists("Nmer_StartSearchCenterCoreStatus") {
         st := Nmer_StartSearchCenterCoreStatus(false, "config")
         if !(st is Map) || !st.Has("status")
             return false
         status := String(st["status"])
-        return (status = "healthy" || status = "started" || status = "process_only")
+        return (status = "healthy" || status = "started")
     }
     if FuncExists("Nmer_StartSearchCenterCore")
         return Nmer_StartSearchCenterCore(false)
@@ -730,7 +835,8 @@ ConfigWebView_GetKeybinderToolbarSnapshot() {
     cmds := []
     try {
         _LoadCommands()
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if !(IsSet(g_Commands) && g_Commands is Map)
         return Map("toolbarLayout", tl, "commands", cmds)
@@ -833,7 +939,8 @@ ConfigWebView_VkEnsureCommandsLoaded() {
     try {
         if FuncExists("_LoadCommands")
             _LoadCommands()
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -842,6 +949,34 @@ ConfigWebView_VkPushBindingsSnapshot() {
     b := snap.Has("bindings") ? snap["bindings"] : Map()
     s := snap.Has("suggestedBindings") ? snap["suggestedBindings"] : Map()
     ConfigWebView_Send(Map("type", "keybinderBindingsSnapshot", "bindings", b, "suggestedBindings", s))
+}
+
+ConfigWebView_LoadPromptTemplatePresets(*) {
+    path := Nmer_ConfigDir() . "\user_studio.defaults.json"
+    if !FileExist(path)
+        return []
+    try {
+        doc := Jxon_Load(FileRead(path, "UTF-8"))
+    } catch {
+        return []
+    }
+    if !(doc is Map) || !doc.Has("promptTemplates")
+        return []
+    raw := doc["promptTemplates"]
+    if !(raw is Array)
+        return []
+    out := []
+    for item in raw {
+        if !(item is Map)
+            continue
+        out.Push(Map(
+            "id", String(item.Get("id", "")),
+            "title", String(item.Get("title", "")),
+            "category", String(item.Get("category", "基础")),
+            "body", String(item.Get("body", item.Get("content", "")))
+        ))
+    }
+    return out
 }
 
 ConfigWebView_BuildInitData() {
@@ -1016,6 +1151,7 @@ ConfigWebView_BuildInitData() {
     if FuncExists("AppUpdateCheck_PayloadForWeb")
         cfgPayload["appUpdate"] := AppUpdateCheck_PayloadForWeb()
     cfgPayload["userCacheRoot"] := Nmer_UserCacheRoot()
+    cfgPayload["promptTemplates"] := ConfigWebView_LoadPromptTemplatePresets()
     return cfgPayload
 }
 
@@ -1114,7 +1250,8 @@ ConfigWebView_SendDockConfig() {
                 ? g_Commands["CommandList"].Count
                 : 0
             OutputDebug("[ConfigWV2] SendDockConfig tray_menu count=" . trayCount . " cmd_count=" . cmdCount)
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         if (g_Commands is Map && g_Commands.Has("SceneToolbarLayout") && g_Commands["SceneToolbarLayout"] is Array) {
             for row in g_Commands["SceneToolbarLayout"] {
@@ -1130,7 +1267,8 @@ ConfigWebView_SendDockConfig() {
                 ))
             }
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     ConfigWebView_Send(Map("type", "nmDockConfig", "sceneToolbarLayout", arr))
 }
@@ -1146,7 +1284,8 @@ ConfigWebView_ExecuteDockCmd(msg) {
     try {
         _ExecuteCommand(cmdId0)
         return
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     m0 := Map(
         "Title", "dock",
@@ -1496,9 +1635,9 @@ ConfigWebView_ValidateAndApply(payload, &errorMsg := "") {
         IniWrite(NewTheme, ConfigFile, "Appearance", "ThemeMode")
         ApplyTheme(NewTheme)
         try SetTimer(ConfigWebView_RefocusAfterThemeChange, -60)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
-
         if (payload.Has("cursorPath"))
             IniWrite(CursorPath, ConfigFile, "Settings", "CursorPath")
         IniWrite(String(AISleepTime), ConfigFile, "Settings", "AISleepTime")
@@ -1591,18 +1730,21 @@ ConfigWebView_ValidateAndApply(payload, &errorMsg := "") {
             try {
                 usMsg := Map("payload", us)
                 try usMsg["payloadJson"] := Jxon_Dump(us)
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
                 ConfigWebView_ApplyUserStudioSave(usMsg)
             } catch as e {
                 try OutputDebug("[ConfigWebView] userStudio from saveSettings: " . e.Message)
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
             }
         }
         if (payload.Has("appearanceActivationMode") || payload.Has("AppearanceActivationMode")) {
             try SetTimer((*) => ApplyAppearanceActivationMode(), -20)
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
         return true
@@ -1717,12 +1859,14 @@ ConfigWebView_MergeHoleTriggerPayload(payload) {
         } catch as e {
             if FuncExists("HoleTriggers_DiagLog")
                 try HoleTriggers_DiagLog("[HoleTrigger] web_apply_fail msg=" . e.Message)
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
         }
     } else if FuncExists("HoleTriggers_SaveToIni") {
         try HoleTriggers_SaveToIni(trig)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 }
@@ -1786,7 +1930,8 @@ ConfigWebView_CloseHolePreview(*) {
     try SetTimer(ConfigWebView_CloseHolePreview, 0)
     if FuncExists("GDHO_RequestClose")
         try GDHO_RequestClose("settings_preview")
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -1877,13 +2022,15 @@ ConfigWebView_SaveAppearanceActivationMode(mode, &errorMsg := "") {
             return false
         }
         try OutputDebug("[ConfigWebView] saveAppearanceActivationMode mode=" . newMode)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         AppearanceActivationMode := newMode
         IniWrite(AppearanceActivationMode, ConfigFile, "Appearance", "ActivationMode")
         if (newMode = "toolbar") {
             try FloatingToolbar_ClearOverlaySuppression()
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
         ; Defer the actual visibility change so we do not re-enter WebView2 show/create paths
@@ -1891,16 +2038,19 @@ ConfigWebView_SaveAppearanceActivationMode(mode, &errorMsg := "") {
         try SetTimer(ApplyAppearanceActivationMode, -10)
         catch {
             try ApplyAppearanceActivationMode()
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
         if (newMode = "toolbar") {
             try SetTimer(FloatingToolbar_ShowForActivationMode, -40)
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         } else if (newMode = "hole" || newMode = "bubble") {
             try SetTimer((*) => SurfaceIntent_Close("floating_toolbar"), -50)
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
         return true
@@ -1997,9 +2147,11 @@ ConfigWebView_RelocateSettingsGuiIfOpen() {
         PosY := ScreenInfo.Top + Round((ScreenInfo.Height - WinH) / 2)
         GuiID_ConfigGUI.Move(PosX, PosY, WinW, WinH)
         try ConfigWebView_ApplyBounds()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -2058,18 +2210,22 @@ ConfigWebView_RelocateSearchCenterIfOpen(*) {
             return
         if FuncExists("Nmer_EnsureGuiMaximizedOnPopupScreen") {
             try Nmer_EnsureGuiMaximizedOnPopupScreen(g_SCWV_Gui)
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         } else {
             Nmer_MoveGuiToPopupScreen(g_SCWV_Gui, true)
             try WinMaximize("ahk_id " . g_SCWV_Gui.Hwnd)
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
         try SCWV_ApplyBounds()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -2088,12 +2244,15 @@ ConfigWebView_RelocateHubCapsuleIfOpen(*) {
             h := 560
         Nmer_DefaultPopupWindowXY(w, h, &x, &y)
         try g_SelSense_MenuGui.Move(x, y, w, h)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         try SelectionSense_ApplyMenuBounds()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -2135,7 +2294,8 @@ ConfigWebView_SaveThemeMode(mode, &errorMsg := "") {
         IniWrite(newMode, ConfigFile, "Appearance", "ThemeMode")
         ApplyTheme(newMode)
         try SetTimer(ConfigWebView_RefocusAfterThemeChange, -60)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return true
     } catch as err {
@@ -2206,7 +2366,8 @@ ConfigWebView_ParseUserStudioSavePayload(msg) {
             parsed := Jxon_Load(jsonPl)
             if (parsed is Map)
                 payload := parsed
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     } else if (payload is String && payload != "") {
         try payload := Jxon_Load(payload)
@@ -2216,6 +2377,57 @@ ConfigWebView_ParseUserStudioSavePayload(msg) {
     }
     if !(payload is Map)
         payload := Map()
+    return payload
+}
+
+/** 合并 postMessage / 宿主对象 顶层的 llmApiKey 等字段，避免 JSON 嵌套丢失密钥 */
+ConfigWebView_BuildLlmTestPayload(msg) {
+    if !(msg is Map)
+        return Map()
+    payload := ConfigWebView_ParseUserStudioSavePayload(msg)
+    if !(payload is Map)
+        payload := Map()
+    flatKey := ConfigWebView_NormalizeApiKey(msg.Get("llmApiKey", payload.Get("llmApiKey", "")))
+    flatProv := ConfigWebView_LlmNormProv(msg.Get("llmProvider", payload.Get("llmProvider", "")))
+    flatBase := Trim(String(msg.Get("llmBaseUrl", payload.Get("llmBaseUrl", ""))))
+    flatModel := Trim(String(msg.Get("llmModel", payload.Get("llmModel", ""))))
+    if (flatKey = "")
+        flatKey := ConfigWebView_NormalizeApiKey(payload.Get("llmApiKey", ""))
+    if (flatKey = "" && payload.Has("llm") && payload["llm"] is Map)
+        flatKey := ConfigWebView_NormalizeApiKey(payload["llm"].Get("apiKey", ""))
+    if (flatProv = "")
+        flatProv := ConfigWebView_LlmNormProv(payload.Get("llmProvider", ""))
+    if (flatProv = "" && payload.Has("llm") && payload["llm"] is Map)
+        flatProv := ConfigWebView_LlmNormProv(payload["llm"].Get("provider", ""))
+    if (flatKey = "" && flatProv != "" && payload.Has("options") && payload["options"] is Map) {
+        optKeys := payload["options"]
+        if (optKeys.Has("llmApiKeys") && optKeys["llmApiKeys"] is Map)
+            flatKey := ConfigWebView_NormalizeApiKey(optKeys["llmApiKeys"].Get(flatProv, ""))
+    }
+    if (flatKey != "" || flatProv != "" || flatBase != "" || flatModel != "") {
+        llm := payload.Has("llm") && payload["llm"] is Map ? payload["llm"].Clone() : Map()
+        if (flatProv != "")
+            llm["provider"] := flatProv
+        if (flatKey != "")
+            llm["apiKey"] := flatKey
+        if (flatBase != "")
+            llm["baseUrl"] := flatBase
+        if (flatModel != "")
+            llm["model"] := flatModel
+        payload["llm"] := llm
+        if (flatKey != "" && flatProv != "") {
+            opt := payload.Has("options") && payload["options"] is Map ? payload["options"].Clone() : Map()
+            keys := opt.Has("llmApiKeys") && opt["llmApiKeys"] is Map ? opt["llmApiKeys"].Clone() : Map()
+            keys[flatProv] := flatKey
+            opt["llmApiKeys"] := keys
+            payload["options"] := opt
+        }
+    }
+    if FuncExists("ConfigWebView_LogStudioLlmTest") {
+        llmLog := payload.Has("llm") && payload["llm"] is Map ? payload["llm"] : Map()
+        kLen := StrLen(Trim(String(llmLog.Get("apiKey", ""))))
+        ConfigWebView_LogStudioLlmTest("buildTestPayload prov=" . llmLog.Get("provider", "") . " keyLen=" . kLen)
+    }
     return payload
 }
 
@@ -2240,7 +2452,8 @@ ConfigWebView_BuildUserStudioPayloadFromFlat(msg) {
             keysParsed := Jxon_Load(keysJson)
             if (keysParsed is Map)
                 opt["llmApiKeys"] := keysParsed
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     modelsJson := Trim(String(msg.Get("modelsJson", "")))
@@ -2249,7 +2462,8 @@ ConfigWebView_BuildUserStudioPayloadFromFlat(msg) {
             modelsParsed := Jxon_Load(modelsJson)
             if (modelsParsed is Map)
                 opt["llmModels"] := modelsParsed
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     return Map(
@@ -2282,7 +2496,8 @@ ConfigWebView_FallbackWriteUserStudioJson(payload) {
             parsed := Jxon_Load(FileRead(path, "UTF-8"))
             if (parsed is Map)
                 doc := parsed
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if !(doc.Has("llm") && doc["llm"] is Map)
@@ -2319,7 +2534,8 @@ ConfigWebView_FallbackWriteUserStudioJson(payload) {
     try {
         if FileExist(path)
             FileCopy(path, Nmer_UserStudioBackupPath(), 1)
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     f := FileOpen(path, "w", "UTF-8")
     if !f
@@ -2343,7 +2559,8 @@ ConfigWebView_ApplyUserStudioSave(msg) {
     } catch as e {
         errPrimary := e.Message
         try OutputDebug("[ConfigWebView] UserStudio save primary failed: " . errPrimary)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     try {
@@ -2358,7 +2575,8 @@ ConfigWebView_ApplyUserStudioSave(msg) {
 ConfigWebView_UserStudioPayloadForWebAfterSave() {
     if FuncExists("UserStudio_PayloadForWeb") {
         try return UserStudio_PayloadForWeb()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     path := ConfigWebView_UserStudioPath()
@@ -2367,7 +2585,8 @@ ConfigWebView_UserStudioPayloadForWebAfterSave() {
             parsed := Jxon_Load(FileRead(path, "UTF-8"))
             if (parsed is Map)
                 return parsed
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     return Map()
@@ -2379,7 +2598,8 @@ ConfigWebView_FindOpenClawCliExe() {
             p := UserStudio_FindOpenClawCliExe()
             if (p != "")
                 return p
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     for _, p in [A_AppData . "\npm\openclaw.cmd", "C:\Program Files\nodejs\openclaw.cmd"] {
@@ -2410,7 +2630,8 @@ ConfigWebView_OpenClawGatewayCliOk(timeoutMs := 8000) {
     while ProcessExist(pid) {
         if (A_TickCount > deadline) {
             try ProcessClose(pid)
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             try FileDelete(out)
             return false
@@ -2486,7 +2707,8 @@ ConfigWebView_TcpPortOpen(host, port, timeoutMs := 2500) {
         return false
     } finally {
         try DllCall("ws2_32\closesocket", "UPtr", sock)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 }
@@ -2589,7 +2811,8 @@ ConfigWebView_RunHermesStudioProbe(msg, action) {
         } catch as eH1 {
             dbg := (dbg != "" ? dbg . " | " : "") . "probe_err=" . eH1.Message
             try OutputDebug("[ConfigWebView] hermes probe failed: " . eH1.Message)
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
     }
@@ -2605,13 +2828,15 @@ ConfigWebView_RunHermesStudioProbe(msg, action) {
                     dbg := (dbg != "" ? dbg . " | " : "") . "quick2=" . source
                 }
             }
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     try {
         if FuncExists("UserStudio_ReadNiumaHermesKey")
             niumaKey := UserStudio_ReadNiumaHermesKey()
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if (token = "" && niumaKey != "") {
         token := niumaKey
@@ -2646,7 +2871,8 @@ ConfigWebView_RunHermesStudioProbe(msg, action) {
                 localAppData := String(meta.Get("localAppData", ""))
                 primaryDir := String(meta.Get("primaryDir", ""))
             }
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if (token = "" && dbg = "") {
@@ -2677,14 +2903,16 @@ ConfigWebView_RunHermesStudioProbe(msg, action) {
                 if (primaryDir = "")
                     primaryDir := String(disc.Get("dataDir", ""))
             }
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if (!gwOk && token != "" && apiServerState = "connected")
         gwErr := "API Server 已在 8642 运行，但当前 Key 与 %LOCALAPPDATA%\hermes\.env 不一致；请点「一键连接 Hermes」对齐。"
     try OutputDebug("[ConfigWebView] hermes_probe token=" . (token != "" ? "yes" : "no")
         . " gwOk=" . (gwOk ? "yes" : "no") . " err=" . gwErr)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if (action = "ensureHermesApiServerEnv") {
         ConfigWebView_Send(Map(
@@ -2796,7 +3024,8 @@ ConfigWebView_RunOpenClawProbe(msg, action) {
             token := envTok
             source := "env:OPENCLAW_GATEWAY_TOKEN"
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if (token = "") {
         try {
@@ -2831,7 +3060,8 @@ ConfigWebView_RunOpenClawProbe(msg, action) {
             }
         } catch as e1 {
             try OutputDebug("[ConfigWebView] openclaw probe failed: " . e1.Message)
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
     }
@@ -2845,12 +3075,14 @@ ConfigWebView_RunOpenClawProbe(msg, action) {
                 "func=" . (FuncExists("UserStudio_ProbeOpenClawGatewayToken") ? "yes" : "no"),
                 "literal=" . (FuncExists("UserStudio_ReadOpenClawAuthTokenLiteral") ? "yes" : "no")
             )
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try {
         if FuncExists("UserStudio_ReadNiumaOpenClawKey")
             niumaKey := UserStudio_ReadNiumaOpenClawKey()
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if (token = "" && niumaKey != "") {
         token := niumaKey
@@ -2861,7 +3093,8 @@ ConfigWebView_RunOpenClawProbe(msg, action) {
         try {
             if ConfigWebView_TcpPortOpen(host, port, 7000)
                 gwOk := true
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if (token != "" && !gwOk) {
@@ -2882,7 +3115,8 @@ ConfigWebView_RunOpenClawProbe(msg, action) {
                     "pingMs=" . pingMs,
                     "host=" . host . ":" . port
                 )
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     dbg := quickDbg
@@ -2931,12 +3165,14 @@ ConfigWebView_RunOpenClawProbe(msg, action) {
 ConfigWebView_ProbeOpenClawGateway(base, token, timeoutMs := 12000) {
     if FuncExists("UserStudio_ProbeOpenClawGateway") {
         try return UserStudio_ProbeOpenClawGateway(base, token, timeoutMs)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if FuncExists("LlmApiPing_TestOpenClaw") {
         try return LlmApiPing_TestOpenClaw(base, token, timeoutMs)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     token := Trim(String(token))
@@ -2974,7 +3210,8 @@ ConfigWebView_QuickReadOpenClawGatewayToken() {
         up0 := Trim(String(EnvGet("USERPROFILE")))
         if (up0 != "")
             paths.Push(up0 . "\.openclaw\openclaw.json")
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if (A_AppData != "") {
         hm := Trim(RegExReplace(A_AppData, "\\AppData\\Roaming$", ""))
@@ -2992,7 +3229,8 @@ ConfigWebView_QuickReadOpenClawGatewayToken() {
             paths.Push(up . "\.openclaw\openclaw.json.last-good")
             paths.Push(up . "\.openclaw\identity\device-auth.json")
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     for _, path in paths {
         path := Trim(String(path))
@@ -3020,7 +3258,8 @@ ConfigWebView_QuickReadOpenClawGatewayToken() {
                             if (tok != "")
                                 meta["token"] := tok
                         }
-                    } catch {
+                    } catch as _e {
+                        NmerCatch(A_ThisFunc, _e) 
                     }
                 }
                 if (meta["token"] = "" && FuncExists("UserStudio_ReadOpenClawAuthTokenLiteral")) {
@@ -3055,7 +3294,8 @@ ConfigWebView_QuickReadOpenClawGatewayToken() {
                 tok := Trim(tok)
             if (tok != "")
                 return Map("token", tok, "source", path, "host", host, "port", port)
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     return Map("token", "", "source", "", "host", host, "port", port)
@@ -3068,14 +3308,16 @@ ConfigWebView_LocalAppDataDir() {
         la := Trim(EnvGet("LOCALAPPDATA"))
         if (la != "")
             return la
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if (A_AppData != "") {
         try {
             p := RegExReplace(A_AppData, "\\Roaming$", "\\Local", , 1)
             if (p != A_AppData)
                 return p
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     return ""
@@ -3098,7 +3340,8 @@ ConfigWebView_NormalizeHermesApiKey(key) {
 ConfigWebView_QuickReadHermesApiServerKey() {
     if FuncExists("UserStudio_QuickReadHermesApiServerKey") {
         try return UserStudio_QuickReadHermesApiServerKey()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     host := "127.0.0.1"
@@ -3123,7 +3366,8 @@ ConfigWebView_QuickReadHermesApiServerKey() {
             pushHermesEnvPath(up . "\.hermes\.env")
             pushHermesEnvPath(up . "\AppData\Local\hermes\.env")
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     for _, path in paths {
         if !FileExist(path)
@@ -3160,7 +3404,8 @@ ConfigWebView_QuickReadHermesApiServerKey() {
             if (host = "localhost")
                 host := "127.0.0.1"
             break
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     tried := []
@@ -3184,8 +3429,16 @@ ConfigWebView_OnMessage(sender, args) {
     action := msg.Has("type") ? msg["type"] : (msg.Has("action") ? msg["action"] : "")
     if (action = "")
         return
+    if FuncExists("ConfigWebView_LogStudioLlmTest") {
+        if (action = "testUserStudioLlm")
+            ConfigWebView_LogStudioLlmTest("onmessage type=testUserStudioLlm testId=" . Trim(String(msg.Get("testId", "")))
+                . " keyLen=" . StrLen(Trim(String(msg.Get("llmApiKey", "")))))
+        else if (action = "ready")
+            ConfigWebView_LogStudioLlmTest("onmessage type=ready")
+    }
     try OutputDebug("[ConfigWebView] onmessage action=" . action)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     switch action {
         case "ready":
@@ -3194,6 +3447,7 @@ ConfigWebView_OnMessage(sender, args) {
             ConfigWebView_Send(Map("type", "initData", "payload", ConfigWebView_BuildInitDataSafe()))
             ConfigWebView_PostFullTextStatus(true)
             ConfigWebView_SendDockConfig()
+            ConfigWebView_FlushPendingLlmTestResult()
         case "nmDockReady":
             ConfigWebView_SendDockConfig()
         case "nmDockLeave":
@@ -3267,7 +3521,8 @@ ConfigWebView_OnMessage(sender, args) {
             } catch as e {
                 err := e.Message
                 try OutputDebug("[ConfigWebView] saveUserStudio failed: " . err)
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
             }
             if ok {
@@ -3277,7 +3532,8 @@ ConfigWebView_OnMessage(sender, args) {
                         if (llmPush is Map && Trim(String(llmPush.Get("apiKey", ""))) != "")
                             FloatingToolbar_PushStudioLlmToChat(llmPush, "", false)
                     }
-                } catch {
+                } catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
             }
             studio := ok ? ConfigWebView_UserStudioPayloadForWebAfterSave() : Map()
@@ -3291,7 +3547,8 @@ ConfigWebView_OnMessage(sender, args) {
             } catch as e {
                 err := e.Message
                 try OutputDebug("[ConfigWebView] saveStudioLlmCards failed: " . err)
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
             }
             studio := ok ? ConfigWebView_UserStudioPayloadForWebAfterSave() : Map()
@@ -3321,50 +3578,22 @@ ConfigWebView_OnMessage(sender, args) {
         case "openclaw_probe_token", "niuma_openclaw_probe_token":
             ConfigWebView_RunOpenClawProbe(msg, action)
         case "testUserStudioLlm":
-            payload := ConfigWebView_ParseUserStudioSavePayload(msg)
+            testId := Trim(String(msg.Get("testId", "")))
+            if !ConfigWebView_SendImmediate(Map("type", "testUserStudioLlmAck", "testId", testId))
+                try ConfigWebView_Send(Map("type", "testUserStudioLlmAck", "testId", testId))
+                catch as _ackE {
+                    NmerCatch(A_ThisFunc, _ackE)
+                }
+            payload := ConfigWebView_BuildLlmTestPayload(msg)
             if !(payload is Map)
                 payload := Map()
-            llm := payload
-            if FuncExists("LlmApiPing_ResolveFromPayload")
-                llm := LlmApiPing_ResolveFromPayload(payload)
-            else if (payload.Has("llm") && payload["llm"] is Map)
-                llm := payload["llm"]
-            if !(llm is Map)
-                llm := Map()
-            provTest := ConfigWebView_LlmNormProv(llm.Get("provider", ""))
-            if (provTest = "hermes") {
-                if FuncExists("UserStudio_ReadHermesApiConfig") {
-                    try {
-                        cfgH := UserStudio_ReadHermesApiConfig()
-                        if (cfgH is Map) {
-                            envKey := ConfigWebView_NormalizeApiKey(cfgH.Get("key", ""))
-                            if (envKey != "")
-                                llm["apiKey"] := envKey
-                            eh := Trim(String(cfgH.Get("host", "")))
-                            ep := Integer(cfgH.Get("port", 8642))
-                            if (eh = "localhost")
-                                eh := "127.0.0.1"
-                            if (eh != "" && ep > 0)
-                                llm["baseUrl"] := "http://" . eh . ":" . ep . "/v1"
-                        }
-                    } catch {
-                    }
-                }
-                if Trim(String(llm.Get("baseUrl", ""))) = ""
-                    llm["baseUrl"] := "http://127.0.0.1:8642/v1"
+            if FuncExists("ConfigWebView_LogStudioLlmTest") {
+                llmLog := payload.Has("llm") && payload["llm"] is Map ? payload["llm"] : Map()
+                kHint := Trim(String(llmLog.Get("apiKey", "")))
+                ConfigWebView_LogStudioLlmTest("recv async testId=" . testId . " prov=" . llmLog.Get("provider", "")
+                    . " keyLen=" . StrLen(kHint))
             }
-            ok := false
-            err := ""
-            elapsed := 0
-            try {
-                r := ConfigWebView_TestLlmPing(llm, 18000)
-                ok := r.Get("ok", false)
-                err := r.Get("error", "")
-                elapsed := Integer(r.Get("elapsedMs", 0))
-            } catch as e {
-                err := e.Message
-            }
-            ConfigWebView_Send(Map("type", "testUserStudioLlmResult", "ok", ok, "error", err, "elapsedMs", elapsed))
+            SetTimer(ConfigWebView_RunUserStudioLlmTest.Bind(payload, testId), -1)
         case "restoreUserStudio":
             ok := false
             err := ""
@@ -3387,13 +3616,15 @@ ConfigWebView_OnMessage(sender, args) {
             }
             if ok {
                 try ConfigWebView_Send(Map("type", "initData", "payload", ConfigWebView_BuildInitDataSafe()))
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
             }
             ConfigWebView_Send(Map("type", "restoreUserStudioResult", "ok", ok, "error", err, "userStudio", studio))
         case "openNiumaChatTtyd":
             try CloseConfigGUI()
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             ok := false
             err := ""
@@ -3426,7 +3657,8 @@ ConfigWebView_OnMessage(sender, args) {
             prompt := Trim(String(msg.Get("prompt", "")))
             autoSend := msg.Has("autoSend") ? !!msg["autoSend"] : (prompt != "")
             try CloseConfigGUI()
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             ok := false
             err := ""
@@ -3544,7 +3776,8 @@ ConfigWebView_OnMessage(sender, args) {
             try {
                 try {
                     _LoadCommands()
-                } catch {
+                } catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
                 if _VK_ApplyToolbarLayoutFromWeb(Map("toolbarLayout", tl)) {
                     _VK_ApplyContextMenuLayoutFromWeb(cml)
@@ -3574,7 +3807,8 @@ ConfigWebView_OnMessage(sender, args) {
         case "vkCancelRecord":
             if FuncExists("_EndRecord")
                 try _EndRecord()
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             ConfigWebView_Send(Map("type", "vkWebEvent", "event", Map("type", "recordHint", "active", false)))
         case "vkBindKey":
@@ -3670,17 +3904,20 @@ ConfigWebView_OnMessage(sender, args) {
                     case "openNiumaChatTtyd":
                         if FuncExists("UserStudio_ApplyFromWebPayload") && (payload is Map) && payload.Has("llm") {
                             try UserStudio_ApplyFromWebPayload(payload)
-                            catch {
+                            catch as _e {
+                                NmerCatch(A_ThisFunc, _e) 
                             }
                         }
                         if FuncExists("UserStudio_Load")
                             try UserStudio_Load()
-                            catch {
+                            catch as _e {
+                                NmerCatch(A_ThisFunc, _e) 
                             }
                         sc := msg.Has("startChat") ? !!msg["startChat"] : false
                         if FuncExists("FloatingToolbar_OpenNiumaChatTtydCustomize") {
                             try CloseConfigGUI()
-                            catch {
+                            catch as _e {
+                                NmerCatch(A_ThisFunc, _e) 
                             }
                             FloatingToolbar_OpenNiumaChatTtydCustomize(sc)
                         } else
@@ -3688,7 +3925,8 @@ ConfigWebView_OnMessage(sender, args) {
                     case "openNiumaChatAsk":
                         if FuncExists("FloatingToolbar_OpenNiumaChatAsk") {
                             try CloseConfigGUI()
-                            catch {
+                            catch as _e {
+                                NmerCatch(A_ThisFunc, _e) 
                             }
                             FloatingToolbar_OpenNiumaChatAsk("", false)
                         } else
@@ -3697,7 +3935,8 @@ ConfigWebView_OnMessage(sender, args) {
                         txt := ""
                         if FuncExists("UserStudio_BuildDefaultNiumaSystemPrompt") {
                             try txt := UserStudio_BuildDefaultNiumaSystemPrompt()
-                            catch {
+                            catch as _e {
+                                NmerCatch(A_ThisFunc, _e) 
                             }
                         }
                         ConfigWebView_Send(Map("type", "loadNiumaProjectBriefResult", "ok", true, "text", txt))
@@ -3750,6 +3989,25 @@ ConfigWebView_OnMessage(sender, args) {
                         WebViewPromptTemplateSetDefault(payload)
                     case "showVk":
                         ConfigWebView_OpenVkKeybinder()
+                    case "getHealthSnapshot":
+                        trig := "user_refresh"
+                        if (payload is Map) && payload.Has("trigger")
+                            trig := String(payload["trigger"])
+                        snap := Map()
+                        if FuncExists("Nmer_CollectHealthSnapshot")
+                            snap := Nmer_CollectHealthSnapshot(trig)
+                        else if FuncExists("Nmer_BuildHealthSnapshot")
+                            snap := Nmer_BuildHealthSnapshot(trig)
+                        ConfigWebView_Send(Map("type", "healthSnapshot", "payload", FuncExists("Nmer_HealthSnapshotForWeb") ? Nmer_HealthSnapshotForWeb(snap) : snap))
+                        return
+                    case "exportDiagnosticsBundle":
+                        if FuncExists("Nmer_ExportDiagnosticsBundle")
+                            Nmer_ExportDiagnosticsBundle()
+                        return
+                    case "openDebugLogsFolder":
+                        if FuncExists("Nmer_OpenLogsFolder")
+                            Nmer_OpenLogsFolder()
+                        return
                     default:
                         ok := false
                         err := "鏈煡鎿嶄綔: " . op
@@ -3776,7 +4034,8 @@ ConfigWebView_OnMessage(sender, args) {
             try {
                 if FuncExists("AppUpdateCheck_CheckNow")
                     AppUpdateCheck_CheckNow(true)
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         case "cancel":
             CloseConfigGUI()
@@ -3885,7 +4144,8 @@ ConfigWebView_Close() {
     try {
         if IsSet(ConfigWV2) && ConfigWV2
             ConfigWV2.ExecuteScriptAsync("(function(){try{if(window.__nmerFlushStudioLlm)window.__nmerFlushStudioLlm();if(window.__nmerFlushSettingsTab)window.__nmerFlushSettingsTab();}catch(e){}})()")
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     Sleep 220
     try FloatingToolbar_PageDockLeave("settings")
@@ -3893,7 +4153,8 @@ ConfigWebView_Close() {
         WMActivateChain_Unregister(ConfigWebView_WM_ACTIVATE)
         try WebView2_NotifyHidden(ConfigWV2)
         GuiID_ConfigGUI.Hide()
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -3901,7 +4162,8 @@ ConfigWebView_Dispose(reason := "") {
     global GuiID_ConfigGUI, ConfigWV2Ctrl, ConfigWV2, ConfigWebViewMode, ConfigWV2Ready
     global ConfigWebViewPreloaded, ConfigWebViewNavFallbackTried, g_ConfigWebView_StartTabNavigated
     try ConfigWebView_Close()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     SurfaceManager_CloseWebViewControl(ConfigWV2Ctrl)
     ConfigWV2Ctrl := 0
@@ -3958,7 +4220,8 @@ ConfigWebView_ParseLlmErrDetail(raw) {
             if j.Has("message")
                 return Trim(String(j["message"]))
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return SubStr(raw, 1, 200)
 }
@@ -3977,21 +4240,35 @@ ConfigWebView_FormatMinimaxErr(status, raw, endpointUrl, baseUrl) {
 }
 
 ConfigWebView_MinimaxPingOnce(key, base, model, timeoutMs) {
+    t0 := A_TickCount
     pingAnth := Jxon_Dump(Map("model", model, "max_tokens", 8, "messages", [Map("role", "user", "content", "ping")]))
     pingOpenAI := Jxon_Dump(Map("model", model, "messages", [Map("role", "user", "content", "ping")], "max_tokens", 8, "temperature", 0.1))
     hdr := Map(
         "Content-Type", "application/json",
         "Authorization", "Bearer " . key,
+        "x-api-key", key,
         "anthropic-version", "2023-06-01"
     )
     urlA := ConfigWebView_MinimaxAnthropicUrl(base)
-    r := ConfigWebView_LlmHttpSync("POST", urlA, hdr, pingAnth, timeoutMs)
+    perA := Max(4000, Integer(timeoutMs) // 2)
+    r := ConfigWebView_LlmHttpSync("POST", urlA, hdr, pingAnth, perA)
     if r["ok"]
         return Map("ok", true, "error", "", "elapsedMs", r["elapsedMs"], "endpoint", urlA)
+    if (Integer(r.Get("status", 0)) = 0 && Trim(String(r.Get("error", ""))) != "") {
+        err0 := LlmApiPing_ClassifyNetworkError(r.Get("error", ""), timeoutMs)
+        if (err0 != "")
+            return Map("ok", false, "error", err0 . "（MiniMax Anthropic 端点）", "elapsedMs", A_TickCount - t0, "endpoint", urlA, "status", 0)
+    }
+    remain := Max(3000, Integer(timeoutMs) - Integer(r.Has("elapsedMs") ? r["elapsedMs"] : perA))
     urlO := ConfigWebView_MinimaxOpenAIUrl(base)
-    r2 := ConfigWebView_LlmHttpSync("POST", urlO, Map("Content-Type", "application/json", "Authorization", "Bearer " . key), pingOpenAI, timeoutMs)
+    r2 := ConfigWebView_LlmHttpSync("POST", urlO, Map("Content-Type", "application/json", "Authorization", "Bearer " . key, "x-api-key", key), pingOpenAI, remain)
     if r2["ok"]
         return Map("ok", true, "error", "", "elapsedMs", r2["elapsedMs"], "endpoint", urlO)
+    if (Integer(r2.Get("status", 0)) = 0 && Trim(String(r2.Get("error", ""))) != "") {
+        err1 := LlmApiPing_ClassifyNetworkError(r2.Get("error", ""), timeoutMs)
+        if (err1 != "")
+            return Map("ok", false, "error", err1 . "（MiniMax OpenAI 端点）", "elapsedMs", A_TickCount - t0, "endpoint", urlO, "status", 0)
+    }
     err := ConfigWebView_FormatMinimaxErr(Integer(r2.Has("status") ? r2["status"] : 401), r2.Has("text") ? r2["text"] : r["text"], urlA, base)
     return Map("ok", false, "error", err, "elapsedMs", Integer(r2.Has("elapsedMs") ? r2["elapsedMs"] : r["elapsedMs"]), "endpoint", urlA)
 }
@@ -4006,24 +4283,7 @@ ConfigWebView_TestMinimaxPing(key, base, model, timeoutMs := 18000) {
     base := Trim(String(base))
     if (base = "")
         base := ConfigWebView_MINIMAX_BASE_CN
-    bases := []
-    bases.Push(base)
-    lb := StrLower(base)
-    if InStr(lb, "minimaxi.com") && !InStr(lb, "minimax.io")
-        bases.Push(ConfigWebView_MINIMAX_BASE_INTL)
-    else if InStr(lb, "minimax.io") && !InStr(lb, "minimaxi.com")
-        bases.Push(ConfigWebView_MINIMAX_BASE_CN)
-    last := Map("ok", false, "error", "测试失败", "elapsedMs", 0)
-    for b in bases {
-        r := ConfigWebView_MinimaxPingOnce(key, b, model, timeoutMs)
-        if r.Get("ok", false)
-            return r
-        last := r
-        if (bases.Length = 1)
-            break
-        last["error"] := r.Get("error", "") . "（已自动尝试另一节点仍失败，请手动切换国内/国际）"
-    }
-    return last
+    return ConfigWebView_MinimaxPingOnce(key, base, model, timeoutMs)
 }
 
 ConfigWebView_LlmNormProv(prov) {
@@ -4068,7 +4328,8 @@ ConfigWebView_LlmUriEnc(s) {
 ConfigWebView_LlmHttpSync(method, url, headers, body, timeoutMs := 18000) {
     if FuncExists("LlmApiPing_HttpSync") {
         try return LlmApiPing_HttpSync(method, url, headers, body, timeoutMs)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     start := A_TickCount
@@ -4167,12 +4428,129 @@ ConfigWebView_GeminiGenerateUrl(base, model, apiKey) {
     return u . "/models/" . m . ":generateContent?key=" . encKey
 }
 
+ConfigWebView_LogStudioLlmTest(line) {
+    try {
+        path := FuncExists("Nmer_DebugPath") ? Nmer_DebugPath("studio_llm_test.log") : (A_ScriptDir . "\Cache\debug\studio_llm_test.log")
+        dir := ""
+        if InStr(path, "\")
+            dir := SubStr(path, 1, InStr(path, "\", , -1) - 1)
+        if (dir != "" && !DirExist(dir))
+            DirCreate(dir)
+        FileAppend(Format("{} {}\n", A_Now, line), path, "UTF-8")
+    } catch as _e {
+        try OutputDebug("[ConfigWebView] studio_llm_test log: " . _e.Message)
+        catch {
+        }
+    }
+}
+
+ConfigWebView_ExecuteStudioLlmTest(payload, testId := "") {
+    ok := false
+    err := ""
+    elapsed := 0
+    epUsed := ""
+    diagUsed := ""
+    phaseUsed := ""
+    httpSt := 0
+    viaRoute := 0
+    llm := Map()
+    provTest := ""
+    try {
+        if !(payload is Map)
+            payload := Map()
+        if FuncExists("LlmApiPing_ResolveTestLlmFromPayload")
+            llm := LlmApiPing_ResolveTestLlmFromPayload(payload)
+        else if FuncExists("LlmApiPing_ResolveFromPayload")
+            llm := LlmApiPing_ResolveFromPayload(payload)
+        else if (payload.Has("llm") && payload["llm"] is Map)
+            llm := payload["llm"]
+        if !(llm is Map)
+            llm := Map()
+        provTest := ConfigWebView_LlmNormProv(llm.Get("provider", ""))
+        keyHint := Trim(String(llm.Get("apiKey", "")))
+        keyLen := StrLen(keyHint)
+        if (keyLen > 6)
+            keyHint := SubStr(keyHint, 1, 3) . "…" . SubStr(keyHint, -2)
+        ConfigWebView_LogStudioLlmTest("start testId=" . testId . " prov=" . provTest . " keyLen=" . keyLen . " key=" . keyHint)
+        if (provTest = "hermes") {
+            if FuncExists("UserStudio_ReadHermesApiConfig") {
+                try {
+                    cfgH := UserStudio_ReadHermesApiConfig()
+                    if (cfgH is Map) {
+                        envKey := ConfigWebView_NormalizeApiKey(cfgH.Get("key", ""))
+                        if (envKey != "")
+                            llm["apiKey"] := envKey
+                        eh := Trim(String(cfgH.Get("host", "")))
+                        ep := Integer(cfgH.Get("port", 8642))
+                        if (eh = "localhost")
+                            eh := "127.0.0.1"
+                        if (eh != "" && ep > 0)
+                            llm["baseUrl"] := "http://" . eh . ":" . ep . "/v1"
+                    }
+                } catch as _e {
+                    NmerCatch(A_ThisFunc, _e)
+                }
+            }
+            if Trim(String(llm.Get("baseUrl", ""))) = ""
+                llm["baseUrl"] := "http://127.0.0.1:8642/v1"
+        }
+        r := ConfigWebView_TestLlmPing(llm, 12000)
+        ok := r.Get("ok", false)
+        err := Trim(String(r.Get("error", "")))
+        elapsed := Integer(r.Get("elapsedMs", 0))
+        epUsed := Trim(String(r.Get("endpoint", "")))
+        diagUsed := Trim(String(r.Get("diagnostics", "")))
+        phaseUsed := Trim(String(r.Get("phase", "")))
+        httpSt := Integer(r.Get("status", 0))
+        viaRoute := r.Has("viaRoute") && r["viaRoute"] ? 1 : 0
+        if ok {
+            if r.Has("baseUrl") && Trim(String(r["baseUrl"])) != ""
+                llm["baseUrl"] := Trim(String(r["baseUrl"]))
+            if r.Has("model") && Trim(String(r["model"])) != ""
+                llm["model"] := Trim(String(r["model"]))
+        }
+    } catch as e {
+        err := e.Message
+    }
+    ConfigWebView_LogStudioLlmTest("done testId=" . testId . " ok=" . (ok ? 1 : 0) . " ms=" . elapsed . " st=" . httpSt . " viaRoute=" . viaRoute . " err=" . SubStr(err, 1, 120))
+    return Map(
+        "type", "testUserStudioLlmResult",
+        "testId", testId,
+        "ok", ok,
+        "error", err,
+        "elapsedMs", elapsed,
+        "baseUrl", Trim(String(llm.Get("baseUrl", ""))),
+        "model", Trim(String(llm.Get("model", ""))),
+        "provider", provTest,
+        "endpoint", epUsed,
+        "diagnostics", diagUsed,
+        "phase", phaseUsed,
+        "status", httpSt
+    )
+}
+
+ConfigWebView_RunUserStudioLlmTest(payload, testId := "") {
+    try {
+        result := ConfigWebView_ExecuteStudioLlmTest(payload, testId)
+        if !(result is Map)
+            result := Map("type", "testUserStudioLlmResult", "ok", false, "error", "内部错误", "testId", testId)
+        else if !result.Has("testId") || Trim(String(result["testId"])) = ""
+            result["testId"] := testId
+        ConfigWebView_SendLlmTestResult(result)
+    } catch as _e2 {
+        NmerCatch(A_ThisFunc, _e2)
+        try ConfigWebView_SendLlmTestResult(Map(
+            "type", "testUserStudioLlmResult", "ok", false, "error", _e2.Message, "testId", testId, "elapsedMs", 0))
+    }
+}
+
 ConfigWebView_TestLlmPing(llm, timeoutMs := 18000) {
     try {
         return LlmApiPing_Test(llm, timeoutMs)
     } catch as e {
         try OutputDebug("[ConfigWebView] LlmApiPing_Test failed: " . e.Message)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if !(llm is Map)

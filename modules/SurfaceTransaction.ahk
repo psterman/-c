@@ -9,7 +9,8 @@ SurfaceTransaction_ShouldUse(*) {
     try {
         if FuncExists("Nmer_SurfaceManagerUseTransactions") && Nmer_SurfaceManagerUseTransactions()
             return true
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return false
 }
@@ -189,7 +190,8 @@ SurfaceTransaction_Begin(surfaceId, meta := 0, requestId := 0) {
             && FuncExists("Nmer_SurfaceManagerEnforceBudget") && Nmer_SurfaceManagerEnforceBudget()
             && FuncExists("SurfaceManager_ConflictGroupFor") && SurfaceManager_ConflictGroupFor(sid) != ""
             budgetPreempt := true
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if budgetPreempt {
         kept := []
@@ -201,7 +203,8 @@ SurfaceTransaction_Begin(surfaceId, meta := 0, requestId := 0) {
             try {
                 if FuncExists("SurfaceManager_ConflictGroupFor")
                     isPrimaryConflict := (SurfaceManager_ConflictGroupFor(conflictSid) = "primary")
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             if !isPrimaryConflict {
                 kept.Push(item)
@@ -211,7 +214,8 @@ SurfaceTransaction_Begin(surfaceId, meta := 0, requestId := 0) {
             try {
                 if FuncExists("SurfaceManager_IsPrimaryHandoff")
                     handoff := SurfaceManager_IsPrimaryHandoff(sid, conflictSid)
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             enforceMeta := Map(
                 "reason", handoff ? "primary_handoff" : "budget_pressure",
@@ -251,7 +255,8 @@ SurfaceTransaction_Begin(surfaceId, meta := 0, requestId := 0) {
     try {
         if FuncExists("SurfaceManager_ShouldEnforceSlotsForRequest")
             shouldEnforce := SurfaceManager_ShouldEnforceSlotsForRequest(sid, "SurfaceIntent_Open", meta)
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if shouldEnforce && FuncExists("SurfaceManager_HideSurface") {
         for item in pending
@@ -317,7 +322,8 @@ SurfaceTransaction_RestorePending(pending, abortedGenId) {
                 "skipTransaction", true,
                 "restoredFromGen", abortedGenId
             ))
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
     } finally {
@@ -342,7 +348,8 @@ SurfaceTransaction_CleanupPartialTarget(targetSurfaceId, genId, reason) {
         "generationId", genId,
         "abortReason", String(reason)
     ))
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 

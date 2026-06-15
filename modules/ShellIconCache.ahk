@@ -79,7 +79,8 @@ ShellIcon_ResolvePathFromSearchItem(Item) {
             if (fp != "")
                 return ShellIcon_NormalizePath(String(fp))
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     ; 剪贴板：SourcePath 为可执行文件，或从 SourceApp 解析真实 .exe 路径
     try {
@@ -100,7 +101,8 @@ ShellIcon_ResolvePathFromSearchItem(Item) {
                 }
             }
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     ; 搜索中心扁平化结果无 Metadata，文件路径在 Content
     try {
@@ -109,7 +111,8 @@ ShellIcon_ResolvePathFromSearchItem(Item) {
             if (c != "")
                 return ShellIcon_NormalizePath(String(c))
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     cand := ""
     try {
@@ -117,7 +120,8 @@ ShellIcon_ResolvePathFromSearchItem(Item) {
             cand := Item.Preview
         else if (Item.HasProp("Content") && Item.Content != "")
             cand := Item.Content
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if (cand = "")
         return ""
@@ -148,7 +152,8 @@ ShellIcon_ItemIsFileLike(Item) {
             if (s = "文件" || s = "文件夹" || s = "文件路径")
                 return true
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return false
 }
@@ -200,7 +205,8 @@ ShellIcon_GetSmIconSizeForHwnd(hwnd) {
         try {
             cx := DllCall("user32\GetSystemMetrics", "Int", 49, "Int")
             cy := DllCall("user32\GetSystemMetrics", "Int", 50, "Int")
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if (cx < 16)
@@ -495,7 +501,8 @@ ShellIcon_ProcessQueueTick(*) {
         idx := GetIconIndex(job.path, job.ctxName)
         try {
             job.lv.Modify(job.row, "Icon" . idx)
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         processed += 1
     }
@@ -566,7 +573,8 @@ ShellIcon_TryRegAppPaths(exeName) {
             cand := ShellIcon_ParseAppPathsRegValue(raw)
             if (cand != "" && ShellIcon_IsExecutablePathLike(cand))
                 return cand
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     return ""
@@ -587,10 +595,12 @@ ShellIcon_QueryWmiExecutablePath(normExe) {
                 ep := ShellIcon_NormalizePath(String(ep))
                 if (ep != "" && ShellIcon_IsExecutablePathLike(ep))
                     return ep
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return ""
 }
@@ -624,9 +634,9 @@ ResolveAppExecutablePath(procName) {
             if (path != "" && ShellIcon_IsExecutablePathLike(path))
                 return ShellIcon_AppPathCachePut(ck, path)
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
-
     p := ShellIcon_QueryWmiExecutablePath(norm)
     if (p != "")
         return ShellIcon_AppPathCachePut(ck, p)

@@ -43,11 +43,13 @@ HoleActivation_IsGestureSource(source) {
 
 HoleActivation_Log(msg) {
     try NativeDropDiag_Log(String(msg))
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if FuncExists("HoleTriggers_DiagLog") {
         try HoleTriggers_DiagLog(String(msg))
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 }
@@ -58,7 +60,8 @@ HoleActivation_OpenAt(x, y, source := "gesture", reason := "") {
         try {
             if !GDHO_IsHoleOnlyMode()
                 return false
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     ax := Integer(x), ay := Integer(y)
@@ -71,7 +74,8 @@ HoleActivation_OpenAt(x, y, source := "gesture", reason := "") {
     dec := false
     if FuncExists("GDHO_IsDecoupled") {
         try dec := GDHO_IsDecoupled()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     HoleActivation_Log("[HoleActivation] open_at src=" . src . " x=" . ax . " y=" . ay . " dec=" . (dec ? "1" : "0"))
@@ -110,14 +114,16 @@ HoleActivation_OpenAt(x, y, source := "gesture", reason := "") {
     }
     if FuncExists("SelectionSense_ArmHoleGesturePreview") {
         try SelectionSense_ArmHoleGesturePreview(ax, ay)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if FuncExists("GDHO_ShowTextDragAt") {
         try {
             GDHO_ShowTextDragAt(ax, ay, true)
             return true
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     return false

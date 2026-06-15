@@ -12,11 +12,13 @@ LegacyPromptQuickPad_ShowNative(openForCapture := false, forceCenterMaximize := 
     if AIListPanelIsVisible && AIListPanelGUI != 0 {
         if forceCenterMaximize {
             try WinRestore("ahk_id " . AIListPanelGUI.Hwnd)
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             PromptQuickPad_CenterAndMaximizeOnActiveMonitor()
             try LegacyGuard_RequestFocus("LegacyPromptQuickPadGui", "ahk_id " . AIListPanelGUI.Hwnd, 50, "show_ailistpanel")
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             return
         }
@@ -38,7 +40,8 @@ LegacyPromptQuickPad_ShowNative(openForCapture := false, forceCenterMaximize := 
         try {
             if err.Line
                 lineHint := " 行" . err.Line
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         TrayTip("Prompt Quick-Pad 创建失败: " . err.Message . lineHint, "错误", "Iconx 3")
         return
@@ -106,9 +109,9 @@ LegacyPromptQuickPad_ShowNative(openForCapture := false, forceCenterMaximize := 
         AIListPanelEnterHotkey := Hotkey("Enter", PromptQuickPad_OnEnter, "On")
         AIListPanelEscHotkey := Hotkey("Escape", PromptQuickPad_OnEsc, "On")
         HotIfWinActive()
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
-
     if !openForCapture && AIListPanelSearchInput != 0
         AIListPanelSearchInput.Focus()
 }
@@ -116,7 +119,8 @@ LegacyPromptQuickPad_ShowNative(openForCapture := false, forceCenterMaximize := 
 LegacyPromptQuickPad_HideNative() {
     if AIListPanelGUI != 0 {
         try SaveAIListPanelPosition()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         try {
             HotIfWinActive("ahk_id " . AIListPanelGUI.Hwnd)
@@ -131,11 +135,13 @@ LegacyPromptQuickPad_HideNative() {
             HotIfWinActive()
         } catch {
             try HotIfWinActive()
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
         try AIListPanelGUI.Hide()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         AIListPanelIsVisible := false
         PromptQuickPad_CaptureChromeVisible := false
@@ -160,7 +166,8 @@ LegacyPromptQuickPad_CreateGUI() {
     if AIListPanelGUI != 0 {
         PromptQuickPad_ClearCategoryStrip()
         try AIListPanelGUI.Destroy()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     PromptQuickPadLastCategorySig := ""
@@ -174,7 +181,8 @@ LegacyPromptQuickPad_CreateGUI() {
     topOpt := PromptQuickPad_PinTop ? "+AlwaysOnTop" : "-AlwaysOnTop"
     AIListPanelGUI := Gui(topOpt . " +Resize +MinimizeBox +MaximizeBox +Caption", "Prompt Quick-Pad")
     try AIListPanelGUI.Opt("+MinSize440x460")
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     AIListPanelGUI.BackColor := AIListPanelColors.Background
     AIListPanelGUI.SetFont("s10 c" . AIListPanelColors.Text, "Segoe UI")
@@ -286,6 +294,7 @@ LegacyPromptQuickPad_CreateGUI() {
         PromptQuickPadListLV.ModifyCol(2, 72)
         PromptQuickPadListLV.ModifyCol(3, 88)
         PromptQuickPadListLV.ModifyCol(4, initW - margin * 2 - 120 - 72 - 88 - 24)
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }

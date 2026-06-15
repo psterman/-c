@@ -388,7 +388,8 @@ class FileClassifier {
             bundle["PerceivedType"] := StrLower(Trim(FileClassifier.AssocQueryOne(FileClassifier.ASSOCSTR_PERCEIVEDTYPE, psz)))
             bundle["OpenCommand"] := FileClassifier.AssocQueryOne(FileClassifier.ASSOCSTR_COMMAND, psz)
             bundle["Executable"] := FileClassifier.AssocQueryOne(FileClassifier.ASSOCSTR_EXECUTABLE, psz)
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         FileClassifier.ExtensionCache[key] := bundle
         return bundle
@@ -464,7 +465,8 @@ class FileClassifier {
                         info.displayTitle := d
                 }
             }
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         FileClassifier.cacheLnk[norm] := info
         return info
@@ -553,7 +555,8 @@ class FileClassifier {
                 path := Item.Content
             else if (Item.HasProp("Metadata") && IsObject(Item.Metadata) && Item.Metadata.Has("FilePath"))
                 path := Item.Metadata["FilePath"]
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return FileClassifier.NormalizePath(path)
     }
@@ -796,7 +799,8 @@ class FileClassifier {
                 if (Item.HasProp("Metadata") && IsObject(Item.Metadata))
                     Item.Metadata["Category"] := "Hidden"
                 FileClassifier.SyncFinalScoreFromParts(Item)
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
         try ResultsArray.Sort(FileClassifier.FinalScoreCompare)
@@ -887,7 +891,8 @@ class FileClassifier {
                     if (Item.Metadata.Has("Ext"))
                         ext := Item.Metadata["Ext"]
                 }
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             SplitPath(path, &fileName, , &ExtFromPath, &nameNoExt)
             if (ext = "")
@@ -926,9 +931,9 @@ class FileClassifier {
                     Item.Metadata["CategoryColor"] := tag.CategoryColor
                     Item.Metadata["QuotaCategory"] := tag.QuotaCategory
                 }
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
-
             if (!isDir && FileExist(path))
                 FileClassifier._polishQueue.Push(Item)
         }
@@ -963,7 +968,8 @@ class FileClassifier {
                 core := Item.HasProp("DisplayTitle") ? Item.DisplayTitle : ""
                 if (core != "" && InStr(core, marker) != 1)
                     Item.DisplayTitle := marker . " " . core
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
         if (FileClassifier._polishQueue.Length > 0)

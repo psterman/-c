@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git *)",
+      "Bash(Get-ChildItem -Recurse -Depth 2 -Directory \"C:\\\\Users\\\\Administrator\\\\Desktop\\\\牛马nmer\")",
+      "Bash(Select-Object -ExpandProperty FullName)",
+      "Bash(Select-Object -First 60)",
+      "Bash(python -c ' *)"
+    ]
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "vibearound"
+  ]
+}

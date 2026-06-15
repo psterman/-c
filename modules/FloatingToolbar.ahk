@@ -85,7 +85,8 @@ FloatingToolbar_EnsureDrawerInWorkArea() {
     FloatingToolbarWindowX := x
     FloatingToolbarWindowY := y
     try FloatingToolbarGUI.Move(x, y, newW, newH)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     FloatingToolbarApplyRoundedCorners()
     FloatingToolbar_ApplyWebViewBounds()
@@ -98,7 +99,8 @@ FloatingToolbar_PushWorkAreaInsetsToWeb() {
         return
     cssPad := Max(4, Round(6 * FloatingToolbar_DpiFactor()))
     try (%"WebView_QueuePayload"%).Call(g_FTB_WV2, Map("type", "host_work_area_insets", "bottom", cssPad))
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -133,7 +135,8 @@ FloatingToolbar_NormalizeAppearanceMode(v) {
         r := Trim(String(Func("NormalizeAppearanceActivationMode").Call(v)))
         if (r = "bubble" || r = "hole" || r = "tray" || r = "toolbar")
             return r
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if (s = "bubble" || s = "hole" || s = "tray" || s = "toolbar")
         return s
@@ -144,7 +147,8 @@ FloatingToolbar_NotifyWebViewShown(wv2) {
     if !wv2
         return
     try Func("WebView2_NotifyShown").Call(wv2)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -152,7 +156,8 @@ FloatingToolbar_NotifyWebViewHidden(wv2) {
     if !wv2
         return
     try Func("WebView2_NotifyHidden").Call(wv2)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -161,20 +166,48 @@ FloatingToolbar_ClearToolbarSelection(action := "") {
     if !g_FTB_WV2
         return
     try WebView_QueuePayload(g_FTB_WV2, Map("type", "set_selected", "action", String(action)))
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
+}
+
+FloatingToolbar_IsSearchCenterShownOnScreen(*) {
+    global g_SCWV_UserMinimized, g_SCWV_Gui
+    try {
+        if SCWV_IsCloseRequested()
+            return false
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
+    }
+    try {
+        if g_SCWV_UserMinimized
+            return false
+        if SCWV_IsRevealedToUser()
+            return true
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
+    }
+    try {
+        if IsObject(g_SCWV_Gui) && g_SCWV_Gui.HasProp("Hwnd")
+            return NmerPanel_IsShown(g_SCWV_Gui.Hwnd)
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
+    }
+    return false
 }
 
 FloatingToolbar_IsSearchCenterRevealedForToggle(*) {
     try {
         if SCWV_IsCloseRequested()
             return false
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try {
         if SCWV_IsRevealedToUser()
             return true
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return false
 }
@@ -188,13 +221,15 @@ FloatingToolbar_RecoverSearchCenterFromToolbar(*) {
     g_SCWV_UserMinimized := false
     if SCWV_IsRevealedToUser() {
         try SCWV_RequestFocusInput()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return true
     }
     if FuncExists("_SCWV_RecoverOpeningReveal") {
         try _SCWV_RecoverOpeningReveal("toolbar_search_stale_recover", Map("triggerSource", "search_hotkey", "initialMode", "search"))
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return true
     }
@@ -285,7 +320,8 @@ FloatingToolbar_PushNodeStatus(nodeKey, status, detail := "", pingMs := 0) {
         "detail", String(detail),
         "pingMs", pingMs,
         "tick", A_TickCount))
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -300,7 +336,8 @@ FloatingToolbar_PushAudit(nodeKey, message, level := "info", meta := "") {
         "level", String(level),
         "meta", String(meta),
         "tick", A_TickCount))
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -311,12 +348,14 @@ FloatingToolbar_ResetChatBridge() {
     try {
         if (%"FuncExists"%).Call("NiumaMobileBrowser_Log")
             NiumaMobileBrowser_Log("HANDSHAKE", "", "reset epoch=" . g_NiumaChatBridgeEpoch)
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try {
         if (%"FuncExists"%).Call("NiumaMobileBrowser_TraceOverlayPush")
             NiumaMobileBrowser_TraceOverlayPush("HANDSHAKE reset epoch=" . g_NiumaChatBridgeEpoch, "warn")
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -334,17 +373,20 @@ FloatingToolbar_OnChatReady(msg) {
     try {
         if (%"FuncExists"%).Call("NiumaMobileBrowser_Log")
             NiumaMobileBrowser_Log("HANDSHAKE", "", "chat_ready received epoch=" . epoch . " bridge_epoch=" . g_NiumaChatBridgeEpoch)
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try {
         if (%"FuncExists"%).Call("NiumaMobileBrowser_TraceOverlayPush")
             NiumaMobileBrowser_TraceOverlayPush("HANDSHAKE chat_ready epoch=" . epoch . " bridge_epoch=" . g_NiumaChatBridgeEpoch, "success")
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try {
         if (%"FuncExists"%).Call("NiumaMobileBrowser_FlushDeferredSnapshotToChat")
             NiumaMobileBrowser_FlushDeferredSnapshotToChat()
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     wv2 := FloatingToolbar_GetChatWv2()
     if !wv2
@@ -358,18 +400,21 @@ FloatingToolbar_OnChatReady(msg) {
         try {
             if (%"FuncExists"%).Call("NiumaMobileBrowser_TraceOverlayPush")
                 NiumaMobileBrowser_TraceOverlayPush("HANDSHAKE host_chat_bridge_ready sent epoch=" . g_NiumaChatBridgeEpoch, "success")
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     } catch as e {
         try {
             if (%"FuncExists"%).Call("NiumaMobileBrowser_Log")
                 NiumaMobileBrowser_Log("HANDSHAKE", "", "host_chat_bridge_ready failed err=" . e.Message)
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         try {
             if (%"FuncExists"%).Call("NiumaMobileBrowser_TraceOverlayPush")
                 NiumaMobileBrowser_TraceOverlayPush("HANDSHAKE host_chat_bridge_ready failed: " . e.Message, "err")
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 }
@@ -422,9 +467,6 @@ FloatingToolbar_PageDockEnter(tag := "") {
     if (t = "")
         return
     g_FTB_PageDockActive[t] := A_TickCount
-    ; 悬浮栏模式下搜索中心全屏不再隐藏工具栏，避免用户误以为工具栏崩溃消失。
-    if (FloatingToolbar_NormalizeAppearanceMode(AppearanceActivationMode) = "toolbar")
-        return
     g_FTB_OverlaySuppressedByPageDock := true
     try HideFloatingToolbar()
 }
@@ -446,7 +488,8 @@ FloatingToolbar_RestoreAfterPageDock() {
     if (mode != "toolbar")
         return
     try FloatingToolbar_ClearOverlaySuppression()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     FloatingToolbar_ShowAfterPageDock()
 }
@@ -455,21 +498,26 @@ FloatingToolbar_RestoreAfterPageDock() {
 FloatingToolbar_ShowAfterPageDock() {
     global g_FTB_WV2, g_FTB_WV2_Ready, FloatingToolbarChatDrawerOpen
     try FloatingToolbarChatDrawerOpen := false
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try ShowFloatingToolbar()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if !(g_FTB_WV2_Ready && g_FTB_WV2)
         return
     try FloatingToolbar_NotifyWebViewShown(g_FTB_WV2)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try FloatingToolbar_ResetWebToToolbarHome()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try FloatingToolbarPushCmdLayoutToWeb()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     SetTimer(FloatingToolbar_PushLayoutDeferred, -10)
     SetTimer(FloatingToolbar_PushLayoutDeferred, -200)
@@ -482,18 +530,21 @@ FloatingToolbar_ShowForActivationMode() {
     if (FloatingToolbar_NormalizeAppearanceMode(AppearanceActivationMode) != "toolbar")
         return
     try FloatingToolbar_ClearOverlaySuppression()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if FuncExists("FloatingToolbarRouter_ShouldUseHybrid") && FloatingToolbarRouter_ShouldUseHybrid()
         && FuncExists("FloatingToolbarWails_ShowHybrid") {
         try {
             if FloatingToolbarWails_ShowHybrid(Map("reason", "activation_mode"))
                 return
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     try ShowFloatingToolbar()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if !FloatingToolbarIsVisible {
         SetTimer(FloatingToolbar_SoftRecoverVisible, -120)
@@ -513,41 +564,49 @@ FloatingToolbar_SoftRecoverVisible(*) {
             if FloatingToolbar_UseMinimalBoot() {
                 if g_FTB_PaintReady {
                     try FloatingToolbar_FinishReveal()
-                    catch {
+                    catch as _e {
+                        NmerCatch(A_ThisFunc, _e) 
                     }
                 } else {
                     try FloatingToolbar_ApplyWebViewBounds()
-                    catch {
+                    catch as _e {
+                        NmerCatch(A_ThisFunc, _e) 
                     }
                     try WebView_QueuePayload(g_FTB_WV2, Map("type", "ftb_boot_paint_nudge"))
-                    catch {
+                    catch as _e {
+                        NmerCatch(A_ThisFunc, _e) 
                     }
                 }
                 return
             }
             if !g_FTB_BootFrameVisible {
                 try FloatingToolbar_FinishRevealBoot()
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
             }
             if g_FTB_PaintReady {
                 try FloatingToolbar_FinishReveal()
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
             }
         } else if !FloatingToolbarIsVisible {
             try ShowFloatingToolbar()
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
         if g_FTB_PaintReady || !g_FTB_WaitingUiFinishedReveal {
             try FloatingToolbar_NotifyWebViewShown(g_FTB_WV2)
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
         if g_FTB_PaintReady && !FloatingToolbar_ShouldSuppressToolbarHomeReset() {
             try FloatingToolbar_ResetWebToToolbarHome()
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
         if g_FTB_PaintReady {
@@ -558,12 +617,14 @@ FloatingToolbar_SoftRecoverVisible(*) {
     }
     if (FloatingToolbarGUI != 0 && g_FTB_WV2) {
         try ShowFloatingToolbar()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return
     }
     try FloatingToolbar_ForceRecoverVisible()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -588,16 +649,20 @@ FloatingToolbar_MarkNiumaHandoffActive(ms := 3000) {
 
 FloatingToolbar_CancelToolbarRecoveryTimers() {
     try SetTimer(FloatingToolbar_EnsureVisibleAfterActivation, 0)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try SetTimer(FloatingToolbar_SoftRecoverVisible, 0)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try SetTimer(FloatingToolbar_RunNiumaHandoffOpen, 0)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try SetTimer(FloatingToolbar_NiumaDrawerHandoffRetry, 0)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -608,7 +673,8 @@ FloatingToolbar_CancelReturnToHoleAfterNiuma() {
     g_FTB_PendingOpenNiumaDrawer := false
     g_FTB_NiumaHandoffOpening := false
     try SetTimer(FloatingToolbar_TryReturnToHoleAfterNiuma, 0)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -629,23 +695,28 @@ FloatingToolbar_TryReturnToHoleAfterNiuma(*) {
             FloatingToolbar_CancelReturnToHoleAfterNiuma()
             return false
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     g_FTB_ReturnToHoleAfterNiuma := false
     g_FTB_PendingOpenNiumaDrawer := false
     g_FTB_NiumaHandoffOpening := false
     g_FTB_SuspendToolbarHomeResetUntil := 0
     try FloatingToolbarChatDrawerOpen := false
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try FloatingToolbar_CancelToolbarRecoveryTimers()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try NativeDropDiag_Log("[LauncherPick] niuma_close_restore_hole begin")
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try HideFloatingToolbar()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if FuncExists("GDHO_PrepareDecoupledHoleForTextSelection") {
         try GDHO_PrepareDecoupledHoleForTextSelection("niuma_close_restore")
@@ -659,7 +730,8 @@ FloatingToolbar_TryReturnToHoleAfterNiuma(*) {
             if !IsSet(ConfigFile) || (Trim(String(ConfigFile)) = "")
                 ConfigFile := Nmer_ResolveConfigFile()
             IniWrite("hole", ConfigFile, "Appearance", "ActivationMode")
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         if FuncExists("ApplyAppearanceActivationMode") {
             try ApplyAppearanceActivationMode()
@@ -668,7 +740,8 @@ FloatingToolbar_TryReturnToHoleAfterNiuma(*) {
         }
     }
     try NativeDropDiag_Log("[LauncherPick] niuma_close_restore_hole done")
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return true
 }
@@ -680,7 +753,8 @@ FloatingToolbar_EnsureVisibleAfterActivation(*) {
     if FloatingToolbarIsVisible && !g_FTB_WaitingUiFinishedReveal
         return
     try FloatingToolbar_ClearOverlaySuppression()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     ; 首启等 UI_FINISHED 期间勿 reset/reveal，避免与 FinishReveal 叠加造成三段闪烁
     if g_FTB_WaitingUiFinishedReveal {
@@ -695,7 +769,8 @@ FloatingToolbar_EnsureVisibleAfterActivation(*) {
     }
     if !FloatingToolbar_ShouldSuppressToolbarHomeReset() {
         try FloatingToolbar_ResetWebToToolbarHome()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if !FloatingToolbarIsVisible {
@@ -708,7 +783,8 @@ FloatingToolbar_RequestWebReveal() {
     if !g_FTB_WV2
         return
     try WebView_QueuePayload(g_FTB_WV2, Map("type", "host_request_reveal"))
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -720,13 +796,15 @@ FloatingToolbar_RequestWebRevealSafe() {
     if FloatingToolbar_ShouldSuppressToolbarHomeReset() {
         if (g_FTB_PendingOpenNiumaDrawer || g_FTB_NiumaHandoffOpening) {
             try FloatingToolbar_NotifyWebDrawerState(true)
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
         return
     }
     try FloatingToolbar_RequestWebReveal()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -736,12 +814,14 @@ FloatingToolbar_ResetWebToToolbarHome() {
     if FloatingToolbar_ShouldSuppressToolbarHomeReset()
         return
     try FloatingToolbarChatDrawerOpen := false
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if !g_FTB_WV2
         return
     try WebView_QueuePayload(g_FTB_WV2, Map("type", "host_force_toolbar_home"))
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -758,10 +838,12 @@ FloatingToolbar_EnsureCommandsLoaded() {
 
 FloatingToolbar_PrefetchIconAssets() {
     try FloatingToolbar_EnsureCommandsLoaded()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try FloatingToolbar_GetCursorIconPath()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -771,11 +853,13 @@ FloatingToolbar_PushEarlyToolbarIcons(*) {
         return
     items := []
     try items := FloatingToolbar_BuildItemsFromCmdIds(FloatingToolbar_GetFallbackCmdIds())
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if items.Length > 0 {
         try WebView_QueuePayload(g_FTB_WV2, Map("type", "set_toolbar_cmds", "items", items))
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 }
@@ -785,17 +869,21 @@ FloatingToolbar_PushLayoutDeferred(*) {
     if !g_FTB_WV2
         return
     try FloatingToolbar_EnsureCommandsLoaded()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try FloatingToolbarPushCmdLayoutToWeb()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try FloatingToolbar_PushLogoToWeb()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if FloatingToolbarIsVisible && !g_FTB_WaitingUiFinishedReveal {
         try FloatingToolbar_RequestWebRevealSafe()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 }
@@ -869,7 +957,8 @@ FloatingToolbar_BuildToolbarItemPayload(cid, cmdList, sceneId := "") {
             nu := BuildAppAssetUrl("牛马.png")
             if (nu != "")
                 rowPayload["iconPath"] := nu
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     } else if ((ent is Map) && ent.Has("iconPath") && ent["iconPath"] != "")
         rowPayload["iconPath"] := String(ent["iconPath"])
@@ -883,17 +972,20 @@ FloatingToolbar_BuildItemsFromSceneToolbarLayout() {
     if !(IsSet(g_Commands) && g_Commands is Map)
         return items
     try FloatingToolbar_EnsureCommandsLoaded()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try {
         if IsSet(_VK_EnsureToolbarLayout)
             _VK_EnsureToolbarLayout()
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try {
         if IsSet(_VK_SyncToolbarLayoutFromSceneToolbar)
             _VK_SyncToolbarLayoutFromSceneToolbar()
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if !g_Commands.Has("CommandList") || !(g_Commands["CommandList"] is Map)
         return items
@@ -931,7 +1023,8 @@ FloatingToolbar_BuildItemsFromCmdIds(cmdIds) {
     global g_Commands
     items := []
     try FloatingToolbar_EnsureCommandsLoaded()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if !(IsSet(g_Commands) && g_Commands is Map && g_Commands.Has("CommandList") && g_Commands["CommandList"] is Map)
         return items
@@ -973,7 +1066,8 @@ FloatingToolbar_PushLegacyToolbarActionsToWeb() {
     if (actions.Length = 0)
         actions := ["Search", "Record", "Prompt", "NewPrompt", "Screenshot", "Settings", "VirtualKeyboard"]
     try WebView_QueuePayload(g_FTB_WV2, Map("type", "set_toolbar_config", "actions", actions))
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 global g_FTB_CursorIconDataUrl := ""
@@ -983,12 +1077,14 @@ FTB_Debug(msg, level := "ok") {
     if !g_FTB_DebugOverlayEnabled
         return
     try OutputDebug("[FTBDBG] " . msg)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if !g_FTB_WV2
         return
     try WebView_QueuePayload(g_FTB_WV2, Map("type", "ftb_debug", "msg", String(msg), "level", level, "tick", A_TickCount))
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -1004,13 +1100,16 @@ FloatingToolbar_BootPaintFallback(*) {
     }
     if FuncExists("CommandPalette_AiLog")
         try CommandPalette_AiLog("ftb_boot_paint_fallback", "UI_PAINT_READY timeout")
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     try FloatingToolbarPushCmdLayoutToWeb()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try WebView_QueuePayload(g_FTB_WV2, Map("type", "ftb_boot_paint_nudge"))
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     SetTimer(FloatingToolbar_BootPaintFallbackForce, -120)
 }
@@ -1021,7 +1120,8 @@ FloatingToolbar_BootPaintFallbackForce(*) {
         return
     if FloatingToolbar_UseMinimalBoot() {
         try WebView_QueuePayload(g_FTB_WV2, Map("type", "ftb_boot_paint_nudge"))
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         g_FTB_UI_Ready := true
         g_FTB_PaintReady := true
@@ -1052,16 +1152,20 @@ FloatingToolbar_FinishRevealBoot() {
     tw := FloatingToolbarCalculateWidth()
     th := FloatingToolbarCalculateHeight()
     try FloatingToolbarGUI.Move(FloatingToolbarWindowX, FloatingToolbarWindowY, tw, th)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try g_FTB_WV2_Ctrl.IsVisible := true
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try WinSetTransparent(255, "ahk_id " . FloatingToolbarGUI.Hwnd)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try FloatingToolbarGUI.Show("x" . FloatingToolbarWindowX . " y" . FloatingToolbarWindowY . " w" . tw . " h" . th . " NoActivate")
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     FloatingToolbarIsVisible := true
     FloatingToolbarApplyRoundedCorners()
@@ -1084,18 +1188,22 @@ FloatingToolbar_FinishReveal() {
     tw := FloatingToolbarCalculateWidth()
     th := FloatingToolbarCalculateHeight()
     try FloatingToolbarGUI.Move(FloatingToolbarWindowX, FloatingToolbarWindowY, tw, th)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     bootAlreadyShown := g_FTB_BootFrameVisible
     if !bootAlreadyShown {
         try g_FTB_WV2_Ctrl.IsVisible := true
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         try WinSetTransparent(255, "ahk_id " . FloatingToolbarGUI.Hwnd)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         try FloatingToolbarGUI.Show("x" . FloatingToolbarWindowX . " y" . FloatingToolbarWindowY . " w" . tw . " h" . th . " NoActivate")
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 
@@ -1104,7 +1212,8 @@ FloatingToolbar_FinishReveal() {
     wasBoot := g_FTB_BootInProgress
     g_FTB_BootInProgress := false
     try FloatingToolbar_ClearHandoffWeb()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try FloatingToolbar_NotifyWebViewShown(g_FTB_WV2)
     FloatingToolbarApplyRoundedCorners()
@@ -1114,7 +1223,8 @@ FloatingToolbar_FinishReveal() {
     SetTimer(FloatingToolbarCheckWindowPosition, 100)
     if !wasBoot {
         try FloatingToolbar_RequestWebRevealSafe()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if g_FTB_PendingOpenNiumaDrawer
@@ -1126,7 +1236,8 @@ FloatingToolbar_SendHostFirstShow() {
     if !g_FTB_WV2
         return
     try WebView_QueuePayload(g_FTB_WV2, Map("type", "host_first_show"))
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -1140,14 +1251,16 @@ FloatingToolbar_ForceRevealIfStuck() {
     if !g_FTB_UI_Ready && !g_FTB_PaintReady {
         if (elapsed > 10000) {
             try FloatingToolbar_BootPaintFallbackForce()
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             return
         }
         if (elapsed > 7000) {
             try {
                 FloatingToolbar_RetryCreateWebView()
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             SetTimer(FloatingToolbar_ForceRevealIfStuck, -600)
             return
@@ -1184,11 +1297,13 @@ ShowFloatingToolbar() {
         FloatingToolbarChatDrawerOpen := false
         g_FTB_NiumaHandoffOpening := false
         try FloatingToolbar_CancelToolbarRecoveryTimers()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         if IsObject(FloatingToolbarGUI) && FloatingToolbarGUI {
             try FloatingToolbarSetChatDrawerState(false, true, false)
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
     }
@@ -1205,11 +1320,13 @@ ShowFloatingToolbar() {
     if (FloatingToolbarIsVisible && FloatingToolbarGUI != 0 && !g_FTB_WaitingUiFinishedReveal) {
         if g_FTB_PendingOpenNiumaDrawer || g_FTB_NiumaHandoffOpening {
             try FloatingToolbar_OpenNiumaChatDrawer(true)
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
         try SetTimer(FloatingToolbar_PushLayoutDeferred, -30)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         if !skipTel
             try SurfaceManager_ObserveShow("floating_toolbar", Map("entry", "ShowFloatingToolbar", "alreadyVisible", 1, "requestId", reqId))
@@ -1251,12 +1368,14 @@ ShowFloatingToolbar() {
         g_FTB_RevealWaitStartTick := 0
         SetTimer(FloatingToolbar_ForceRevealIfStuck, 0)
         try WinSetTransparent(255, "ahk_id " . FloatingToolbarGUI.Hwnd)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         FloatingToolbarGUI.Show("x" . FloatingToolbarWindowX . " y" . FloatingToolbarWindowY . " w" . ToolbarWidth . " h" . ToolbarHeight . " NoActivate")
         FloatingToolbar_FinishReveal()
         try SetTimer(FloatingToolbar_PushLayoutDeferred, -30)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         if !skipTel
             try SurfaceManager_ObserveShow("floating_toolbar", Map("entry", "ShowFloatingToolbar", "reused", 1, "wv2Ready", g_FTB_WV2_Ready ? 1 : 0, "requestId", reqId))
@@ -1266,7 +1385,8 @@ ShowFloatingToolbar() {
     ; 首次加载：在真实位置显示深色壳（非 Hide），等 UI_PAINT_READY 后再揭示；Hide 父窗下 WebView 不合成会整块发黑。
     FloatingToolbar_ApplyHostThemeColors()
     try WinSetTransparent(255, "ahk_id " . FloatingToolbarGUI.Hwnd)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     FloatingToolbarGUI.Show("x" . FloatingToolbarWindowX . " y" . FloatingToolbarWindowY . " w" . ToolbarWidth . " h" . ToolbarHeight . " NoActivate")
     g_FTB_WaitingUiFinishedReveal := true
@@ -1275,7 +1395,8 @@ ShowFloatingToolbar() {
     FloatingToolbarApplyRoundedCorners()
     global g_FTB_WV2_Ctrl
     try g_FTB_WV2_Ctrl.IsVisible := true
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     FloatingToolbar_ApplyWebViewBounds()
     FloatingToolbar_ScheduleCompositionPump("boot_show")
@@ -1287,7 +1408,8 @@ ShowFloatingToolbar() {
     if FuncExists("FloatingToolbarWails_ShouldUseHybrid") && FloatingToolbarWails_ShouldUseHybrid()
         && FuncExists("FloatingToolbarWails_EnsureHybridBridge") {
         try FloatingToolbarWails_EnsureHybridBridge()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if !skipTel
@@ -1313,25 +1435,30 @@ HideFloatingToolbar() {
     }
 
     try NiumaMobileBrowser_Close()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     global g_FTB_PendingOpenNiumaDrawer, g_FTB_NiumaHandoffOpening
     g_FTB_PendingOpenNiumaDrawer := false
     g_FTB_NiumaHandoffOpening := false
     try FloatingToolbar_CancelToolbarRecoveryTimers()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try FloatingToolbarChatDrawerOpen := false
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if (g_FTB_WV2 && g_FTB_WV2_Ready) {
         try FloatingToolbar_ResetWebToToolbarHome()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if IsObject(FloatingToolbarGUI) && FloatingToolbarGUI {
         try FloatingToolbarSetChatDrawerState(false, true, false)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if (FloatingToolbarGUI != 0) {
@@ -1342,7 +1469,8 @@ HideFloatingToolbar() {
         SetTimer(FloatingToolbar_ForceRevealIfStuck, 0)
         FloatingToolbar_StopCompositionWatchdog()
         try WinSetTransparent(255, "ahk_id " . FloatingToolbarGUI.Hwnd)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         try FloatingToolbar_NotifyWebViewHidden(g_FTB_WV2)
         try FloatingToolbarGUI.Hide()
@@ -1359,13 +1487,16 @@ FloatingToolbar_DisposeAhkWebViewIfRetired(reason := "shell_retired") {
     if !(IsObject(FloatingToolbarGUI) && FloatingToolbarGUI.Hwnd)
         return false
     try SetTimer(FloatingToolbar_ForceRevealIfStuck, 0)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try SetTimer(FloatingToolbarCheckWindowPosition, 0)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try SurfaceManager_CloseWebViewControl(g_FTB_WV2_Ctrl)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     g_FTB_WV2_Ctrl := 0
     g_FTB_WV2 := 0
@@ -1378,12 +1509,14 @@ FloatingToolbar_DisposeAhkWebViewIfRetired(reason := "shell_retired") {
     try SurfaceManager_DestroyGui(FloatingToolbarGUI)
     catch {
         try FloatingToolbarGUI.Destroy()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     FloatingToolbarGUI := 0
     try SurfaceManager_ObserveClose("floating_toolbar", Map("entry", "FloatingToolbar_DisposeAhkWebViewIfRetired", "reason", String(reason), "host", "ahk_retired"))
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return true
 }
@@ -1397,7 +1530,8 @@ FloatingToolbar_Dispose(reason := "") {
     global FloatingToolbarGUI, FloatingToolbarIsVisible, g_FTB_WV2_Ctrl, g_FTB_WV2, g_FTB_WV2_Ready
     global g_FTB_UI_Ready, g_FTB_WaitingUiFinishedReveal, g_FTB_BootFrameVisible
     try HideFloatingToolbar()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     SurfaceManager_CloseWebViewControl(g_FTB_WV2_Ctrl)
     g_FTB_WV2_Ctrl := 0
@@ -1462,7 +1596,8 @@ CreateFloatingToolbarGUI() {
         try {
             if FuncExists("NiumaMobileBrowser_TraceOverlayPush")
                 NiumaMobileBrowser_TraceOverlayPush("FTB WebView 重建: Destroy 旧实例", "warn")
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 
@@ -1485,10 +1620,12 @@ CreateFloatingToolbarGUI() {
         try {
             if FuncExists("NiumaMobileBrowser_TraceOverlayPush")
                 NiumaMobileBrowser_TraceOverlayPush("FTB WebView 创建失败: " . e.Message, "err")
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         try TrayTip("悬浮工具栏", "WebView2 创建失败，请确认已安装 Edge WebView2 运行时。", "Iconx 2")
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 }
@@ -1511,7 +1648,8 @@ FloatingToolbar_FlushPendingNiumaComposeIfReady() {
     global g_FTB_WV2, g_FTB_WV2_Ready, g_FTB_WV2_FrameReady, g_FTB_PendingNiumaCompose, g_FTB_PendingStudioAsk
     if FuncExists("CommandPalette_FlushPendingAiSendIfReady")
         try CommandPalette_FlushPendingAiSendIfReady()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     if !(g_FTB_WV2 && g_FTB_WV2_Ready && g_FTB_WV2_FrameReady)
         return
@@ -1523,7 +1661,8 @@ FloatingToolbar_FlushPendingNiumaComposeIfReady() {
         n := g_FTB_PendingNiumaCompose.Length
         if FuncExists("CommandPalette_AiLog")
             try CommandPalette_AiLog("ftb_flush_compose", "count=" . n)
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         for _, payload in g_FTB_PendingNiumaCompose {
             WebView_QueuePayload(g_FTB_WV2, payload)
@@ -1532,7 +1671,8 @@ FloatingToolbar_FlushPendingNiumaComposeIfReady() {
     } catch as _e {
         if FuncExists("CommandPalette_AiLog")
             try CommandPalette_AiLog("ftb_flush_compose_err", _e.Message)
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
     }
 }
@@ -1555,7 +1695,8 @@ FloatingToolbar_OnNavigationCompleted(sender, args) {
             fileUrl := "file:///" . StrReplace(HtmlPanelPath("FloatingToolbarStrip.html"), "\", "/")
             sender.Navigate(fileUrl)
             return
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     g_FTB_WV2_FrameReady := !!ok
@@ -1565,14 +1706,16 @@ FloatingToolbar_OnNavigationCompleted(sender, args) {
         SetTimer(FloatingToolbar_PushEarlyToolbarIcons, -40)
         SetTimer(FloatingToolbar_PushEarlyToolbarIcons, -180)
         try WebView_QueuePayload(g_FTB_WV2, Map("type", "ftb_boot_paint_nudge"))
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if ok && !g_FTB_WaitingUiFinishedReveal {
         SetTimer(FloatingToolbar_PushLayoutDeferred, -40)
         SetTimer(FloatingToolbar_PushLayoutDeferred, -220)
         try FloatingToolbar_RequestWebReveal()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     FloatingToolbar_FlushPendingSelectionIfReady()
@@ -1593,7 +1736,8 @@ FloatingToolbarApplyRoundedCorners() {
     }
 
     try DllCall("SetWindowRgn", "Ptr", FloatingToolbarGUI.Hwnd, "Ptr", 0, "Int", 1)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -1607,7 +1751,8 @@ FloatingToolbar_OnWebViewCreated(ctrl) {
         try {
             if FuncExists("NiumaMobileBrowser_TraceOverlayPush")
                 NiumaMobileBrowser_TraceOverlayPush("FTB WebView 创建失败: invalid controller", "err")
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         FloatingToolbar_RetryCreateWebView()
         return
@@ -1624,7 +1769,8 @@ FloatingToolbar_OnWebViewCreated(ctrl) {
         try {
             if FuncExists("NiumaMobileBrowser_TraceOverlayPush")
                 NiumaMobileBrowser_TraceOverlayPush("FTB WebView 创建失败: CoreWebView2 unavailable", "err")
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         g_FTB_WV2_Ctrl := 0
         g_FTB_WV2 := 0
@@ -1643,13 +1789,14 @@ FloatingToolbar_OnWebViewCreated(ctrl) {
     g_FTB_NavFallbackTried := false
     if FuncExists("CommandPalette_FlushPendingAiSendIfReady")
         try CommandPalette_FlushPendingAiSendIfReady()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     if FuncExists("CommandPalette_AiLog")
         try CommandPalette_AiLog("ftb_wv2_created", "CoreWebView2 ready for navigation")
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
-
     ; Keep WebView2's first compositor frame aligned with current theme.
     try ctrl.DefaultBackgroundColor := FloatingToolbar_GetBootBackColorArgb()
     FloatingToolbar_ApplyHostThemeColors()
@@ -1691,7 +1838,8 @@ FloatingToolbar_OnWebViewCreated(ctrl) {
             stripUrl := stripUrl . "&v=" . ver
         else
             stripUrl := stripUrl . "?v=" . ver
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     g_FTB_WV2.Navigate(stripUrl)
 }
@@ -1718,7 +1866,8 @@ FloatingToolbar_SyncCompactWindowSquare() {
         FloatingToolbarWindowY := gy
         FloatingToolbarGUI.Move(gx, gy, s, s)
         FloatingToolbarApplyRoundedCorners()
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -1783,24 +1932,29 @@ FloatingToolbar_CompositionPump(reason := "") {
         return
     FloatingToolbar_ApplyWebViewBounds()
     try g_FTB_WV2_Ctrl.IsVisible := true
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try g_FTB_WV2_Ctrl.NotifyParentWindowPositionChanged()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try {
         hwnd := FloatingToolbarGUI.Hwnd
         if hwnd {
             if FuncExists("WebView2_ForceHostRedraw")
                 try WebView2_ForceHostRedraw(hwnd)
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if IsObject(g_FTB_WV2) {
         try WebView_QueuePayload(g_FTB_WV2, Map("type", "ftb_boot_paint_nudge", "reason", String(reason)))
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 }
@@ -1920,7 +2074,8 @@ FloatingToolbar_ApplyWebViewBounds(clientW := 0, clientH := 0) {
     }
     if mobileW > 0 {
         try NiumaMobileBrowser_ApplyBounds(FloatingToolbarGUI.Hwnd)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     return true
@@ -1990,7 +2145,8 @@ FloatingToolbar_ResizeForMobileBrowser() {
     }
     FloatingToolbarWindowX := newX
     try FloatingToolbarGUI.Move(newX, gy, newW, newH)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     FloatingToolbar_EnsureDrawerInWorkArea()
 }
@@ -2001,7 +2157,8 @@ FloatingToolbar_RetryCreateWebView() {
         return
     if (g_FTB_WV2_CreateRetry >= 3) {
         try TrayTip("悬浮工具栏", "WebView 初始化失败，请重载脚本。", "Icon! 2")
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return
     }
@@ -2021,7 +2178,8 @@ FloatingToolbar_GetLogoAppUrl() {
                 if (InStr(rel, "assets/") = 1)
                     return BuildAppAssetUrl(rel)
                 return BuildAppLocalUrl(rel)
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
     }
@@ -2076,7 +2234,8 @@ FloatingToolbar_PushLogoToWeb(*) {
     global g_FTB_WaitingUiFinishedReveal, FloatingToolbarIsVisible
     if FloatingToolbarIsVisible && !g_FTB_WaitingUiFinishedReveal {
         try FloatingToolbar_RequestWebReveal()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 }
@@ -2123,12 +2282,14 @@ FloatingToolbar_ApplyHostThemeColorsForMode(tm) {
     try {
         if IsObject(FloatingToolbarGUI)
             FloatingToolbarGUI.BackColor := hex
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try {
         if IsObject(g_FTB_WV2_Ctrl)
             g_FTB_WV2_Ctrl.DefaultBackgroundColor := argb
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -2156,18 +2317,21 @@ FloatingToolbar_GetThemeMode() {
             if (Trim(String(raw)) != "")
                 return FloatingToolbar_NormalizeThemeToken(raw, "dark")
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try {
         fn := Func("ReadPersistedThemeMode")
         if IsObject(fn)
             return FloatingToolbar_NormalizeThemeToken(fn.Call(), "dark")
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try {
         global ThemeMode
         return FloatingToolbar_NormalizeThemeToken(ThemeMode, "dark")
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return "dark"
 }
@@ -2207,7 +2371,8 @@ FloatingToolbar_DrainWebMessageQueue(*) {
                     m := FuncExists("Jxon_LoadSafe") ? Jxon_LoadSafe(m) : Jxon_Load(m)
                 if (m is Map)
                     FloatingToolbar_DispatchWebMessage(m)
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
     } finally {
@@ -2234,7 +2399,8 @@ FloatingToolbar_DispatchWebMessage(msg) {
         try {
             if FuncExists("NiumaMobileBrowser_TraceFromChat")
                 NiumaMobileBrowser_TraceFromChat(msg)
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return
     }
@@ -2246,12 +2412,14 @@ FloatingToolbar_DispatchWebMessage(msg) {
         try {
             if FuncExists("NiumaMobileBrowser_Log")
                 NiumaMobileBrowser_Log("HANDSHAKE", rid, "inject_ack ok=" . (ok ? 1 : 0) . " why=" . why . (err != "" ? (" err=" . err) : ""))
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         try {
             if FuncExists("NiumaMobileBrowser_TraceOverlayPush")
                 NiumaMobileBrowser_TraceOverlayPush("INJECT ack rid=" . rid . " ok=" . (ok ? 1 : 0) . " why=" . why . (err != "" ? (" err=" . SubStr(err, 1, 120)) : ""), ok ? "success" : "err")
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return
     }
@@ -2261,12 +2429,14 @@ FloatingToolbar_DispatchWebMessage(msg) {
         if FuncExists("FloatingToolbarWails_ShouldUseHybrid") && FloatingToolbarWails_ShouldUseHybrid() {
             if FuncExists("FloatingToolbarWails_RegisterExternalReady")
                 try FloatingToolbarWails_RegisterExternalReady()
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
         }
         FloatingToolbar_ApplyWebViewBounds()
         try FloatingToolbar_PushThemeToWeb()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         SetTimer(FloatingToolbar_PushLogoToWeb, -10)
         FloatingToolbarPushScaleStateToWeb(FloatingToolbarScale)
@@ -2274,10 +2444,12 @@ FloatingToolbar_DispatchWebMessage(msg) {
             return
         }
         try FloatingToolbar_EnsureCommandsLoaded()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         try FloatingToolbarPushButtonConfigToWeb()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         SetTimer(FloatingToolbar_PushLayoutDeferred, -10)
         SetTimer(FloatingToolbar_PushStudioLlmOnReady, -450)
@@ -2286,10 +2458,12 @@ FloatingToolbar_DispatchWebMessage(msg) {
         FloatingToolbar_FlushPendingNiumaComposeIfReady()
         if FuncExists("CommandPalette_FlushPendingAiSendIfReady")
             try CommandPalette_FlushPendingAiSendIfReady()
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         try FloatingToolbar_RequestWebReveal()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return
     }
@@ -2299,15 +2473,18 @@ FloatingToolbar_DispatchWebMessage(msg) {
         try {
             if FuncExists("NiumaMobileBrowser_TraceOverlayPush")
                 NiumaMobileBrowser_TraceOverlayPush("DRAWER ftb_soft_reset", "warn")
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         try FloatingToolbar_EnsureCommandsLoaded()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         SetTimer(FloatingToolbar_PushLayoutDeferred, -10)
         SetTimer(FloatingToolbar_PushLayoutDeferred, -150)
         try FloatingToolbar_RequestWebReveal()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return
     }
@@ -2319,7 +2496,8 @@ FloatingToolbar_DispatchWebMessage(msg) {
         if !FloatingToolbarGUI || !g_FTB_WaitingUiFinishedReveal
             return
         try FloatingToolbar_PushThemeToWeb()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         FloatingToolbar_FinishRevealBoot()
         return
@@ -2338,20 +2516,24 @@ FloatingToolbar_DispatchWebMessage(msg) {
             return
 
         try FloatingToolbar_PushThemeToWeb()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         try FloatingToolbarPushCmdLayoutToWeb()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         try FloatingToolbar_PushLogoToWeb()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         ; 涓嶅啀浣跨敤 AnimateWindow(AW_BLEND)锛岄伩鍏嶉粦鐧芥笎鍙橀棯灞忥紱鐢?FloatingToolbar_FinishReveal 涓€娆℃€т笉閫忔槑鏄剧ず
         SetTimer(FloatingToolbar_BootPaintFallback, -3500)
         FloatingToolbar_FlushPendingNiumaComposeIfReady()
         if FuncExists("CommandPalette_AiLog")
             try CommandPalette_AiLog("ftb_ui_finished", CommandPalette_AiStateSnapshot())
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         return
     }
@@ -2365,7 +2547,8 @@ FloatingToolbar_DispatchWebMessage(msg) {
         if FuncExists("FloatingToolbarWails_ShouldUseHybrid") && FloatingToolbarWails_ShouldUseHybrid() {
             if FuncExists("FloatingToolbarWails_RegisterExternalReady")
                 try FloatingToolbarWails_RegisterExternalReady()
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
         }
         if !g_FTB_WaitingUiFinishedReveal
@@ -2381,11 +2564,13 @@ FloatingToolbar_DispatchWebMessage(msg) {
         FloatingToolbar_FlushPendingNiumaComposeIfReady()
         if FuncExists("CommandPalette_FlushPendingAiSendIfReady")
             try CommandPalette_FlushPendingAiSendIfReady()
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         if FuncExists("CommandPalette_AiLog")
             try CommandPalette_AiLog("ftb_ui_paint_ready", CommandPalette_AiStateSnapshot())
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         return
     }
@@ -2426,14 +2611,16 @@ FloatingToolbar_DispatchWebMessage(msg) {
         t := msg.Has("text") ? Trim(String(msg["text"])) : ""
         if (t != "") {
             try FloatingToolbar_RequestSearchByKeyword(t)
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
         if g_FTB_WV2 {
             try {
                 WebView_QueuePayload(g_FTB_WV2, Map("type", "drop_done"))
                 WebView_QueuePayload(g_FTB_WV2, Map("type", "SELECTION_CLEAR"))
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
         return
@@ -2466,7 +2653,8 @@ FloatingToolbar_DispatchWebMessage(msg) {
                         ; 未定义入口图标统一回退到搜索中心
                         FloatingToolbar_RequestSearchByKeyword(t)
                 }
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         } else if (filePaths.Length > 0) {
             try {
@@ -2478,14 +2666,16 @@ FloatingToolbar_DispatchWebMessage(msg) {
                     default:
                         FloatingToolbar_HandleDroppedFiles(filePaths)
                 }
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
         if g_FTB_WV2 {
             try {
                 WebView_QueuePayload(g_FTB_WV2, Map("type", "drop_done"))
                 WebView_QueuePayload(g_FTB_WV2, Map("type", "SELECTION_CLEAR"))
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
         return
@@ -2520,7 +2710,8 @@ FloatingToolbar_DispatchWebMessage(msg) {
         try {
             if GDHO_IsDragSessionActive()
                 return
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         if !FloatingToolbarGUI || FloatingToolbarDragging
             return
@@ -2574,7 +2765,8 @@ FloatingToolbar_DispatchWebMessage(msg) {
         cid := msg.Has("cmdId") ? Trim(String(msg["cmdId"])) : ""
         if (cid = "ftb_cursor_menu") {
             try FloatingToolbar_ShowCursorQuickMenu()
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             return
         }
@@ -2602,7 +2794,8 @@ FloatingToolbar_DispatchWebMessage(msg) {
         global g_NiumaMobile_WV2
         if NiumaMobileBrowser_IsOpen() && g_NiumaMobile_WV2 {
             try u := g_NiumaMobile_WV2.SourceUri
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
         isOpen := NiumaMobileBrowser_IsOpen()
@@ -2728,11 +2921,13 @@ FloatingToolbar_DispatchWebMessage(msg) {
         }
         if (holeTxt = "") && FuncExists("SelectionSense_GetLastSelectedText") {
             try holeTxt := Trim(String(SelectionSense_GetLastSelectedText()))
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
         try WebView_QueuePayload(g_FTB_WV2, Map("type", "host_hole_context", "text", holeTxt))
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return
     }
@@ -2753,7 +2948,8 @@ FloatingToolbar_DispatchWebMessage(msg) {
                 "ok", false,
                 "error", "GroundingCache db init failed"
             ))
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             return
         }
@@ -2771,7 +2967,8 @@ FloatingToolbar_DispatchWebMessage(msg) {
             "textTemplate", outTT,
             "successCount", outCnt
         ))
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return
     }
@@ -2795,7 +2992,8 @@ FloatingToolbar_DispatchWebMessage(msg) {
                 "ok", false,
                 "error", "GroundingCache db init failed"
             ))
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             return
         }
@@ -2807,7 +3005,8 @@ FloatingToolbar_DispatchWebMessage(msg) {
             "ok", true,
             "stored", !!stored
         ))
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return
     }
@@ -2821,7 +3020,8 @@ FloatingToolbar_DispatchWebMessage(msg) {
             "error", ret.Has("error") ? String(ret["error"]) : "",
             "action", ret.Has("action") ? String(ret["action"]) : ""
         ))
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return
     }
@@ -2835,19 +3035,22 @@ FloatingToolbar_DispatchWebMessage(msg) {
             global g_FTB_PendingOpenNiumaDrawer
             g_FTB_PendingOpenNiumaDrawer := false
             try FloatingToolbar_CancelToolbarRecoveryTimers()
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
         try {
             if FuncExists("NiumaMobileBrowser_TraceOverlayPush")
                 NiumaMobileBrowser_TraceOverlayPush("DRAWER state open=" . (open ? 1 : 0), open ? "success" : "warn")
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         wasOpen := !!FloatingToolbarChatDrawerOpen
         if (open = wasOpen && !g_FTB_NiumaHandoffOpening) {
             if open {
                 try FloatingToolbar_PushStudioContextToChat()
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
             }
             return
@@ -2856,12 +3059,14 @@ FloatingToolbar_DispatchWebMessage(msg) {
         FloatingToolbarSetChatDrawerState(open, g_FTB_NiumaHandoffOpening && open, false)
         if open {
             try FloatingToolbar_PushStudioContextToChat()
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             llm := FloatingToolbar_GetStudioLlm()
             if Trim(String(llm.Get("apiKey", ""))) != "" {
                 try FloatingToolbar_PushStudioLlmToChat(llm, "", false)
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
             }
         }
@@ -2887,7 +3092,8 @@ FloatingToolbar_DispatchWebMessage(msg) {
         try {
             FloatingToolbar_PushNodeStatus(engine, "thinking", "正在连接 ttyd")
             FloatingToolbar_PushAudit(engine, "正在打开 CLI 终端", "info")
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         SetTimer(NiumaTtyd_DeferredOpenJob.Bind(reqId, engine), -10)
         return
@@ -2898,7 +3104,8 @@ FloatingToolbar_DispatchWebMessage(msg) {
         try {
             FloatingToolbar_PushNodeStatus(engine, "thinking", "正在重启 ttyd")
             FloatingToolbar_PushAudit(engine, "正在重启 CLI 终端", "info")
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         SetTimer(NiumaTtyd_DeferredRestartJob.Bind(reqId, engine), -10)
         return
@@ -2916,7 +3123,8 @@ FloatingToolbar_DispatchWebMessage(msg) {
     }
     if (typ = "niuma_request_studio_context") {
         try FloatingToolbar_PushStudioContextToChat()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return
     }
@@ -2932,7 +3140,8 @@ FloatingToolbar_DispatchWebMessage(msg) {
             "installRoot", payload.Get("installRoot", A_ScriptDir),
             "scriptDir", payload.Get("scriptDir", A_ScriptDir)
         ))
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return
     }
@@ -2943,7 +3152,8 @@ FloatingToolbar_DispatchWebMessage(msg) {
         err := ""
         studioOnly := false
         try FloatingToolbar_PushStudioContextToChat()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         if Trim(String(llm.Get("apiKey", ""))) = ""
             FloatingToolbar_PickStudioLlmFromKeys(llm, keys)
@@ -2958,7 +3168,8 @@ FloatingToolbar_DispatchWebMessage(msg) {
                         saved := opt.Has("llmApiKeys") && opt["llmApiKeys"] is Map ? opt["llmApiKeys"].Get("hermes", "") : ""
                         if (Trim(String(saved)) = "")
                             studioOnly := true
-                    } catch {
+                    } catch as _e {
+                        NmerCatch(A_ThisFunc, _e) 
                     }
                 }
             }
@@ -2968,7 +3179,8 @@ FloatingToolbar_DispatchWebMessage(msg) {
         ctx := Map()
         if FuncExists("UserStudio_GetNiumaContext") {
             try ctx := UserStudio_GetNiumaContext()
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
         syncPayload := Map("type", "studio_llm_sync_result", "ok", ok, "error", err, "niumaContext", ctx, "llm", llm, "apiKeys", keys)
@@ -2985,11 +3197,13 @@ FloatingToolbar_DispatchWebMessage(msg) {
                         opt["llmApiKeys"][k] := v
                     syncPayload["options"] := opt
                 }
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
         try WebView_QueuePayload(g_FTB_WV2, syncPayload)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return
     }
@@ -2999,7 +3213,8 @@ FloatingToolbar_DispatchWebMessage(msg) {
             catch as ePalKeys {
                 if FuncExists("CommandPalette_AiLog")
                     try CommandPalette_AiLog("ai_keys_handler_err", ePalKeys.Message)
-                    catch {
+                    catch as _e {
+                        NmerCatch(A_ThisFunc, _e) 
                     }
             }
         return
@@ -3010,7 +3225,8 @@ FloatingToolbar_DispatchWebMessage(msg) {
             catch as ePalLlm {
                 if FuncExists("CommandPalette_AiLog")
                     try CommandPalette_AiLog("ai_llm_handler_err", ePalLlm.Message)
-                    catch {
+                    catch as _e {
+                        NmerCatch(A_ThisFunc, _e) 
                     }
             }
         return
@@ -3020,7 +3236,8 @@ FloatingToolbar_DispatchWebMessage(msg) {
             step := msg.Has("step") ? String(msg["step"]) : ""
             det := msg.Has("detail") ? String(msg["detail"]) : ""
             try CommandPalette_AiLog("web_" . step, det)
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
         return
@@ -3028,21 +3245,24 @@ FloatingToolbar_DispatchWebMessage(msg) {
     if (typ = "niuma_palette_ai_chunk") {
         if FuncExists("CommandPalette_OnNiumaPaletteAiChunk")
             try CommandPalette_OnNiumaPaletteAiChunk(msg)
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         return
     }
     if (typ = "niuma_palette_ai_end") {
         if FuncExists("CommandPalette_OnNiumaPaletteAiEnd")
             try CommandPalette_OnNiumaPaletteAiEnd(msg)
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         return
     }
     if (typ = "niuma_palette_ai_error") {
         if FuncExists("CommandPalette_OnNiumaPaletteAiError")
             try CommandPalette_OnNiumaPaletteAiError(msg)
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         return
     }
@@ -3063,7 +3283,8 @@ FloatingToolbar_DispatchWebMessage(msg) {
         }
         if FuncExists("CommandPalette_OnNiumaPaletteAgentChunk")
             try CommandPalette_OnNiumaPaletteAgentChunk(msg)
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         return
     }
@@ -3074,14 +3295,16 @@ FloatingToolbar_DispatchWebMessage(msg) {
         }
         if FuncExists("CommandPalette_OnNiumaPaletteAgentEnd")
             try CommandPalette_OnNiumaPaletteAgentEnd(msg)
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         return
     }
     if (typ = "niuma_palette_agent_error") {
         if FuncExists("CommandPalette_OnNiumaPaletteAgentError")
             try CommandPalette_OnNiumaPaletteAgentError(msg)
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         return
     }
@@ -3095,13 +3318,15 @@ FloatingToolbar_DispatchWebMessage(msg) {
     }
     if (typ = "host_palette_agent_stream_cancel") {
         try WebView_QueuePayload(g_FTB_WV2, msg)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return
     }
     if (typ = "palette_agent_prepare_new") {
         try WebView_QueuePayload(g_FTB_WV2, msg)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return
     }
@@ -3115,19 +3340,22 @@ FloatingToolbar_DispatchWebMessage(msg) {
     }
     if (typ = "host_palette_ai_handoff") {
         try WebView_QueuePayload(g_FTB_WV2, msg)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return
     }
     if (typ = "host_palette_ai_handoff_end") {
         try WebView_QueuePayload(g_FTB_WV2, msg)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return
     }
     if (typ = "host_palette_ai_stream_cancel") {
         try WebView_QueuePayload(g_FTB_WV2, msg)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return
     }
@@ -3163,15 +3391,18 @@ FloatingToolbar_DispatchWebMessage(msg) {
                 if FuncExists("ConfigWebView_ApplyUserStudioSave") {
                     saveMsg := Map("payload", pl)
                     try saveMsg["payloadJson"] := Jxon_Dump(pl)
-                    catch {
+                    catch as _e {
+                        NmerCatch(A_ThisFunc, _e) 
                     }
                     ConfigWebView_ApplyUserStudioSave(saveMsg)
                 } else if FuncExists("UserStudio_ApplyFromWebPayload")
                     UserStudio_ApplyFromWebPayload(pl)
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             try ConfigWebView_NotifyStudioLlmSynced()
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
         return
@@ -3192,11 +3423,13 @@ FloatingToolbar_DispatchWebMessage(msg) {
         }
         if ok {
             try SetTimer(NiumaTtyd_DeferredRestartJob.Bind("", "studio_cli", g_FTB_WV2), -400)
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
         try WebView_QueuePayload(g_FTB_WV2, Map("type", "niuma_save_ttyd_studio_result", "ok", ok, "error", err))
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return
     }
@@ -3210,7 +3443,8 @@ FloatingToolbar_DispatchWebMessage(msg) {
             selected := ""
         }
         try WebView_QueuePayload(g_FTB_WV2, Map("type", "niuma_browse_ttyd_workdir_result", "path", selected))
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return
     }
@@ -3223,7 +3457,8 @@ FloatingToolbar_DispatchWebMessage(msg) {
                 if (sh = "")
                     sh := "cmd.exe"
                 IniWrite(sh, cf, "NiumaTtyd", engine . "_shell")
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             SetTimer(NiumaTtyd_DeferredRestartJob.Bind("", engine), -400)
         } else {
@@ -3269,7 +3504,8 @@ FloatingToolbar_DispatchWebMessage(msg) {
             "bundle", bundle,
             "error", String(bundle.Get("error", ""))
         ))
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return
     }
@@ -3311,14 +3547,87 @@ FloatingToolbar_DispatchWebMessage(msg) {
             headers := msg["headers"]
         if (url = "") {
             try WebView_QueuePayload(g_FTB_WV2, Map("type", "niuma_llm_http_result", "reqId", reqId, "ok", false, "status", 0, "text", "", "error", "empty url"))
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             return
         }
         try OutputDebug("[FTB] niuma_llm_http start reqId=" . reqId . " timeoutMs=" . timeoutMs . " bodyLen=" . StrLen(body) . " url=" . SubStr(url, 1, 96))
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         HttpJsonAsync(method, url, body, FloatingToolbar_OnLlmHttpDone.Bind(reqId), Map("headers", headers, "timeoutMs", timeoutMs, "receiveTimeoutMs", timeoutMs, "tag", "niuma_llm_http", "reqId", reqId))
+        return
+    }
+    if (typ = "niuma_llm_http_chat") {
+        reqId := String(msg.Get("reqId", ""))
+        timeoutMs := Integer(msg.Get("timeoutMs", 120000))
+        if (timeoutMs < 5000)
+            timeoutMs := 120000
+        if (timeoutMs > 300000)
+            timeoutMs := 300000
+        maxTokens := Integer(msg.Get("maxTokens", 4096))
+        userText := Trim(String(msg.Get("userText", "")))
+        messages := []
+        if msg.Has("messagesJson") {
+            rawMsgs := Trim(String(msg["messagesJson"]))
+            if (rawMsgs != "") {
+                try {
+                    loaded := Jxon_Load(rawMsgs)
+                    if (loaded is Array)
+                        messages := loaded
+                } catch as _e {
+                    NmerCatch(A_ThisFunc, _e)
+                }
+            }
+        }
+        cfg := Nmer_Llm_GetHttpActive()
+        if msg.Has("model") && Trim(String(msg["model"])) != ""
+            cfg["model"] := Trim(String(msg["model"]))
+        if msg.Has("provider") && Trim(String(msg["provider"])) != "" {
+            prov := FuncExists("UserStudio_NormalizeLlmProvider")
+                ? UserStudio_NormalizeLlmProvider(msg["provider"])
+                : Trim(String(msg["provider"]))
+            cfg["vendor"] := prov
+            cfg["protocolId"] := Nmer_Llm_VendorToProtocol(prov)
+            if FuncExists("Nmer_Llm_CfgFromLlmMap") {
+                merged := Nmer_Llm_CfgFromLlmMap(Map(
+                    "provider", prov,
+                    "model", cfg.Get("model", ""),
+                    "baseUrl", cfg.Get("baseUrl", ""),
+                    "apiKey", cfg.Get("apiKey", "")
+                ))
+                if (merged is Map) && merged.Count > 0
+                    cfg := merged
+            }
+        }
+        payload := messages.Length > 0 ? messages : userText
+        req := FuncExists("Nmer_Llm_BuildHttpChat") ? Nmer_Llm_BuildHttpChat(cfg, payload, maxTokens, false) : Map("ok", false, "message", "统一层未加载")
+        if !req.Get("ok", false) {
+            try WebView_QueuePayload(g_FTB_WV2, Map(
+                "type", "niuma_llm_http_chat_result",
+                "reqId", reqId,
+                "ok", false,
+                "status", 0,
+                "text", "",
+                "error", String(req.Get("message", "请求无效"))
+            ))
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e)
+            }
+            return
+        }
+        try OutputDebug("[FTB] niuma_llm_http_chat start reqId=" . reqId . " vendor=" . cfg.Get("vendor", ""))
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e)
+        }
+        HttpJsonAsync("POST", req["url"], req["body"], FloatingToolbar_OnLlmHttpChatDone.Bind(reqId, cfg), Map(
+            "headers", req["headers"],
+            "timeoutMs", timeoutMs,
+            "receiveTimeoutMs", timeoutMs,
+            "tag", "niuma_llm_http_chat",
+            "reqId", reqId
+        ))
         return
     }
     if (typ = "niuma_llm_http_cancel") {
@@ -3356,7 +3665,8 @@ FloatingToolbar_DeferredOllamaStart(msg) {
         "ok", !!ret.Get("ok", false),
         "message", String(ret.Get("message", ""))
     ))
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -3513,7 +3823,8 @@ FloatingToolbar_DeferredCdpExecute(msg) {
         "error", err,
         "result", result
     ))
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -3547,7 +3858,8 @@ FloatingToolbar_DeferredScratchpadRun(msg) {
                         } else if parsed.Has("result")
                             result := String(parsed["result"])
                     }
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         } catch as e {
             err := e.Message
@@ -3559,7 +3871,8 @@ FloatingToolbar_DeferredScratchpadRun(msg) {
             WebView_QueuePayload(g_FTB_WV2, Map("type", "niuma_scratchpad_run_result", "reqId", reqId, "ok", true, "result", result))
         else
             WebView_QueuePayload(g_FTB_WV2, Map("type", "niuma_scratchpad_run_result", "reqId", reqId, "ok", false, "error", err ? err : "scratchpad_failed", "result", result))
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -3617,7 +3930,8 @@ FloatingToolbar_ReadTextExcerptFromFile(path, maxLen := 12000) {
             if (StrLen(t) > maxLen)
                 t := SubStr(t, 1, maxLen)
             return t
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     return ""
@@ -3660,7 +3974,8 @@ FloatingToolbar_RunPsScript(scriptBody) {
         FileAppend(String(scriptBody), ps1, "UTF-8")
         cmd := q . "powershell.exe" . q . " -NoProfile -ExecutionPolicy Bypass -File " . q . ps1 . q
         RunWait(cmd, , "Hide")
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e)
     } finally {
         try FileDelete(ps1)
     }
@@ -3901,7 +4216,8 @@ FloatingToolbar_LoadNiumaAttachContext(ids) {
                         x["textExcerpt"] := ex2
                         files[sid] := x
                         dirty := true
-                    } catch {
+                    } catch as _e {
+                        NmerCatch(A_ThisFunc, _e) 
                     }
                 }
             }
@@ -3980,10 +4296,12 @@ FloatingToolbar_ReadHermesEnvKeyDirect(&outSource := "", &outHost := "", &outPor
     la := ""
     up := ""
     try la := Trim(EnvGet("LOCALAPPDATA"))
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try up := Trim(EnvGet("USERPROFILE"))
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if (la != "")
         paths.Push(la . "\hermes\.env")
@@ -4129,7 +4447,8 @@ FloatingToolbar_ProbeHermesApiServerKey(force := false, ensureEnv := false) {
                     port := Integer(fb.Get("port", port))
                 }
             }
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 
@@ -4143,14 +4462,16 @@ FloatingToolbar_ProbeHermesApiServerKey(force := false, ensureEnv := false) {
                 port := Integer(info.Get("port", port))
                 apiEnabled := !!info.Get("apiEnabled", false)
             }
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 
     try {
         if FuncExists("UserStudio_ReadNiumaHermesKey")
             niumaKey := UserStudio_ReadNiumaHermesKey()
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if (token = "" && niumaKey != "") {
         token := niumaKey
@@ -4185,10 +4506,12 @@ FloatingToolbar_ProbeHermesApiServerKey(force := false, ensureEnv := false) {
         laProbe := ""
         upProbe := ""
         try laProbe := Trim(EnvGet("LOCALAPPDATA"))
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         try upProbe := Trim(EnvGet("USERPROFILE"))
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         if (laProbe != "")
             tried.Push(laProbe . "\hermes\.env" . (FileExist(laProbe . "\hermes\.env") ? " ✓" : " ✗"))
@@ -4207,7 +4530,8 @@ FloatingToolbar_ProbeHermesApiServerKey(force := false, ensureEnv := false) {
                     localAppData := String(meta.Get("localAppData", ""))
                     primaryDir := String(meta.Get("primaryDir", ""))
                 }
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
         hasEnvKey := (token != "" && source != "" && source != "niuma_chat_llm.json")
@@ -4223,7 +4547,8 @@ FloatingToolbar_ProbeHermesApiServerKey(force := false, ensureEnv := false) {
                     canRestartGateway := !!disc.Get("canRestartGateway", false)
                     hermesDataDir := String(disc.Get("dataDir", ""))
                 }
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
     }
@@ -4232,7 +4557,8 @@ FloatingToolbar_ProbeHermesApiServerKey(force := false, ensureEnv := false) {
             rAct := UserStudio_ProbeHermesApiServer("http://" . host . ":" . port . "/v1", token, 2000)
             if (rAct is Map)
                 probeAction := String(rAct.Get("action", ""))
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 
@@ -4255,9 +4581,9 @@ FloatingToolbar_ProbeHermesApiServerKey(force := false, ensureEnv := false) {
         logLine := (%"FuncExists"%).Call("Jxon_Dump") ? Jxon_Dump(logEvt) : "hermes_probe"
         OutputDebug("[FTB] " . logLine)
         FloatingToolbar_DebugWriteEvent(logLine)
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
-
     try WebView_QueuePayload(g_FTB_WV2, Map(
         "type", "hermes_host_token_probe",
         "token", token,
@@ -4303,7 +4629,8 @@ FloatingToolbar_DebugWriteEvent(evt) {
         try DirCreate(dir)
         fp := Nmer_OpenClawTimelinePath()
         FileAppend(line . "`n", fp, "UTF-8")
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -4317,7 +4644,8 @@ FloatingToolbar_DeferredDebugPullGo() {
         dbgRaw := g_AhkInterface.HttpRequest("GET", base . "/v1/niuma/debug", "", "")
         data := Map("status", statusRaw, "debug", dbgRaw, "fetchedAt", A_Now)
         WebView_QueuePayload(g_FTB_WV2, Map("type", "niuma_debug_go_snapshot", "data", data))
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -4341,9 +4669,9 @@ FloatingToolbar_ProbeOpenClawGatewayToken(force := false) {
             token := envTok
             source := "env:OPENCLAW_GATEWAY_TOKEN"
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
-
     if (token = "" && FuncExists("UserStudio_ProbeOpenClawGatewayToken")) {
         info := UserStudio_ProbeOpenClawGatewayToken()
     } else if (token = "") {
@@ -4372,7 +4700,8 @@ FloatingToolbar_ProbeOpenClawGatewayToken(force := false) {
     try {
         if FuncExists("UserStudio_ReadNiumaOpenClawKey")
             niumaKey := UserStudio_ReadNiumaOpenClawKey()
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if (token = "" && niumaKey != "") {
         token := niumaKey
@@ -4417,7 +4746,8 @@ FloatingToolbar_ReadOpenClawGatewayToken() {
                 if (tok != "")
                     return info
             }
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     userProfile := ""
@@ -4457,7 +4787,8 @@ FloatingToolbar_ReadOpenClawGatewayToken() {
             tok := FloatingToolbar_ExtractOpenClawGatewayToken(cfg)
             if (tok != "")
                 return Map("token", tok, "source", path)
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     return Map("token", "", "source", "")
@@ -4487,7 +4818,8 @@ FloatingToolbar_ExtractOpenClawGatewayToken(cfg) {
                 }
             }
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return ""
 }
@@ -4573,14 +4905,16 @@ FloatingToolbarSetChatDrawerState(open, force := false, notifyWeb := true) {
     if (FloatingToolbar_NormalizeAppearanceMode(AppearanceActivationMode) != "toolbar") {
         if (open && FuncExists("CommandPalette_AiLog"))
             try CommandPalette_AiLog("set_drawer_blocked", "reason=not_toolbar actMode=" . String(AppearanceActivationMode))
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         open := false
     }
     if (!FloatingToolbarGUI) {
         if (open && FuncExists("CommandPalette_AiLog"))
             try CommandPalette_AiLog("set_drawer_blocked", "reason=no_FloatingToolbarGUI")
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         return
     }
@@ -4615,20 +4949,23 @@ FloatingToolbarSetChatDrawerState(open, force := false, notifyWeb := true) {
             global g_FTB_WV2, g_FTB_WV2_Ready
             if (g_FTB_WV2 && g_FTB_WV2_Ready)
                 WebView_QueuePayload(g_FTB_WV2, Map("type", "niuma_llm_http_cancel", "reqId", "*"))
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         try {
             global g_FTB_WV2, g_FTB_WV2_Ready
             if (g_FTB_WV2 && g_FTB_WV2_Ready)
                 WebView_QueuePayload(g_FTB_WV2, Map("type", "host_browser_agent_reset"))
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         NiumaMobileBrowser_Close()
     }
 
     if open {
         try FloatingToolbarExitCompactMode()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     FloatingToolbarChatDrawerOpen := open
@@ -4696,7 +5033,8 @@ FloatingToolbar_StartPaletteAiStream(msg) {
         return
     if FuncExists("CommandPalette_PostFtbPaletteAiStream") {
         try CommandPalette_PostFtbPaletteAiStream(reqId, q, prov)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return
     }
@@ -4704,24 +5042,28 @@ FloatingToolbar_StartPaletteAiStream(msg) {
     if !(g_FTB_WV2 && g_FTB_WV2_Ready && g_FTB_WV2_FrameReady) {
         if FuncExists("CommandPalette_AiLog")
             try CommandPalette_AiLog("palette_stream_not_ready", "reqId=" . reqId)
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         if FuncExists("CommandPalette_AgentDebug_TraceIfAgentReq")
             try CommandPalette_AgentDebug_TraceIfAgentReq(reqId, "ftb", "ai_stream_not_ready", "frame=" . (g_FTB_WV2_FrameReady ? 1 : 0), "warn")
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         return
     }
     payload := Map("type", "host_palette_ai_stream", "reqId", reqId, "query", q, "provider", prov, "openDrawer", false)
     if FuncExists("CommandPalette_AgentDebug_TraceIfAgentReq")
         try CommandPalette_AgentDebug_TraceIfAgentReq(reqId, "ftb", "ai_stream_start", "q=" . SubStr(q, 1, 40) . " prov=" . prov)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     try WebView_QueuePayload(g_FTB_WV2, payload)
     catch as eQ {
         if FuncExists("CommandPalette_OnNiumaPaletteAiError")
             try CommandPalette_OnNiumaPaletteAiError(Map("reqId", reqId, "message", eQ.Message))
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
     }
 }
@@ -4743,13 +5085,15 @@ FloatingToolbar_StartPaletteAgentStream(msg) {
     if !(g_FTB_WV2 && g_FTB_WV2_Ready && g_FTB_WV2_FrameReady) {
         if FuncExists("CommandPalette_AgentDebug_TraceIfAgentReq")
             try CommandPalette_AgentDebug_TraceIfAgentReq(reqId, "ftb", "agent_stream_not_ready", "card=" . cardId, "warn")
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         return false
     }
     if FuncExists("CommandPalette_AgentDebug_TraceIfAgentReq")
         try CommandPalette_AgentDebug_TraceIfAgentReq(reqId, "ftb", "agent_stream_start", "card=" . cardId . " q=" . SubStr(q, 1, 40))
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     payload := Map(
         "type", "host_palette_agent_stream",
@@ -4780,12 +5124,14 @@ FloatingToolbar_StartPaletteAgentStream(msg) {
                         g_FTB_WV2.PostWebMessageAsJson(Jxon_Dump(payload))
                     return true
                 }
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
         if FuncExists("CommandPalette_OnNiumaPaletteAgentError")
             try CommandPalette_OnNiumaPaletteAgentError(Map("reqId", reqId, "cardId", cardId, "message", eQ.Message))
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         return false
     }
@@ -4797,11 +5143,13 @@ FloatingToolbar_NotifyWebDrawerState(open := false) {
         return
     if open {
         try WebView2_NotifyShown(g_FTB_WV2)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     } else {
         try WebView2_NotifyHidden(g_FTB_WV2)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     try WebView_QueuePayload(g_FTB_WV2, Map("type", "host_set_drawer", "open", !!open))
@@ -4829,7 +5177,8 @@ FloatingToolbar_OnLlmHttpDone(reqId, ret) {
     } else
         err := "invalid response"
     try OutputDebug("[FTB] niuma_llm_http done reqId=" . reqId . " ok=" . (ok ? 1 : 0) . " status=" . status . " textLen=" . StrLen(text))
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if !g_FTB_WV2
         return
@@ -4849,10 +5198,62 @@ FloatingToolbar_OnLlmHttpDone(reqId, ret) {
                 return
             }
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try WebView_QueuePayload(g_FTB_WV2, payload)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
+    }
+}
+
+FloatingToolbar_OnLlmHttpChatDone(reqId, cfg, ret) {
+    global g_FTB_WV2
+    ok := false
+    status := 0
+    text := ""
+    err := ""
+    if (ret is Map) {
+        if FuncExists("Nmer_Llm_ParseChatHttpResult") {
+            parsed := Nmer_Llm_ParseChatHttpResult(cfg, ret)
+            ok := !!parsed.Get("ok", false)
+            status := Integer(parsed.Get("status", ret.Get("status", 0)))
+            text := String(parsed.Get("text", ""))
+            err := String(parsed.Get("error", ""))
+            if (!ok && err = "" && !ret.Get("ok", false))
+                err := String(ret.Get("error", "HTTP 失败"))
+        } else {
+            ok := !!ret.Get("ok", false)
+            status := Integer(ret.Get("status", 0))
+            text := String(ret.Get("text", ""))
+            err := String(ret.Get("error", ""))
+        }
+    } else
+        err := "invalid response"
+    if !g_FTB_WV2
+        return
+    payload := Map(
+        "type", "niuma_llm_http_chat_result",
+        "reqId", String(reqId),
+        "ok", ok,
+        "status", status,
+        "text", SubStr(text, 1, 400000),
+        "error", SubStr(err, 1, 4000)
+    )
+    try {
+        if FuncExists("WebView_DumpJson") && FuncExists("WebView_QueueJson") {
+            json := WebView_DumpJson(payload)
+            if (json != "") {
+                WebView_QueueJson(g_FTB_WV2, json)
+                return
+            }
+        }
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e)
+    }
+    try WebView_QueuePayload(g_FTB_WV2, payload)
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e)
     }
 }
 
@@ -4864,10 +5265,12 @@ FloatingToolbar_PushTtydStudioConfig(*) {
     try {
         if FuncExists("UserStudio_TtydPayloadForWeb")
             ttyd := UserStudio_TtydPayloadForWeb()
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try WebView_QueuePayload(g_FTB_WV2, Map("type", "ttyd_studio_config", "ttyd", ttyd))
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -4876,20 +5279,24 @@ FloatingToolbar_OpenNiumaChatTtydCustomize(startChat := false) {
     global g_FTB_WV2, g_FTB_WV2_Ready, FloatingToolbarIsVisible, g_FTB_TtydOpenStartChat
     g_FTB_TtydOpenStartChat := !!startChat
     try FloatingToolbar_ClearOverlaySuppression()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try ShowFloatingToolbar()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if !FloatingToolbarIsVisible {
         SetTimer(FloatingToolbar_OpenNiumaChatTtydCustomize, -280)
         return
     }
     try FloatingToolbarSetChatDrawerState(true, true)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try FloatingToolbar_NotifyWebDrawerState(true)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     SetTimer(FloatingToolbar_NiumaDrawerHandoffRetry, -520)
     SetTimer(FloatingToolbar_DeferredOpenTtydCustomize, -360)
@@ -4902,14 +5309,16 @@ FloatingToolbar_EnrichStudioApiKeys(keys) {
     hk := Trim(String(keys.Get("hermes", "")))
     if (hk = "") && FuncExists("UserStudio_ReadNiumaHermesKey") {
         try hk := UserStudio_ReadNiumaHermesKey()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if (hk = "") && FuncExists("UserStudio_ProbeHermesGatewayToken") {
         try {
             info := UserStudio_ProbeHermesGatewayToken(false)
             hk := Trim(String(info.Get("token", "")))
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if (hk != "")
@@ -4929,7 +5338,8 @@ FloatingToolbar_ApplyStudioKeyToLlm(llm, pk, vk) {
                 llm["baseUrl"] := pre.Get("baseUrl", "")
             if (Trim(String(llm.Get("model", ""))) = "")
                 llm["model"] := pre.Get("model", "")
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 }
@@ -4967,10 +5377,20 @@ FloatingToolbar_PickStudioLlmFromKeys(llm, keys) {
 }
 
 FloatingToolbar_GetStudioLlm() {
+    if FuncExists("Nmer_Llm_ResolveLegacyLlm") {
+        try {
+            u := Nmer_Llm_ResolveLegacyLlm()
+            if (u is Map) && u.Has("provider")
+                return u
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e)
+        }
+    }
     llm := Map("provider", "openai", "apiKey", "", "baseUrl", "https://api.openai.com/v1", "model", "gpt-4o-mini")
     if FuncExists("UserStudio_Load")
         try UserStudio_Load()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     if FuncExists("UserStudio_Get") {
         try {
@@ -4998,7 +5418,8 @@ FloatingToolbar_GetStudioLlm() {
                     }
                 }
             }
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if (Trim(String(llm.Get("apiKey", ""))) = "")
@@ -5010,7 +5431,8 @@ FloatingToolbar_GetStudioApiKeys() {
     keys := Map()
     if FuncExists("UserStudio_Load")
         try UserStudio_Load()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     if FuncExists("UserStudio_Get") {
         try {
@@ -5024,7 +5446,8 @@ FloatingToolbar_GetStudioApiKeys() {
                         keys[pk] := vk
                 }
             }
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     return FloatingToolbar_EnrichStudioApiKeys(keys)
@@ -5035,7 +5458,8 @@ FloatingToolbar_PushLocalAgentsAutoConnect(*) {
     if !g_FTB_WV2_Ready || !g_FTB_WV2
         return
     try WebView_QueuePayload(g_FTB_WV2, Map("type", "host_run_local_agents_autoconnect"))
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -5046,7 +5470,8 @@ FloatingToolbar_PushStudioLlmOnReady(*) {
     llm := FloatingToolbar_GetStudioLlm()
     if Trim(String(llm.Get("apiKey", ""))) != "" {
         try FloatingToolbar_PushStudioLlmToChat(llm, "", false)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 }
@@ -5068,18 +5493,22 @@ FloatingToolbar_DeferredOpenTtydCustomize(*) {
     if startChat
         msg["startChat"] := true
     try WebView_QueuePayload(g_FTB_WV2, msg)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try FloatingToolbar_PushTtydStudioConfig()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if Trim(String(llm.Get("apiKey", ""))) != "" {
         try FloatingToolbar_PushStudioLlmToChat(llm, "", false)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     } else {
         try SetTimer(FloatingToolbar_RequestNiumaLlmExport, -250)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 }
@@ -5090,7 +5519,8 @@ FloatingToolbar_StudioContextPayload() {
     ctx := Map("autoInject", true, "systemPrompt", "", "installRoot", A_ScriptDir, "scriptDir", A_ScriptDir)
     if FuncExists("UserStudio_GetNiumaContext") {
         try ctx := UserStudio_GetNiumaContext()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     return Map(
@@ -5113,7 +5543,8 @@ FloatingToolbar_PushStudioContextToChat() {
     if FuncExists("CommandPalette_FtbTransportMode") && (CommandPalette_FtbTransportMode() = "wails_shell") {
         if FuncExists("CommandPalette_DeliverFtbPayload")
             try CommandPalette_DeliverFtbPayload(msg)
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         return
     }
@@ -5121,7 +5552,8 @@ FloatingToolbar_PushStudioContextToChat() {
     if !g_FTB_WV2
         return
     try WebView_QueuePayload(g_FTB_WV2, msg)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -5131,7 +5563,8 @@ FloatingToolbar_ForwardShellEgressMessage(msg) {
     typ := String(msg.Get("type", ""))
     if (typ = "niuma_request_studio_context") {
         try FloatingToolbar_PushStudioContextToChat()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return
     }
@@ -5142,7 +5575,8 @@ FloatingToolbar_ForwardShellEgressMessage(msg) {
             if FuncExists("CommandPalette_DeliverFtbPayload") {
                 CommandPalette_DeliverFtbPayload(Map("type", "host_apply_studio_llm", "llm", llm, "apiKeys", keys))
             }
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return
     }
@@ -5153,12 +5587,14 @@ FloatingToolbar_PushStudioLlmToChat(llm, prompt := "", autoSend := false) {
     if !g_FTB_WV2 || !(llm is Map)
         return
     try FloatingToolbar_PushStudioContextToChat()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     ctx := Map("autoInject", true, "systemPrompt", "")
     if FuncExists("UserStudio_GetNiumaContext") {
         try ctx := UserStudio_GetNiumaContext()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     syncKeys := FloatingToolbar_GetStudioApiKeys()
@@ -5177,7 +5613,8 @@ FloatingToolbar_PushStudioLlmToChat(llm, prompt := "", autoSend := false) {
         "systemPrompt", Trim(String(ctx.Get("systemPrompt", ""))),
         "openDrawer", false
     ))
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -5192,24 +5629,29 @@ FloatingToolbar_OpenNiumaChatAsk(prompt := "", autoSend := false) {
             doc := UserStudio_Get()
             if (doc.Has("llm") && doc["llm"] is Map)
                 llm := doc["llm"]
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     try FloatingToolbar_ClearOverlaySuppression()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try ShowFloatingToolbar()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if !FloatingToolbarIsVisible {
         SetTimer(FloatingToolbar_OpenNiumaChatAsk.Bind(prompt, autoSend), -320)
         return
     }
     try FloatingToolbarSetChatDrawerState(true, true)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try FloatingToolbar_NotifyWebDrawerState(true)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     SetTimer(FloatingToolbar_NiumaDrawerHandoffRetry, -520)
     SetTimer(FloatingToolbar_DeferredPushStudioAsk.Bind(llm, prompt, autoSend), -450)
@@ -5220,7 +5662,8 @@ FloatingToolbar_OpenNiumaChatAsk(prompt := "", autoSend := false) {
 FloatingToolbar_RequestNiumaLlmExport() {
     global g_FTB_WV2, g_FTB_WV2_Ready, FloatingToolbarIsVisible
     try ShowFloatingToolbar()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if !FloatingToolbarIsVisible {
         SetTimer(FloatingToolbar_RequestNiumaLlmExport, -350)
@@ -5231,7 +5674,8 @@ FloatingToolbar_RequestNiumaLlmExport() {
         return
     }
     try WebView_QueuePayload(g_FTB_WV2, Map("type", "host_request_llm_export"))
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     SetTimer(FloatingToolbar_DeferredRequestLlmExport, -500)
 }
@@ -5241,7 +5685,8 @@ FloatingToolbar_DeferredRequestLlmExport(*) {
     if !g_FTB_WV2_Ready || !g_FTB_WV2
         return
     try WebView_QueuePayload(g_FTB_WV2, Map("type", "host_request_llm_export"))
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -5261,7 +5706,8 @@ FloatingToolbar_DeferredPushStudioAsk(llm, prompt, autoSend) {
         SetTimer(FloatingToolbar_RetryPendingStudioAsk, -400)
         if (pr != "")
             try FloatingToolbar_SendTextToNiumaChat(pr, !!autoSend, false, true)
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         return
     }
@@ -5269,7 +5715,8 @@ FloatingToolbar_DeferredPushStudioAsk(llm, prompt, autoSend) {
     FloatingToolbar_PushStudioLlmToChat(llm, pr, autoSend)
     if (pr != "" && !autoSend)
         try FloatingToolbar_SendTextToNiumaChat(pr, false, false, false)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
 }
 
@@ -5299,17 +5746,20 @@ FloatingToolbar_OpenNiumaChatDrawer(open := true) {
     if (FloatingToolbar_NormalizeAppearanceMode(AppearanceActivationMode) != "toolbar") {
         if FuncExists("CommandPalette_AiLog")
             try CommandPalette_AiLog("open_drawer_blocked", "open=" . (open ? 1 : 0) . " actMode=" . String(AppearanceActivationMode))
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         return false
     }
     if open {
         g_FTB_NiumaHandoffOpening := true
         try FloatingToolbar_MarkNiumaHandoffActive(4000)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         try FloatingToolbar_ClearOverlaySuppression()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         if !(IsObject(FloatingToolbarGUI) && FloatingToolbarGUI && FloatingToolbarIsVisible) {
             try FloatingToolbar_ShowForActivationMode()
@@ -5317,7 +5767,8 @@ FloatingToolbar_OpenNiumaChatDrawer(open := true) {
                 global g_FTB_PendingOpenNiumaDrawer
                 g_FTB_PendingOpenNiumaDrawer := true
                 try ShowFloatingToolbar()
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
             }
         }
@@ -5349,7 +5800,8 @@ FloatingToolbar_NiumaDrawerHandoffRetry(*) {
     g_FTB_PendingOpenNiumaDrawer := false
     FloatingToolbarSetChatDrawerState(true, true)
     try FloatingToolbar_NotifyWebDrawerState(true)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -5366,13 +5818,15 @@ FloatingToolbarCollapseTransientUi(forceResize := true) {
             FloatingToolbarGUI.Move(gx, gy, newW, newH)
             FloatingToolbarApplyRoundedCorners()
             FloatingToolbar_ApplyWebViewBounds()
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 
     if g_FTB_WV2 {
         try FloatingToolbar_ResetWebToToolbarHome()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 }
@@ -5384,9 +5838,9 @@ FloatingToolbar_DeferredScreenshot(*) {
     global FloatingToolbarIsVisible, FloatingToolbar_ScheduleRestoreAfterScreenshot, g_ExecuteScreenshotWithMenuBusy
     global g_FTB_ScreenshotDeferLastTick
     try OutputDebug("[FTB] screenshot deferred begin visible=" . (FloatingToolbarIsVisible ? "1" : "0") . " busy=" . (g_ExecuteScreenshotWithMenuBusy ? "1" : "0"))
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
-
     ; 防抖：同一操作 1500ms 内只接受一次（截图流程耗时长，完成后也需防重复触发）
     if (g_FTB_ScreenshotDeferLastTick && (A_TickCount - g_FTB_ScreenshotDeferLastTick < 1500))
         return
@@ -5406,17 +5860,20 @@ FloatingToolbar_DeferredScreenshot(*) {
     try {
         if (wasVisible) {
             try OutputDebug("[FTB] screenshot hide toolbar before capture")
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             HideFloatingToolbar()
             Sleep(120)
         }
         try OutputDebug("[FTB] screenshot call ExecuteScreenshotWithMenu(true)")
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         ExecuteScreenshotWithMenu(true)
         try OutputDebug("[FTB] screenshot ExecuteScreenshotWithMenu(true) returned")
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         ; 截图流程完成后刷新防抖时间戳，阻止后续 1.5 秒内的重复触发
         g_FTB_ScreenshotDeferLastTick := A_TickCount
@@ -5424,11 +5881,13 @@ FloatingToolbar_DeferredScreenshot(*) {
         ; Hide/Sleep 鍦?ExecuteScreenshotWithMenu 涔嬪墠澶辫触鏃讹紝棰勫崰鐨?busy 涓嶄細鐢卞悗鑰?finally 娓呴櫎
         g_ExecuteScreenshotWithMenuBusy := false
         try OutputDebug("[FloatingToolbar] DeferredScreenshot: " . err.Message)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     try OutputDebug("[FTB] screenshot deferred end")
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     ; 悬浮条在 ExecuteScreenshotWithMenu 内剪贴板就绪后、ShowScreenshotEditor 前统一恢复，避免 finally 再延迟 Show 造成双重显示与位移
 }
@@ -5453,13 +5912,14 @@ FloatingToolbar_EnsureSearchCenterFocused(*) {
         lastFocusTick := nowTick
         try SCWV_Log("ftb_ensure_focus", "hwnd=" . hwnd . " vis=" . (SCWV_IsVisible() ? "1" : "0"))
         try FocusBroker_Request("SearchCenter", hwnd, 20, "ftb_ensure_focus", 300)
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
-
     try {
         if (IsSet(SCWV_RequestFocusInput))
             SCWV_RequestFocusInput()
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -5469,9 +5929,9 @@ FloatingToolbar_VerifySearchCenterOpen(*) {
     try {
         if SCWV_IsRevealedToUser()
             scVisible := true
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
-
     if scVisible
         return
 
@@ -5479,9 +5939,9 @@ FloatingToolbar_VerifySearchCenterOpen(*) {
     try {
         if FuncExists("SearchCenter_IsOpeningOrBusy") && SearchCenter_IsOpeningOrBusy() && FuncExists("SCWV_HostAlive") && SCWV_HostAlive()
             return
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
-
     try SCWV_Log("ftb_verify_search_center_miss", "tb_visible=" . (FloatingToolbarIsVisible ? "1" : "0") . " mode=" . FloatingToolbar_NormalizeAppearanceMode(AppearanceActivationMode))
 
     try FloatingToolbar_ClearToolbarSelection("")
@@ -5522,7 +5982,8 @@ FloatingToolbar_NormalizeInputRuntime(reason := "") {
     try {
         if FuncExists("SearchCenter_ScheduleIMEStabilize")
             SearchCenter_ScheduleIMEStabilize()
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -5584,7 +6045,8 @@ FloatingToolbar_ActivateSearchCenter() {
     try {
         if (FloatingToolbar_NormalizeAppearanceMode(IsSet(AppearanceActivationMode) ? AppearanceActivationMode : "toolbar") = "hole" && !SCWV_IsVisible())
             TrayMenu_HardenHoleUiTransition("caps_f_search", 1800)
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try {
         if (SearchCenter_IsOpeningOrBusy()) {
@@ -5598,7 +6060,8 @@ FloatingToolbar_ActivateSearchCenter() {
             try SCWV_Log("toolbar_activate_search_end", "opened=" . (opened ? "1" : "0") . " vis=" . (usedWebView ? (SCWV_IsRevealedToUser() ? "1" : "0") : "n/a") . " recover=1")
             return
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try FloatingToolbarCollapseTransientUi()
     ; 兜底清理：若上一次 search dock 标记残留，先释放，后续由 SCWV_Show 重新进入
@@ -5622,9 +6085,9 @@ FloatingToolbar_ActivateSearchCenter() {
         } else
             ShowSearchCenter()
         opened := true
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
-
     try SCWV_Log("toolbar_activate_search_mid", "selected_len=" . StrLen(selectedText) . " opened=" . (opened ? "1" : "0") . " vis=" . (usedWebView ? (SCWV_IsVisible() ? "1" : "0") : "n/a"))
 
     if (!opened && usedWebView) {
@@ -5636,19 +6099,22 @@ FloatingToolbar_ActivateSearchCenter() {
                 "triggerSource", "search_hotkey"
             ))
             opened := true
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 
     if (!opened) {
         try ShowSearchCenter()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 
     if (usedWebView) {
         try SCWV_RequestFocusInput()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 
@@ -5684,7 +6150,8 @@ FloatingToolbarExecuteButtonAction(action, buttonHwnd) {
             try SelectionSense_OpenHubCapsuleFromToolbar()
             catch as err {
                 try TrayTip("Unable to open HubCapsule (SelectionSenseCore.ahk is required): " . err.Message, "Error", "Iconx 2")
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
             }
         case "Screenshot":
@@ -5701,21 +6168,49 @@ FloatingToolbarExecuteButtonAction(action, buttonHwnd) {
 ; 延后一帧处理搜索切换：让 WM_ACTIVATE / 延迟 Hide 与 postMessage 顺序稳定，避免先关后立又弹回
 FloatingToolbar_SearchToggleDeferred(*) {
     global GuiID_SearchCenter
-    if FloatingToolbar_IsSearchCenterRevealedForToggle() {
-        try SurfaceIntent_Close("search_center", Map("persistSelection", 1, "reason", "ftb_search_toggle_close"))
+    if FloatingToolbar_IsSearchCenterShownOnScreen() {
+        try SCWV_MinimizeHost()
         catch {
-            try SearchCenterUnifiedClose("ftb_search_toggle_close", false, true)
-            catch {
+            try SurfaceIntent_Close("search_center", Map("persistSelection", 1, "reason", "ftb_search_toggle_minimize"))
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
         return
     }
     try {
         if (GuiID_SearchCenter != 0 && (!IsSet(SearchCenter_ShouldUseWebView) || !SearchCenter_ShouldUseWebView())) {
-            SearchCenterCloseHandler()
+            if NmerPanel_IsShown(GuiID_SearchCenter.Hwnd) {
+                try WinMinimize("ahk_id " . GuiID_SearchCenter.Hwnd)
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
+                }
+                return
+            }
+        }
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
+    }
+    try {
+        global g_SCWV_Gui, g_SCWV_UserMinimized
+        if IsObject(g_SCWV_Gui) && g_SCWV_Gui.HasProp("Hwnd") && NmerPanel_IsMinimized(g_SCWV_Gui.Hwnd) {
+            g_SCWV_UserMinimized := false
+            try WinRestore("ahk_id " . g_SCWV_Gui.Hwnd)
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
+            }
+            try FloatingToolbar_PageDockEnter("search")
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
+            }
+            try SCWV_RequestFocusInput()
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
+            }
             return
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     FloatingToolbarExecuteButtonAction("Search", 0)
 }
@@ -5723,18 +6218,37 @@ FloatingToolbar_SearchToggleDeferred(*) {
 FloatingToolbar_PromptToggleDeferred(*) {
     global g_PQP_Gui
     try {
-        if (g_PQP_Gui && WinExist("ahk_id " . g_PQP_Gui.Hwnd) && (WinGetStyle("ahk_id " . g_PQP_Gui.Hwnd) & 0x10000000)) {
-            SurfaceIntent_Close("prompt_quick_pad")
-            return
+        if IsObject(g_PQP_Gui) && g_PQP_Gui.HasProp("Hwnd") {
+            if NmerPanel_IsShown(g_PQP_Gui.Hwnd) {
+                NmerPanel_MinimizeGui(g_PQP_Gui, "prompts")
+                return
+            }
+            if NmerPanel_IsMinimized(g_PQP_Gui.Hwnd) {
+                NmerPanel_RestoreGui(g_PQP_Gui)
+                try FloatingToolbar_PageDockEnter("prompts")
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
+                }
+                try PQP_Show()
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
+                }
+                return
+            }
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try {
         if (PQP_IsVisible()) {
-            SurfaceIntent_Close("prompt_quick_pad")
+            try NmerPanel_MinimizeGui(g_PQP_Gui, "prompts")
+            catch {
+                SurfaceIntent_Close("prompt_quick_pad")
+            }
             return
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     FloatingToolbarExecuteButtonAction("Prompt", 0)
 }
@@ -5748,11 +6262,30 @@ FloatingToolbarToggleButtonAction(action) {
             return
         case "Record":
             try {
+                global g_CP_Gui, g_CP_Visible
+                if IsObject(g_CP_Gui) && g_CP_Gui.HasProp("Hwnd") {
+                    if NmerPanel_IsShown(g_CP_Gui.Hwnd) {
+                        NmerPanel_MinimizeGui(g_CP_Gui, "clipboard")
+                        return
+                    }
+                    if NmerPanel_IsMinimized(g_CP_Gui.Hwnd) {
+                        NmerPanel_RestoreGui(g_CP_Gui)
+                        try CP_Show()
+                        catch as _e {
+                            NmerCatch(A_ThisFunc, _e) 
+                        }
+                        return
+                    }
+                }
                 if (IsSet(g_CP_Visible) && g_CP_Visible) {
-                    SurfaceIntent_Close("clipboard_panel")
+                    try NmerPanel_MinimizeGui(g_CP_Gui, "clipboard")
+                    catch {
+                        SurfaceIntent_Close("clipboard_panel")
+                    }
                     return
                 }
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             FloatingToolbarExecuteButtonAction(action, 0)
         case "AIAssistant", "Prompt":
@@ -5760,10 +6293,33 @@ FloatingToolbarToggleButtonAction(action) {
             SetTimer(FloatingToolbar_PromptToggleDeferred, -10)
             return
         case "Settings":
-            ; WebView 璁剧疆锛氬叧闂椂浠?Hide锛孏uiID_ConfigGUI 浠嶉潪 0锛屽繀椤绘寜銆屾槸鍚﹀彲瑙併€嶅垏鎹紝鍚﹀垯浼氭棤娉曞啀娆℃墦寮€
             try {
                 if (GuiID_ConfigGUI != 0) {
-                    cfgVisible := false
+                    cfgShown := false
+                    cfgMin := false
+                    try {
+                        cfgShown := NmerPanel_IsShown(GuiID_ConfigGUI.Hwnd)
+                        cfgMin := NmerPanel_IsMinimized(GuiID_ConfigGUI.Hwnd)
+                    } catch as _e {
+                        NmerCatch(A_ThisFunc, _e) 
+                    }
+                    if cfgShown {
+                        try ConfigWebView_Minimize()
+                        catch {
+                            try CloseConfigGUI()
+                            catch as _e {
+                                NmerCatch(A_ThisFunc, _e) 
+                            }
+                        }
+                        return
+                    }
+                    if cfgMin {
+                        try ConfigWebView_RestoreFromMinimize()
+                        catch as _e {
+                            NmerCatch(A_ThisFunc, _e) 
+                        }
+                        return
+                    }
                     if (ConfigWebViewMode) {
                         try cfgVisible := ConfigWebView_HostWindowVisible()
                         catch {
@@ -5778,23 +6334,35 @@ FloatingToolbarToggleButtonAction(action) {
                         }
                     }
                     if (cfgVisible) {
-                        CloseConfigGUI()
+                        try ConfigWebView_Minimize()
+                        catch {
+                            CloseConfigGUI()
+                        }
                         return
                     }
                 }
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             FloatingToolbarExecuteButtonAction(action, 0)
         case "NewPrompt":
             try {
                 if (IsSet(SelectionSense_HubCapsuleHostIsOpen) && SelectionSense_HubCapsuleHostIsOpen()) {
-                    if FuncExists("SelectionSense_CloseHubCapsuleHost")
+                    if FuncExists("SelectionSense_MinimizeHubCapsuleHost")
+                        SelectionSense_MinimizeHubCapsuleHost("toolbar_toggle")
+                    else if FuncExists("SelectionSense_CloseHubCapsuleHost")
                         SelectionSense_CloseHubCapsuleHost("toolbar_toggle")
                     else
                         SelectionSense_HideMenu()
                     return
                 }
-            } catch {
+                if FuncExists("SelectionSense_HubCapsuleIsMinimized") && SelectionSense_HubCapsuleIsMinimized() {
+                    if FuncExists("SelectionSense_RestoreHubCapsuleHost")
+                        SelectionSense_RestoreHubCapsuleHost("toolbar_toggle")
+                    return
+                }
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             FloatingToolbarExecuteButtonAction(action, 0)
         case "Screenshot":
@@ -5803,23 +6371,45 @@ FloatingToolbarToggleButtonAction(action) {
                     CloseScreenshotEditor()
                     return
                 }
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             FloatingToolbarExecuteButtonAction(action, 0)
         case "VirtualKeyboard":
-            ; VK_ToggleEmbedded 依赖可见性；失焦自动 Hide 后需与 VK_IsHostVisible 一致，见 VirtualKeyboardCore
             try {
+                global g_VK_Gui
+                if IsObject(g_VK_Gui) && g_VK_Gui.HasProp("Hwnd") {
+                    if NmerPanel_IsShown(g_VK_Gui.Hwnd) {
+                        try VK_Minimize()
+                        catch {
+                            SurfaceIntent_Close("virtual_keyboard")
+                        }
+                        return
+                    }
+                    if NmerPanel_IsMinimized(g_VK_Gui.Hwnd) {
+                        try VK_Show()
+                        catch as _e {
+                            NmerCatch(A_ThisFunc, _e) 
+                        }
+                        return
+                    }
+                }
                 if (VK_IsHostVisible()) {
-                    SurfaceIntent_Close("virtual_keyboard")
+                    try VK_Minimize()
+                    catch {
+                        SurfaceIntent_Close("virtual_keyboard")
+                    }
                     return
                 }
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             try {
                 VK_ToggleEmbedded()
             } catch as err {
                 try TrayTip("虚拟键盘不可用: " . err.Message, "虚拟键盘", "Iconx 2")
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
             }
         default:
@@ -5854,7 +6444,8 @@ FloatingToolbarActivateVirtualKeyboard() {
     try VK_ToggleEmbedded()
     catch as err {
         try TrayTip("閾忔碍瀚欓柨顔炬磸娑撳秴褰查悽? " . err.Message, "閾忔碍瀚欓柨顔炬磸", "Iconx 2")
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 }
@@ -5865,14 +6456,16 @@ FloatingToolbarOpenSettings() {
             SurfaceIntent_Open("config_webview")
             return
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try {
         if IsSet(ShowConfigGUI) {
             ShowConfigGUI()
             return
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try {
         SetCapsLockState("AlwaysOff")
@@ -5882,7 +6475,8 @@ FloatingToolbarOpenSettings() {
         Sleep(30)
         Send("{CapsLock up}")
         SetCapsLockState("Off")
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -5986,7 +6580,8 @@ FloatingToolbar_FadeGui(hwnd, fromAlpha, toAlpha, durationMs, onDone := "") {
             if (onDone != "") {
                 if (IsObject(onDone))
                     try onDone.Call()
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
             }
             return
@@ -6002,10 +6597,12 @@ FloatingToolbar_PersistActivationBubble() {
     AppearanceActivationMode := "bubble"
     cfg := Nmer_ResolveConfigFile()
     try IniWrite("bubble", cfg, "Appearance", "ActivationMode")
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try ApplyActivationRuntimeAsync("toolbar")
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -6014,7 +6611,8 @@ FloatingToolbar_RequestHandoffToBubble() {
     if !g_FTB_WV2
         return
     try WebView_QueuePayload(g_FTB_WV2, Map("type", "handoff_to_bubble"))
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -6023,7 +6621,8 @@ FloatingToolbar_ClearHandoffWeb() {
     if !g_FTB_WV2
         return
     try WebView_QueuePayload(g_FTB_WV2, Map("type", "handoff_clear"))
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -6032,7 +6631,8 @@ FloatingToolbar_FinalizeBubbleSwitch(*) {
     try FloatingToolbar_ClearHandoffWeb()
     try FloatingToolbar_PersistActivationBubble()
     try HideFloatingToolbar()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     g_FTB_ModeTransitionBusy := false
 }
@@ -6061,7 +6661,8 @@ FloatingToolbar_AnimatedSwitchToBubble_Crossfade(*) {
             global g_FB_LayeredAlpha
             g_FB_LayeredAlpha := 0
             FloatingBubble_RenderLayered()
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 
@@ -6079,9 +6680,9 @@ FloatingToolbar_AnimatedSwitchToBubble_CrossfadeFade(*) {
     fadeMs := g_FTB_CrossfadeMs
 
     try WebView_QueuePayload(g_FTB_WV2, Map("type", "handoff_fade_out"))
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
-
     FloatingToolbar_FadeGui(hwndTb, 255, 0, fadeMs + 40, (*) => 0)
     SetTimer((*) => FloatingBubble_FadeLayered(0, 255, fadeMs + 100, FloatingToolbar_FinalizeBubbleSwitch), -72)
 }
@@ -6175,16 +6776,18 @@ FloatingToolbar_AnimatedSwitchToToolbar_Reveal(newX, newY, tw, th, *) {
     global FloatingToolbarScale, AppearanceActivationMode
 
     try HideFloatingBubble()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
-
     AppearanceActivationMode := "toolbar"
     cfg := Nmer_ResolveConfigFile()
     try IniWrite("toolbar", cfg, "Appearance", "ActivationMode")
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try ApplyActivationRuntimeAsync("toolbar")
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try FloatingToolbar_ClearHandoffWeb()
 
@@ -6233,7 +6836,8 @@ FloatingToolbar_SetActivationMode(mode) {
     AppearanceActivationMode := m
     cfg := Nmer_ResolveConfigFile()
     try IniWrite(AppearanceActivationMode, cfg, "Appearance", "ActivationMode")
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     SetTimer((*) => ApplyAppearanceActivationMode(), -10)
     if (m = "toolbar")
@@ -6491,7 +7095,8 @@ FloatingToolbarCheckWindowPosition() {
 
             SaveFloatingToolbarPosition()
             FloatingToolbar_ApplyWebViewBounds()
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 }
@@ -6530,7 +7135,8 @@ FloatingToolbar_ParseWebMessage(args) {
             m := FuncExists("Jxon_LoadSafe") ? Jxon_LoadSafe(m) : Jxon_Load(m)
         if (m is Map)
             return m
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     FTB_Debug("web message parse failed", "err")
     return 0
@@ -6589,7 +7195,8 @@ FloatingToolbar_ChatInputCtxCopy(hasSel, selection, *) {
             A_Clipboard := ""
             A_Clipboard := String(selection)
             ClipWait(1)
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return
     }
@@ -6606,7 +7213,8 @@ FloatingToolbar_ChatInputCtxCut(selection, fieldId := "input", *) {
             A_Clipboard := ""
             A_Clipboard := sel
             ClipWait(1)
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     elJs := FloatingToolbar_ChatInputFieldJs(fieldId)
@@ -6673,7 +7281,8 @@ FloatingToolbar_ShowChatInputContextMenuDeferred(anchorX := 0, anchorY := 0, fie
 ; ===================== 缁愭褰涢崗鎶芥４娴滃娆?=====================
 OnFloatingToolbarClose(*) {
     try NiumaMobileBrowser_Close()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     HideFloatingToolbar()
 }
@@ -6699,7 +7308,8 @@ SaveFloatingToolbarPosition() {
         ConfigFile := Nmer_ResolveConfigFile()
         IniWrite(String(x), ConfigFile, "WindowPositions", "FloatingToolbar_X")
         IniWrite(String(y), ConfigFile, "WindowPositions", "FloatingToolbar_Y")
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -6738,7 +7348,8 @@ FloatingToolbarSaveScale() {
     try {
         ConfigFile := Nmer_ResolveConfigFile()
         IniWrite(String(FloatingToolbarScale), ConfigFile, "FloatingToolbar", "Scale")
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -6752,7 +7363,8 @@ FloatingToolbarLoadScale() {
             if (scaleValue >= FloatingToolbarMinScale && scaleValue <= FloatingToolbarMaxScale)
                 FloatingToolbarScale := scaleValue
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     FloatingToolbarLoadDrawerWidth()
 }
@@ -6764,24 +7376,30 @@ FloatingToolbar_ForceRecoverVisible() {
     global g_FTB_WV2
     if (g_FTB_WaitingUiFinishedReveal && g_FTB_CompactBootMinimal && !g_FTB_PaintReady && FloatingToolbarGUI != 0 && g_FTB_WV2) {
         try FloatingToolbarPushCmdLayoutToWeb()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         try WebView_QueuePayload(g_FTB_WV2, Map("type", "ftb_boot_paint_nudge"))
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return
     }
     try FloatingToolbar_ClearOverlaySuppression()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try GDHO_UnpinFromDesktop()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try GDHO_Stop()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try NativeDropBridge_Stop()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try {
         tw := FloatingToolbarCalculateWidth()
@@ -6792,7 +7410,8 @@ FloatingToolbar_ForceRecoverVisible() {
         ConfigFile := Nmer_ResolveConfigFile()
         IniWrite(String(FloatingToolbarWindowX), ConfigFile, "WindowPositions", "FloatingToolbar_X")
         IniWrite(String(FloatingToolbarWindowY), ConfigFile, "WindowPositions", "FloatingToolbar_Y")
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     ; Reset sticky drawer/compact state before recreate/show.
     try FloatingToolbarChatDrawerOpen := false
@@ -6801,11 +7420,13 @@ FloatingToolbar_ForceRecoverVisible() {
     try {
         if (g_FTB_WV2) {
             try FloatingToolbar_ResetWebToToolbarHome()
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             WebView_QueuePayload(g_FTB_WV2, Map("type", "set_scale", "scale", FloatingToolbar_EffectiveScale(), "compact", false))
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     ; Hard recovery: rebuild toolbar host once to break stuck reveal states.
     try {
@@ -6815,17 +7436,21 @@ FloatingToolbar_ForceRecoverVisible() {
         g_FTB_WV2_Ready := false
         FloatingToolbar_ResetChatBridge()
         CreateFloatingToolbarGUI()
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try ShowFloatingToolbar()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try SetTimer(FloatingToolbar_RequestWebReveal, -200)
     try SetTimer((*) => ShowFloatingToolbar(), -260)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try SetTimer((*) => ShowFloatingToolbar(), -680)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if !(g_FTB_WaitingUiFinishedReveal && g_FTB_CompactBootMinimal && !g_FTB_PaintReady) {
         ; Last resort: force host window visible immediately.
@@ -6836,7 +7461,8 @@ FloatingToolbar_ForceRecoverVisible() {
                 FloatingToolbarGUI.Show("x" . FloatingToolbarWindowX . " y" . FloatingToolbarWindowY . " w" . tw . " h" . th . " NoActivate")
                 WinSetTransparent(255, "ahk_id " . FloatingToolbarGUI.Hwnd)
             }
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 }
@@ -6870,7 +7496,8 @@ FloatingToolbar_SwitchToToolbarFromMenu(*) {
             Nmer_PersistAndApplyActivationMode("toolbar")
         else
             FloatingToolbar_SetActivationMode("toolbar")
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -6879,15 +7506,18 @@ FloatingToolbar_SwitchToHoleMode(*) {
     cur := FloatingToolbar_NormalizeAppearanceMode(IsSet(AppearanceActivationMode) ? AppearanceActivationMode : "toolbar")
     if (cur = "hole") {
         try FloatingBubbleShowFromMenu()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return
     }
     try FloatingToolbar_SetActivationMode("hole")
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try SetTimer(FloatingBubbleShowFromMenu, -100)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -6949,7 +7579,8 @@ FloatingToolbar_DeferredToolbarCmd(cmdId) {
         try ShowCloudPlayer()
         catch as e {
             try OutputDebug("[FloatingToolbar] cloud player open failed: " . e.Message)
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
         return
@@ -6974,7 +7605,8 @@ FloatingToolbar_DeferredToolbarCmd(cmdId) {
         _ExecuteCommand(c)
     } catch as e {
         try OutputDebug("[FloatingToolbar] toolbar_cmd: " . e.Message)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 }
@@ -6984,23 +7616,27 @@ FloatingToolbarPushCmdLayoutToWeb() {
     if !g_FTB_WV2
         return
     try FloatingToolbar_EnsureCommandsLoaded()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try {
         if (IsSet(_VK_EnsureToolbarLayout) && IsSet(g_Commands) && g_Commands is Map && g_Commands.Has("CommandList"))
             _VK_EnsureToolbarLayout()
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if !(IsSet(g_Commands) && g_Commands is Map && g_Commands.Has("ToolbarLayout") && g_Commands["ToolbarLayout"] is Array
         && g_Commands.Has("CommandList") && g_Commands["CommandList"] is Map) {
         items := FloatingToolbar_BuildItemsFromCmdIds(FloatingToolbar_GetFallbackCmdIds())
         if (items.Length > 0) {
             try WebView_QueuePayload(g_FTB_WV2, Map("type", "set_toolbar_cmds", "items", items))
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         } else {
             try FloatingToolbar_PushLegacyToolbarActionsToWeb()
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
         return
@@ -7040,7 +7676,8 @@ FloatingToolbarPushCmdLayoutToWeb() {
         items := FloatingToolbar_BuildItemsFromCmdIds(FloatingToolbar_GetFallbackCmdIds())
         if (items.Length = 0) {
             try FloatingToolbar_PushLegacyToolbarActionsToWeb()
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             return
         }
@@ -7048,7 +7685,8 @@ FloatingToolbarPushCmdLayoutToWeb() {
     try WebView_QueuePayload(g_FTB_WV2, Map("type", "set_toolbar_cmds", "items", items))
     catch as _e {
         try FloatingToolbar_PushLegacyToolbarActionsToWeb()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if !FloatingToolbarChatDrawerOpen && !FloatingToolbarIsCompactMode()
@@ -7072,7 +7710,8 @@ FloatingToolbar_GetCursorIconPath() {
         b64 := FloatingToolbar_Base64EncodeBuffer(buf)
         if (b64 != "")
             g_FTB_CursorIconDataUrl := "data:image/png;base64," . b64
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return (g_FTB_CursorIconDataUrl != "") ? g_FTB_CursorIconDataUrl : iconFile
 }
@@ -7194,7 +7833,8 @@ FloatingToolbar_ShowCursorQuickMenu() {
                 menuItems.Push({ Text: nm, Icon: "▶", Action: ((*) => _ExecuteCommand(cid)) })
             }
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if (menuItems.Length = 0) {
         menuItems := [
@@ -7210,7 +7850,8 @@ FloatingToolbar_ShowCursorQuickMenu() {
     try {
         MouseGetPos &mx, &my
         ShowDarkStylePopupMenuAt(menuItems, mx + 2, my + 2)
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -7237,7 +7878,8 @@ FloatingToolbar_ResizeForToolbarCount() {
     FloatingToolbarWindowX := newX
     FloatingToolbarWindowY := gy
     try FloatingToolbarGUI.Move(newX, gy, newW, newH)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     FloatingToolbar_ApplyWebViewBounds()
 }
@@ -7315,7 +7957,8 @@ FloatingToolbar_SendTextToNiumaChat(text, sendNow := true, appendMode := true, o
         if (StrLen(t) > 40)
             preview .= "…"
         try CommandPalette_AiLog("ftb_send_text", "provider=" . prov . " send=" . (sendNow ? 1 : 0) . " openDrawer=" . (openDrawer ? 1 : 0) . " text=" . preview)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if (t = "")
@@ -7328,14 +7971,16 @@ FloatingToolbar_SendTextToNiumaChat(text, sendNow := true, appendMode := true, o
             catch as eGui {
                 if FuncExists("CommandPalette_AiLog")
                     try CommandPalette_AiLog("ftb_send_no_wv2_create_err", eGui.Message)
-                    catch {
+                    catch as _e {
+                        NmerCatch(A_ThisFunc, _e) 
                     }
             }
         }
         if !g_FTB_WV2 {
             if FuncExists("CommandPalette_AiLog")
                 try CommandPalette_AiLog("ftb_send_no_wv2", "CreateFloatingToolbarGUI did not yield CoreWebView2")
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
             return false
         }
@@ -7362,17 +8007,20 @@ FloatingToolbar_SendTextToNiumaChat(text, sendNow := true, appendMode := true, o
             g_FTB_PendingNiumaCompose.Push(payload)
             if FuncExists("CommandPalette_AiLog")
                 try CommandPalette_AiLog("ftb_send_queued", "reason=wv2_not_ready ready=" . (g_FTB_WV2_Ready ? 1 : 0) . " frame=" . (g_FTB_WV2_FrameReady ? 1 : 0) . " queueLen=" . g_FTB_PendingNiumaCompose.Length)
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
             if openDrawer && FuncExists("FloatingToolbar_OpenNiumaChatDrawer")
                 try FloatingToolbar_OpenNiumaChatDrawer(true)
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
             return true
         } catch as _ePending {
             if FuncExists("CommandPalette_AiLog")
                 try CommandPalette_AiLog("ftb_send_queue_err", _ePending.Message)
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
             return false
         }
@@ -7381,13 +8029,15 @@ FloatingToolbar_SendTextToNiumaChat(text, sendNow := true, appendMode := true, o
         WebView_QueuePayload(g_FTB_WV2, payload)
         if FuncExists("CommandPalette_AiLog")
             try CommandPalette_AiLog("ftb_send_posted", "niuma_compose_send provider=" . prov)
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         return true
     } catch as _e {
         if FuncExists("CommandPalette_AiLog")
             try CommandPalette_AiLog("ftb_send_post_err", _e.Message)
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         return false
     }
@@ -7413,7 +8063,8 @@ FloatingToolbar_ApplyActivationFallback(*) {
         return
     if FuncExists("ApplyAppearanceActivationMode")
         try ApplyAppearanceActivationMode()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -7427,7 +8078,8 @@ FloatingToolbar_InitShowFallback(*) {
     if (FloatingToolbarGUI != 0 && g_FTB_WaitingUiFinishedReveal) {
         if (g_FTB_RevealWaitStartTick > 0 && (A_TickCount - g_FTB_RevealWaitStartTick) > 12000 && !g_FTB_PaintReady) {
             try FloatingToolbar_BootPaintFallbackForce()
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
         return
@@ -7435,7 +8087,8 @@ FloatingToolbar_InitShowFallback(*) {
     try FloatingToolbar_ShowForActivationMode()
     catch {
         try ShowFloatingToolbar()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 }

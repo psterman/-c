@@ -89,7 +89,8 @@ VK_ResetHostState() {
     try {
         if IsObject(g_VK_Gui)
             g_VK_Gui.Destroy()
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     g_VK_Gui := 0
     g_VK_WV2 := 0
@@ -418,8 +419,6 @@ _VK_BuiltinCommandCatalog() {
             Map("id", "qa_extensions", "name", "扩展", "desc", "Cursor: Ctrl+Shift+X", "fn", "CH_RUN"),
             Map("id", "qa_terminal", "name", "终端", "desc", "Cursor: Ctrl+Shift+``", "fn", "CH_RUN"),
             Map("id", "qa_command_palette", "name", "命令面板", "desc", "Cursor: Ctrl+Shift+P", "fn", "CH_RUN"),
-            Map("id", "qa_voice", "name", "快捷动作 / 语音输入", "desc", "执行 Quick Action: Voice", "fn", "CH_RUN"),
-            Map("id", "ch_z", "name", "语音输入", "desc", "CapsLock+Z：开始或停止语音输入", "fn", "CH_RUN", "suggested", "z"),
             Map("id", "cursor_open", "name", "搜索中心", "desc", "打开全局搜索中心", "fn", "CURSOR_OPEN"),
             Map("id", "cursor_close", "name", "关闭光标面板", "desc", "隐藏光标助手面板", "fn", "CURSOR_CLOSE")
         ]),
@@ -569,7 +568,8 @@ _LoadCommands() {
             ? g_Commands["SceneMenus"]["tray_menu"].Length
             : -1
         OutputDebug("[VK] LoadCommands after sync tray_menu count=" . trayCount)
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     ; Sync cursor-native mapping layer (catalog + user_keymap) into runtime bindings.
     try CursorShortcutMapper_SyncUserKeymapToCommands(g_Commands)
@@ -578,8 +578,14 @@ _LoadCommands() {
     _VK_NormalizeBindingsOverrides()
     _VK_RebuildEffectiveBindings()
     _VK_EnsureDashboardStorage()
-    _VK_EnsureToolbarLayout()
-    _VK_EnsureSceneToolbarLayout()
+    try _VK_EnsureToolbarLayout()
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e)
+    }
+    try _VK_EnsureSceneToolbarLayout()
+    catch as _e2 {
+        NmerCatch(A_ThisFunc, _e2)
+    }
     _VK_EnsureSceneMenus()
     _VK_EnsureContextMenuLayout()
     try {
@@ -588,7 +594,8 @@ _LoadCommands() {
             ? g_Commands["SceneMenus"]["tray_menu"].Length
             : -1
         OutputDebug("[VK] LoadCommands ready tray_menu count=" . trayCount . " cmd_count=" . (g_Commands.Has("CommandList") && g_Commands["CommandList"] is Map ? g_Commands["CommandList"].Count : 0))
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     _VK_SyncFloatPinnedFromStorage()
     _VK_RenderGlobalFloatPanel()
@@ -1240,10 +1247,12 @@ _VK_SyncSceneToolbarFromToolbarLayout() {
     if !(g_Commands is Map)
         return
     try _VK_EnsureSceneToolbarLayout()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try _VK_EnsureToolbarLayout()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if !g_Commands.Has("ToolbarLayout") || !(g_Commands["ToolbarLayout"] is Array)
         return
@@ -1273,10 +1282,12 @@ _VK_SyncToolbarLayoutFromSceneToolbar() {
     if !(g_Commands is Map)
         return
     try _VK_EnsureSceneToolbarLayout()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try _VK_EnsureToolbarLayout()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if !g_Commands.Has("ToolbarLayout") || !(g_Commands["ToolbarLayout"] is Array)
         return
@@ -1499,7 +1510,7 @@ _VK_DefaultSceneMenuSettingsCmds() {
 }
 
 _VK_DefaultSceneMenuCursorCmds() {
-    return ["cursor_open", "cursor_close", "qa_command_palette", "qa_terminal", "qa_global_search", "qa_explorer", "qa_source_control", "qa_extensions", "qa_browser", "qa_settings", "qa_cursor_settings", "qa_voice"]
+    return ["cursor_open", "cursor_close", "qa_command_palette", "qa_terminal", "qa_global_search", "qa_explorer", "qa_source_control", "qa_extensions", "qa_browser", "qa_settings", "qa_cursor_settings"]
 }
 
 _VK_DefaultSceneMenuCloudPlayerCmds() {
@@ -1757,7 +1768,8 @@ _VK_EnsureSceneMenus() {
             ? g_Commands["SceneMenuVisibility"]["tray_menu"].Count
             : -1
         OutputDebug("[VK] EnsureSceneMenus tray_menu count=" . trayCount . " vis_count=" . visCount . " cmd_count=" . cmdList.Count)
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -1770,7 +1782,8 @@ _VK_SceneMenusToJson() {
     try {
         trayCount := (sm.Has("tray_menu") && sm["tray_menu"] is Array) ? sm["tray_menu"].Length : -1
         OutputDebug("[VK] SceneMenusToJson tray_menu count=" . trayCount)
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     json := "{"
     sep := ""
@@ -1903,7 +1916,7 @@ _VK_SceneCtxActMap(sceneKey) {
     }
     if (sk = "cursor") {
         m := Map()
-        for c in ["cursor_open", "cursor_close", "qa_command_palette", "qa_terminal", "qa_global_search", "qa_explorer", "qa_source_control", "qa_extensions", "qa_browser", "qa_settings", "qa_cursor_settings", "qa_voice"]
+        for c in ["cursor_open", "cursor_close", "qa_command_palette", "qa_terminal", "qa_global_search", "qa_explorer", "qa_source_control", "qa_extensions", "qa_browser", "qa_settings", "qa_cursor_settings"]
             m[c] := c
         return m
     }
@@ -2221,7 +2234,8 @@ _VK_ApplySceneMenuFromWeb(msg) {
         if (key = "tray_menu") {
             OutputDebug("[VK] ApplySceneMenuFromWeb tray_menu incoming=" . (msg.Has("cmds") && msg["cmds"] is Array ? msg["cmds"].Length : 0) . " stored=" . user.Length)
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if !g_Commands.Has("SceneMenus") || !(g_Commands["SceneMenus"] is Map)
         g_Commands["SceneMenus"] := Map()
@@ -2243,7 +2257,8 @@ _VK_ApplySceneMenuFromWeb(msg) {
                 : -1
             OutputDebug("[VK] ApplySceneMenuFromWeb tray_menu visible_count=" . visCount)
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if (key = "floating_bar")
         _VK_SyncContextMenuLayoutFromFloatingSceneMenu()
@@ -2449,6 +2464,43 @@ _VK_MergeToolbarRowSearchFields(&row, rawItem, cid) {
     row["menu_scenes"] := scenes
 }
 
+_VK_ToolbarRowCmdId(row) {
+    try {
+        if !(row is Map) || !row.Has("cmdId")
+            return ""
+        return Trim(String(row["cmdId"]))
+    } catch {
+        return ""
+    }
+}
+
+_VK_CloneToolbarRow(row) {
+    try {
+        if !(row is Map)
+            return Map()
+        cid := Trim(String(row.Get("cmdId", "")))
+        if (cid = "")
+            return Map()
+        scenes := []
+        if row.Has("menu_scenes") && row["menu_scenes"] is Array {
+            for s in row["menu_scenes"]
+                scenes.Push(String(s))
+        }
+        return Map(
+            "cmdId", cid,
+            "visible_in_bar", row.Has("visible_in_bar") ? !!row["visible_in_bar"] : false,
+            "visible_in_menu", row.Has("visible_in_menu") ? !!row["visible_in_menu"] : false,
+            "order_bar", row.Has("order_bar") ? Integer(row["order_bar"]) : -1,
+            "order_menu", row.Has("order_menu") ? Integer(row["order_menu"]) : -1,
+            "visible_in_search_row", row.Has("visible_in_search_row") ? !!row["visible_in_search_row"] : false,
+            "order_search_row", row.Has("order_search_row") ? Integer(row["order_search_row"]) : -1,
+            "menu_scenes", scenes
+        )
+    } catch {
+        return Map()
+    }
+}
+
 _VK_SortRowsByNumericKey(rows, keyName) {
     src := rows is Array ? rows : []
     sorted := []
@@ -2472,6 +2524,30 @@ _VK_SortRowsByNumericKey(rows, keyName) {
 }
 
 _VK_EnsureToolbarLayout() {
+    try {
+        _VK_EnsureToolbarLayout_Impl()
+    } catch as e {
+        try NmerCatch("_VK_EnsureToolbarLayout", e)
+        catch {
+        }
+        global g_Commands
+        try {
+            if (g_Commands is Map) {
+                if g_Commands.Has("ToolbarLayout")
+                    g_Commands.Delete("ToolbarLayout")
+                if g_Commands.Has("toolbar_layout")
+                    g_Commands.Delete("toolbar_layout")
+            }
+            _VK_EnsureToolbarLayout_Impl()
+        } catch as e2 {
+            try NmerCatch("_VK_EnsureToolbarLayout", e2)
+            catch {
+            }
+        }
+    }
+}
+
+_VK_EnsureToolbarLayout_Impl() {
     global g_Commands
     if !(g_Commands is Map) || !g_Commands.Has("CommandList") || !(g_Commands["CommandList"] is Map)
         return
@@ -2542,7 +2618,8 @@ _VK_EnsureToolbarLayout() {
     )
     menuDefaultOrder := ["ftm_reset_scale", "ftm_search_center", "ftm_switch_hole", "ftm_clipboard", "ftm_minimize_to_edge", "ftm_exit_app", "ftm_hide_toolbar", "ftm_open_config", "ftm_toggle_toolbar", "ftm_reload_script"]
     for cmdId, _ in cmdList {
-        if (SubStr(cmdId, 1, 3) = "pt_")
+        cmdId := Trim(String(cmdId))
+        if (cmdId = "" || SubStr(cmdId, 1, 3) = "pt_")
             continue
         if seen.Has(cmdId)
             continue
@@ -2569,38 +2646,44 @@ _VK_EnsureToolbarLayout() {
         barItems := _VK_SortRowsByNumericKey(barItems, "order_bar")
     if menuItems.Length > 1
         menuItems := _VK_SortRowsByNumericKey(menuItems, "order_menu")
-    for row in barItems
-        out.Push(row)
+    byId := Map()
+    for row in barItems {
+        c := _VK_CloneToolbarRow(row)
+        cid := _VK_ToolbarRowCmdId(c)
+        if (cid = "")
+            continue
+        byId[cid] := c
+    }
     for row in menuItems {
-        cid := row["cmdId"]
-        already := false
-        for r in out {
-            if r["cmdId"] = cid {
-                already := true
-                r["visible_in_menu"] := true
-                if row.Has("order_menu")
-                    r["order_menu"] := row["order_menu"]
-                if row.Has("visible_in_search_row") && row["visible_in_search_row"]
-                    r["visible_in_search_row"] := true
-                if row.Has("menu_scenes") && row["menu_scenes"] is Array && row["menu_scenes"].Length
-                    r["menu_scenes"] := row["menu_scenes"]
-                break
-            }
+        c := _VK_CloneToolbarRow(row)
+        cid := _VK_ToolbarRowCmdId(c)
+        if (cid = "")
+            continue
+        if byId.Has(cid) {
+            cur := byId[cid]
+            cur["visible_in_menu"] := true
+            if c.Has("order_menu")
+                cur["order_menu"] := c["order_menu"]
+            if c.Has("visible_in_search_row") && c["visible_in_search_row"]
+                cur["visible_in_search_row"] := true
+            if c.Has("order_search_row")
+                cur["order_search_row"] := c["order_search_row"]
+            if c.Has("menu_scenes") && c["menu_scenes"] is Array && c["menu_scenes"].Length
+                cur["menu_scenes"] := c["menu_scenes"].Clone()
+        } else {
+            byId[cid] := c
         }
-        if !already
-            out.Push(row)
     }
     for row in unassigned {
-        exists := false
-        for r in out {
-            if r["cmdId"] = row["cmdId"] {
-                exists := true
-                break
-            }
-        }
-        if !exists
-            out.Push(row)
+        c := _VK_CloneToolbarRow(row)
+        cid := _VK_ToolbarRowCmdId(c)
+        if (cid = "" || byId.Has(cid))
+            continue
+        byId[cid] := c
     }
+    out := []
+    for _, row in byId
+        out.Push(row)
     _VK_MigrateSearchToolbarLegacy(&out)
     out := _VK_NormalizeToolbarLayoutOrders(out)
     out := _VK_NormalizeToolbarSearchRowOrders(out)
@@ -2657,7 +2740,8 @@ _VK_ApplyToolbarLayoutFromWeb(msg) {
     out := _VK_NormalizeToolbarSearchRowOrders(out)
     g_Commands["ToolbarLayout"] := out
     try _VK_SyncSceneToolbarFromToolbarLayout()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return true
 }
@@ -2690,7 +2774,8 @@ _VK_ApplySceneToolbarLayoutFromWeb(msg) {
         row["order_bar"] := idx++
     g_Commands["SceneToolbarLayout"] := out
     try _VK_SyncToolbarLayoutFromSceneToolbar()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return true
 }
@@ -3035,22 +3120,26 @@ VK_IsTypingPassthroughContext() {
     try {
         if FuncExists("SCWV_IsHostForegroundActive") && SCWV_IsHostForegroundActive()
             return true
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try {
         if FuncExists("SCWV_IsSearchInputFocused") && SCWV_IsSearchInputFocused()
             return true
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try {
         if FuncExists("CommandPalette_IsInputActive") && CommandPalette_IsInputActive()
             return true
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try {
         if FuncExists("ConfigWebView_HostWindowVisible") && ConfigWebView_HostWindowVisible()
             return true
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return false
 }
@@ -3161,7 +3250,8 @@ _VK_BindCriticalHotkey(ahkKey, fn) {
         Hotkey(ahkKey, fn, "On")
         g_VK_CriticalHotkeys.Push(ahkKey)
         return true
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if (InStr(ahkKey, "^") || InStr(ahkKey, "!") || InStr(ahkKey, "+") || InStr(ahkKey, "#")) {
         hkHook := "$" . ahkKey
@@ -3169,7 +3259,8 @@ _VK_BindCriticalHotkey(ahkKey, fn) {
             Hotkey(hkHook, fn, "On")
             g_VK_CriticalHotkeys.Push(hkHook)
             return true
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     return false
@@ -3438,7 +3529,8 @@ VirtualKeyboard_HandleKey(physKey) {
     try {
         if FuncExists("CapsLockChordInputBlocked") && CapsLockChordInputBlocked()
             return false
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if (VK_IsTypingPassthroughContext() && _VK_IsBareSingleKey(physKey))
         return false
@@ -3491,7 +3583,8 @@ _VkSearchCenterHostHotIfCb(*) {
     try {
         if FuncExists("SCWV_ScCapsInputAllowed")
             return SCWV_ScCapsInputAllowed()
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return false
 }
@@ -3565,7 +3658,8 @@ _VK_GetThemeMode() {
                 raw := IniRead(cfgPath, "Appearance", "ThemeMode", "")
             if (raw != "")
                 return _VK_NormalizeThemeToken(raw)
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     global ThemeMode
@@ -3730,7 +3824,8 @@ _OnWV2Created(ctrl) {
     if !IsObject(ctrl) {
         OutputDebug("[VK] WV2 created callback returned non-object: " . ctrl)
         try VK_ResetHostState()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return
     }
@@ -3738,7 +3833,8 @@ _OnWV2Created(ctrl) {
     catch as e {
         OutputDebug("[VK] WV2 created callback invalid controller: " . e.Message)
         try VK_ResetHostState()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return
     }
@@ -3869,8 +3965,16 @@ _VK_DeferredMoveFocus(*) {
 }
 
 _OnGuiResize(GuiObj, MinMax, Width, Height) {
-    if MinMax = -1
+    static vkWasMin := false
+    if (MinMax = -1) {
+        vkWasMin := true
+        NmerPanel_OnGuiMinimized(MinMax, "hotkeys")
         return
+    }
+    if (MinMax >= 0) {
+        NmerPanel_OnGuiRestoredFromMinimize(MinMax, vkWasMin, "hotkeys")
+        vkWasMin := false
+    }
     _ApplyWV2Bounds()
 }
 
@@ -3902,7 +4006,8 @@ _VK_SendDockConfig() {
                 ))
             }
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try WebView_QueuePayload(g_VK_WV2, Map("type", "nmDockConfig", "sceneToolbarLayout", arr))
 }
@@ -3927,7 +4032,8 @@ VK_GetSceneToolbarLayoutArray() {
                 ))
             }
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return arr
 }
@@ -3944,7 +4050,8 @@ VK_ExecuteDockCmd(cmdId) {
         try {
             if VK_Execute(cmdId)
                 return true
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if FuncExists("SC_ExecuteContextCommand") {
@@ -3961,7 +4068,8 @@ VK_ExecuteDockCmd(cmdId) {
         try {
             SC_ExecuteContextCommand(cmdId, 0, m0)
             return true
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     return false
@@ -4098,7 +4206,8 @@ _OnWebMessage(sender, args) {
                     if (sk = "tray_menu") {
                         OutputDebug("[VK] saveSceneMenu tray_menu persisted")
                     }
-                } catch {
+                } catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
                 if (sk = "floating_bar") {
                     try FloatingToolbarReloadFromToolbarLayout()
@@ -5383,6 +5492,7 @@ VK_Show() {
     if !VK_HostGuiValid()
         VK_EnsureInit(true)
     if g_VK_Gui {
+        NmerPanel_RestoreGui(g_VK_Gui)
         openFromCapsHold := g_VK_NextShowFromCapsLockHold
         g_VK_NextShowFromCapsLockHold := false
         try g_VK_Gui.Show("NoActivate")
@@ -5447,15 +5557,30 @@ VK_Hide() {
     try WebView2_NotifyHidden(g_VK_WV2)
     if VK_HostGuiValid()
         try g_VK_Gui.Hide()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
+}
+
+VK_Minimize(*) {
+    global g_VK_Gui
+    if !VK_HostGuiValid()
+        return false
+    try {
+        if !NmerPanel_IsShown(g_VK_Gui.Hwnd)
+            return false
+    } catch {
+        return false
+    }
+    return NmerPanel_MinimizeGui(g_VK_Gui, "hotkeys")
 }
 
 VK_Dispose(reason := "") {
     global g_VK_Gui, g_VK_Ctrl, g_VK_WV2, g_VK_Ready, g_VK_FocusPending
     global g_VK_TitleBgCtrl, g_VK_TitleLblCtrl, g_VK_MinBtnCtrl, g_VK_CloseBtnCtrl
     try VK_Hide()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     SurfaceManager_CloseWebViewControl(g_VK_Ctrl)
     g_VK_Ctrl := 0
@@ -5489,7 +5614,8 @@ VK_SendToWeb(jsonStr) {
         WebView_QueueJson(g_VK_WV2, jsonStr)
     if FuncExists("ConfigWebView_RelayVkWebJson")
         try ConfigWebView_RelayVkWebJson(jsonStr)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
 }
 
@@ -5507,12 +5633,14 @@ _VK_WM_ACTIVATE(wParam, lParam, msg, hwnd) {
         try {
             if IsSet(FloatingToolbar_IsForegroundToolbarOrChild) && FloatingToolbar_IsForegroundToolbarOrChild()
                 return
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         try {
             if _VK_IsForegroundGlobalFloat()
                 return
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         ; 显示后一段时间内焦点可能在宿主/子控件间切换，勿误判为「用户点到外面」而立刻隐藏
         if (g_VK_LastShown && (A_TickCount - g_VK_LastShown < 2000))

@@ -53,7 +53,8 @@ VK_Execute(cmdId) {
         try {
             if IsSet(_ExecuteCommand)
                 return _ExecuteCommand(cid)
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return false
     }
@@ -75,13 +76,14 @@ VK_Execute(cmdId) {
     try {
         if (A_ScriptHwnd && WinExist("ahk_id " A_ScriptHwnd))
             return VK_ExecCursorHelperCmd(cid)
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
-
     try {
         if NotifyScript("CursorHelper", '{"type":"vkExec","cmdId":"' . cid . '"}')
             return true
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return VK_ExecCursorHelperCmd(cid)
 }
@@ -90,7 +92,8 @@ VK_ExecCursorHelperCmd(cmdId) {
     global CapsLock, CapsLock2, BatchHotkey, IsCountdownActive
     global g_LastExecutedCmdId
     global HotkeyESC, HotkeyC, HotkeyV, HotkeyX, HotkeyE, HotkeyR, HotkeyO, HotkeyQ, HotkeyZ, HotkeyT
-    global AppearanceActivationMode, ConfigFile, g_CapsLockChordSessionActive
+    global AppearanceActivationMode, ConfigFile
+    global g_CapsLockChordSessionActive := false
     prevCaps := CapsLock
     prevSession := g_CapsLockChordSessionActive
     CapsLock := true
@@ -169,7 +172,8 @@ VK_ExecCursorHelperCmd(cmdId) {
                 try _VK_H("FloatingToolbar_ActivateSearchCenter")
                 catch {
                     try _VK_H("ShowSearchCenter")
-                    catch {
+                    catch as _e {
+                        NmerCatch(A_ThisFunc, _e) 
                     }
                 }
                 executed := true
@@ -665,9 +669,6 @@ VK_ExecCursorHelperCmd(cmdId) {
             case "qa_clipboard":
                 ExecuteQuickActionByType("Clipboard")
                 executed := true
-            case "qa_voice":
-                ExecuteQuickActionByType("Voice")
-                executed := true
             case "qa_command_palette":
                 ExecuteQuickActionByType("CommandPalette")
                 executed := true
@@ -798,7 +799,8 @@ VK_ExecCursorHelperCmd(cmdId) {
                 try SelectionSense_OpenHubCapsuleFromToolbar()
                 catch as err {
                     try TrayTip("草稿本", "无法打开 HubCapsule: " . err.Message, "Iconx 2")
-                    catch {
+                    catch as _e {
+                        NmerCatch(A_ThisFunc, _e) 
                     }
                 }
                 executed := true
@@ -949,7 +951,8 @@ VK_IsClipboardPanelActive() {
     try {
         if (SCWV_IsClipboardUnifiedActive())
             return true
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try return CP_IsForeground()
     catch {
@@ -965,7 +968,8 @@ VK_ClipboardPost(payloadJson) {
             SCWV_PostJson(payloadJson)
             return true
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try {
         CP_SendToWeb(payloadJson)
@@ -1033,9 +1037,9 @@ VK_NiumaControlSend(keys, openDrawer := true) {
     try {
         ControlSend(keys, , "ahk_id " . hwnd)
         return true
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
-
     ; 兜底：仅对 Enter / Esc 做 PostMessage，组合键继续依赖 ControlSend
     vk := 0
     if (keys = "{Enter}")
@@ -1288,7 +1292,8 @@ SC_ExecuteContextCommand(cmdId, visibleRow := 0, ctxItem := unset) {
             clipId := Integer(Item["ClipboardId"])
         if (clipId < 1) {
             try TrayTip("剪贴板项", "当前结果不是剪贴板条目", "Icon! 2")
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             return
         }
@@ -1303,7 +1308,8 @@ SC_ExecuteContextCommand(cmdId, visibleRow := 0, ctxItem := unset) {
                 _CP_DoCopyToClipboard(clipId, false)
             default:
                 try TrayTip("剪贴板", "不支持该命令", "Iconi 2")
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
         }
         return
@@ -1321,11 +1327,13 @@ SC_ExecuteContextCommand(cmdId, visibleRow := 0, ctxItem := unset) {
                     t := Trim(String(Content), " `t`r`n")
                     if (t != "") {
                         try A_Clipboard := t
-                        catch {
+                        catch as _e {
+                            NmerCatch(A_ThisFunc, _e) 
                         }
                         Sleep(50)
                         try Send("^v")
-                        catch {
+                        catch as _e {
+                            NmerCatch(A_ThisFunc, _e) 
                         }
                     }
                     return
@@ -1334,12 +1342,14 @@ SC_ExecuteContextCommand(cmdId, visibleRow := 0, ctxItem := unset) {
                     PromptQuickPad_PasteByMergedIndex(Integer(Item["PromptMergedIndex"]))
                     Sleep(50)
                     try Send("^v")
-                    catch {
+                    catch as _e {
+                        NmerCatch(A_ThisFunc, _e) 
                     }
                     return
                 }
                 try TrayTip("立即执行", "当前项无法在此面板执行", "Iconi 2")
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
                 return
             }
@@ -1348,7 +1358,8 @@ SC_ExecuteContextCommand(cmdId, visibleRow := 0, ctxItem := unset) {
         case "sc_run_as_admin":
             if !isFileLike || !FileExist(path) {
                 try TrayTip("仅支持本地 .exe / .bat", path, "Icon! 2")
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
                 return
             }
@@ -1357,20 +1368,23 @@ SC_ExecuteContextCommand(cmdId, visibleRow := 0, ctxItem := unset) {
             el := StrLower(ext)
             if (el != ".exe" && el != ".bat") {
                 try TrayTip("仅支持 .exe / .bat", path, "Icon! 2")
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
                 return
             }
             try Run('*RunAs "' . path . '"')
             catch as err {
                 try TrayTip("提升运行失败", err.Message, "Iconx 2")
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
             }
         case "sc_open_path":
             if !isFileLike || (!FileExist(path) && !DirExist(path)) {
                 try TrayTip("无法打开位置", "非本地文件或文件夹路径", "Icon! 2")
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
                 return
             }
@@ -1381,14 +1395,16 @@ SC_ExecuteContextCommand(cmdId, visibleRow := 0, ctxItem := unset) {
                 Run('explorer.exe /select,"' . pn . '"')
             } catch as err {
                 try TrayTip("资源管理器失败", err.Message, "Iconx 2")
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
             }
         case "sc_open_with":
             ; 已从搜索中心右键移除；保留 case 供旧热键/脚本调用
             if !isFileLike || !FileExist(path) {
                 try TrayTip("打开方式", "需要存在的本地文件", "Icon! 2")
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
                 return
             }
@@ -1401,38 +1417,44 @@ SC_ExecuteContextCommand(cmdId, visibleRow := 0, ctxItem := unset) {
                 Run(Format('"{1}\System32\rundll32.exe" shell32.dll,OpenAs_RunDLL "{2}"', sysRoot, path))
             } catch as err {
                 try TrayTip("打开方式失败", err.Message, "Iconx 2")
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
             }
         case "sc_copy":
         case "sc_copy_plain":
             try A_Clipboard := Content
             try TrayTip("已复制", "全文已复制到剪贴板", "Iconi 1")
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         case "sc_copy_path":
             p := SC_ExtractPathForCopy(Content)
             if (p = "") {
                 try TrayTip("未找到路径", "内容中无可用的本地路径", "Icon! 2")
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
                 return
             }
             try A_Clipboard := p
             try TrayTip("已复制路径", p, "Iconi 1")
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         case "sc_copy_url":
             u := SC_ExtractFirstHttpUrl(Content)
             if (u = "") {
                 try TrayTip("未找到链接", "", "Icon! 2")
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
                 return
             }
             try A_Clipboard := u
             try TrayTip("已复制链接", u, "Iconi 1")
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         case "sc_copy_link":
             p := SC_ExtractPathForCopy(Content)
@@ -1447,31 +1469,36 @@ SC_ExecuteContextCommand(cmdId, visibleRow := 0, ctxItem := unset) {
                 }
             }
             try TrayTip("已复制", "路径/链接/全文已复制", "Iconi 1")
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         case "sc_copy_digit":
             d := SC_JoinAllRegExMatches(Content, "\d+")
             if (d = "") {
                 try TrayTip("未匹配到数字", "", "Icon! 2")
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
                 return
             }
             try A_Clipboard := d
             try TrayTip("已复制数字", d, "Iconi 1")
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         case "sc_copy_chinese":
             zh := SC_JoinAllRegExMatches(Content, "\p{Han}+")
             if (zh = "") {
                 try TrayTip("未匹配到中文", "", "Icon! 2")
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
                 return
             }
             try A_Clipboard := zh
             try TrayTip("已复制中文", SubStr(zh, 1, 80), "Iconi 1")
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         case "sc_copy_md":
             link := Content
@@ -1482,25 +1509,29 @@ SC_ExecuteContextCommand(cmdId, visibleRow := 0, ctxItem := unset) {
                 md := "[" . name . "](" . link . ")"
             try A_Clipboard := md
             try TrayTip("已复制 Markdown", md, "Iconi 1")
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         case "sc_to_draft":
             seg := Trim(String(Content), " `t`r`n")
             if (seg = "")
                 return
             try SelectionSense_OpenHubCapsuleFromToolbar(false, seg)
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             Sleep(280)
             if !VK_HubCapsulePost(Map("type", "draft_collect", "text", seg, "source", "vk_clip_ctx")) {
                 try TrayTip("草稿本", "HubCapsule 未就绪，请稍后再试", "Icon! 2")
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
             }
         case "sc_to_prompt":
             try A_Clipboard := Content
             try TrayTip("已复制", "内容已复制，可粘贴到提示词模板", "Iconi 1")
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         case "sc_to_openclaw":
             t := Trim(String(Content), " `t`r`n")
@@ -1510,14 +1541,16 @@ SC_ExecuteContextCommand(cmdId, visibleRow := 0, ctxItem := unset) {
             try _VK_H("FloatingToolbar_SendTextToNiumaChat",t, true, true, true)
             catch as err {
                 try TrayTip("发送失败", err.Message, "Iconx 2")
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
             }
         case "sc_send_desktop":
         case "sc_send_documents":
             if !isFileLike || !FileExist(path) {
                 try TrayTip("发送", "仅支持本地文件（非文件夹）", "Iconi 2")
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
                 return
             }
@@ -1536,25 +1569,29 @@ SC_ExecuteContextCommand(cmdId, visibleRow := 0, ctxItem := unset) {
             try {
                 FileCopy path, dest, false
                 try TrayTip("已发送", dest, "Iconi 1")
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
             } catch as err {
                 try TrayTip("复制失败", err.Message, "Iconx 2")
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
             }
         case "sc_open_sendto_folder":
             st := EnvGet("APPDATA") . "\Microsoft\Windows\SendTo"
             if !DirExist(st) {
                 try TrayTip("发送到", "未找到系统「发送到」目录", "Icon! 2")
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
                 return
             }
             try Run('explorer.exe "' . st . '"')
             catch as err {
                 try TrayTip("打开失败", err.Message, "Iconx 2")
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
             }
         case "ai_explain_item":
@@ -1566,7 +1603,8 @@ SC_ExecuteContextCommand(cmdId, visibleRow := 0, ctxItem := unset) {
             try _VK_H("FloatingToolbar_SendTextToNiumaChat",payload, true, false, true)
             catch as err {
                 try TrayTip("牛马 AI", err.Message, "Iconx 2")
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
             }
         case "ai_translate_item":
@@ -1578,7 +1616,8 @@ SC_ExecuteContextCommand(cmdId, visibleRow := 0, ctxItem := unset) {
             try _VK_H("FloatingToolbar_SendTextToNiumaChat",payload, true, false, true)
             catch as err {
                 try TrayTip("翻译", err.Message, "Iconx 2")
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
             }
         case "ai_prompt_refine":
@@ -1588,7 +1627,8 @@ SC_ExecuteContextCommand(cmdId, visibleRow := 0, ctxItem := unset) {
             try _VK_H("FloatingToolbar_SendTextToNiumaChat",payload, true, false, true)
             catch as err {
                 try TrayTip("提示词精炼", err.Message, "Iconx 2")
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
             }
         case "sc_pin_item":
@@ -1598,7 +1638,8 @@ SC_ExecuteContextCommand(cmdId, visibleRow := 0, ctxItem := unset) {
             }
             if Item is Map && Item.Has("Source") && String(Item["Source"]) != "" && String(Item["Source"]) != "clipboard" {
                 try TrayTip("置顶", "仅剪贴板历史条目支持置顶", "Iconi 2")
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
                 return
             }
@@ -1614,7 +1655,8 @@ SC_ExecuteContextCommand(cmdId, visibleRow := 0, ctxItem := unset) {
                     global g_SelSense_MenuWV2
                     if g_SelSense_MenuWV2 {
                         try WebView_QueuePayload(g_SelSense_MenuWV2, Map("type", "hub_remove_at", "index", Integer(Item["HubSegIndex"])))
-                        catch {
+                        catch as _e {
+                            NmerCatch(A_ThisFunc, _e) 
                         }
                     }
                     return
@@ -1631,14 +1673,16 @@ SC_ExecuteContextCommand(cmdId, visibleRow := 0, ctxItem := unset) {
             if Item is Map && Item.Has("Source") && String(Item["Source"]) = "clipboard" {
                 if !(isFileLike && FileExist(path)) {
                     try TrayTip("回收", "当前剪贴板项不是可进回收站的本地文件", "Iconi 2")
-                    catch {
+                    catch as _e {
+                        NmerCatch(A_ThisFunc, _e) 
                     }
                     return
                 }
                 try FileRecycle(path)
                 catch as err {
                     try TrayTip("回收失败", err.Message, "Iconx 2")
-                    catch {
+                    catch as _e {
+                        NmerCatch(A_ThisFunc, _e) 
                     }
                     return
                 }
@@ -1648,13 +1692,15 @@ SC_ExecuteContextCommand(cmdId, visibleRow := 0, ctxItem := unset) {
             }
             if Item is Map && Item.Has("Source") && String(Item["Source"]) = "pqp" {
                 try TrayTip("回收", "提示词列表项请使用「删除」或自行管理 prompts.json", "Iconi 2")
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
                 return
             }
             if Item is Map && Item.Has("Source") && String(Item["Source"]) = "hub" {
                 try TrayTip("回收", "草稿卡片请使用「移除」或清空堆叠", "Iconi 2")
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
                 return
             }

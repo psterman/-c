@@ -107,18 +107,21 @@ CommandPalette_AgentWireLog(tag, detail := "") {
         if (dir != "" && !DirExist(dir))
             DirCreate(dir)
         FileAppend("[" . A_Now . "][" . String(tag) . "] " . SubStr(String(detail), 1, 800) . "`n", dir . "\cmdpal_agent_wire.log", "UTF-8")
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
 CommandPalette_AgentLog(event, detail := "") {
     line := "[" . A_Now . "][agent][" . event . "] " . String(detail)
     try OutputDebug(line . "`n")
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if FuncExists("NMER_Log") {
         try NMER_Log("cmdpal_agent", event, String(detail))
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if FuncExists("CommandPalette_AgentDebugTrace") {
@@ -129,7 +132,8 @@ CommandPalette_AgentLog(event, detail := "") {
         else if (InStr(ev, "poll") || InStr(ev, "compose") || InStr(ev, "agent_dispatch"))
             dbgLayer := "ftb"
         try CommandPalette_AgentDebugTrace(dbgLayer, ev, String(detail))
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 }
@@ -278,7 +282,8 @@ CommandPalette_AgentFlushPersist(*) {
 CommandPalette_AgentResolveOfficialRoute(query) {
     if FuncExists("Nmer_WailsBridgeResolveOfficialRoute") {
         try return Nmer_WailsBridgeResolveOfficialRoute(query)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     return Map("route", "r1r2", "allowed", false, "reason", "bridge_module_missing", "command", "")
@@ -353,7 +358,8 @@ CommandPalette_AgentPersistCards() {
         CommandPalette_AgentLog("persist_ok", "n=" . arr.Length . " path=" . path)
         if FuncExists("CommandPalette_AgentQueueShadowWrite")
             try CommandPalette_AgentQueueShadowWrite()
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
     } catch as eP {
         CommandPalette_AgentLog("persist_err", path . " :: " . eP.Message)
@@ -497,7 +503,8 @@ CommandPalette_AgentDefaultProvider() {
         p := "openclaw"
     if FuncExists("CommandPalette_NormalizeAiProvider")
         try return CommandPalette_NormalizeAiProvider(p)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     return p
 }
@@ -508,7 +515,8 @@ CommandPalette_AgentSanitizeProvider(prov) {
         return CommandPalette_AgentDefaultProvider()
     if FuncExists("CommandPalette_NormalizeAiProvider")
         try p := CommandPalette_NormalizeAiProvider(p)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     if (p = "" || p = "new" || p = "append" || p = "correction")
         return CommandPalette_AgentDefaultProvider()
@@ -588,7 +596,8 @@ CommandPalette_AgentForwardAiEvent(kind, msg) {
         delta := msg.Has("delta") ? String(msg["delta"]) : (msg.Has("text") ? String(msg["text"]) : "")
         if FuncExists("CommandPalette_AgentDebugTrace")
             try CommandPalette_AgentDebugTrace("ftb", "forward_chunk", "req=" . reqId . " Δ=" . SubStr(delta, 1, 48))
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         if (delta != "")
             CommandPalette_OnNiumaPaletteAgentChunk(Map("reqId", reqId, "cardId", cardId, "delta", delta))
@@ -596,7 +605,8 @@ CommandPalette_AgentForwardAiEvent(kind, msg) {
         ans := msg.Has("answer") ? String(msg["answer"]) : ""
         if FuncExists("CommandPalette_AgentDebugTrace")
             try CommandPalette_AgentDebugTrace("ftb", "forward_end", "req=" . reqId . " len=" . StrLen(ans))
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         if CommandPalette_AgentAnswerIsSubstantial(ans)
             CommandPalette_OnNiumaPaletteAgentEnd(Map("reqId", reqId, "cardId", cardId, "answer", ans))
@@ -628,7 +638,8 @@ CommandPalette_AgentPullCardsJson() {
             if !(c is Map)
                 continue
             try items.Push(CommandPalette_AgentCardToPushDto(c))
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
         return Jxon_Dump(items)
@@ -678,7 +689,8 @@ CommandPalette_AgentPushCardSync() {
         CommandPalette_PushToWeb(Map("type", "palette_agent_card_sync", "cards", items, "summary", useSummary))
     if FuncExists("CommandPalette_AgentQueueShadowWrite")
         try CommandPalette_AgentQueueShadowWrite()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
 }
 
@@ -692,7 +704,8 @@ CommandPalette_AgentPushCardDetail(cardId) {
     dto := CommandPalette_AgentCardToSyncDto(card)
     if FuncExists("CommandPalette_AgentShadowWriteDetail")
         try CommandPalette_AgentShadowWriteDetail(cid, dto)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     if FuncExists("CommandPalette_PushToWeb")
         return CommandPalette_PushToWeb(Map("type", "palette_agent_card_detail", "card", dto))
@@ -730,7 +743,8 @@ CommandPalette_AgentSaveBlockStore(msg) {
     CommandPalette_AgentSchedulePersist()
     if FuncExists("CommandPalette_AgentDebugTrace") {
         try CommandPalette_AgentDebugTrace("ahk", "block_store_persist", "card=" . cid . " n=" . n, "info")
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     return true
@@ -750,7 +764,8 @@ CommandPalette_AgentSubmit(msg) {
             c0 := g_Agent_Cards[g_Agent_LastSubmitCardId]
             if FuncExists("CommandPalette_AgentDebugTrace")
                 try CommandPalette_AgentDebugTrace("ahk", "submit_dedupe", "card=" . g_Agent_LastSubmitCardId, "info")
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
             return Map(
                 "ok", true,
@@ -764,7 +779,8 @@ CommandPalette_AgentSubmit(msg) {
     }
     CommandPalette_AgentWireLog("submit_enter", "kind=" . kind . " text=" . SubStr(text, 1, 60))
     try CommandPalette_AgentDebugTrace("ahk", "submit_enter", "kind=" . kind . " text=" . SubStr(text, 1, 40), "info")
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     routeDecision := CommandPalette_AgentResolveOfficialRoute(text)
     try CommandPalette_AgentDebugTrace(
@@ -775,7 +791,8 @@ CommandPalette_AgentSubmit(msg) {
             . " cmd=" . String(routeDecision.Get("command", "")),
         String(routeDecision.Get("route", "")) = "r3" ? "info" : "debug"
     )
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     cardId := msg.Has("cardId") ? Trim(String(msg["cardId"])) : ""
     prov := CommandPalette_AgentSanitizeProvider(msg.Has("provider") ? msg["provider"] : "")
@@ -785,7 +802,8 @@ CommandPalette_AgentSubmit(msg) {
     routeConfidence := msg.Has("routeConfidence") ? String(msg["routeConfidence"]) : ""
     if (routeId != "") {
         try CommandPalette_AgentDebugTrace("route", "pipeline_route", "id=" . routeId . " conf=" . routeConfidence, "info")
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 
@@ -813,7 +831,8 @@ CommandPalette_AgentSubmit(msg) {
             card["reqId"] := reqId
             if FuncExists("CommandPalette_DeliverFtbPayload") {
                 try CommandPalette_DeliverFtbPayload(Map("type", "palette_agent_prepare_new", "cardId", cardId, "reqId", reqId))
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
             }
             card["gen"] := gen
@@ -839,7 +858,8 @@ CommandPalette_AgentSubmit(msg) {
             g_Agent_LastSubmitTick := A_TickCount
             ret := Map("ok", true, "cardId", cardId, "reqId", reqId, "provider", prov, "title", String(card.Get("title", text)))
             try CommandPalette_AgentDebugNoteSubmit(cardId, reqId, prov, "post")
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             return ret
         }
@@ -849,7 +869,8 @@ CommandPalette_AgentSubmit(msg) {
     if !(FuncExists("Nmer_PaletteAgentTransportHubEnabled") && Nmer_PaletteAgentTransportHubEnabled()) {
         if FuncExists("CommandPalette_BootstrapNiumaChat")
             try CommandPalette_BootstrapNiumaChat("agent_submit", false)
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
     }
     g_Agent_StreamGen++
@@ -898,7 +919,8 @@ CommandPalette_AgentSubmit(msg) {
     CommandPalette_AgentScheduleDispatch(cardId, reqId, text, prov, gen, 0)
     ret := Map("ok", true, "cardId", cardId, "reqId", reqId, "provider", prov, "title", title, "query", text)
     try CommandPalette_AgentDebugNoteSubmit(cardId, reqId, prov, "post")
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return ret
 }
@@ -1121,28 +1143,34 @@ CommandPalette_AgentWarmFtbHost(reason := "") {
     global g_FTB_WV2, g_FTB_WV2_Ready, g_FTB_WV2_FrameReady, FloatingToolbarGUI
     if FuncExists("Nmer_WailsBridgeEnsureOpenClawHubEnv")
         try Nmer_WailsBridgeEnsureOpenClawHubEnv()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     if FuncExists("FloatingToolbarWails_EnsureHybridBridge")
         try FloatingToolbarWails_EnsureHybridBridge()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     if FuncExists("FloatingToolbarWails_RegisterExternalFtb")
         try FloatingToolbarWails_RegisterExternalFtb("agent_warm_" . Trim(String(reason)))
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     if FuncExists("StartWebViewWarmup")
         try StartWebViewWarmup()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     if !(IsObject(g_FTB_WV2) && g_FTB_WV2_Ready && g_FTB_WV2_FrameReady) {
         if (FloatingToolbarGUI = 0) && FuncExists("CreateFloatingToolbarGUI")
             try CreateFloatingToolbarGUI()
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         if !IsObject(g_FTB_WV2) && FuncExists("FloatingToolbar_RetryCreateWebView")
             try FloatingToolbar_RetryCreateWebView()
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
     }
     return IsObject(g_FTB_WV2) && g_FTB_WV2_Ready && g_FTB_WV2_FrameReady
@@ -1282,7 +1310,8 @@ CommandPalette_AgentRunOpenClawAdapterAsync(cardId, reqId, query, sessionRef) {
         surfaceId := Trim(String(result.Get("surfaceId", "")))
         CommandPalette_AgentLog("adapter_ok", "card=" . cid . " r3=" . (isR3 ? 1 : 0) . " accepted=" . Integer(result.Get("accepted", 0)) . " ansLen=" . StrLen(ans))
         try CommandPalette_AgentDebugTrace("adapter", "ingest_ok", "card=" . cid . " r3=" . (isR3 ? 1 : 0) . " surface=" . surfaceId . " ans=" . StrLen(ans), "info")
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         if (card is Map) {
             card["streamDispatched"] := true
@@ -1310,7 +1339,8 @@ CommandPalette_AgentRunOpenClawAdapterAsync(cardId, reqId, query, sessionRef) {
     code := (result is Map) ? String(result.Get("code", "ADAPTER_FAIL")) : "ADAPTER_FAIL"
     CommandPalette_AgentLog("adapter_fail", "card=" . cid . " code=" . code)
     try CommandPalette_AgentDebugTrace("adapter", "ingest_fail", "card=" . cid . " code=" . code, "warn")
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     prov := "openclaw"
     if (card is Map)
@@ -1340,7 +1370,8 @@ CommandPalette_AgentRunOpenClawAdapterAsync(cardId, reqId, query, sessionRef) {
                 if (result2 is Map)
                     code := String(result2.Get("code", code))
             }
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     ftbMsg := "⚠ hub Adapter 失败（" . code . "），改走 Niuma Chat…"
@@ -1466,7 +1497,8 @@ CommandPalette_AgentPrefetchOpenClawSessionRef(cardId) {
                     g_CardSessionMap[cid] := sr
             }
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return sr
 }
@@ -1506,7 +1538,8 @@ CommandPalette_InvokeFtbPaletteAgentScript(cardId, reqId, query, provider, sessi
     routeId0 := (card is Map) ? Trim(String(card.Get("routeId", ""))) : ""
     if (routeId0 != "") {
         try CommandPalette_AgentDebugTrace("route", "prompt_inject", "route=" . routeId0 . " len=" . StrLen(sysPrompt), "info")
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     argsJson := "{}"
@@ -1590,7 +1623,8 @@ CommandPalette_AgentEnsureEngine(*) {
     if FuncExists("FloatingToolbarWails_ShouldUseHybrid") && FloatingToolbarWails_ShouldUseHybrid() {
         if FuncExists("FloatingToolbarWails_EnsureHybridBridge")
             try FloatingToolbarWails_EnsureHybridBridge()
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         if FuncExists("PaletteAgent_FtbTransportReady")
             return (PaletteAgent_FtbTransportReady() = "hybrid")
@@ -1600,7 +1634,8 @@ CommandPalette_AgentEnsureEngine(*) {
     if FuncExists("FloatingToolbar_AhkWebViewEnabled") && !FloatingToolbar_AhkWebViewEnabled() {
         if FuncExists("FloatingToolbarWails_EnsureShellForAgent")
             try return !!FloatingToolbarWails_EnsureShellForAgent(false)
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         if FuncExists("PaletteAgent_FtbTransportReady")
             return PaletteAgent_FtbTransportReady() != ""
@@ -1608,11 +1643,13 @@ CommandPalette_AgentEnsureEngine(*) {
     }
     if FuncExists("StartWebViewWarmup")
         try StartWebViewWarmup()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     if FuncExists("CommandPalette_BootstrapNiumaChat")
         try CommandPalette_BootstrapNiumaChat("agent_stream", false)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     if FuncExists("PaletteAgent_FtbTransportReady") {
         tr := PaletteAgent_FtbTransportReady()
@@ -1782,7 +1819,8 @@ CommandPalette_OnPaletteAgentOfficialDone(msg) {
         ))
     SetTimer(CommandPalette_AgentPushCardSync, -600)
     try CommandPalette_AgentDebugTrace("adapter", "official_done", "card=" . cardId . " surface=" . surfaceId, "info")
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -1865,7 +1903,8 @@ CommandPalette_AgentPollFtbAnswerShell(cardId, reqId, query, tryN) {
         prov := String(card.Get("provider", "openclaw"))
         sr := Trim(String(card.Get("sessionRef", "")))
         try CommandPalette_InvokeFtbPaletteAgentScript(cid, rid, q, prov, sr)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if (tryN >= 120) {
@@ -1894,7 +1933,8 @@ CommandPalette_AgentPaletteStreamScriptBackup(cardId, reqId, query, provider, se
     if (sr = "")
         sr := CommandPalette_AgentResolveSessionRef(cardId)
     try CommandPalette_InvokeFtbPaletteAgentScript(cardId, reqId, q, provider, sr)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -1979,7 +2019,8 @@ CommandPalette_AgentSyncNiumaSession(reqId, cardId, query, sessionRef := "", ans
                     "sessionRef", String(sessionRef),
                     "answer", String(answer)
                 ))
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
         return false
@@ -2078,7 +2119,8 @@ CommandPalette_AgentBootstrapNiumaSessions(*) {
             return
         if FuncExists("CommandPalette_DeliverFtbPayload") {
             try CommandPalette_DeliverFtbPayload(Map("type", "palette_agent_cards_sync", "cards", items, "force", true))
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
         bootMode := FuncExists("CommandPalette_FtbTransportMode") ? CommandPalette_FtbTransportMode() : ""
@@ -2172,7 +2214,8 @@ CommandPalette_AgentFetchAnswerFromFtb(reqId, query, cardId := "", sessionRef :=
         data := FuncExists("CommandPalette_ParseScriptJson") ? CommandPalette_ParseScriptJson(raw) : Map()
         if (data is Map) && data.Get("ok", false)
             return Trim(String(data.Get("answer", "")))
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e)
     } finally {
         g_Agent_FtbFetchBusy := false
     }
@@ -2299,7 +2342,8 @@ CommandPalette_AgentScheduleDispatch(cardId, reqId, query, provider, gen, tryN :
     )
     CommandPalette_AgentWireLog("dispatch_scheduled", "card=" . cid . " req=" . rid . " try=" . tryN)
     try CommandPalette_AgentDebugTrace("dispatch", "dispatch_scheduled", "card=" . cid . " req=" . rid . " try=" . tryN, "info")
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     SetTimer(CommandPalette_AgentProcessDispatchPending, 0)
     SetTimer(CommandPalette_AgentProcessDispatchPending, -40)
@@ -2335,12 +2379,14 @@ CommandPalette_AgentDeliverStreamPayload(payload) {
     ; 单路径投递，避免 DeliverFtbPayload + StartPaletteAgentStream 重复入队
     if FuncExists("CommandPalette_DeliverFtbPayload") {
         try return !!CommandPalette_DeliverFtbPayload(payload)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if FuncExists("FloatingToolbar_StartPaletteAgentStream") {
         try return !!FloatingToolbar_StartPaletteAgentStream(payload)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     return false
@@ -2630,7 +2676,8 @@ CommandPalette_AgentExportOcBaseline(provider := "openclaw") {
     p2 := Map("ok", false, "code", "P2_NOT_PROBED")
     if FuncExists("CommandPalette_ProbeP2OfficialA2ui") {
         try p2 := CommandPalette_ProbeP2OfficialA2ui(4000)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     bridge := Map("healthy", false, "enabled", false)
@@ -2644,7 +2691,8 @@ CommandPalette_AgentExportOcBaseline(provider := "openclaw") {
     oc5cp := Map("ok", false, "code", "OC5_CP_NOT_PROBED")
     if FuncExists("CommandPalette_ProbeOc5ProtocolClosure") {
         try oc5cp := CommandPalette_ProbeOc5ProtocolClosure(12000)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     export := Map(
@@ -2662,7 +2710,8 @@ CommandPalette_AgentExportOcBaseline(provider := "openclaw") {
             DirCreate(dir)
         FileDelete(path)
         FileAppend(Jxon_Dump(export), path, "UTF-8")
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     CommandPalette_AgentLogOcBaseline(baseline, "export_full")
     return export
@@ -2693,7 +2742,8 @@ CommandPalette_AgentLogOcBaseline(baseline, phase := "probe") {
         . " oc4=" . oc4s . " oc5=" . oc5s . " oc6=" . oc6s . " oc7=" . oc7s
     CommandPalette_AgentLog("oc_baseline", detail)
     try CommandPalette_AgentDebugTrace("host", "oc_baseline", detail, baseline.Get("pass", false) ? "info" : "warn")
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -2737,7 +2787,8 @@ CommandPalette_AgentDispatchViaAiStream(cardId, reqId, query, provider, gen, try
         haveGen := (card is Map) ? Integer(card.Get("gen", 0)) : -1
         CommandPalette_AgentWireLog("dispatch_skip", "reason=gen card=" . cardId . " want=" . gen . " have=" . haveGen)
         try CommandPalette_AgentDebugTrace("dispatch", "dispatch_skip", "gen card=" . cardId . " want=" . gen . " have=" . haveGen, "warn")
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return
     }
@@ -2758,7 +2809,8 @@ CommandPalette_AgentDispatchViaAiStream(cardId, reqId, query, provider, gen, try
         CommandPalette_AgentWireLog("dispatch_hub", "card=" . cardId . " req=" . reqId)
         if FuncExists("Nmer_WailsBridgeEnsureOpenClawHubEnv")
             try Nmer_WailsBridgeEnsureOpenClawHubEnv()
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         if !(FuncExists("Nmer_WailsBridgeHealthy") && Nmer_WailsBridgeHealthy()) {
             CommandPalette_AgentWireLog("dispatch_hub_fail", "card=" . cardId . " req=" . reqId . " reason=hub_not_ready")
@@ -2784,7 +2836,8 @@ CommandPalette_AgentDispatchViaAiStream(cardId, reqId, query, provider, gen, try
     }
     CommandPalette_AgentLog("dispatch_ai", "card=" . cardId . " req=" . reqId . " prov=" . prov . " try=" . tryN)
     try CommandPalette_AgentDebugTrace("dispatch", "dispatch_start", "card=" . cardId . " req=" . reqId . " prov=" . prov . " try=" . tryN, "info")
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     CommandPalette_AgentEnsureEngine()
     provLabel := (prov = "hermes") ? "Hermes" : "龙虾 OpenClaw"
@@ -2817,7 +2870,8 @@ CommandPalette_AgentDispatchViaAiStream(cardId, reqId, query, provider, gen, try
         sessionRef := CommandPalette_AgentResolveSessionRef(cardId)
     if FuncExists("FloatingToolbarWails_EnsureShellForAgent")
         try FloatingToolbarWails_EnsureShellForAgent(false)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     ftbReady := false
     if FuncExists("PaletteAgent_FtbTransportReady") && (PaletteAgent_FtbTransportReady() != "")
@@ -2829,7 +2883,8 @@ CommandPalette_AgentDispatchViaAiStream(cardId, reqId, query, provider, gen, try
         routeId1 := Trim(String(card.Get("routeId", "")))
         if (routeId1 != "") {
             try CommandPalette_AgentDebugTrace("route", "prompt_inject", "route=" . routeId1 . " len=" . StrLen(sysPrompt), "info")
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
         agentPayload := Map(
@@ -2855,7 +2910,8 @@ CommandPalette_AgentDispatchViaAiStream(cardId, reqId, query, provider, gen, try
         }
         CommandPalette_AgentLog("dispatch_ai_paths", "agent=" . (streamOk ? 1 : 0) . " script=" . (scriptOk ? 1 : 0) . " compose=0")
         try CommandPalette_AgentDebugTrace("ftb", "agent_dispatch", "card=" . cardId . " agent=" . (streamOk ? 1 : 0) . " script=" . (scriptOk ? 1 : 0), "info")
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         if (streamOk || scriptOk) {
             CommandPalette_AgentMarkStreamDispatched(cardId, false)
@@ -2960,7 +3016,8 @@ CommandPalette_AgentFtbSessionStillSending(reqId, cacheMs := 2500) {
         data := FuncExists("CommandPalette_ParseScriptJson") ? CommandPalette_ParseScriptJson(raw) : Map()
         if (data is Map) && data.Get("ok", false)
             sending := !!data.Get("sending", false)
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if !IsObject(g_Agent_FtbSendingCache)
         g_Agent_FtbSendingCache := Map()
@@ -3059,7 +3116,8 @@ CommandPalette_OnNiumaPaletteAgentChunk(msg) {
     if !(card is Map) {
         if FuncExists("CommandPalette_AgentDebugTrace")
             try CommandPalette_AgentDebugTrace("ahk", "chunk_no_card", "req=" . reqId . " card=" . cardId, "warn")
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         return
     }
@@ -3125,7 +3183,8 @@ CommandPalette_OnNiumaPaletteAgentEnd(msg) {
         return
     if CommandPalette_AgentCardIsOfficialA2uiRoute(card) {
         try CommandPalette_AgentDebugTrace("adapter", "end_skip_prose", "card=" . cardId, "info")
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return
     }
@@ -3242,7 +3301,8 @@ CommandPalette_AgentCancelPriorStreamForCard(cardId) {
     CommandPalette_AgentClearAiRoute(rid)
     if FuncExists("CommandPalette_DeliverFtbPayload") {
         try CommandPalette_DeliverFtbPayload(Map("type", "host_palette_agent_stream_cancel", "reqId", rid, "cardId", cid))
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 }
@@ -3252,7 +3312,8 @@ CommandPalette_AgentCancelOtherStreams(keepCardId := "") {
     keep := Trim(String(keepCardId))
     if FuncExists("CommandPalette_DeliverFtbPayload") {
         try CommandPalette_DeliverFtbPayload(Map("type", "palette_agent_prepare_new", "cardId", keep))
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     for id, c in g_Agent_Cards {
@@ -3268,7 +3329,8 @@ CommandPalette_AgentCancelOtherStreams(keepCardId := "") {
             "reqId", rid,
             "cardId", id
         ))
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 }
@@ -3279,10 +3341,12 @@ CommandPalette_AgentCancelDeliverFtb(reqId, cardId) {
     if (rid = "") || !FuncExists("CommandPalette_DeliverFtbPayload")
         return
     try CommandPalette_DeliverFtbPayload(Map("type", "host_palette_agent_stream_cancel", "reqId", rid, "cardId", cid))
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try CommandPalette_DeliverFtbPayload(Map("type", "host_palette_ai_stream_cancel", "reqId", rid))
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -3368,7 +3432,8 @@ CommandPalette_AgentOnReady() {
     global g_CmdPal_Visible
     if FuncExists("CommandPalette_PushToWeb") && g_CmdPal_Visible {
         try CommandPalette_PushToWeb(Map("type", "palette_show"))
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     SetTimer(CommandPalette_AgentPushCardSync, -180)
@@ -3436,7 +3501,8 @@ CommandPalette_ExecutePhysicalStep(actionType, actionArgs, cardId := "") {
 CommandPalette_HandleAgentSubmit(msg) {
     CommandPalette_AgentWireLog("handle_submit", "text=" . SubStr(String(msg.Has("text") ? msg["text"] : ""), 1, 60))
     try CommandPalette_AgentDebugTrace("ahk", "handle_submit", "via=host", "info")
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return CommandPalette_AgentSubmit(msg)
 }
@@ -3523,7 +3589,8 @@ CommandPalette_AgentDebugTrace(layer, event, detail := "", level := "info", extr
     while (g_AgentDbg_Events.Length > g_AgentDbg_MaxEvents)
         g_AgentDbg_Events.RemoveAt(1)
     try OutputDebug("[AgentDbg][" . lay . "][" . evt . "] " . SubStr(String(detail), 1, 240) . "`n")
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     CommandPalette_AgentDebug_RefreshPullCache()
     if FuncExists("CommandPalette_SearchDebug_DbgReady") && CommandPalette_SearchDebug_DbgReady()

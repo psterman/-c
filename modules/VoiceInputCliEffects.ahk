@@ -82,7 +82,8 @@ ReadCLIExecutableOverride(Engine) {
         if (path != "" && FileExist(path)) {
             return path
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return ""
 }
@@ -133,7 +134,8 @@ TryResolveExecutableViaWhere(WhereExe, Name) {
                 return L
             }
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return ""
 }
@@ -350,9 +352,9 @@ GetCLIAgentInputControl(WindowHwnd) {
         if (FocusedControl != "") {
             return FocusedControl
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
-
     PreferredPatterns := [
         "CASCADIA_HOSTING_WINDOW_CLASS",
         "Windows.UI",
@@ -374,9 +376,9 @@ GetCLIAgentInputControl(WindowHwnd) {
         if (Controls.Length > 0) {
             return Controls[1]
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
-
     return ""
 }
 
@@ -440,7 +442,8 @@ SendPromptToCLIAgentWindow(WindowHwnd, PromptText, Engine := "") {
         ControlSend("{Text}" . PromptText, , "ahk_id " . WindowHwnd)
         Sleep(120)
         ControlSend("{Enter}", , "ahk_id " . WindowHwnd)
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -745,7 +748,8 @@ MonitorPendingCLIAgentPrompts() {
                 Pending.LastWindowText := CurrentWindowText
                 Pending.ReadySeenCount := 0
                 CLIAgentPendingPrompts[Key] := Pending
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             continue
         }
@@ -802,7 +806,8 @@ OpenCLIAgentTerminal(Engine) {
         try {
             LegacyGuard_RequestFocus("VoiceInput", ExistingWindow, 30, "voice_existing_hwnd", 120)
             WinWaitActive("ahk_id " . ExistingWindow, , 3)
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return {Hwnd: ExistingWindow, IsNew: false}
     }
@@ -903,7 +908,8 @@ InvokePythonCLIBridge(Engines, PromptText := "", Action := "send") {
         try {
             LegacyGuard_RequestFocus("VoiceInput", Hwnd, 30, "voice_hwnd", 120)
             WinWaitActive("ahk_id " . Hwnd, , 2)
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         OkCount += 1
         Sleep(150)

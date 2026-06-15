@@ -79,7 +79,8 @@ HideClipboardMonitor() {
         try {
             if (MonitorFlashOriginalBg != "")
                 GuiID_ClipboardMonitor.BackColor := MonitorFlashOriginalBg
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         GuiID_ClipboardMonitor.Hide()
         MonitorIsVisible := false
@@ -310,7 +311,8 @@ UpdateStatusLight(isSuccess, errorMsg := "") {
             if (errorMsg != "")
                 MonitorStatusLight.ToolTip := "错误: " . errorMsg
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -339,7 +341,8 @@ AddMonitorLog(message) {
         ControlSend("{End}", MonitorLogEdit)
         Sleep(10)
         ControlSend("^{End}", MonitorLogEdit)
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -433,7 +436,8 @@ FlashMonitorWindow() {
         MonitorFlashOriginalBg := GuiID_ClipboardMonitor.BackColor
         GuiID_ClipboardMonitor.BackColor := MonitorColors.StatusGreen
         SetTimer(RestoreMonitorWindowBg, -200)
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -445,7 +449,8 @@ RestoreMonitorWindowBg() {
         if (GuiID_ClipboardMonitor && GuiID_ClipboardMonitor != 0) {
             GuiID_ClipboardMonitor.BackColor := MonitorFlashOriginalBg
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 

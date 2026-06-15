@@ -11,6 +11,10 @@ Jxon_Load(jsonText) {
     catch {
         return Map()
     }
+    if (SubStr(s, 1, 1) = Chr(0xFEFF))
+        s := SubStr(s, 2)
+    if (SubStr(s, 1, 3) = Chr(0xEF) . Chr(0xBB) . Chr(0xBF))
+        s := SubStr(s, 4)
     if (s = "")
         return Map()
     if (g_Jxon_ParseDepth > 0)

@@ -24,7 +24,8 @@ ShowSearchCenterDebugPanel() {
     if (GuiID_SearchCenterDebug != 0) {
         try {
             GuiID_SearchCenterDebug.Destroy()
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         GuiID_SearchCenterDebug := 0
     }
@@ -153,7 +154,8 @@ AddSearchCenterDebugLog(Message) {
                 ; 滚动到底部
                 SendMessage(0x0115, 7, 0, LogEdit)  ; EM_SCROLL = 0x0115, SB_BOTTOM = 7
             }
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 }
@@ -643,7 +645,8 @@ ClearDebugLogInSearchCenterDebug(*) {
             if (LogEdit != 0) {
                 LogEdit.Value := ""
             }
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     AddSearchCenterDebugLog("日志已清空")
@@ -659,7 +662,8 @@ GetTestKeyword() {
             if (KeywordEdit != 0) {
                 return KeywordEdit.Value
             }
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     
@@ -668,8 +672,8 @@ GetTestKeyword() {
         if (IsSet(SearchCenterSearchEdit) && SearchCenterSearchEdit != 0) {
             return SearchCenterSearchEdit.Value
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
-    
     return SearchCenterDebugTestKeyword
 }

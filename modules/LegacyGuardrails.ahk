@@ -29,7 +29,8 @@ LegacyGuard_Log(tag, detail := "") {
             NMER_AsyncLog(Nmer_DebugPath("legacy_guardrails.log"), line)
         else
             FileAppend(line, Nmer_DebugPath("legacy_guardrails.log"), "UTF-8")
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -259,13 +260,15 @@ LegacyGuard_ShouldWhitelistActivate(hwnd, winTitle := "") {
     try {
         if WinActive("ahk_id " . hwnd)
             return true
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try {
         pn := StrLower(WinGetProcessName("ahk_id " . hwnd))
         if (pn = "autohotkey64.exe" || pn = "autohotkey32.exe" || pn = "autohotkey.exe")
             return true
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return false
 }
@@ -283,7 +286,8 @@ LegacyGuard_SetForegroundSoft(hwnd) {
             try {
                 if WinActive("ahk_id " . hwnd)
                     return true
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
         LegacyGuard_SafeSleep(40)
@@ -316,7 +320,8 @@ LegacyGuard_RequestFocus(owner, target, priority := 40, reason := "", protectMs 
             ok := FocusBroker_Request(o != "" ? o : "LegacyFocus", hwnd, pri, rs != "" ? rs : "legacy_guard", pm, focusCb)
             if ok
                 return true
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     return LegacyGuard_SetForegroundSoft(hwnd)
@@ -351,7 +356,8 @@ WinActivate(winTitle := "", winText := "", excludeTitle := "", excludeText := ""
         try {
             FocusBroker_Request("LegacyWinActivate", hwnd, 45, "legacy_winactivate", 120)
             return true
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 
@@ -380,10 +386,12 @@ LegacyGuard_WinHttpBeforeSync(moduleName, method, url, reason := "", &token := 0
     strict := false
     fallback := true
     try strict := !!CoreAsyncStrictMode
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try fallback := !!LegacySyncFallback
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if (strict && !fallback) {
         token["decision"] := "deny"

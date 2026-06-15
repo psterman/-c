@@ -239,10 +239,12 @@ VoiceInputEffect_SearchOpen() {
 
 VoiceInputEffect_SearchStop(prevState) {
     try VoiceInputEffect_SearchStopListeningImpl()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try VoiceInputEffect_DestroySearchPanel()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     VoiceInput_SyncLegacyFlags()
 }

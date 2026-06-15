@@ -6766,13 +6766,13 @@ SearchClipboardFTS5ForSearchCenter(Keyword, MaxResults := 10, Offset := 0) {
         ; 【修复】使用 GetTable 替代 Prepare+Step，避免 _Statement 错误
         ; 转义 SQL 字符串中的单引号，防止 SQL 注入
         ; 支持分页：查询 limit+1 条数据，用于检测是否还有更多
-        SearchPatternEscaped := StrReplace(SearchPattern, "'", "''")
+        likePat := "%" . SearchPattern . "%"
         SQL := "SELECT " . selectFields . " FROM ClipMain " .
-               "WHERE (LOWER(Content) LIKE '" . SearchPatternEscaped . "' OR LOWER(SourceApp) LIKE '" . SearchPatternEscaped . "') " .
-               "ORDER BY " . (hasLastCopyTime ? "LastCopyTime" : "Timestamp") . " DESC LIMIT " . (MaxResults + 1) . " OFFSET " . Offset
+               "WHERE (LOWER(Content) LIKE LOWER(?) OR LOWER(SourceApp) LIKE LOWER(?)) " .
+               "ORDER BY " . (hasLastCopyTime ? "LastCopyTime" : "Timestamp") . " DESC LIMIT ? OFFSET ?"
         
         ResultSet := ""
-        if (!ClipboardFTS5DB.GetTable(SQL, &ResultSet)) {
+        if (!SqlSafe_GetTable(ClipboardFTS5DB, &ResultSet, SQL, likePat, likePat, MaxResults + 1, Offset)) {
             return Results
         }
         
@@ -7427,7 +7427,8 @@ ComputeSearchItemFinalScore(Item, Keyword, path) {
         try {
             Item.Metadata["FzyScore"] := Item.FinalScore
             Item.Metadata["FzyBase"] := fs
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 }
@@ -7501,7 +7502,8 @@ SearchCenterOtherRelevance(Keyword, item) {
                     sc += 95.0
             }
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return sc
 }
@@ -7546,7 +7548,8 @@ SyncIdentityToResultItem(&item, Keyword) {
     try {
         if (item.Metadata.Has("CharCount"))
             charCount := Integer(item.Metadata["CharCount"])
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     sub := friendly . " › " . timeFmt
     if (charCount > 0)
@@ -7592,7 +7595,8 @@ SortSearchCenterMergedResults(&items, Keyword) {
                     if (fnl = kwLower || fnl = kwLower . ".exe" || stem = kwLower)
                         fileArr[A_Index].FinalScore += 45.0
                 }
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
         try fileArr.Sort(FzyScoreResultItemStableCompare)
@@ -8601,7 +8605,8 @@ AddSearchResultItem(ListView, Item) {
         try {
             if (ShellIcon_EnsureImageList(ListView, "cfg"))
                 iconOpt := "Icon" . ShellIcon_GetPlaceholderIndex("cfg")
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         ; 第 1 列留空仅显示图标，文本从第 2 列开始
         if (iconOpt != "")

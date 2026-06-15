@@ -33,7 +33,8 @@ ScWebEmbedProbePaths(*) {
 ScWebEmbedProbeLog(line) {
     paths := ScWebEmbedProbePaths()
     try FileAppend("[" . A_Now . "] " . String(line) . "`n", paths["log"], "UTF-8")
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -63,7 +64,8 @@ ScWebEmbedProbeWriteResult(id, ok, pass, code, detail := "", extra := 0) {
     try {
         if FileExist(paths["req"])
             FileDelete(paths["req"])
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try {
         if FileExist(paths["res"])
@@ -73,7 +75,8 @@ ScWebEmbedProbeWriteResult(id, ok, pass, code, detail := "", extra := 0) {
             f.Write(Jxon_Dump(body))
             f.Close()
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -140,7 +143,8 @@ ScWebEmbedProbeCreateChildHost(parentHwnd) {
         DllCall("SetWindowLongPtr", "Ptr", hwnd, "Int", -16, "Ptr", style, "Ptr")
         if !DllCall("SetParent", "Ptr", hwnd, "Ptr", parentHwnd, "Ptr") {
             try g.Destroy()
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             return 0
         }
@@ -161,7 +165,8 @@ ScWebEmbedProbePositionChildHost(hostHwnd, x, y, w, h, show := true) {
         h := 0
     }
     try DllCall("SetWindowPos", "Ptr", hostHwnd, "Ptr", 0, "Int", x, "Int", y, "Int", w, "Int", h, "UInt", flags)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -170,7 +175,8 @@ ScWebEmbedProbeDestroyTabHost(tab) {
         return
     if tab.Has("ctrl") && IsObject(tab["ctrl"]) {
         try tab["ctrl"].Close()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     tab["ctrl"] := 0
@@ -179,7 +185,8 @@ ScWebEmbedProbeDestroyTabHost(tab) {
     tab["createInFlight"] := false
     if tab.Has("hostGui") && IsObject(tab["hostGui"]) {
         try tab["hostGui"].Destroy()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     tab["hostGui"] := 0
@@ -261,7 +268,8 @@ ScWebEmbedProbeEncodeQuery(query) {
         q := "牛马搜索探针"
     if FuncExists("UriEncode") {
         try return UriEncode(q)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     return q
@@ -276,7 +284,8 @@ ScWebEmbedProbeBuildUrl(engine, query := "") {
             u := VoiceInputEffect_BuildSearchUrl(String(query), eng)
             if (u != "")
                 return u
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     enc := ScWebEmbedProbeEncodeQuery(query)
@@ -303,7 +312,8 @@ ScWebEmbedProbeSetStatus(text) {
     msg := String(text)
     if IsObject(g_SCWebProbe_StatusText) {
         try g_SCWebProbe_StatusText.Value := msg
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     ScWebEmbedProbeLog(msg)
@@ -317,7 +327,8 @@ ScWebEmbedProbeRefreshTabButtons() {
                 btn.Opt("+Default")
             else
                 btn.Opt("-Default")
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 }
@@ -328,7 +339,8 @@ ScWebEmbedProbeBuildTabBar() {
         return
     for _, btn in g_SCWebProbe_TabButtons {
         try btn.Destroy()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     g_SCWebProbe_TabButtons := Map()
@@ -375,10 +387,12 @@ ScWebEmbedProbeApplyBounds() {
             rc.right := bodyW
             rc.bottom := bodyH
             try tab["ctrl"].Bounds := rc
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             try tab["ctrl"].IsVisible := true
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
     }
@@ -416,7 +430,8 @@ ScWebEmbedProbeHideTabWebViews(exceptId := "") {
             ScWebEmbedProbePositionChildHost(tab["hostHwnd"], 0, top, bodyW, bodyH, false)
         if tab.Has("wv2") && IsObject(tab["wv2"]) && FuncExists("WebView2_NotifyHidden") {
             try WebView2_NotifyHidden(tab["wv2"])
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
     }
@@ -432,11 +447,13 @@ ScWebEmbedProbeOnTabNavCompleted(tabId, sender, args) {
         return
     url := ""
     try url := wv2.Source
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if (url = "")
         try url := wv2.SourceUri
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     tab["lastUrl"] := String(url)
     ok := true
@@ -449,7 +466,8 @@ ScWebEmbedProbeOnTabNavCompleted(tabId, sender, args) {
                 err := "navigation_failed"
             }
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     tab["lastNavOk"] := ok
     tab["lastNavError"] := err
@@ -497,17 +515,20 @@ ScWebEmbedProbeOnTabCreated(tabId, ctrl) {
         s.AreDefaultContextMenusEnabled := true
         s.AreDevToolsEnabled := true
         s.AreBrowserAcceleratorKeysEnabled := true
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if FuncExists("ApplyWebView2PerformanceSettings")
         try ApplyWebView2PerformanceSettings(tab["wv2"])
     try tab["wv2"].add_NavigationCompleted(ScWebEmbedProbeMakeNavCompletedHandler(tabId))
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     global g_SCWebProbe_ActiveTabId
     if (tabId = g_SCWebProbe_ActiveTabId) {
         try ctrl.IsVisible := true
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         ScWebEmbedProbeApplyBounds()
         if FuncExists("WebView2_NotifyShown") && IsObject(tab["wv2"])
@@ -612,7 +633,8 @@ ScWebEmbedProbeEnsureHost() {
     try {
         if FuncExists("Nmer_MoveGuiToPopupScreen")
             Nmer_MoveGuiToPopupScreen(g_SCWebProbe_Gui)
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     catalog := ScWebEmbedProbeTabCatalog()
     if catalog.Length
@@ -635,14 +657,16 @@ ScWebEmbedProbeShow() {
         return false
     global g_SCWebProbe_Gui
     try g_SCWebProbe_Gui.Show()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     ScWebEmbedProbeApplyBounds()
     ScWebEmbedProbeSyncActiveGlobals()
     if FuncExists("WebView2_NotifyShown") && IsObject(g_SCWebProbe_WV2)
         try WebView2_NotifyShown(g_SCWebProbe_WV2)
     try WinActivate("ahk_id " . g_SCWebProbe_Gui.Hwnd)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return true
 }
@@ -652,7 +676,8 @@ ScWebEmbedProbeHide() {
     ScWebEmbedProbeHideTabWebViews("")
     if IsObject(g_SCWebProbe_Gui) {
         try g_SCWebProbe_Gui.Hide()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 }
@@ -673,13 +698,15 @@ ScWebEmbedProbeDispose() {
     g_SCWebProbe_StatusText := 0
     for _, btn in g_SCWebProbe_TabButtons {
         try btn.Destroy()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     g_SCWebProbe_TabButtons := Map()
     if IsObject(g_SCWebProbe_Gui) {
         try g_SCWebProbe_Gui.Destroy()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     g_SCWebProbe_Gui := 0
@@ -772,16 +799,19 @@ ScWebEmbedProbeStatusMap(tag := "") {
     hwnd := 0
     if IsObject(g_SCWebProbe_Gui) {
         try hwnd := g_SCWebProbe_Gui.Hwnd
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         try visible := g_SCWebProbe_Gui.Visible
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     title := ""
     if (hwnd && WinExist("ahk_id " . hwnd))
         try title := WinGetTitle("ahk_id " . hwnd)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     tabCount := 0
     readyTabs := 0
@@ -829,7 +859,8 @@ ScWebEmbedProbePoll(*) {
     if (raw = "" || StrLen(raw) > 65536) {
         ScWebEmbedProbeWriteResult("", false, false, "PROBE_JSON_INVALID", "empty_or_oversize")
         try FileDelete(reqPath)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return
     }
@@ -838,14 +869,16 @@ ScWebEmbedProbePoll(*) {
     catch as errJson {
         ScWebEmbedProbeWriteResult("", false, false, "PROBE_JSON_INVALID", SubStr(String(errJson.Message), 1, 120))
         try FileDelete(reqPath)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return
     }
     if !(root is Map) {
         ScWebEmbedProbeWriteResult("", false, false, "PROBE_JSON_INVALID", "expected_object")
         try FileDelete(reqPath)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return
     }

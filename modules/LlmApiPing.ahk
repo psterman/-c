@@ -120,19 +120,470 @@ LlmApiPing_EncodeUri(s) {
     return s
 }
 
+LlmApiPing_ClassifyNetworkError(msg, timeoutMs := 0) {
+    low := StrLower(Trim(String(msg)))
+    if (low = "")
+        return ""
+    if RegExMatch(low, "dns|name not resolved|can't resolve|cannot resolve|unknown host|无法解析|找不到服务器|未找到主机|0x80072ee7|11001|11002")
+        return "DNS 解析失败"
+    if RegExMatch(low, "proxy|tunnel|407|authentication required|proxy authentication|代理|0x80072f19|0x80072f78|0x80072f79")
+        return "代理未同步或代理鉴权失败"
+    if RegExMatch(low, "certificate|ssl|tls|secure channel|证书|0x80072f7d|0x80072f8f")
+        return "TLS/证书握手失败"
+    if RegExMatch(low, "refused|actively refused|connection refused|connectex|unreachable|network is unreachable|no route to host|无法连接|连接被拒绝|0x80072efd|0x8007274c")
+        return "连接被拒绝或出站被阻断"
+    if RegExMatch(low, "timeout|timed\s*out|超时|0x80072ee2|0x8007274d")
+        return "请求超时"
+    if (timeoutMs > 0)
+        return "请求超时（约 " . Round(Max(3000, Integer(timeoutMs)) / 1000) . " 秒）"
+    return ""
+}
+
+LlmApiPing_ParseUrlHostPort(url) {
+    u := Trim(String(url))
+    host := ""
+    port := 443
+    scheme := "https"
+    if RegExMatch(u, "i)^(https?)://([^/:]+)(?::(\d+))?", &m) {
+        scheme := StrLower(m[1])
+        host := m[2]
+        if (m[3] != "")
+            port := Integer(m[3])
+        else if (scheme = "http")
+            port := 80
+    }
+    if (host = "localhost")
+        host := "127.0.0.1"
+    return Map("host", host, "port", port, "scheme", scheme)
+}
+
+LlmApiPing_WinHttpErrDetail(msg) {
+    raw := Trim(String(msg))
+    if (raw = "")
+        return Map("code", "", "phase", "", "label", "")
+    code := ""
+    if RegExMatch(raw, "0x8007[0-9A-Fa-f]{4}|0x800727[0-9A-Fa-f]{2}", &m)
+        code := StrUpper(m[0])
+    else if RegExMatch(raw, "\b(\d{5})\b", &m2) && Integer(m2[1]) >= 10000
+        code := m2[1]
+    phase := ""
+    label := ""
+    switch code {
+        case "0x80072EE7", "11001", "11002":
+            phase := "dns", label := "DNS 无法解析主机名"
+        case "0x80072EFD", "0x8007274C", "10061":
+            phase := "connect", label := "TCP 连接被拒绝或不可达"
+        case "0x80072EE2", "0x8007274D", "10060":
+            phase := "timeout", label := "连接/发送超时"
+        case "0x80072F7D":
+            phase := "tls", label := "TLS/证书握手失败"
+        case "0x80072F19", "0x80072F78", "0x80072F79":
+            phase := "proxy", label := "代理不可达或代理鉴权失败"
+        case "0x80072F8F", "0x80072EFE":
+            phase := "reset", label := "连接被重置或中断"
+        case "0x80072F0D":
+            phase := "url", label := "URL 无效"
+        default:
+            if RegExMatch(raw, "i)name not resolved|dns|unknown host|无法解析|找不到服务器")
+                phase := "dns", label := "DNS 解析失败"
+            else if RegExMatch(raw, "i)proxy|407|tunnel")
+                phase := "proxy", label := "代理相关错误"
+            else if RegExMatch(raw, "i)certificate|ssl|tls|secure channel|证书")
+                phase := "tls", label := "TLS/证书错误"
+            else if RegExMatch(raw, "i)refused|cannot connect|connectex|unreachable|无法连接")
+                phase := "connect", label := "无法建立连接"
+            else if RegExMatch(raw, "i)timeout|timed\s*out|超时")
+                phase := "timeout", label := "请求超时"
+    }
+    if (label = "")
+        label := SubStr(raw, 1, 120)
+    return Map("code", code, "phase", phase, "label", label, "raw", raw)
+}
+
+LlmApiPing_EnsureWsa() {
+    static ready := false
+    if ready
+        return true
+    wsaData := Buffer(400, 0)
+    if DllCall("ws2_32\WSAStartup", "UShort", 0x0202, "Ptr", wsaData, "Int")
+        return false
+    ready := true
+    return true
+}
+
+LlmApiPing_DnsLookupV4(host) {
+    host := Trim(String(host))
+    if (host = "")
+        return Map("ok", false, "addrs", [], "error", "主机名为空")
+    if (host = "localhost" || host = "127.0.0.1")
+        return Map("ok", true, "addrs", ["127.0.0.1"], "error", "")
+    if RegExMatch(host, "^\d{1,3}(\.\d{1,3}){3}$")
+        return Map("ok", true, "addrs", [host], "error", "")
+    if !LlmApiPing_EnsureWsa()
+        return Map("ok", false, "addrs", [], "error", "WSA 初始化失败")
+    hints := Buffer(48, 0)
+    NumPut("Int", 2, hints, 0)
+    NumPut("Int", 1, hints, 4)
+    resultPtr := 0
+    rc := DllCall("ws2_32\getaddrinfo", "AStr", host, "Ptr", 0, "Ptr", hints, "Ptr*", &resultPtr, "Int")
+    if (rc != 0 || !resultPtr) {
+        err := "getaddrinfo errno " . rc
+        if (rc = 11001)
+            err := "DNS 无记录 (WSAHOST_NOT_FOUND)"
+        else if (rc = 11002)
+            err := "DNS 临时失败 (WSATRY_AGAIN)"
+        return Map("ok", false, "addrs", [], "error", err)
+    }
+    addrs := []
+    cur := resultPtr
+    loop 12 {
+        if !cur
+            break
+        aiAddr := NumGet(cur, A_PtrSize = 8 ? 32 : 20, "Ptr")
+        if aiAddr {
+            b0 := NumGet(aiAddr, 4, "UChar")
+            b1 := NumGet(aiAddr, 5, "UChar")
+            b2 := NumGet(aiAddr, 6, "UChar")
+            b3 := NumGet(aiAddr, 7, "UChar")
+            ip := b0 . "." . b1 . "." . b2 . "." . b3
+            if !ArrayHasValue(addrs, ip)
+                addrs.Push(ip)
+        }
+        cur := NumGet(cur, A_PtrSize = 8 ? 40 : 24, "Ptr")
+    }
+    try DllCall("ws2_32\freeaddrinfo", "Ptr", resultPtr)
+    if !addrs.Length
+        return Map("ok", false, "addrs", [], "error", "DNS 未返回 IPv4 地址")
+    return Map("ok", true, "addrs", addrs, "error", "")
+}
+
+LlmApiPing_ProxySummary(quick := false) {
+    parts := []
+    try {
+        pe := RegRead("HKCU\Software\Microsoft\Windows\CurrentVersion\Internet Settings", "ProxyEnable")
+        ps := Trim(String(RegRead("HKCU\Software\Microsoft\Windows\CurrentVersion\Internet Settings", "ProxyServer")))
+        if (pe)
+            parts.Push("IE 代理: " . (ps != "" ? ps : "已启用但未配置地址"))
+        else
+            parts.Push("IE 代理: 未启用")
+    } catch {
+        parts.Push("IE 代理: 无法读取")
+    }
+    if quick
+        return parts.Join(" · ")
+    try {
+        outFile := A_Temp . "\nmer_winhttp_proxy.txt"
+        try FileDelete(outFile)
+        RunWait(A_ComSpec . ' /c netsh winhttp show proxy > "' . outFile . '"', , "Hide")
+        if FileExist(outFile) {
+            raw := Trim(FileRead(outFile, "UTF-8"))
+            try FileDelete(outFile)
+            line := ""
+            for ln in StrSplit(raw, "`n", "`r") {
+                ln := Trim(ln)
+                if (ln != "" && !InStr(ln, "当前的 WinHTTP 代理服务器设置") && !InStr(ln, "Current WinHTTP proxy"))
+                    line .= (line != "" ? " " : "") . ln
+            }
+            if (line = "" || InStr(line, "直接访问") || InStr(line, "Direct access"))
+                parts.Push("WinHTTP: 直连")
+            else
+                parts.Push("WinHTTP: " . line)
+        }
+    } catch {
+        parts.Push("WinHTTP: 无法读取")
+    }
+    return parts.Join(" · ")
+}
+
+LlmApiPing_AttemptLabel(attempt) {
+    if !(attempt is Map)
+        return ""
+    via := Trim(String(attempt.Get("via", "")))
+    proxyMode := Integer(attempt.Get("proxyMode", 0))
+    proxyTag := proxyMode = 1 ? "直连" : (proxyMode = 2 ? "系统代理" : "默认")
+    st := Integer(attempt.Get("status", 0))
+    ms := Integer(attempt.Get("elapsedMs", 0))
+    err := Trim(String(attempt.Get("error", "")))
+    code := Trim(String(attempt.Get("hresult", "")))
+    if (st >= 200 && st < 300)
+        return via . "(" . proxyTag . "): HTTP " . st . " · " . ms . "ms"
+    detail := LlmApiPing_WinHttpErrDetail(err)
+    if (code = "" && detail["code"] != "")
+        code := detail["code"]
+    if (st > 0)
+        return via . "(" . proxyTag . "): HTTP " . st . " · " . ms . "ms — " . (detail["label"] != "" ? detail["label"] : err)
+    core := detail["label"] != "" ? detail["label"] : err
+    if (code != "")
+        core := core . " [" . code . "]"
+    return via . "(" . proxyTag . "): " . core . " · " . ms . "ms"
+}
+
+LlmApiPing_BuildNetworkDiagnostic(url, attempts, timeoutMs := 0) {
+    ep := LlmApiPing_ParseUrlHostPort(url)
+    host := ep.Get("host", "")
+    port := Integer(ep.Get("port", 443))
+    lines := []
+    lines.Push("目标: " . Trim(String(url)))
+    dns := LlmApiPing_DnsLookupV4(host)
+    if dns["ok"]
+        lines.Push("DNS: " . host . " → " . dns["addrs"].Join(", ") . " ✓")
+    else
+        lines.Push("DNS: " . host . " ✗ " . dns.Get("error", "解析失败"))
+    if dns["ok"] {
+        ip := dns["addrs"][1]
+        tcpMs := Min(3500, Max(1200, Integer(timeoutMs) // 4))
+        tcpOk := LlmApiPing_TcpPortOpen(ip, port, tcpMs)
+        if tcpOk
+            lines.Push("TCP: " . ip . ":" . port . " 可连接 ✓")
+        else
+            lines.Push("TCP: " . ip . ":" . port . " 不可达/超时 ✗")
+    }
+    if (attempts is Array) {
+        for att in attempts {
+            lab := LlmApiPing_AttemptLabel(att)
+            if (lab != "")
+                lines.Push("尝试: " . lab)
+        }
+    }
+    lines.Push("代理: " . LlmApiPing_ProxySummary(true))
+    phase := ""
+    if (attempts is Array) {
+        for att in attempts {
+            det := LlmApiPing_WinHttpErrDetail(att.Get("error", ""))
+            if (det["phase"] != "") {
+                phase := det["phase"]
+                break
+            }
+        }
+    }
+    hint := ""
+    if (phase = "dns" || !dns["ok"])
+        hint := "建议: DNS 失败 → 检查本机 DNS、hosts、公司内网解析策略"
+    else if (phase = "proxy")
+        hint := "建议: 代理问题 → 在管理员终端执行 netsh winhttp import proxy source=ie，或关闭/修正 Clash 系统代理"
+    else if (phase = "tls")
+        hint := "建议: TLS 失败 → 检查公司 HTTPS 解密证书、系统根证书或代理 MITM"
+    else if (phase = "connect")
+        hint := "建议: DNS 正常但连接失败 → 检查防火墙、EDR、公司出口是否放行 " . host . ":" . port
+    else if (phase = "timeout")
+        hint := "建议: 超时 → 若 DNS/TCP 均失败多为网络阻断；若 TCP 成功而 HTTP 超时，检查 API 地址与代理"
+    else if !dns["ok"]
+        hint := "建议: 先修复 DNS，再重试测试连接"
+    else
+        hint := "建议: 核对 API Key、Base URL 与模型名；若仅 WinHTTP 失败可尝试 netsh winhttp import proxy source=ie"
+    lines.Push(hint)
+    return Map(
+        "text", lines.Join("`n"),
+        "phase", phase,
+        "dnsOk", !!dns["ok"],
+        "host", host,
+        "port", port
+    )
+}
+
+LlmApiPing_FormatAttemptFailure(url, lastResult, attempts, timeoutMs := 0) {
+    diag := LlmApiPing_BuildNetworkDiagnostic(url, attempts, timeoutMs)
+    st := lastResult is Map ? Integer(lastResult.Get("status", 0)) : 0
+    rawErr := lastResult is Map ? Trim(String(lastResult.Get("error", ""))) : ""
+    head := ""
+    if (st = 401)
+        head := "HTTP 401 鉴权失败"
+    else if (st = 403)
+        head := "HTTP 403 禁止访问"
+    else if (st = 404)
+        head := "HTTP 404 接口不存在"
+    else if (st = 429)
+        head := "HTTP 429 限流"
+    else if (st >= 500)
+        head := "HTTP " . st . " 服务端错误"
+    else {
+        det := LlmApiPing_WinHttpErrDetail(rawErr)
+        head := det["label"] != "" ? det["label"] : (rawErr != "" ? rawErr : "网络连接失败")
+        if (det["code"] != "")
+            head .= " [" . det["code"] . "]"
+    }
+    return Map("error", head . "`n" . diag["text"], "diag", diag)
+}
+
 LlmApiPing_IsLoopbackUrl(url) {
     return RegExMatch(String(url), "i)^https?://(127\.0\.0\.1|localhost)(:\d+)?/")
 }
 
 LlmApiPing_HttpSync(method, url, headers, body, timeoutMs := 18000) {
+    attempts := []
+    if LlmApiPing_IsLoopbackUrl(url) {
+        r0 := LlmApiPing_HttpSyncOnce(method, url, headers, body, timeoutMs, 1)
+        attempts.Push(Map(
+            "via", "winhttp",
+            "proxyMode", 1,
+            "status", Integer(r0.Get("status", 0)),
+            "error", String(r0.Get("error", "")),
+            "hresult", String(r0.Get("hresult", "")),
+            "elapsedMs", Integer(r0.Get("elapsedMs", 0))
+        ))
+        r0["attempts"] := attempts
+        if !r0.Get("ok", false) && Integer(r0.Get("status", 0)) = 0 {
+            formatted := LlmApiPing_FormatAttemptFailure(url, r0, attempts, timeoutMs)
+            r0["error"] := formatted["error"]
+            r0["diagnostics"] := formatted["diag"]["text"]
+            r0["phase"] := formatted["diag"]["phase"]
+        }
+        return r0
+    }
+    t0 := A_TickCount
+    budget := Max(4000, Integer(timeoutMs))
+    if (method = "POST" && RegExMatch(String(url), "i)^https://")) {
+        rC := LlmApiPing_HttpSyncCurl(method, url, headers, body, Min(10000, budget))
+        attempts.Push(Map(
+            "via", "curl",
+            "proxyMode", 0,
+            "status", Integer(rC.Get("status", 0)),
+            "error", String(rC.Get("error", "")),
+            "hresult", "",
+            "elapsedMs", Integer(rC.Get("elapsedMs", 0))
+        ))
+        if Integer(rC.Get("status", 0)) > 0 {
+            rC["attempts"] := attempts
+            return rC
+        }
+        remain := Max(2000, budget - (A_TickCount - t0))
+        if (remain >= 2000) {
+            r2 := LlmApiPing_HttpSyncOnce(method, url, headers, body, Min(4000, remain), 2)
+            attempts.Push(Map(
+                "via", "winhttp",
+                "proxyMode", 2,
+                "status", Integer(r2.Get("status", 0)),
+                "error", String(r2.Get("error", "")),
+                "hresult", String(r2.Get("hresult", "")),
+                "elapsedMs", Integer(r2.Get("elapsedMs", 0))
+            ))
+            if Integer(r2.Get("status", 0)) > 0 {
+                r2["attempts"] := attempts
+                return r2
+            }
+            rC := r2
+        }
+        rC["attempts"] := attempts
+        if !rC.Get("ok", false) && Integer(rC.Get("status", 0)) = 0 {
+            formatted := LlmApiPing_FormatAttemptFailure(url, rC, attempts, timeoutMs)
+            rC["error"] := formatted["error"]
+            rC["diagnostics"] := formatted["diag"]["text"]
+            rC["phase"] := formatted["diag"]["phase"]
+        }
+        return rC
+    }
+    per := Max(3000, Min(6000, budget))
+    r := LlmApiPing_HttpSyncOnce(method, url, headers, body, per, 0)
+    attempts.Push(Map(
+        "via", "winhttp",
+        "proxyMode", 0,
+        "status", Integer(r.Get("status", 0)),
+        "error", String(r.Get("error", "")),
+        "hresult", String(r.Get("hresult", "")),
+        "elapsedMs", Integer(r.Get("elapsedMs", 0))
+    ))
+    if Integer(r.Get("status", 0)) = 0 {
+        remain := Max(3000, budget - (A_TickCount - t0))
+        r2 := LlmApiPing_HttpSyncOnce(method, url, headers, body, remain, 2)
+        attempts.Push(Map(
+            "via", "winhttp",
+            "proxyMode", 2,
+            "status", Integer(r2.Get("status", 0)),
+            "error", String(r2.Get("error", "")),
+            "hresult", String(r2.Get("hresult", "")),
+            "elapsedMs", Integer(r2.Get("elapsedMs", 0))
+        ))
+        if Integer(r2.Get("status", 0)) != 0 {
+            r2["attempts"] := attempts
+            return r2
+        }
+        r := r2
+    }
+    r["attempts"] := attempts
+    if !r.Get("ok", false) && Integer(r.Get("status", 0)) = 0 {
+        formatted := LlmApiPing_FormatAttemptFailure(url, r, attempts, timeoutMs)
+        r["error"] := formatted["error"]
+        r["diagnostics"] := formatted["diag"]["text"]
+        r["phase"] := formatted["diag"]["phase"]
+    }
+    return r
+}
+
+LlmApiPing_HttpSyncCurl(method, url, headers, body, timeoutMs := 12000) {
+    start := A_TickCount
+    if (method != "POST")
+        return Map("ok", false, "status", 0, "text", "", "error", "curl: 不支持 " . method, "elapsedMs", 0)
+    id := A_TickCount
+    bodyPath := A_Temp . "\nmer_ping_" . id . ".json"
+    outPath := A_Temp . "\nmer_ping_" . id . ".out"
+    for f in [bodyPath, outPath] {
+        try if FileExist(f)
+            FileDelete(f)
+    }
+    try FileAppend(String(body), bodyPath, "UTF-8")
+    catch {
+        return Map("ok", false, "status", 0, "text", "", "error", "curl: 无法写入临时文件", "elapsedMs", A_TickCount - start)
+    }
+    sec := Max(3, Min(10, Integer(timeoutMs // 1000)))
+    cmd := "curl.exe -sS --connect-timeout " . sec . " -m " . (sec + 2)
+    cmd .= ' -o "' . outPath . '" -w "%{http_code}"'
+    if (headers is Map) {
+        for k, v in headers {
+            hv := StrReplace(String(v), '"', '\"')
+            cmd .= ' -H "' . String(k) . ': ' . hv . '"'
+        }
+    }
+    cmd .= ' -X POST -d @"' . bodyPath . '" "' . String(url) . '"'
+    codeOut := ""
+    try RunWait(cmd, , "Hide", &codeOut)
+    catch as eRun {
+        for f in [bodyPath, outPath] {
+            try if FileExist(f)
+                FileDelete(f)
+        }
+        return Map("ok", false, "status", 0, "text", "", "error", "curl 启动失败: " . eRun.Message, "elapsedMs", A_TickCount - start, "via", "curl")
+    }
+    status := 0
+    text := ""
+    codeOut := Trim(String(codeOut))
+    if RegExMatch(codeOut, "^\d{3}$")
+        status := Integer(codeOut)
+    try {
+        if FileExist(outPath)
+            text := String(FileRead(outPath, "UTF-8"))
+    } catch as _e2 {
+        NmerCatch(A_ThisFunc, _e2)
+    }
+    for f in [bodyPath, outPath] {
+        try if FileExist(f)
+            FileDelete(f)
+    }
+    ok := (status >= 200 && status < 300)
+    err := ok ? "" : (status > 0 ? ("HTTP " . status) : "curl 连接失败")
+    if (!ok && status = 0) {
+        if (codeOut != "" && !RegExMatch(codeOut, "^\d{3}$"))
+            err .= " — " . SubStr(codeOut, 1, 80)
+        else if (text != "")
+            err .= " — " . SubStr(Trim(text), 1, 120)
+    }
+    return Map("ok", ok, "status", status, "text", text, "error", err, "elapsedMs", A_TickCount - start, "via", "curl")
+}
+
+; proxyMode: 0=默认, 1=强制直连, 2=系统/WinHTTP 代理
+LlmApiPing_HttpSyncOnce(method, url, headers, body, timeoutMs := 18000, proxyMode := 0) {
     start := A_TickCount
     try {
         whr := ComObject("WinHttp.WinHttpRequest.5.1")
-        if LlmApiPing_IsLoopbackUrl(url)
+        if LlmApiPing_IsLoopbackUrl(url) || proxyMode = 1 {
             try whr.SetProxy(1)
+        } else if (proxyMode = 2) {
+            try whr.SetProxy(0)
+        }
         whr.Open(method, url, false)
-        t := Max(3000, Integer(timeoutMs))
-        whr.SetTimeouts(t, t, t, t)
+        t := Max(2000, Integer(timeoutMs))
+        resolveMs := Min(4000, t)
+        connectMs := Min(5000, t)
+        whr.SetTimeouts(resolveMs, connectMs, t, t)
         if (headers is Map) {
             for k, v in headers
                 whr.SetRequestHeader(String(k), String(v))
@@ -147,14 +598,131 @@ LlmApiPing_HttpSync(method, url, headers, body, timeoutMs := 18000) {
             "status", status,
             "text", text,
             "error", ok ? "" : ("HTTP " . status),
-            "elapsedMs", A_TickCount - start
+            "elapsedMs", A_TickCount - start,
+            "via", "winhttp",
+            "proxyMode", proxyMode,
+            "hresult", ""
         )
     } catch as e {
         errMsg := e.Message
-        if RegExMatch(errMsg, "i)timeout|timed\s*out|超时")
-            errMsg := "连接超时（约 " . Round(Max(3000, Integer(timeoutMs)) / 1000) . " 秒），请检查网络或 Base URL 是否与密钥区域一致"
-        return Map("ok", false, "status", 0, "text", "", "error", errMsg, "elapsedMs", A_TickCount - start)
+        hresult := ""
+        if RegExMatch(errMsg, "0x8007[0-9A-Fa-f]{4}|0x800727[0-9A-Fa-f]{2}", &hm)
+            hresult := StrUpper(hm[0])
+        cls := LlmApiPing_ClassifyNetworkError(errMsg, timeoutMs)
+        det := LlmApiPing_WinHttpErrDetail(errMsg)
+        if (cls != "") {
+            if (det["label"] != "" && det["label"] != errMsg)
+                errMsg := det["label"] . (hresult != "" ? " [" . hresult . "]" : "")
+            else if (hresult != "")
+                errMsg := cls . " [" . hresult . "]"
+            else
+                errMsg := cls
+        } else if (hresult != "")
+            errMsg := errMsg . " [" . hresult . "]"
+        return Map(
+            "ok", false,
+            "status", 0,
+            "text", "",
+            "error", errMsg,
+            "elapsedMs", A_TickCount - start,
+            "via", "winhttp",
+            "proxyMode", proxyMode,
+            "hresult", hresult,
+            "phase", det.Get("phase", "")
+        )
     }
+}
+
+LlmApiPing_IsMinimaxCodingPlanKey(key) {
+    return RegExMatch(Trim(String(key)), "i)^sk-cp-")
+}
+
+LlmApiPing_FormatMinimaxErr(status, raw, endpointUrl := "", baseUrl := "") {
+    detail := ""
+    s := Trim(String(raw))
+    if (s != "") {
+        if RegExMatch(s, '"message"\s*:\s*"([^"]+)"', &m)
+            detail := m[1]
+        else
+            detail := SubStr(s, 1, 200)
+    }
+    ep := (endpointUrl != "") ? (" 请求：" . endpointUrl) : ""
+    bu := (baseUrl != "") ? (" Base：" . baseUrl) : ""
+    if (status = 401 || RegExMatch(detail . s, "i)authorized_error|login fail|1004|invalid api key|authentication")) {
+        return "MiniMax 鉴权失败 (401)：请确认 ① 使用 Billing→Token Plan / Coding Plan 密钥（sk-cp-…，不是开放平台按量付费接口密钥）；"
+            . " ② 已分配 Token Plan 席位； ③ 节点与密钥区域一致（国内 "
+            . LlmApiPing_MINIMAX_BASE_CN . " / 国际 " . LlmApiPing_MINIMAX_BASE_INTL . "）。"
+            . (detail ? " 详情：" . detail : "") . ep . bu
+    }
+    if RegExMatch(detail . s, "i)timeout|timed\s*out|超时")
+        return "MiniMax 连接超时：请检查 WinHTTP 代理、公司网络出口与 Base URL 节点是否一致。" . ep . bu
+    return "HTTP " . status . (detail ? ("：" . detail) : (s ? ("：" . SubStr(s, 1, 120)) : "")) . ep
+}
+
+LlmApiPing_MinimaxPingOnce(key, base, model, timeoutMs) {
+    pingAnth := Jxon_Dump(Map("model", model, "max_tokens", 8, "messages", [Map("role", "user", "content", "ping")]))
+    pingOpenAI := Jxon_Dump(Map("model", model, "messages", [Map("role", "user", "content", "ping")], "max_tokens", 8, "temperature", 0.1))
+    hdr := Map(
+        "Content-Type", "application/json",
+        "Authorization", "Bearer " . key,
+        "x-api-key", key,
+        "anthropic-version", "2023-06-01"
+    )
+    urlA := LlmApiPing_MinimaxAnthropicUrl(base)
+    t0 := A_TickCount
+    perA := Max(4000, Integer(timeoutMs) // 2)
+    r := LlmApiPing_HttpSync("POST", urlA, hdr, pingAnth, perA)
+    if r.Get("ok", false)
+        return Map("ok", true, "error", "", "elapsedMs", A_TickCount - t0, "endpoint", urlA, "baseUrl", base, "model", model, "via", "anthropic")
+    if (Integer(r.Get("status", 0)) = 0 && Trim(String(r.Get("error", ""))) != "") {
+        err0 := LlmApiPing_ClassifyNetworkError(r.Get("error", ""), timeoutMs)
+        if (err0 != "") {
+            return Map("ok", false, "error", err0 . "（MiniMax Anthropic 端点）", "elapsedMs", A_TickCount - t0, "endpoint", urlA, "baseUrl", base, "model", model, "status", 0)
+        }
+    }
+    remain := Max(3000, Integer(timeoutMs) - (A_TickCount - t0))
+    urlO := LlmApiPing_MinimaxOpenAIUrl(base)
+    r2 := LlmApiPing_HttpSync("POST", urlO, Map("Content-Type", "application/json", "Authorization", "Bearer " . key, "x-api-key", key), pingOpenAI, remain)
+    if r2.Get("ok", false)
+        return Map("ok", true, "error", "", "elapsedMs", A_TickCount - t0, "endpoint", urlO, "baseUrl", base, "model", model, "via", "openai")
+    if (Integer(r2.Get("status", 0)) = 0 && Trim(String(r2.Get("error", ""))) != "") {
+        err1 := LlmApiPing_ClassifyNetworkError(r2.Get("error", ""), timeoutMs)
+        if (err1 != "") {
+            return Map("ok", false, "error", err1 . "（MiniMax OpenAI 端点）", "elapsedMs", A_TickCount - t0, "endpoint", urlO, "baseUrl", base, "model", model, "status", 0)
+        }
+    }
+    st := r2.Has("status") ? Integer(r2["status"]) : (r.Has("status") ? Integer(r["status"]) : 0)
+    err := LlmApiPing_FormatMinimaxErr(st, r2.Has("text") ? r2["text"] : r.Get("text", ""), urlA, base)
+    return Map("ok", false, "error", err, "elapsedMs", A_TickCount - t0, "endpoint", urlA, "baseUrl", base, "model", model, "status", st)
+}
+
+LlmApiPing_TestMinimax(key, base, model, timeoutMs := 18000) {
+    t0 := A_TickCount
+    key := LlmApiPing_NormalizeApiKey(key)
+    if (key = "")
+        return Map("ok", false, "error", "请先填写 API Key", "elapsedMs", 0)
+    model := Trim(String(model))
+    if (model = "")
+        model := "MiniMax-M2.7"
+    base := Trim(String(base))
+    if (base = "")
+        base := LlmApiPing_MINIMAX_BASE_CN
+    r := LlmApiPing_MinimaxPingOnce(key, base, model, timeoutMs)
+    st := Integer(r.Get("status", 0))
+    if !r.Get("ok", false) && (st = 401 || st = 403 || RegExMatch(Trim(String(r.Get("error", ""))), "i)authentication|invalid api key|鉴权")) {
+        alt := InStr(StrLower(base), "minimax.io") ? LlmApiPing_MINIMAX_BASE_CN : LlmApiPing_MINIMAX_BASE_INTL
+        if (alt != base) {
+            spent := Integer(r.Get("elapsedMs", 0))
+            rem := Max(4000, Integer(timeoutMs) - spent)
+            r2 := LlmApiPing_MinimaxPingOnce(key, alt, model, rem)
+            if r2.Get("ok", false) {
+                r2["elapsedMs"] := spent + Integer(r2.Get("elapsedMs", 0))
+                return r2
+            }
+        }
+    }
+    r["elapsedMs"] := A_TickCount - t0
+    return r
 }
 
 LlmApiPing_MinimaxAnthropicUrl(base) {
@@ -212,6 +780,13 @@ LlmApiPing_FormatHttpError(r, prov := "") {
             err := "OpenAI 鉴权失败：请确认 sk- 密钥有效、账户有余额；官方地址 https://api.openai.com/v1。Azure OpenAI 请用手动 Base URL 并勾选对应选项。"
         else if RegExMatch(err, "i)model_not_found|model.*not exist|does not exist|invalid_model")
             err .= "。模型名可能不可用或账号未开通该模型，请换 gpt-4o-mini / gpt-4.1-mini 等后重试。"
+    } else if (prov = "deepseek") {
+        if RegExMatch(err, "i)402|insufficient balance|余额")
+            err := "DeepSeek 账户余额不足 (402)：API Key 有效但需充值。请到 platform.deepseek.com 充值后重试。"
+        else if RegExMatch(err, "i)401|invalid.*api|authentication")
+            err := "DeepSeek 鉴权失败 (401)：API Key 无效或已撤销，请到 platform.deepseek.com/api_keys 核对；若 Key 正确请检查账户余额。"
+        else if RegExMatch(err, "i)404|not\s*found")
+            err := "DeepSeek 接口 404：Base URL 应为 https://api.deepseek.com/v1，完整路径 …/v1/chat/completions。"
     }
     return err
 }
@@ -246,7 +821,8 @@ LlmApiPing_BuildChatBody(prov, model, userText, maxTokens := 4096) {
         try {
             pre := LlmApiPing_PresetFor(prov)
             model := Trim(String(pre.Get("model", "")))
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     tok := Max(64, Integer(maxTokens))
@@ -365,22 +941,46 @@ LlmApiPing_ResolveFromPayload(payload) {
         return Map()
     llm := payload
     if (payload.Has("llm") && payload["llm"] is Map)
-        llm := payload["llm"]
-    if !(llm is Map)
-        return Map()
+        llm := payload["llm"].Clone()
+    else if !(llm is Map)
+        llm := Map()
     prov := LlmApiPing_NormalizeProvider(llm.Get("provider", "openai"))
+    opt := (payload.Has("options") && payload["options"] is Map) ? payload["options"] : Map()
     key := LlmApiPing_NormalizeApiKey(llm.Get("apiKey", ""))
-    if (key = "" && payload.Has("options") && payload["options"] is Map) {
-        opt := payload["options"]
-        if (opt.Has("llmApiKeys") && opt["llmApiKeys"] is Map) {
-            keys := opt["llmApiKeys"]
-            if keys.Has(prov)
-                key := LlmApiPing_NormalizeApiKey(keys[prov])
+    base := Trim(String(llm.Get("baseUrl", "")))
+    model := Trim(String(llm.Get("model", "")))
+    if (key = "" && opt.Has("llmApiKeys") && opt["llmApiKeys"] is Map) {
+        keys := opt["llmApiKeys"]
+        if keys.Has(prov)
+            key := LlmApiPing_NormalizeApiKey(keys[prov])
+    }
+    if (base = "" && opt.Has("llmBaseUrls") && opt["llmBaseUrls"] is Map) {
+        bases := opt["llmBaseUrls"]
+        if bases.Has(prov)
+            base := Trim(String(bases[prov]))
+    }
+    if (model = "" && opt.Has("llmModels") && opt["llmModels"] is Map) {
+        models := opt["llmModels"]
+        if models.Has(prov)
+            model := Trim(String(models[prov]))
+    }
+    if (key = "" && LlmApiPing_HasFunc("Nmer_SecretStore_Get")) {
+        try key := LlmApiPing_NormalizeApiKey(Nmer_SecretStore_Get("options.llmApiKeys." . prov))
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e)
         }
     }
     llm["provider"] := prov
     llm["apiKey"] := key
+    if (base != "")
+        llm["baseUrl"] := base
+    if (model != "")
+        llm["model"] := model
     return llm
+}
+
+LlmApiPing_ResolveTestLlmFromPayload(payload) {
+    return LlmApiPing_ResolveFromPayload(payload)
 }
 
 LlmApiPing_TestKimi(key, base, model, timeoutMs) {
@@ -535,7 +1135,8 @@ LlmApiPing_TcpPortOpen(host, port, timeoutMs := 2500) {
         return false
     } finally {
         try DllCall("ws2_32\closesocket", "UPtr", sock)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 }
@@ -557,7 +1158,8 @@ LlmApiPing_ParseHermesEndpoint(base) {
                 port := Integer(m[2])
         } else if RegExMatch(raw, ":(\d+)", &mp)
             port := Integer(mp[1])
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if (host = "localhost")
         host := "127.0.0.1"
@@ -582,7 +1184,8 @@ LlmApiPing_ParseOpenClawEndpoint(base) {
             if (m[2] != "")
                 port := Integer(m[2])
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if (port < 1 || port > 65535)
         port := 18789
@@ -610,7 +1213,8 @@ LlmApiPing_OpenClawGatewayStatusOk(timeoutMs := 9000) {
     while ProcessExist(pid) {
         if (A_TickCount > deadline) {
             try ProcessClose(pid)
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             try FileDelete(out)
             return false
@@ -655,7 +1259,8 @@ LlmApiPing_TestHermes(base, key, timeoutMs := 8000) {
                     "error", "API 鉴权失败：请用 %LOCALAPPDATA%\hermes\.env 中的 API_SERVER_KEY，或点测试连接重新读取。",
                     "elapsedMs", A_TickCount - t0
                 )
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if LlmApiPing_HasFunc("UserStudio_ProbeHermesApiServer") {
@@ -665,7 +1270,8 @@ LlmApiPing_TestHermes(base, key, timeoutMs := 8000) {
                 return r
         } catch as eProbe {
             try OutputDebug("[LlmApiPing] UserStudio_ProbeHermesApiServer: " . eProbe.Message)
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
     }
@@ -675,7 +1281,8 @@ LlmApiPing_TestHermes(base, key, timeoutMs := 8000) {
             gw := UserStudio_ReadHermesGatewayState()
             if (gw is Map)
                 apiSt := Trim(String(gw.Get("apiServerState", "")))
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     tcpMs := Min(Max(1200, Integer(timeoutMs)), 4000)
@@ -718,7 +1325,8 @@ LlmApiPing_OpenClawHttpReachable(host, port, timeoutMs := 3000) {
             if (r.Get("ok", false))
                 return true
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return false
 }
@@ -759,7 +1367,53 @@ LlmApiPing_TestOpenClaw(base, key, timeoutMs := 8000) {
     )
 }
 
+LlmApiPing_NormalizeRoutePingResult(routeR, llm, cfg) {
+    prov := ""
+    if (cfg is Map) && cfg.Has("vendor")
+        prov := Trim(String(cfg["vendor"]))
+    if (prov = "" && llm is Map)
+        prov := LlmApiPing_NormalizeProvider(llm.Get("provider", "openai"))
+    err := Trim(String(routeR.Get("message", routeR.Get("error", ""))))
+    st := routeR.Has("status") ? Integer(routeR["status"]) : 0
+    if !routeR.Get("ok", false) && err = "" && st > 0
+        err := "HTTP " . st
+    return Map(
+        "ok", !!routeR.Get("ok", false),
+        "error", err,
+        "elapsedMs", Integer(routeR.Get("elapsedMs", 0)),
+        "endpoint", Trim(String(routeR.Get("endpoint", ""))),
+        "baseUrl", Trim(String(routeR.Get("baseUrl", (cfg is Map) ? cfg.Get("baseUrl", "") : ""))),
+        "model", Trim(String(routeR.Get("model", (cfg is Map) ? cfg.Get("model", "") : ""))),
+        "provider", prov,
+        "diagnostics", Trim(String(routeR.Get("diagnostics", ""))),
+        "phase", Trim(String(routeR.Get("phase", ""))),
+        "status", st,
+        "viaRoute", true
+    )
+}
+
 LlmApiPing_Test(llm, timeoutMs := 18000) {
+    if !(llm is Map)
+        return Map("ok", false, "error", "配置无效", "elapsedMs", 0)
+    prov := LlmApiPing_NormalizeProvider(llm.Get("provider", "openai"))
+    if (prov = "openclaw") {
+        base := Trim(String(llm.Get("baseUrl", "")))
+        key := LlmApiPing_NormalizeApiKey(llm.Get("apiKey", ""))
+        return LlmApiPing_TestOpenClaw(base, key, Min(timeoutMs, 12000))
+    }
+    if (prov = "hermes") {
+        base := Trim(String(llm.Get("baseUrl", "")))
+        key := LlmApiPing_NormalizeApiKey(llm.Get("apiKey", ""))
+        return LlmApiPing_TestHermes(base, key, Min(timeoutMs, 12000))
+    }
+    if FuncExists("Nmer_Llm_ShouldUseManager") && Nmer_Llm_ShouldUseManager(llm) {
+        if FuncExists("Nmer_Llm_PingFromLlmMap")
+            return Nmer_Llm_PingFromLlmMap(llm, timeoutMs)
+    }
+    return LlmApiPing_TestHttpDirect(llm, timeoutMs)
+}
+
+LlmApiPing_TestHttpDirect(llm, timeoutMs := 18000) {
     if !(llm is Map)
         return Map("ok", false, "error", "配置无效", "elapsedMs", 0)
     prov := LlmApiPing_NormalizeProvider(llm.Get("provider", "openai"))
@@ -777,33 +1431,12 @@ LlmApiPing_Test(llm, timeoutMs := 18000) {
         return Map("ok", false, "error", "请先填写 API Key", "elapsedMs", 0)
     if (prov = "ollama")
         return LlmApiPing_TestOllama(base, model, timeoutMs)
-    if (prov = "openclaw")
-        return LlmApiPing_TestOpenClaw(base, key, Min(timeoutMs, 12000))
-    if (prov = "hermes")
-        return LlmApiPing_TestHermes(base, key, Min(timeoutMs, 12000))
     pingAnth := Jxon_Dump(Map("model", model, "max_tokens", 8, "messages", [Map("role", "user", "content", "ping")]))
     pingOpenAI := Jxon_Dump(Map("model", model, "messages", [Map("role", "user", "content", "ping")], "max_tokens", 8, "temperature", 0.1))
     pingOpenAINew := Jxon_Dump(Map("model", model, "messages", [Map("role", "user", "content", "ping")], "max_completion_tokens", 16, "temperature", 0.1))
     t0 := A_TickCount
-    if (prov = "minimax") {
-        r := LlmApiPing_HttpSync("POST", LlmApiPing_MinimaxAnthropicUrl(base), Map(
-            "Content-Type", "application/json",
-            "Authorization", "Bearer " . key,
-            "anthropic-version", "2023-06-01"
-        ), pingAnth, timeoutMs)
-        if r["ok"]
-            return Map("ok", true, "error", "", "elapsedMs", A_TickCount - t0)
-        r2 := LlmApiPing_HttpSync("POST", LlmApiPing_MinimaxOpenAIUrl(base), Map(
-            "Content-Type", "application/json",
-            "Authorization", "Bearer " . key
-        ), pingOpenAI, timeoutMs)
-        if r2["ok"]
-            return Map("ok", true, "error", "", "elapsedMs", A_TickCount - t0)
-        err := r2.Has("error") ? r2["error"] : "测试失败"
-        if r2.Has("text") && Trim(String(r2["text"])) != ""
-            err .= " " . SubStr(Trim(String(r2["text"])), 1, 120)
-        return Map("ok", false, "error", err, "elapsedMs", A_TickCount - t0)
-    }
+    if (prov = "minimax")
+        return LlmApiPing_TestMinimax(key, base, model, timeoutMs)
     if (prov = "claude") {
         r := LlmApiPing_HttpSync("POST", LlmApiPing_ClaudeMessagesUrl(base), Map(
             "Content-Type", "application/json",
@@ -827,15 +1460,39 @@ LlmApiPing_Test(llm, timeoutMs := 18000) {
     if (prov = "openai")
         bodies.InsertAt(1, pingOpenAINew)
     lastErr := ""
+    pingUrl := LlmApiPing_OpenAIChatUrl(base)
+    perMs := Max(4000, Min(12000, Integer(timeoutMs)))
+    lastSt := 0
+    lastR := Map()
     for _, body in bodies {
-        r := LlmApiPing_HttpSync("POST", LlmApiPing_OpenAIChatUrl(base), headers, body, timeoutMs)
+        r := LlmApiPing_HttpSync("POST", pingUrl, headers, body, perMs)
+        lastR := r
         if r["ok"]
-            return Map("ok", true, "error", "", "elapsedMs", A_TickCount - t0)
+            return Map("ok", true, "error", "", "elapsedMs", A_TickCount - t0, "endpoint", pingUrl, "baseUrl", base, "model", model)
         lastErr := LlmApiPing_FormatHttpError(r, prov = "openai" ? "openai" : prov)
-        ; 429/401 等再发第二种请求体会加倍消耗配额，易连续 429；仅对可能「参数不兼容」的 400 再尝试
-        st := r.Has("status") ? Integer(r["status"]) : 0
-        if (prov = "openai" && (st = 429 || st = 401 || st = 402 || st = 403))
+        lastSt := r.Has("status") ? Integer(r["status"]) : 0
+        if (lastSt = 0) {
+            if r.Has("error") && Trim(String(r["error"])) != ""
+                lastErr := Trim(String(r["error"]))
+            break
+        }
+        if (prov = "openai" && (lastSt = 429 || lastSt = 401 || lastSt = 402 || lastSt = 403))
             break
     }
-    return Map("ok", false, "error", lastErr, "elapsedMs", A_TickCount - t0)
+    out := Map(
+        "ok", false,
+        "error", lastErr,
+        "elapsedMs", A_TickCount - t0,
+        "endpoint", pingUrl,
+        "baseUrl", base,
+        "model", model,
+        "status", lastSt
+    )
+    if (lastR is Map) {
+        if lastR.Has("diagnostics")
+            out["diagnostics"] := lastR["diagnostics"]
+        if lastR.Has("phase")
+            out["phase"] := lastR["phase"]
+    }
+    return out
 }

@@ -1,7 +1,11 @@
 ; ===================== msg =====================
 #Requires AutoHotkey v2.0
 A_MaxHotkeysPerInterval := 400
+#Include modules\NmerCatch.ahk
 #Include modules\LocalPaths.ahk
+#Include modules\WsHubAuth.ahk
+#Include modules\SecretVault.ahk
+#Include modules\Nmer_SecretStore.ahk
 
 NMER_StartupOnError(err, mode) {
     if (mode = "Return")
@@ -36,11 +40,13 @@ NMER_Log(scope, event, detail := "") {
             DirCreate(dir)
         ts := FormatTime(A_Now, "yyyy-MM-dd HH:mm:ss")
         FileAppend("[" . ts . "][" . NMER_TraceSession . "][" . scope . "][" . event . "] " . String(detail) . "`r`n", logPath, "UTF-8")
-    } catch {
+    } catch as _e {
+        try NMER_Log(A_ThisFunc, "catch", _e.Message)
     }
 }
 
 OnError(NMER_StartupOnError)
+#Include modules\SqlSafe.ahk
 global NMER_TraceSession := FormatTime(A_Now, "yyyyMMdd-HHmmss") . "-" . A_TickCount
 global pToken := Gdip_Startup()
 if (!pToken) {
@@ -209,6 +215,8 @@ global NativeDropDiagLogPath := Nmer_DebugPath("drop_diagnostics_runtime.log")
 ; 包含 lib 文件夹中的 ImagePut.ahk（用于简化图片处理，提高性能和功能）
 #Include lib\ahk\ImagePut.ahk
 
+#Include modules\NmerDiagnostics.ahk
+#Include modules\NmerHealthSummary.ahk
 #Include modules\TrayMenuManager.ahk
 TrayMenu_Init()
 
@@ -237,11 +245,14 @@ global MainScriptDir := A_ScriptDir
 ; Hermes / LLM 探测须在 FloatingToolbar 之前加载，供 NiumaChat 一键连接读 .env
 #Include modules\LlmApiPing.ahk
 #Include modules\UserStudio.ahk
+#Include modules\Nmer_LlmProvider_Oai.ahk
+#Include modules\Nmer_LlmProvider_Ollama.ahk
+#Include modules\Nmer_LlmProvider_Anthropic.ahk
+#Include modules\Nmer_LlmProvider_Gemini.ahk
+#Include modules\Nmer_LlmProvider.ahk
 
 ; ===================== 包含悬浮工具栏模块 =====================
 global CommandPaletteUseWebView := true
-#Include modules\HoleWhisperStt.ahk
-#Include modules\WailsWhisperVoice.ahk
 #Include modules\WailsNativeInput.ahk
 #Include modules\GlobalDragHoleOverlay.ahk
 #Include modules\NativeDropCursorSync.ahk
@@ -700,25 +711,32 @@ ApplyTheme(Mode) {
     UpdateSearchCenterResultLimitDDLBrush()
     ; WebView 前端主题同步（悬浮栏/悬浮球等）；传入 Mode，避免配置页先 Apply 后写 INI 时从磁盘读到旧主题
     try FloatingToolbar_PushThemeToWeb(Mode)
-    catch {
+    catch as _e {
+        try NMER_Log(A_ThisFunc, "catch", _e.Message) 
     }
     try FloatingBubble_PushThemeToWeb()
-    catch {
+    catch as _e {
+        try NMER_Log(A_ThisFunc, "catch", _e.Message) 
     }
     try VK_PushThemeToWeb()
-    catch {
+    catch as _e {
+        try NMER_Log(A_ThisFunc, "catch", _e.Message) 
     }
     try CommandPalette_PushThemeToWeb(Mode)
-    catch {
+    catch as _e {
+        try NMER_Log(A_ThisFunc, "catch", _e.Message) 
     }
     try SCWV_PushThemeToWeb()
-    catch {
+    catch as _e {
+        try NMER_Log(A_ThisFunc, "catch", _e.Message) 
     }
     try SelectionSense_HubCapsule_PushThemeToWeb(Mode)
-    catch {
+    catch as _e {
+        try NMER_Log(A_ThisFunc, "catch", _e.Message) 
     }
     try SetTimer(ThemeApply_RefreshVisibleUi, -120)
-    catch {
+    catch as _e {
+        try NMER_Log(A_ThisFunc, "catch", _e.Message) 
     }
     try SetTimer((*) => ThemeApply_ClearIfCurrent(token), -500)
     catch {
@@ -743,17 +761,20 @@ ThemeApply_RefreshVisibleUi(*) {
     try {
         if ConfigWebView_HostAlive()
             ConfigWebView_RefocusAfterThemeChange()
-    } catch {
+    } catch as _e {
+        try NMER_Log(A_ThisFunc, "catch", _e.Message) 
     }
     try {
         if (g_CP_Visible && g_CP_Ready)
             CP_NotifyClipboardUpdated()
-    } catch {
+    } catch as _e {
+        try NMER_Log(A_ThisFunc, "catch", _e.Message) 
     }
     try {
         if (g_SCWV_Visible && g_SCWV_Ready)
             SetTimer(SCWV_FocusDeferred, -60)
-    } catch {
+    } catch as _e {
+        try NMER_Log(A_ThisFunc, "catch", _e.Message) 
     }
 }
 
@@ -2411,7 +2432,8 @@ InitClipboardDB() {
                     ClipboardDB.Exec("DROP TABLE IF EXISTS ClipboardHistory")
             }
             ClipboardDB.Exec("DROP TABLE IF EXISTS ClipMain")
-        } catch {
+        } catch as _e {
+            try NMER_Log(A_ThisFunc, "catch", _e.Message) 
         }
         startupSql := []
         startupSql.Push("DROP VIEW IF EXISTS v_GlobalSearch")
@@ -2453,7 +2475,8 @@ InitClipboardDB() {
                     ; 实际删除会在下次 DROP TABLE 时完成
                     try {
                         FileAppend("[" . FormatTime(, "yyyy-MM-dd HH:mm:ss") . "] InitClipboardDB: 检测到旧字段 SessionID/ItemIndex，将在下次重建表时移除`n", A_ScriptDir "\clipboard_debug.log")
-                    } catch {
+                    } catch as _e {
+                        try NMER_Log(A_ThisFunc, "catch", _e.Message) 
                     }
                 }
             }
@@ -2461,7 +2484,8 @@ InitClipboardDB() {
             ; 如果字段检查失败，忽略错误（可能表结构已经是新的）
             try {
                 FileAppend("[" . FormatTime(, "yyyy-MM-dd HH:mm:ss") . "] InitClipboardDB: 字段检查异常 - " . err.Message . "`n", A_ScriptDir "\clipboard_debug.log")
-            } catch {
+            } catch as _e {
+                try NMER_Log(A_ThisFunc, "catch", _e.Message) 
             }
         }
         
@@ -2616,7 +2640,8 @@ SetHoleRuntimeEnabled(enabled) {
     g_HoleRuntimeEnabled := !!enabled
     if FuncExists("HoleTriggers_SyncInputCapture")
         try HoleTriggers_SyncInputCapture()
-    catch {
+    catch as _e {
+        try NMER_Log(A_ThisFunc, "catch", _e.Message) 
     }
 }
 
@@ -2631,19 +2656,24 @@ BeginScreenshotUiSession() {
     g_ScreenshotSuspendActivationMode := m
     try SurfaceManager_ObserveModeTransition("screenshot_suspend_begin", m, Map("token", g_ScreenshotSuspendActivationToken))
     try SetHoleRuntimeEnabled(false)
-    catch {
+    catch as _e {
+        try NMER_Log(A_ThisFunc, "catch", _e.Message) 
     }
     try NativeDropBridge_Stop()
-    catch {
+    catch as _e {
+        try NMER_Log(A_ThisFunc, "catch", _e.Message) 
     }
     try GDHO_UnpinFromDesktop()
-    catch {
+    catch as _e {
+        try NMER_Log(A_ThisFunc, "catch", _e.Message) 
     }
     try GDHO_SetClickThrough(true)
-    catch {
+    catch as _e {
+        try NMER_Log(A_ThisFunc, "catch", _e.Message) 
     }
     try GDHO_Stop()
-    catch {
+    catch as _e {
+        try NMER_Log(A_ThisFunc, "catch", _e.Message) 
     }
     return true
 }
@@ -2663,7 +2693,8 @@ EndScreenshotUiSession(token := 0) {
         try SetTimer((*) => RestoreActivationRuntimeAfterScreenshot(token), -120)
         catch {
             try RestoreActivationRuntimeAfterScreenshot(token)
-            catch {
+            catch as _e {
+                try NMER_Log(A_ThisFunc, "catch", _e.Message) 
             }
         }
     }
@@ -2680,7 +2711,8 @@ RestoreActivationRuntimeAfterScreenshot(token) {
         return false
     try SurfaceManager_ObserveModeTransition("screenshot_restore_runtime", "hole", Map("token", token))
     try ApplyActivationRuntimeAsync("hole")
-    catch {
+    catch as _e {
+        try NMER_Log(A_ThisFunc, "catch", _e.Message) 
     }
     return true
 }
@@ -2704,7 +2736,8 @@ ApplyActivationRuntimeDeferred(mode, token) {
     ; 切换激活模式时统一清理残留的 CapsLock 物理/逻辑状态，避免重启或黑洞切换后
     ; 继续沿用上一次会话里的“按下中”状态，导致单键被误判成 CapsLock+组合键。
     try NormalizeCapsLockRuntimeForUiOpen()
-    catch {
+    catch as _e {
+        try NMER_Log(A_ThisFunc, "catch", _e.Message) 
     }
     if (m = "hole") {
         try SetHoleRuntimeEnabled(true)
@@ -2725,10 +2758,12 @@ ApplyActivationRuntimeDeferred(mode, token) {
                         try GDHO_SetLauncherFallbackUrl(BuildAppLocalUrl("hole_launcher_layer.html"))
                 }
             }
-        } catch {
+        } catch as _e {
+            try NMER_Log(A_ThisFunc, "catch", _e.Message) 
         }
         try GDHO_Start()
-        catch {
+        catch as _e {
+            try NMER_Log(A_ThisFunc, "catch", _e.Message) 
         }
         if (FuncExists("GDHO_IsDecoupled") && GDHO_IsDecoupled()) {
             ; 解耦：划选驱动弱预览，切换模式时不钉 file 常驻态（否则会挡住文字黑洞）。
@@ -2736,24 +2771,29 @@ ApplyActivationRuntimeDeferred(mode, token) {
                 try GDHO_PrepareDecoupledHoleForTextSelection("runtime_hole")
             } else {
                 try GDHO_UnpinFromDesktop()
-                catch {
+                catch as _e {
+                    try NMER_Log(A_ThisFunc, "catch", _e.Message) 
                 }
             }
         } else {
             ; 旧拓扑：常驻钉住 file 黑洞，绕开文本近距门槛。
             try GDHO_PinToDesktop("file")
-            catch {
+            catch as _e {
+                try NMER_Log(A_ThisFunc, "catch", _e.Message) 
             }
             try GDHO_SetClickThrough(false)
         }
         try NativeDropBridge_Start()
-        catch {
+        catch as _e {
+            try NMER_Log(A_ThisFunc, "catch", _e.Message) 
         }
         try NativeDropBridge_RestartForHoleDropRect()
-        catch {
+        catch as _e {
+            try NMER_Log(A_ThisFunc, "catch", _e.Message) 
         }
         try NativeDropBridge_SetSilentMode(false, "runtime_hole")
-        catch {
+        catch as _e {
+            try NMER_Log(A_ThisFunc, "catch", _e.Message) 
         }
         if FuncExists("HoleTriggers_LoadFromIni")
             try HoleTriggers_LoadFromIni(ConfigFile)
@@ -2768,10 +2808,12 @@ ApplyActivationRuntimeDeferred(mode, token) {
         if FuncExists("HoleTriggers_SyncInputCapture")
             try HoleTriggers_SyncInputCapture()
         try NativeDropBridge_Stop()
-        catch {
+        catch as _e {
+            try NMER_Log(A_ThisFunc, "catch", _e.Message) 
         }
         try GDHO_Stop()
-        catch {
+        catch as _e {
+            try NMER_Log(A_ThisFunc, "catch", _e.Message) 
         }
         NMER_Log("activation", "runtime_disabled_ready", "elapsed_ms=" . (A_TickCount - t0))
         try SurfaceManager_ObserveModeTransition("runtime_ready", "disabled", Map("token", token, "elapsedMs", A_TickCount - t0))
@@ -2779,22 +2821,28 @@ ApplyActivationRuntimeDeferred(mode, token) {
     }
     try SetHoleRuntimeEnabled(false)
     try NativeDropBridge_SetSilentMode(true, "runtime_" . m)
-    catch {
+    catch as _e {
+        try NMER_Log(A_ThisFunc, "catch", _e.Message) 
     }
     try GDHO_UnpinFromDesktop()
-    catch {
+    catch as _e {
+        try NMER_Log(A_ThisFunc, "catch", _e.Message) 
     }
     try GDHO_SetClickThrough(true)
-    catch {
+    catch as _e {
+        try NMER_Log(A_ThisFunc, "catch", _e.Message) 
     }
     try GDHO_DisarmPolling("runtime_" . m)
-    catch {
+    catch as _e {
+        try NMER_Log(A_ThisFunc, "catch", _e.Message) 
     }
     try GDHO_HideFrontend()
-    catch {
+    catch as _e {
+        try NMER_Log(A_ThisFunc, "catch", _e.Message) 
     }
     try GDHO_HideOverlay()
-    catch {
+    catch as _e {
+        try NMER_Log(A_ThisFunc, "catch", _e.Message) 
     }
     NMER_Log("activation", "runtime_non_hole_ready", "mode=" . m . " elapsed_ms=" . (A_TickCount - t0))
     try SurfaceManager_ObserveModeTransition("runtime_ready", m, Map("token", token, "elapsedMs", A_TickCount - t0))
@@ -2834,39 +2882,46 @@ ApplyAppearanceActivationMode_Run(m, token) {
             }
             try ApplyActivationRuntimeAsync("toolbar")
             try FloatingBubble_DestroyCompletely()
-            catch {
+            catch as _e {
+                try NMER_Log(A_ThisFunc, "catch", _e.Message) 
             }
             if !openNiumaDrawer {
                 try FloatingToolbarChatDrawerOpen := false
-                catch {
+                catch as _e {
+                    try NMER_Log(A_ThisFunc, "catch", _e.Message) 
                 }
                 global g_FTB_WV2, g_FTB_WV2_Ready, g_FTB_WaitingUiFinishedReveal
                 try {
                     if (g_FTB_WV2_Ready && g_FTB_WV2 && !g_FTB_WaitingUiFinishedReveal) {
                         WebView_QueuePayload(g_FTB_WV2, Map("type", "host_force_toolbar_home"))
                     }
-                } catch {
+                } catch as _e {
+                    try NMER_Log(A_ThisFunc, "catch", _e.Message) 
                 }
             }
             try FloatingToolbar_ShowForActivationMode()
             catch {
                 try FloatingToolbar_ForceRecoverVisible()
-                catch {
+                catch as _e {
+                    try NMER_Log(A_ThisFunc, "catch", _e.Message) 
                 }
             }
             if !openNiumaDrawer {
                 global g_FTB_WV2_Ready, FloatingToolbarIsVisible, g_FTB_WaitingUiFinishedReveal
                 if (g_FTB_WV2_Ready && FloatingToolbarIsVisible && !g_FTB_WaitingUiFinishedReveal) {
                     try FloatingToolbarReloadFromToolbarLayout()
-                    catch {
+                    catch as _e {
+                        try NMER_Log(A_ThisFunc, "catch", _e.Message) 
                     }
                 }
             } else {
                 try FloatingToolbar_ScheduleNiumaDrawerOpen(280)
-                catch {
+                catch as _e {
+                    try NMER_Log(A_ThisFunc, "catch", _e.Message) 
                 }
                 try SetTimer(FloatingToolbar_NiumaDrawerHandoffRetry, -720)
-                catch {
+                catch as _e {
+                    try NMER_Log(A_ThisFunc, "catch", _e.Message) 
                 }
             }
             NMER_Log("activation", "apply_mode_toolbar", "ok=1 open_niuma=" . (openNiumaDrawer ? "1" : "0"))
@@ -2876,13 +2931,16 @@ ApplyAppearanceActivationMode_Run(m, token) {
         if (m = "bubble") {
             try ApplyActivationRuntimeAsync("toolbar")
             try FloatingToolbarChatDrawerOpen := false
-            catch {
+            catch as _e {
+                try NMER_Log(A_ThisFunc, "catch", _e.Message) 
             }
             try SurfaceIntent_Close("floating_toolbar")
-            catch {
+            catch as _e {
+                try NMER_Log(A_ThisFunc, "catch", _e.Message) 
             }
             try ShowFloatingBubble()
-            catch {
+            catch as _e {
+                try NMER_Log(A_ThisFunc, "catch", _e.Message) 
             }
             NMER_Log("activation", "apply_mode_bubble", "ok=1")
             try SurfaceManager_ObserveModeTransition("appearance_ready", "bubble", Map("token", token))
@@ -2891,18 +2949,22 @@ ApplyAppearanceActivationMode_Run(m, token) {
         if (m = "hole") {
             if FuncExists("FloatingToolbar_CancelToolbarRecoveryTimers") {
                 try FloatingToolbar_CancelToolbarRecoveryTimers()
-                catch {
+                catch as _e {
+                    try NMER_Log(A_ThisFunc, "catch", _e.Message) 
                 }
             }
             try SurfaceIntent_Close("floating_toolbar")
-            catch {
+            catch as _e {
+                try NMER_Log(A_ThisFunc, "catch", _e.Message) 
             }
             try FloatingBubble_DestroyCompletely()
-            catch {
+            catch as _e {
+                try NMER_Log(A_ThisFunc, "catch", _e.Message) 
             }
             if FuncExists("GDHO_PrepareDecoupledHoleForTextSelection") {
                 try GDHO_PrepareDecoupledHoleForTextSelection("apply_mode_hole")
-                catch {
+                catch as _e {
+                    try NMER_Log(A_ThisFunc, "catch", _e.Message) 
                 }
             }
             try ApplyActivationRuntimeAsync("hole")
@@ -2911,10 +2973,12 @@ ApplyAppearanceActivationMode_Run(m, token) {
             return
         }
         try SurfaceIntent_Close("floating_toolbar")
-        catch {
+        catch as _e {
+            try NMER_Log(A_ThisFunc, "catch", _e.Message) 
         }
         try FloatingBubble_DestroyCompletely()
-        catch {
+        catch as _e {
+            try NMER_Log(A_ThisFunc, "catch", _e.Message) 
         }
         NMER_Log("activation", "apply_mode_tray", "ok=1")
         try ApplyActivationRuntimeAsync("tray")
@@ -2953,47 +3017,57 @@ Nmer_PersistAndApplyActivationMode(mode) {
     try SurfaceManager_ObserveModeTransition("persist_begin", m)
     if (m != "hole" && FuncExists("FloatingToolbar_CancelReturnToHoleAfterNiuma")) {
         try FloatingToolbar_CancelReturnToHoleAfterNiuma()
-        catch {
+        catch as _e {
+            try NMER_Log(A_ThisFunc, "catch", _e.Message) 
         }
     }
     AppearanceActivationMode := m
     cfg := (IsSet(ConfigFile) && ConfigFile != "") ? ConfigFile : (A_ScriptDir . "\local\CursorShortcut.ini")
     try IniWrite(m, cfg, "Appearance", "ActivationMode")
-    catch {
+    catch as _e {
+        try NMER_Log(A_ThisFunc, "catch", _e.Message) 
     }
     g_ActivationApplyLastMode := ""
     g_ActivationApplyLastTick := 0
     if (m != "hole") {
         try SetHoleRuntimeEnabled(false)
-        catch {
+        catch as _e {
+            try NMER_Log(A_ThisFunc, "catch", _e.Message) 
         }
         try ApplyActivationRuntimeAsync(m)
-        catch {
+        catch as _e {
+            try NMER_Log(A_ThisFunc, "catch", _e.Message) 
         }
     }
     if (m = "toolbar") {
         try FloatingToolbar_ClearOverlaySuppression()
-        catch {
+        catch as _e {
+            try NMER_Log(A_ThisFunc, "catch", _e.Message) 
         }
     }
     try ApplyAppearanceActivationMode()
-    catch {
+    catch as _e {
+        try NMER_Log(A_ThisFunc, "catch", _e.Message) 
     }
     if (m = "toolbar") {
         try SetTimer(FloatingToolbar_ShowForActivationMode, -40)
-        catch {
+        catch as _e {
+            try NMER_Log(A_ThisFunc, "catch", _e.Message) 
         }
         try SetTimer((*) => FloatingToolbar_ForceRecoverVisible(), -220)
-        catch {
+        catch as _e {
+            try NMER_Log(A_ThisFunc, "catch", _e.Message) 
         }
     }
     try NMER_Log("activation", "persist_apply", "mode=" . m)
-    catch {
+    catch as _e {
+        try NMER_Log(A_ThisFunc, "catch", _e.Message) 
     }
     try SurfaceManager_ObserveModeTransition("persist_ready", m)
     if FuncExists("TrayMenu_Log") {
         try TrayMenu_Log("persist_activation_mode mode=" . m)
-        catch {
+        catch as _e {
+            try NMER_Log(A_ThisFunc, "catch", _e.Message) 
         }
     }
     return m
@@ -3008,7 +3082,8 @@ EnsureFloatingSurfaceVisible() {
     m := NormalizeAppearanceActivationMode(AppearanceActivationMode)
     if (m = "toolbar") {
         try FloatingToolbar_ShowForActivationMode()
-        catch {
+        catch as _e {
+            try NMER_Log(A_ThisFunc, "catch", _e.Message) 
         }
     }
 }
@@ -3029,7 +3104,8 @@ BuildAppLocalUrl(relativePath) {
             if (h != "")
                 host := h
         }
-    } catch {
+    } catch as _e {
+        try NMER_Log(A_ThisFunc, "catch", _e.Message) 
     }
     normalized := StrReplace(relativePath, "\", "/")
     if (SubStr(normalized, 1, 1) = "/")
@@ -3204,7 +3280,8 @@ _WebView_QueueFlush(*) {
                 ; 这里是宿主->WebView 的关键通道；失败必须可见，否则前端只能超时
                 snippet := SubStr(String(jsonStr), 1, 260)
                 OutputDebug("[WebView] PostWebMessageAsJson failed: " . e.Message . " | json_head=" . snippet)
-            } catch {
+            } catch as _e {
+                try NMER_Log(A_ThisFunc, "catch", _e.Message) 
             }
         }
     }
@@ -3311,6 +3388,8 @@ NativeDropBridge_Start() {
         rx := Integer(rect["x"]), ry := Integer(rect["y"]), rw := Integer(rect["w"]), rh := Integer(rect["h"])
         cmd := '"' . NativeDropBridgeExe . '" --out "' . NativeDropBridgeOut . '" --x ' . rx . ' --y ' . ry . ' --w ' . rw . ' --h ' . rh
         cmd .= ' --ws 127.0.0.1:18790 --gate-follow'
+        if FuncExists("Nmer_GetOrCreateWsHubToken")
+            cmd .= ' --ws-token ' . Nmer_GetOrCreateWsHubToken()
         if (NativeDropBridgeUseCopyData && NativeDropBridgeCopyDataReady)
             cmd .= ' --copydata --ahk-class "AutoHotkey" --ahk-title "' . NativeDropBridgeCopyDataTitle . '"'
         Run(cmd, A_ScriptDir, "Hide", &pid)
@@ -3321,7 +3400,8 @@ NativeDropBridge_Start() {
         SetTimer(NativeDropBridge_Poll, 250)
         SetTimer(NativeDropBridge_Watchdog, 180)
         NMER_Log("activation", "native_drop_bridge_started", "pid=" . pid . " elapsed_ms=" . (A_TickCount - t0))
-    } catch {
+    } catch as _e {
+        try NMER_Log(A_ThisFunc, "catch", _e.Message) 
     }
 }
 
@@ -3338,7 +3418,8 @@ NativeDropBridge_GetDropRect() {
         if (GDHO_GUI && GDHO_GUI.Hwnd) {
             try {
                 GDHO_GUI.GetPos(&hx, &hy, &hw, &hh)
-            } catch {
+            } catch as _e {
+                try NMER_Log(A_ThisFunc, "catch", _e.Message) 
             }
         }
         if (hw > 0 && hh > 0)
@@ -3355,7 +3436,8 @@ NativeDropBridge_GetDropRect() {
             if (y < 12)
                 y := Integer(ty + th + 12)
         }
-    } catch {
+    } catch as _e {
+        try NMER_Log(A_ThisFunc, "catch", _e.Message) 
     }
     return Map("x", x, "y", y, "w", w, "h", h)
 }
@@ -3464,12 +3546,14 @@ NativeDropBridge_Poll(*) {
                     GDHO_RunJS("window.HoleOverlay?.setNativeState({ kind: '" . k . "', dispatch: 'evt' })")
                 }
                 NativeDropBridge_TriggerHolePulse(evt)
-            } catch {
+            } catch as _e {
+                try NMER_Log(A_ThisFunc, "catch", _e.Message) 
             }
         }
         NativeDropBridgeReadOffset := f.Pos
         f.Close()
-    } catch {
+    } catch as _e {
+        try NMER_Log(A_ThisFunc, "catch", _e.Message) 
     }
 }
 
@@ -3594,7 +3678,8 @@ NativeDropBridge_TriggerHolePulse(evt) {
             try {
                 if (evt.Has("x") && evt.Has("y") && FuncExists("GDHO_HwndFromScreenPoint"))
                     srcHwnd := GDHO_HwndFromScreenPoint(Integer(evt["x"]), Integer(evt["y"]))
-            } catch {
+            } catch as _e {
+                try NMER_Log(A_ThisFunc, "catch", _e.Message) 
             }
             if FuncExists("GDHO_CaptureTextSeedAtDragStart") {
                 try NativeDropSeedText := GDHO_CaptureTextSeedAtDragStart(srcHwnd)
@@ -3625,7 +3710,8 @@ NativeDropBridge_TriggerHolePulse(evt) {
                 SetTimer((*) => (NativeDropSessionActive ? GDHO_Show(NativeDropSessionPayload) : 0), -120)
                 SetTimer((*) => (NativeDropSessionActive ? GDHO_Show(NativeDropSessionPayload) : 0), -320)
                 SetTimer((*) => (NativeDropSessionActive ? GDHO_Show(NativeDropSessionPayload) : 0), -620)
-            } catch {
+            } catch as _e {
+                try NMER_Log(A_ThisFunc, "catch", _e.Message) 
             }
         }
         try HoleDragHooks_Emit("activate", Map(
@@ -3698,13 +3784,15 @@ NativeDropBridge_TriggerHolePulse(evt) {
                     try {
                         GDHO_ForceSuckAction()
                         SetTimer(GDHO_FinishSuckSession, -2000)
-                    } catch {
+                    } catch as _e {
+                        try NMER_Log(A_ThisFunc, "catch", _e.Message) 
                     }
                 }
                 try NativeDropBridge_ResetSessionAsync("drag_end_file", 300)
                 return
             }
-        } catch {
+        } catch as _e {
+            try NMER_Log(A_ThisFunc, "catch", _e.Message) 
         }
         try GDHO_SubmitReleaseSignal("bridge_drag_end", Map("canCommit", canCommit, "payload", NativeDropSessionPayload))
         try HoleDragHooks_Emit("release", Map(
@@ -3755,7 +3843,8 @@ NativeDropBridge_TriggerHolePulse(evt) {
             GDHO_Drop(kind)
             SetTimer((*) => GDHO_HideFrontend(), -900)
             SetTimer((*) => GDHO_HideOverlay(), -1200)
-        } catch {
+        } catch as _e {
+            try NMER_Log(A_ThisFunc, "catch", _e.Message) 
         }
         try NativeDropBridge_ApplyDropAction(evt, kind)
         NativeDropBridge_ResetSessionAsync("drop", 300)
@@ -3777,7 +3866,8 @@ NativeDropBridge_TriggerHolePulse(evt) {
         SetTimer((*) => GDHO_Drop(kind), -120)
         SetTimer((*) => GDHO_HideFrontend(), -920)
         SetTimer((*) => GDHO_HideOverlay(), -1200)
-    } catch {
+    } catch as _e {
+        try NMER_Log(A_ThisFunc, "catch", _e.Message) 
     }
     try NativeDropBridge_ApplyDropAction(evt, kind)
 }
@@ -3844,8 +3934,6 @@ NativeDropBridge_ApplyDropAction(evt, kind := "") {
             try GDHO_RoutePayload("file", files)
             return true
         }
-        if FuncExists("HoleWhisper_TryRouteAudioFiles") && HoleWhisper_TryRouteAudioFiles(files)
-            return true
         try return FloatingToolbar_HandleDroppedFiles(files)
     }
     try GDHO_RunJS("window.HoleOverlay?.setNativeState({ dispatch: 'files:empty' })")
@@ -3999,7 +4087,8 @@ NativeDropBridge_SetReceiverVisible(visible := true) {
             WinHide("ahk_id " hwnd)
         }
         try NativeDropDiag_Log("native_drop_bridge_receiver visible=" . (want ? "1" : "0"))
-    } catch {
+    } catch as _e {
+        try NMER_Log(A_ThisFunc, "catch", _e.Message) 
     }
 }
 
@@ -4075,7 +4164,8 @@ NativeDropBridge_DelayedHide(*) {
         GDHO_HideFrontend()
         GDHO_HideOverlay()
         NativeDropDiag_Log("route delayed_hide action=hide_now")
-    } catch {
+    } catch as _e {
+        try NMER_Log(A_ThisFunc, "catch", _e.Message) 
     }
 }
 
@@ -4128,7 +4218,8 @@ NativeDropBridge_DragSessionTick(*) {
                     }
                     if (NativeDropSessionPayload = "file")
                         NativeDropWeakPreviewShown := true
-                } catch {
+                } catch as _e {
+                    try NMER_Log(A_ThisFunc, "catch", _e.Message) 
                 }
             }
         }
@@ -4151,7 +4242,8 @@ NativeDropBridge_DragSessionTick(*) {
         skipProx := false
         if FuncExists("GDHO_ShouldBlockStarryReentry") {
             try skipProx := GDHO_ShouldBlockStarryReentry()
-            catch {
+            catch as _e {
+                try NMER_Log(A_ThisFunc, "catch", _e.Message) 
             }
         }
         if !skipProx {
@@ -4198,7 +4290,8 @@ NativeDropBridge_DragSessionTick(*) {
                     GDHO_RunJS("window.HoleOverlay?.setStyle({ scale: " GDHO_SIZE_SCALE ", animLevel: " GDHO_ANIM_LEVEL ", visualStyle: '" GDHO_VISUAL_STYLE "' })")
                     NativeDropWeakPreviewShown := false
                 }
-            } catch {
+            } catch as _e {
+                try NMER_Log(A_ThisFunc, "catch", _e.Message) 
             }
         }
         if NativeDropOverHole
@@ -4237,7 +4330,8 @@ NativeDropBridge_DragSessionTick(*) {
             NativeDropBridge_ResetSessionAsync("release_fallback_timeout", 300)
             return
         }
-    } catch {
+    } catch as _e {
+        try NMER_Log(A_ThisFunc, "catch", _e.Message) 
     }
 }
 
@@ -4259,7 +4353,8 @@ NativeDropBridge_ShowWeakPreviewGate(*) {
         SetTimer((*) => (NativeDropSessionActive ? GDHO_Show(NativeDropSessionPayload) : 0), -80)
         try NativeDropDiag_Log("route weak_preview action=show_gate payload=" . NativeDropSessionPayload)
         try GDHO_RunJS("window.HoleOverlay?.setNativeState({ kind: 'weak_preview', dispatch: 'show_gate', active: 1, overHole: 0, wasOverHole: 0, payload: '" . NativeDropSessionPayload . "' })")
-    } catch {
+    } catch as _e {
+        try NMER_Log(A_ThisFunc, "catch", _e.Message) 
     }
 }
 
@@ -4343,7 +4438,8 @@ NativeDropBridge_ResetSession(reason := "", hideDelayMs := 300, silentMode := fa
                 }
                 hideOverlay := false
             }
-        } catch {
+        } catch as _e {
+            try NMER_Log(A_ThisFunc, "catch", _e.Message) 
         }
     }
     if FuncExists("GDHO_ShouldDeferStarryCloseForTextHole") {
@@ -4359,7 +4455,8 @@ NativeDropBridge_ResetSession(reason := "", hideDelayMs := 300, silentMode := fa
                     return
                 }
             }
-        } catch {
+        } catch as _e {
+            try NMER_Log(A_ThisFunc, "catch", _e.Message) 
         }
     }
     if FuncExists("GDHO_IsTextHoleUserPanelActive") {
@@ -4380,7 +4477,8 @@ NativeDropBridge_ResetSession(reason := "", hideDelayMs := 300, silentMode := fa
                     }
                 }
             }
-        } catch {
+        } catch as _e {
+            try NMER_Log(A_ThisFunc, "catch", _e.Message) 
         }
     }
     if FuncExists("GDHO_ShouldKeepTextHolePanel") {
@@ -4395,7 +4493,8 @@ NativeDropBridge_ResetSession(reason := "", hideDelayMs := 300, silentMode := fa
                 }
                 hideOverlay := false
             }
-        } catch {
+        } catch as _e {
+            try NMER_Log(A_ThisFunc, "catch", _e.Message) 
         }
     }
     global g_SelSense_TextCaptured, g_SelSense_LastFireTick
@@ -4411,7 +4510,8 @@ NativeDropBridge_ResetSession(reason := "", hideDelayMs := 300, silentMode := fa
     }
     if FuncExists("SelectionSense_OnHoleDragSessionEnded") {
         try SelectionSense_OnHoleDragSessionEnded()
-        catch {
+        catch as _e {
+            try NMER_Log(A_ThisFunc, "catch", _e.Message) 
         }
     }
     specialUiReason := (r0 = "caps_f_search" || r0 = "search_center_exit" || r0 = "hole_close")
@@ -4550,7 +4650,8 @@ NativeDropBridge_ResetSessionAsyncRun(reason := "", hideDelayMs := 300, silentMo
                 try NativeDropDiag_Log("reset_session_async_skip reason=" . reason . " launcher_cmd_in_flight=1")
                 return
             }
-        } catch {
+        } catch as _e {
+            try NMER_Log(A_ThisFunc, "catch", _e.Message) 
         }
     }
     if (FuncExists("GDHO_IsPostSuckProtected") && GDHO_IsPostSuckProtected()) {
@@ -4568,7 +4669,8 @@ NativeDropBridge_ResetSessionAsyncRun(reason := "", hideDelayMs := 300, silentMo
                 try NativeDropDiag_Log("reset_session_async_skip reason=" . reason . " selection_preview=1")
                 return
             }
-        } catch {
+        } catch as _e {
+            try NMER_Log(A_ThisFunc, "catch", _e.Message) 
         }
     }
     if FuncExists("GDHO_ShouldDeferStarryCloseForTextHole") {
@@ -4580,7 +4682,8 @@ NativeDropBridge_ResetSessionAsyncRun(reason := "", hideDelayMs := 300, silentMo
                 try NativeDropDiag_Log("reset_session_async_skip reason=" . reason . " text_hole_expand=1")
                 return
             }
-        } catch {
+        } catch as _e {
+            try NMER_Log(A_ThisFunc, "catch", _e.Message) 
         }
     }
     if FuncExists("GDHO_IsTextHoleUserPanelActive") {
@@ -4597,7 +4700,8 @@ NativeDropBridge_ResetSessionAsyncRun(reason := "", hideDelayMs := 300, silentMo
                     return
                 }
             }
-        } catch {
+        } catch as _e {
+            try NMER_Log(A_ThisFunc, "catch", _e.Message) 
         }
     }
     if FuncExists("GDHO_ShouldKeepTextHolePanel") {
@@ -4608,7 +4712,8 @@ NativeDropBridge_ResetSessionAsyncRun(reason := "", hideDelayMs := 300, silentMo
                 try NativeDropDiag_Log("reset_session_async_skip reason=" . reason . " text_hole_panel=1")
                 return
             }
-        } catch {
+        } catch as _e {
+            try NMER_Log(A_ThisFunc, "catch", _e.Message) 
         }
     }
     global g_SelSense_TextCaptured, g_SelSense_LastFireTick
@@ -4635,7 +4740,8 @@ NativeDropBridge_ResetSessionAsyncRun(reason := "", hideDelayMs := 300, silentMo
         try {
             if SelectionSense_IsSelectionHolePreviewActive()
                 hideOverlay := false
-        } catch {
+        } catch as _e {
+            try NMER_Log(A_ThisFunc, "catch", _e.Message) 
         }
     }
     try NativeDropBridge_ResetSession(reason, hideDelayMs, silentMode, hideOverlay)
@@ -4654,7 +4760,8 @@ NativeDropDiag_Log(msg) {
             DirCreate(dir)
         ts := FormatTime(A_Now, "yyyy-MM-dd HH:mm:ss")
         FileAppend("[" . ts . "] " . String(msg) . "`r`n", NativeDropDiagLogPath, "UTF-8")
-    } catch {
+    } catch as _e {
+        try NMER_Log(A_ThisFunc, "catch", _e.Message) 
     }
 }
 
@@ -4677,6 +4784,20 @@ StartWebViewWarmup(*) {
 #Include modules\ConfigManager.ahk
 #Include modules\AppUpdateCheck.ahk
 InitConfig() ; 启动初始化
+try {
+    if FuncExists("Nmer_SecretStore_MigrateUserStudioPlaintext")
+        Nmer_SecretStore_MigrateUserStudioPlaintext()
+    else if FuncExists("SecretVault_MigrateUserStudioPlaintext")
+        SecretVault_MigrateUserStudioPlaintext()
+} catch as _e {
+    try NMER_Log(A_ThisFunc, "catch", _e.Message)
+}
+try {
+    if FuncExists("Nmer_EnsureWsHubTokenEnv")
+        Nmer_EnsureWsHubTokenEnv()
+} catch as _e {
+    try NMER_Log(A_ThisFunc, "catch", _e.Message)
+}
 try UserStudio_Load()
 try SetTimer(AppUpdateCheck_ScheduleStartup, -8000)
 try GDHO_LoadSettingsFromIni()
@@ -4685,7 +4806,8 @@ if FuncExists("HoleTriggers_EnsureInputAlive")
 ; 启动时统一归一化 CapsLock 状态，避免继承系统残留 On 状态导致后续组合键流程反复恢复为大写
 SetCapsLockState("Off")
 try NormalizeCapsLockRuntimeForUiOpen()
-catch {
+catch as _e {
+    try NMER_Log(A_ThisFunc, "catch", _e.Message)
 }
 PromptQuickPad_ReloadCapsLockBSettings()
 ; 初始化剪贴板数据库（在配置初始化后）
@@ -4695,13 +4817,15 @@ InitEverythingService()
 global ClipboardFTS5DB
 if IsObject(ClipboardFTS5DB) && ClipboardFTS5DB {
     try ClipboardFTS5DB.CloseDB()
-    catch {
+    catch as _e {
+        try NMER_Log(A_ThisFunc, "catch", _e.Message) 
     }
     ClipboardFTS5DB := 0
 }
 if FuncExists("Nmer_SqliteClearWalSidecars") {
     try Nmer_SqliteClearWalSidecars(Nmer_ClipboardFts5DbPath())
-    catch {
+    catch as _e {
+        try NMER_Log(A_ThisFunc, "catch", _e.Message) 
     }
 }
 ; 初始化新的剪贴板管理器数据库（FTS5）
@@ -4805,11 +4929,13 @@ DeferredScreenshotHistorySave(clipData := "") {
             if (ClipboardFTS5DB && ClipboardFTS5DB != 0)
                 CaptureImageFileToFTS5(imgPath, "CursorHelper")
         }
-    } catch {
+    } catch as _e {
+        try NMER_Log(A_ThisFunc, "catch", _e.Message) 
     }
     try {
         A_Clipboard := OldClip
-    } catch {
+    } catch as _e {
+        try NMER_Log(A_ThisFunc, "catch", _e.Message) 
     }
 }
 
@@ -4937,9 +5063,9 @@ OnClipboardChangeHandler(Type) {
     global ClipboardChangeDebounceTimer, PendingClipboardType, PendingClipboardContent
     global ScreenshotWaiting, ScreenshotImageDetected, ScreenshotClipboard, ScreenshotLastFilePath
     try OutputDebug("[CLIP] change type=" . Type . " waiting=" . (ScreenshotWaiting ? "1" : "0") . " detected=" . (ScreenshotImageDetected ? "1" : "0"))
-    catch {
+    catch as _e {
+        try NMER_Log(A_ThisFunc, "catch", _e.Message) 
     }
-
     if (CapsLockCopyInProgress) {
         return
     }
@@ -4962,11 +5088,13 @@ OnClipboardChangeHandler(Type) {
                 if (txt != "" && FileExist(txt))
                     ScreenshotLastFilePath := txt
             }
-        } catch {
+        } catch as _e {
+            try NMER_Log(A_ThisFunc, "catch", _e.Message) 
         }
         ScreenshotImageDetected := true
         try OutputDebug("[CLIP] screenshot image detected type=2")
-        catch {
+        catch as _e {
+            try NMER_Log(A_ThisFunc, "catch", _e.Message) 
         }
         return
     }
@@ -4978,7 +5106,8 @@ OnClipboardChangeHandler(Type) {
     if (ClipboardChangeDebounceTimer != 0) {
         try {
             SetTimer(ClipboardChangeDebounceTimer, 0)  ; 清除定时器
-        } catch {
+        } catch as _e {
+            try NMER_Log(A_ThisFunc, "catch", _e.Message) 
         }
     }
 
@@ -5188,7 +5317,8 @@ ProcessClipboardChange() {
                 if (IsSet(HistoryIsVisible) && HistoryIsVisible) {
                     SetTimer(() => RefreshHistoryData(), -300)
                 }
-            } catch {
+            } catch as _e {
+                try NMER_Log(A_ThisFunc, "catch", _e.Message) 
             }
         }
     } catch as err {
@@ -5198,6 +5328,7 @@ ProcessClipboardChange() {
 
 ; VirtualKeyboardCore 在热键块之后才 #Include；CapsLock 和弦会先调到 VK_*，须提前声明
 global g_VK_TextInputActive := false
+global g_CapsLockChordSessionActive := false
 
 ; 快捷操作面板与提示词执行（模块化）
 #Include modules\CursorPanelController.ahk
@@ -5246,7 +5377,8 @@ ShowConfigGUI_FallbackCheck(*) {
         } else {
             retryCount := 0
         }
-    } catch {
+    } catch as _e {
+        try NMER_Log(A_ThisFunc, "catch", _e.Message) 
     }
     try {
         if (g_ConfigWebViewOpenStartTick > 0) {
@@ -5257,7 +5389,8 @@ ShowConfigGUI_FallbackCheck(*) {
                 return
             }
         }
-    } catch {
+    } catch as _e {
+        try NMER_Log(A_ThisFunc, "catch", _e.Message) 
     }
     try {
         if (GuiID_ConfigGUI && WinExist("ahk_id " . GuiID_ConfigGUI.Hwnd)) {
@@ -5271,7 +5404,8 @@ ShowConfigGUI_FallbackCheck(*) {
             }
         }
     }
-    catch {
+    catch as _e {
+        try NMER_Log(A_ThisFunc, "catch", _e.Message) 
     }
     if (g_ConfigPreferWebViewOnly) {
         try {
@@ -5283,13 +5417,15 @@ ShowConfigGUI_FallbackCheck(*) {
                     return
                 }
             }
-        } catch {
+        } catch as _e {
+            try NMER_Log(A_ThisFunc, "catch", _e.Message) 
         }
     }
     try {
         if FuncExists("ConfigWebView_ReleaseSettingsDock")
             ConfigWebView_ReleaseSettingsDock("recover")
-    } catch {
+    } catch as _e {
+        try NMER_Log(A_ThisFunc, "catch", _e.Message) 
     }
     if (g_ConfigPreferWebViewOnly) {
         try SetTimer((*) => SurfaceIntent_Open("config_webview"), -120)
@@ -5330,7 +5466,8 @@ ShowConfigGUI_Safe() {
                 NMER_Log("ui", "open_config_recover_stale_host", "")
             }
         }
-    } catch {
+    } catch as _e {
+        try NMER_Log(A_ThisFunc, "catch", _e.Message) 
     }
     if (g_ConfigOpenInFlight && (nowTick - g_ConfigOpenInFlightSince) < 2500) {
         NMER_Log("ui", "open_config_safe_skip_inflight", "elapsed_ms=" . (nowTick - g_ConfigOpenInFlightSince))
@@ -5343,7 +5480,8 @@ ShowConfigGUI_Safe() {
     catch
         g_ConfigOpenEntryMode := "toolbar"
     try NormalizeCapsLockRuntimeForUiOpen()
-    catch {
+    catch as _e {
+        try NMER_Log(A_ThisFunc, "catch", _e.Message) 
     }
     try {
         if (ThemeApply_IsInProgress() || ActivationApply_IsInProgress()) {
@@ -5352,42 +5490,52 @@ ShowConfigGUI_Safe() {
             return
         }
     }
-    catch {
+    catch as _e {
+        try NMER_Log(A_ThisFunc, "catch", _e.Message) 
     }
     g_ConfigWebViewOpenStartTick := A_TickCount
     ; Defensive open path: clear overlay/runtime interference before showing settings.
     try GDHO_UnpinFromDesktop()
-    catch {
+    catch as _e {
+        try NMER_Log(A_ThisFunc, "catch", _e.Message) 
     }
     try GDHO_SetClickThrough(true)
-    catch {
+    catch as _e {
+        try NMER_Log(A_ThisFunc, "catch", _e.Message) 
     }
     ; Avoid tearing down the whole hole runtime when opening menus/settings.
     ; Stopping the bridge here can trigger a visible white fallback and add startup lag.
     try NativeDropBridge_SetSilentMode(true, "config_open")
-    catch {
+    catch as _e {
+        try NMER_Log(A_ThisFunc, "catch", _e.Message) 
     }
     try GDHO_DisarmPolling("config_open")
-    catch {
+    catch as _e {
+        try NMER_Log(A_ThisFunc, "catch", _e.Message) 
     }
     try GDHO_HideFrontend()
-    catch {
+    catch as _e {
+        try NMER_Log(A_ThisFunc, "catch", _e.Message) 
     }
     try GDHO_HideOverlay()
-    catch {
+    catch as _e {
+        try NMER_Log(A_ThisFunc, "catch", _e.Message) 
     }
     try SurfaceIntent_Close("floating_toolbar")
-    catch {
+    catch as _e {
+        try NMER_Log(A_ThisFunc, "catch", _e.Message) 
     }
     try HideFloatingBubble()
-    catch {
+    catch as _e {
+        try NMER_Log(A_ThisFunc, "catch", _e.Message) 
     }
     ; Open settings async to avoid re-entrancy from menu/hotkey callbacks.
     delayMs := 20
     try {
         if (NormalizeAppearanceActivationMode(IsSet(AppearanceActivationMode) ? AppearanceActivationMode : "toolbar") = "hole")
             delayMs := 140
-    } catch {
+    } catch as _e {
+        try NMER_Log(A_ThisFunc, "catch", _e.Message) 
     }
     try SetTimer((*) => ShowConfigGUI_Core(), -delayMs)
     catch {
@@ -5484,7 +5632,8 @@ CloseConfigGUI() {
             try {
                 if FuncExists("ConfigWebView_Close")
                     ConfigWebView_Close()
-            } catch {
+            } catch as _e {
+                try NMER_Log(A_ThisFunc, "catch", _e.Message) 
             }
         }
         ; 兜底：Intent 路由未真正 Hide 时强制收起设置窗
@@ -5493,7 +5642,8 @@ CloseConfigGUI() {
                 && DllCall("IsWindowVisible", "Ptr", GuiID_ConfigGUI.Hwnd)
                 && FuncExists("ConfigWebView_Close")
                 ConfigWebView_Close()
-        } catch {
+        } catch as _e {
+            try NMER_Log(A_ThisFunc, "catch", _e.Message) 
         }
         ; Restore activation runtime (especially hole mode bridge/overlay) after settings close.
         try SetTimer(RestoreActivationRuntimeAfterConfigClose, -120)
@@ -5905,16 +6055,33 @@ AutoSaveConfig(*) {
 
 ; 自动显示剪贴板管理面板（延迟执行，避免干扰复制操作）
 AutoShowClipboardManager(*) {
-    global GuiID_ClipboardManager
-    ; 再次检查是否已打开（防止重复打开）
-    if (GuiID_ClipboardManager = 0) {
-        ShowClipboardManager()
-        ; 切换到 CapsLock+C 标签
-        global ClipboardCurrentTab
-        if (ClipboardCurrentTab != "CapsLockC") {
-            SwitchClipboardTab("CapsLockC")
-        }
+    global GuiID_ClipboardManager, g_CP_Visible, g_CP_Gui
+    alreadyOpen := false
+    try {
+        if (IsSet(g_CP_Visible) && g_CP_Visible)
+            alreadyOpen := true
+        else if (IsSet(g_CP_Gui) && g_CP_Gui && WinExist("ahk_id " . g_CP_Gui.Hwnd))
+            alreadyOpen := true
+        else if (GuiID_ClipboardManager != 0)
+            alreadyOpen := true
+    } catch {
     }
+    if alreadyOpen
+        return
+    try {
+        if FuncExists("SurfaceIntent_OpenClipboardPanel")
+            SurfaceIntent_OpenClipboardPanel(Map("triggerSource", "auto_copy", "reason", "auto_show_clipboard"))
+        else if FuncExists("SurfaceIntent_Open")
+            SurfaceIntent_Open("clipboard_panel", Map("triggerSource", "auto_copy", "reason", "auto_show_clipboard"))
+        else
+            ShowClipboardManager()
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e)
+        try ShowClipboardManager()
+    }
+    global ClipboardCurrentTab
+    if (ClipboardCurrentTab != "CapsLockC")
+        SwitchClipboardTab("CapsLockC")
 }
 
 ; 保存配置并关闭
@@ -6372,7 +6539,8 @@ Esc:: {
         try {
             if GDHO_DismissLauncherOnEsc("esc_search_center")
                 return
-        } catch {
+        } catch as _e {
+            try NMER_Log(A_ThisFunc, "catch", _e.Message) 
         }
     }
     if (IsCountdownActive) {
@@ -6388,7 +6556,8 @@ Esc:: {
                     GDHO_DismissTextHolePanel("esc_global")
                     return
                 }
-            } catch {
+            } catch as _e {
+                try NMER_Log(A_ThisFunc, "catch", _e.Message) 
             }
         }
         if (GDHO_VISIBLE || NativeDropSessionActive || g_SCWV_WaitingUiFinishedReveal) {
@@ -6399,14 +6568,16 @@ Esc:: {
         try NativeDropDiag_Log("route esc key=Esc path=unified_close visible=" . (SCWV_IsVisible() ? "1" : "0"))
         if (SearchCenterUnifiedClose("esc", false, true))
             return
-    } catch {
+    } catch as _e {
+        try NMER_Log(A_ThisFunc, "catch", _e.Message) 
     }
     Send("{Esc}")
 }
 
 $^+q:: {
     try ReloadScriptFromPopupMenu()
-    catch {
+    catch as _e {
+        try NMER_Log(A_ThisFunc, "catch", _e.Message) 
     }
 }
 
@@ -6421,12 +6592,14 @@ RestoreActivationRuntimeAfterConfigClose(*) {
             mode := NormalizeAppearanceActivationMode(IsSet(AppearanceActivationMode) ? AppearanceActivationMode : "toolbar")
         ApplyActivationRuntimeAsync(mode)
         try ApplyAppearanceActivationMode()
-        catch {
+        catch as _e {
+            try NMER_Log(A_ThisFunc, "catch", _e.Message) 
         }
         TrayMenuCustomFailStreak := 0
         TrayMenuSuppressNativeFallbackUntil := A_TickCount + 1800
         try UpdateTrayMenu()
-    } catch {
+    } catch as _e {
+        try NMER_Log(A_ThisFunc, "catch", _e.Message) 
     }
     g_ConfigOpenEntryMode := ""
 }
@@ -6443,7 +6616,8 @@ Esc:: {
         try {
             if GDHO_DismissLauncherOnEsc("esc_caps")
                 return
-        } catch {
+        } catch as _e {
+            try NMER_Log(A_ThisFunc, "catch", _e.Message) 
         }
     }
     try {
@@ -6454,7 +6628,8 @@ Esc:: {
                     GDHO_DismissTextHolePanel("esc_global")
                     return
                 }
-            } catch {
+            } catch as _e {
+                try NMER_Log(A_ThisFunc, "catch", _e.Message) 
             }
         }
         if (GDHO_VISIBLE || NativeDropSessionActive || g_SCWV_WaitingUiFinishedReveal) {
@@ -6465,7 +6640,8 @@ Esc:: {
         try NativeDropDiag_Log("route esc key=Esc path=unified_close_caps visible=" . (SCWV_IsVisible() ? "1" : "0"))
         if (SearchCenterUnifiedClose("esc_caps", false, true))
             return
-    } catch {
+    } catch as _e {
+        try NMER_Log(A_ThisFunc, "catch", _e.Message) 
     }
     if (VirtualKeyboard_HandleKey("Esc"))
         return
@@ -6618,7 +6794,8 @@ f:: {
             searchVisible := false
         }
         try SCWV_Log("caps_f_state", "search_active=" . (IsSearchCenterActive() ? "1" : "0") . " search_visible=" . (searchVisible ? "1" : "0") . " waiting=" . (g_SCWV_WaitingUiFinishedReveal ? "1" : "0") . " create_inflight=" . (g_SCWV_CreateInFlight ? "1" : "0") . " phase=" . (IsSet(g_SCWV_LifecyclePhase) ? g_SCWV_LifecyclePhase : "") . " countdown=" . (IsCountdownActive ? "1" : "0") . " caps=" . (GetCapsLockState() ? "1" : "0"))
-        catch {
+        catch as _e {
+            try NMER_Log(A_ThisFunc, "catch", _e.Message) 
         }
     }
     if (IsSearchCenterActive() && SCWV_IsRevealedToUser() && SearchCenter_HandleCapsChordKey("f")) {
@@ -6677,7 +6854,8 @@ b:: {
             Send("{Raw}b")
             return
         }
-    } catch {
+    } catch as _e {
+        try NMER_Log(A_ThisFunc, "catch", _e.Message) 
     }
     if (VirtualKeyboard_HandleKey("b"))
         return
@@ -6703,7 +6881,8 @@ $f:: {
     if (IsCountdownActive) {
         ExecuteCountdownAction()
         try VK_NoteLastChFromCapsLockKey("f")
-        catch {
+        catch as _e {
+            try NMER_Log(A_ThisFunc, "catch", _e.Message) 
         }
         return
     }
@@ -6711,17 +6890,20 @@ $f:: {
         try {
             pid := DllCall("GetCurrentProcessId", "UInt")
             DllCall("AllowSetForegroundWindow", "UInt", pid)
-        } catch {
+        } catch as _e {
+            try NMER_Log(A_ThisFunc, "catch", _e.Message) 
         }
         SurfaceIntent_OpenSearch("", "search_hotkey")
         if FuncExists("SCWV_StartHotkeyForegroundPump")
             try SCWV_StartHotkeyForegroundPump()
-            catch {
+            catch as _e {
+                try NMER_Log(A_ThisFunc, "catch", _e.Message) 
             }
     } else
         ShowSearchCenter()
     try VK_NoteLastChFromCapsLockKey("f")
-    catch {
+    catch as _e {
+        try NMER_Log(A_ThisFunc, "catch", _e.Message) 
     }
 }
 #HotIf
@@ -6743,7 +6925,8 @@ Enter:: {
     try {
         if (SearchCenter_ShouldUseWebView() && SCWV_IsVisible())
             return
-    } catch {
+    } catch as _e {
+        try NMER_Log(A_ThisFunc, "catch", _e.Message) 
     }
     global SearchCenterActiveArea, SearchCenterResultLV, SearchCenterSearchResults, SearchCenterSearchEdit
     
@@ -6755,7 +6938,8 @@ Enter:: {
                 ExecuteSearchCenterCLICommand()
                 return
             }
-        } catch {
+        } catch as _e {
+            try NMER_Log(A_ThisFunc, "catch", _e.Message) 
         }
     }
     
@@ -7034,8 +7218,6 @@ ExecuteQuickActionByType(Type) {
             CapsLockPaste()
         case "Clipboard":
             SurfaceIntent_Open("clipboard_panel")
-        case "Voice":
-            StartVoiceInput()
         case "Split":
             SplitCode()
         case "Batch":
@@ -7168,7 +7350,8 @@ ExitFunc(ExitReason, ExitCode) {
     try {
         if (IsSet(SCWV_RequestHardClose) && Func(SCWV_RequestHardClose))
             SCWV_RequestHardClose("app_exit")
-    } catch {
+    } catch as _e {
+        try NMER_Log(A_ThisFunc, "catch", _e.Message) 
     }
     try {
         if FuncExists("SearchCore_StopWatchdog")
@@ -7177,7 +7360,8 @@ ExitFunc(ExitReason, ExitCode) {
             SearchCore_Shutdown("app_exit")
         else if ProcessExist("SearchCenterCore.exe")
             ProcessClose("SearchCenterCore.exe")
-    } catch {
+    } catch as _e {
+        try NMER_Log(A_ThisFunc, "catch", _e.Message) 
     }
     if (ClipboardDB && ClipboardDB != 0) {
         try {
@@ -7205,11 +7389,13 @@ ExitFunc(ExitReason, ExitCode) {
             CommandPalette_ProbeOc5ProtocolClosure()
         else
             try TrayTip("命令面板", "OC-5 探针未载入，请完全重启牛马脚本", "Iconx 2")
-            catch {
+            catch as _e {
+                try NMER_Log(A_ThisFunc, "catch", _e.Message) 
             }
     } catch as e {
         try TrayTip("命令面板", "OC-5 探针失败: " . e.Message, "Iconx 2")
-        catch {
+        catch as _e {
+            try NMER_Log(A_ThisFunc, "catch", _e.Message) 
         }
     }
 }
@@ -7222,11 +7408,13 @@ ExitFunc(ExitReason, ExitCode) {
             CommandPalette_ProbeAdapterOfficialA2ui()
         else
             try TrayTip("命令面板", "Adapter 探针未载入，请完全重启牛马脚本", "Iconx 2")
-            catch {
+            catch as _e {
+                try NMER_Log(A_ThisFunc, "catch", _e.Message) 
             }
     } catch as e {
         try TrayTip("命令面板", "Adapter 探针失败: " . e.Message, "Iconx 2")
-        catch {
+        catch as _e {
+            try NMER_Log(A_ThisFunc, "catch", _e.Message) 
         }
     }
 }
@@ -7239,11 +7427,13 @@ ExitFunc(ExitReason, ExitCode) {
             CommandPalette_ProbeGrayRoute()
         else
             try TrayTip("命令面板", "灰度探针未载入，请完全重启牛马脚本", "Iconx 2")
-            catch {
+            catch as _e {
+                try NMER_Log(A_ThisFunc, "catch", _e.Message) 
             }
     } catch as e {
         try TrayTip("命令面板", "灰度探针失败: " . e.Message, "Iconx 2")
-        catch {
+        catch as _e {
+            try NMER_Log(A_ThisFunc, "catch", _e.Message) 
         }
     }
 }
@@ -7256,18 +7446,21 @@ ExitFunc(ExitReason, ExitCode) {
             CommandPalette_HandleAgentDebug()
         else
             try TrayTip("命令面板", "诊断模块未载入，请完全重启牛马脚本", "Iconx 2")
-            catch {
+            catch as _e {
+                try NMER_Log(A_ThisFunc, "catch", _e.Message) 
             }
     } catch as e {
         try TrayTip("命令面板", "诊断热键失败: " . e.Message, "Iconx 2")
-        catch {
+        catch as _e {
+            try NMER_Log(A_ThisFunc, "catch", _e.Message) 
         }
     }
 }
 ; 命令面板 WebView 聚焦时会吞全局 Ctrl+Shift+Q，宿主 $ 钩子兜底重载脚本
 $^+q:: {
     try ReloadScriptFromPopupMenu()
-    catch {
+    catch as _e {
+        try NMER_Log(A_ThisFunc, "catch", _e.Message) 
     }
 }
 #HotIf

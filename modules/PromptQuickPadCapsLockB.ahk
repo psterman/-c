@@ -41,7 +41,8 @@ PromptQuickPad_CapsB_IsOurGuiWindow(hwnd) {
             return true
         if GuiID_ClipboardManager && hwnd = GuiID_ClipboardManager
             return true
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return false
 }
@@ -74,7 +75,8 @@ PromptQuickPad_CapsB_CopySelection(&outText) {
     try {
         if CoreAsyncStrictMode
             NMER_AsyncLog(Nmer_DebugPath("core_async_guard.log"), "[" . A_Now . "][legacy_sync_path_hit] PromptQuickPad_CapsB_CopySelection`r`n")
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     outText := ""
     fg := DllCall("GetForegroundWindow", "ptr")
@@ -91,7 +93,8 @@ PromptQuickPad_CapsB_CopySelection(&outText) {
             else
                 DllCall("SetForegroundWindow", "ptr", tgt, "int")
             WinWaitActive("ahk_id " . tgt, , 0.6)
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         DllCall("Sleep", "uint", 120)
     } else {
@@ -146,7 +149,8 @@ PromptQuickPad_CapsB_CopySelection(&outText) {
     } finally {
         try
             A_Clipboard := oldClip
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 }
@@ -171,7 +175,8 @@ PromptQuickPad_CapsB_BeginAsyncCopy(fgHwnd, doneCb) {
     ctx["timerFunc"] := pollFn
     g_PQPCB_CopyCtx := ctx
     try A_Clipboard := ""
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if (target) {
         try {
@@ -179,7 +184,8 @@ PromptQuickPad_CapsB_BeginAsyncCopy(fgHwnd, doneCb) {
                 FocusBroker_Request("PromptQuickPad", target, 45, "capslock_b_copy", 120)
             else
                 DllCall("SetForegroundWindow", "ptr", target, "int")
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     SetTimer(pollFn, 40)
@@ -196,7 +202,8 @@ PromptQuickPad_CapsB_CopyFinish(ctx, ok, text := "", reason := "") {
     doneCb := ctx["done"]
     oldClip := ctx["oldClip"]
     try A_Clipboard := oldClip
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     g_PQPCB_CopyCtx := 0
     if IsObject(doneCb) {
@@ -282,7 +289,8 @@ PromptQuickPad_AppendCapsLockBToTemplateLibrary(content) {
         _PQPCB_CallExternal("PromptQuickPad_RefreshListView")
     try
         _PQPCB_CallExternal("RefreshPromptListView")
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     tip := "已静默保存到模板库（PromptTemplates.ini）"
     if StrLen(title) <= 24

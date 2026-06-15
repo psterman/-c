@@ -47,7 +47,8 @@ Nmer_SqliteClearWalSidecars(dbPath) {
             try {
                 FileDelete(p)
                 n += 1
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
     }
@@ -99,7 +100,8 @@ Nmer_SqliteQuickCheck(dbPath) {
         ok := false
     }
     try db.CloseDB()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return ok
 }

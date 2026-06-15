@@ -14,7 +14,8 @@ CoreAsyncHttp_Log(event, detail := "") {
             NMER_AsyncLog(Nmer_DebugPath("core_async_http.log"), line)
         else
             FileAppend(line, Nmer_DebugPath("core_async_http.log"), "UTF-8")
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -111,7 +112,8 @@ CoreAsyncHttp_ReadUtf8Text(whr) {
             if (Trim(txt) != "")
                 return txt
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try {
         body := whr.ResponseBody
@@ -120,7 +122,8 @@ CoreAsyncHttp_ReadUtf8Text(whr) {
             DllCall("RtlMoveMemory", "Ptr", buf, "Ptr", body, "UPtr", body.Size)
             return StrGet(buf, "UTF-8")
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try return String(whr.ResponseText)
     catch {

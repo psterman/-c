@@ -175,7 +175,8 @@ class ScreenshotEditorPlugin {
     if (!pBitmap || pBitmap = 0)
         return
     try Gdip_DisposeImage(pBitmap)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -183,7 +184,8 @@ class ScreenshotEditorPlugin {
     if (!pGraphics || pGraphics = 0)
         return
     try Gdip_DeleteGraphics(pGraphics)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -198,7 +200,8 @@ class ScreenshotEditorPlugin {
             ; 璁板綍鍒版棩蹇?
             try {
                 FileAppend("[" . A_Now . "] 妫€娴嬪埌鍓创鏉垮伐鍏? " . tool . "`n", Nmer_DebugPath("screenshot_interference.log"))
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
     }
@@ -255,7 +258,8 @@ class ScreenshotEditorPlugin {
         if (this.ScreenshotTraceFile = "")
             this.ScreenshotTraceFile := Nmer_DebugPath("screenshot_editor_trace.log")
         FileAppend("[" . A_Now . "] " . String(msg) . "`r`n", this.ScreenshotTraceFile, "UTF-8")
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -275,7 +279,8 @@ class ScreenshotEditorPlugin {
                 this._SS_Trace("close_system_window hit=" . target)
                 WinClose(target)
             }
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 }
@@ -284,7 +289,8 @@ class ScreenshotEditorPlugin {
     static ShowScreenshotEditor(DebugGui := 0) {
     global ScreenshotClipboard, ScreenshotLastFilePath, UI_Colors, ThemeMode
     try OutputDebug("[SSE] ShowScreenshotEditor begin clipboard=" . (!!ScreenshotClipboard ? "1" : "0") . " unified=" . (this.ScreenshotUseUnifiedWebView ? "1" : "0"))
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try FloatingToolbar_PageDockEnter("screenshot")
     try this._SS_Trace("ShowScreenshotEditor begin unified=" . (this.ScreenshotUseUnifiedWebView ? "1" : "0"))
@@ -463,7 +469,8 @@ class ScreenshotEditorPlugin {
                             pBitmap := Gdip_CreateBitmapFromFile(clipTxt)
                     }
                 }
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
 
@@ -527,7 +534,8 @@ class ScreenshotEditorPlugin {
                 pBitmap := Gdip_CreateBitmapFromClipboard()
                 if (!pBitmap || pBitmap = 0)
                     pBitmap := ImagePutBitmap(A_Clipboard)
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             if (pBitmap && pBitmap != 0) {
                 try {
@@ -722,9 +730,9 @@ class ScreenshotEditorPlugin {
         this.GuiID_ScreenshotEditor := EditorGui
         ScreenshotEditorPlugin._SyncHub()
         try OutputDebug("[SSE] editor gui created hwnd=" . (EditorGui.HasProp("Hwnd") ? EditorGui.Hwnd : 0))
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
-        
         ; 璁＄畻绐楀彛浣嶇疆锛堝睆骞曞眳涓級
         ScreenInfo := GetScreenInfo(1)
         if (!IsObject(ScreenInfo) || !ScreenInfo.HasProp("Width") || !ScreenInfo.HasProp("Height")) {
@@ -758,12 +766,14 @@ class ScreenshotEditorPlugin {
         if FuncExists("SurfaceManager_ObserveShow")
             try SurfaceManager_ObserveShow("screenshot_editor", Map("entry", "ShowScreenshotEditor"))
         try OutputDebug("[SSE] editor gui shown hwnd=" . (EditorGui.HasProp("Hwnd") ? EditorGui.Hwnd : 0))
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         ; Phase-1 preview shell: mount inside editor window (single-window UX).
         try this.ScreenshotPreviewShell_Show(0, TitleBarHeight, WindowWidth, PreviewHeight, TempImagePath)
         try OutputDebug("[SSE] preview shell show requested path=" . TempImagePath)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         this.ScreenshotPreviewVisibilityRetryPass := 0
         SetTimer(ObjBindMethod(ScreenshotEditorPlugin, "ScreenshotPreviewShell_EnsureVisible"), -80)
@@ -842,7 +852,8 @@ class ScreenshotEditorPlugin {
 
         ; 系统截图工具可能会在我们展示编辑器后异步弹出，做一次延迟清理，避免遮挡/误认工具栏。
         try this.CloseSystemScreenshotWindows()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         SetTimer(ObjBindMethod(ScreenshotEditorPlugin, "CloseSystemScreenshotWindows"), -800)
         
@@ -1050,18 +1061,21 @@ class ScreenshotEditorPlugin {
             if (Trim(String(raw)) != "")
                 return this.ScreenshotToolbarNormalizeTheme(raw, "dark")
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try {
         fn := Func("ReadPersistedThemeMode")
         if IsObject(fn)
             return this.ScreenshotToolbarNormalizeTheme(fn.Call(), "dark")
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try {
         global ThemeMode
         return this.ScreenshotToolbarNormalizeTheme(ThemeMode, "dark")
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return "dark"
 }
@@ -1163,7 +1177,8 @@ class ScreenshotEditorPlugin {
     try {
         if (IsObject(this.GuiID_ScreenshotToolbar) && this.GuiID_ScreenshotToolbar != 0)
             WebView2_CreateWithSharedEnvAsync(this.GuiID_ScreenshotToolbar.Hwnd, ObjBindMethod(ScreenshotEditorPlugin, "ScreenshotToolbar_OnCreated"), "screenshot_toolbar")
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -1234,7 +1249,8 @@ class ScreenshotEditorPlugin {
             WebView_QueuePayload(wv2, msg)
         else
             wv2.PostWebMessageAsJson(WebView_DumpJson(msg))
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -1372,7 +1388,8 @@ class ScreenshotEditorPlugin {
     try {
         c := (sc is Map && sc.Has("items") && sc["items"] is Array) ? sc["items"].Length : 0
         this._SS_Trace("toolbar_send_init items=" . c)
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     payload := Map(
         "bridgeVersion", this.ScreenshotBridgeVersion,
@@ -1473,10 +1490,12 @@ class ScreenshotEditorPlugin {
             WebView2_CreateWithSharedEnvAsync(this.GuiID_ScreenshotEditor.Hwnd, ObjBindMethod(ScreenshotEditorPlugin, "ScreenshotPreviewShell_OnCreated"), "screenshot_preview")
         } catch as e {
             try OutputDebug("[SSE] preview shell create failed: " . e.Message)
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             try TrayTip("截图预览", "预览窗口创建失败: " . e.Message, "Iconx 2")
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             return
         }
@@ -1503,7 +1522,8 @@ class ScreenshotEditorPlugin {
     try {
         if (IsObject(this.GuiID_ScreenshotEditor) && this.GuiID_ScreenshotEditor != 0)
             WebView2_CreateWithSharedEnvAsync(this.GuiID_ScreenshotEditor.Hwnd, ObjBindMethod(ScreenshotEditorPlugin, "ScreenshotPreviewShell_OnCreated"), "screenshot_preview")
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -1537,11 +1557,13 @@ class ScreenshotEditorPlugin {
 
     static ScreenshotPreviewShell_OnCreated(ctrl) {
     try OutputDebug("[SSE] preview shell on created ctrl=" . (IsObject(ctrl) ? 1 : 0))
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if !IsObject(ctrl) {
         try TrayTip("截图预览", "预览控件创建失败", "Iconx 2")
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return
     }
@@ -1579,10 +1601,12 @@ class ScreenshotEditorPlugin {
         SetTimer(ObjBindMethod(ScreenshotEditorPlugin, "ScreenshotPreviewShell_EnsureVisible"), -220)
     } catch as e {
         try OutputDebug("[SSE] preview shell navigation failed: " . e.Message)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         try TrayTip("截图预览", "预览页面加载失败: " . e.Message, "Iconx 2")
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 }
@@ -1612,7 +1636,8 @@ class ScreenshotEditorPlugin {
     if (t = "event" && name = "ready") {
             this.ScreenshotPreviewWV2Ready := true
             try OutputDebug("[SSE] preview shell ready")
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             this.ScreenshotPreviewShell_SendInit()
             this.ScreenshotPreviewShell_SendState()
@@ -1621,7 +1646,8 @@ class ScreenshotEditorPlugin {
     }
     if (t = "event" && name = "requestInit") {
             try OutputDebug("[SSE] preview shell requestInit")
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             this.ScreenshotPreviewShell_SendInit()
             this.ScreenshotPreviewShell_SendState()
@@ -1790,7 +1816,8 @@ class ScreenshotEditorPlugin {
                 ))
             }
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try this.ScreenshotToolbarWV2.PostWebMessageAsJson(WebView_DumpJson(Map("type", "nmDockConfig", "sceneToolbarLayout", arr)))
 }
@@ -1806,7 +1833,8 @@ class ScreenshotEditorPlugin {
     try {
         _ExecuteCommand(cmdId0)
         return
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     m0 := Map(
         "Title", "dock",
@@ -2106,7 +2134,8 @@ class ScreenshotEditorPlugin {
             mh := Max(0.0, Number(parts[4]))
             return Map("w", mw, "h", mh)
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e)
     } finally {
         if (pG)
             try Gdip_DeleteGraphics(pG)
@@ -2897,7 +2926,8 @@ class ScreenshotEditorPlugin {
         if (Gdip_SaveBitmapToFile(pBmp, outPath) != 0)
             return
         this.ScreenshotHistory_Push(outPath, kind)
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e)
     } finally {
         if (pPen)
             try Gdip_DeletePen(pPen)
@@ -2972,7 +3002,8 @@ class ScreenshotEditorPlugin {
                                 DllCall("gdiplus\GdipSetInterpolationMode", "Ptr", pG, "Int", 7)
                             }
                         }
-                    } catch {
+                    } catch as _e {
+                        NmerCatch(A_ThisFunc, _e)
                     } finally {
                         if (pTinyG)
                             try Gdip_DeleteGraphics(pTinyG)
@@ -2980,7 +3011,8 @@ class ScreenshotEditorPlugin {
                             try Gdip_DisposeImage(pTiny)
                     }
                 }
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e)
             } finally {
                 if (pPix2)
                     try Gdip_DisposeImage(pPix2)
@@ -3082,7 +3114,8 @@ class ScreenshotEditorPlugin {
         if (Gdip_SaveBitmapToFile(pBmp, outPath) != 0)
             return
         this.ScreenshotHistory_Push(outPath, "number")
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e)
     } finally {
         if (pBrush)
             try Gdip_DeleteBrush(pBrush)
@@ -3140,7 +3173,8 @@ class ScreenshotEditorPlugin {
         if (Gdip_SaveBitmapToFile(pBmp, outPath) != 0)
             return
         this.ScreenshotHistory_Push(outPath, "symbol")
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e)
     } finally {
         if (pPen)
             try Gdip_DeletePen(pPen)
@@ -3185,7 +3219,8 @@ class ScreenshotEditorPlugin {
         if (Gdip_SaveBitmapToFile(pCur, outPath) != 0)
             return
         this.ScreenshotHistory_Push(outPath, "eraser")
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e)
     } finally {
         if (pG)
             try Gdip_DeleteGraphics(pG)
@@ -3468,7 +3503,8 @@ class ScreenshotEditorPlugin {
     ; 未收到 paint_ok 时不要立刻降级：以时间阈值兜底，给主页面足够时间初始化。
     age := (this.ScreenshotToolbarNavStartTick > 0) ? (A_TickCount - this.ScreenshotToolbarNavStartTick) : 0
     try this._SS_Trace("toolbar_ensure_usable pass=" . this.ScreenshotToolbarEnsureUsablePass . " age_ms=" . age . " ready=" . (this.ScreenshotToolbarWV2Ready ? "1" : "0") . " paint=" . (this.ScreenshotToolbarWV2PaintOk ? "1" : "0"))
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     ; 某些机器上 WebView2 首帧 / webMessage 可能需要更久；4.2s 容易误判导致切安全页。
     ; 这里放宽到 12s，并且只要收到 ready 就继续等待，不做降级。
@@ -3497,7 +3533,8 @@ class ScreenshotEditorPlugin {
                 this.ScreenshotToolbarUsingSafeHtml := false
                 this.ScreenshotToolbarWV2.Navigate(BuildAppLocalUrl("ScreenshotToolbarWebView.html"))
             }
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         SetTimer(ObjBindMethod(ScreenshotEditorPlugin, "ScreenshotToolbar_RefreshComposition"), -80)
         SetTimer(ObjBindMethod(ScreenshotEditorPlugin, "ScreenshotToolbar_EnsureUsable"), -900)
@@ -3510,7 +3547,8 @@ class ScreenshotEditorPlugin {
         safeHtml := StrReplace(safeHtml, "applyTheme('dark');", "applyTheme('" . this.ScreenshotToolbarGetThemeMode() . "');", , , 1)
         this.ScreenshotToolbarUsingSafeHtml := true
         this.ScreenshotToolbarWV2.NavigateToString(safeHtml)
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     SetTimer(ObjBindMethod(ScreenshotEditorPlugin, "ScreenshotToolbar_RefreshComposition"), -60)
     SetTimer(ObjBindMethod(ScreenshotEditorPlugin, "ScreenshotToolbar_EnsureUsableSecondPass"), -700)
@@ -3790,7 +3828,8 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:var(--bg);color:v
         if (Gdip_SaveBitmapToFile(pBmp, outPath) != 0)
             return
         this.ScreenshotHistory_SetCurrent(outPath)
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e)
     } finally {
         if (pPen)
             try Gdip_DeletePen(pPen)
@@ -3815,9 +3854,9 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:var(--bg);color:v
     retryPass := this.ScreenshotEditorActivationRetryPass
     Critical(prevCrit)
     try OutputDebug("[SSE] ensure activated pass=" . retryPass . " hwnd=" . hwnd . " toolbar=" . (toolbarHwnd ? toolbarHwnd : 0))
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
-
     try {
         if (this.g_ShowScreenshotEditorInFlight) {
             if (retryPass < 4)
@@ -3850,7 +3889,8 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:var(--bg);color:v
         activeHwnd := 0
         try activeHwnd := WinGetID("A")
         try OutputDebug("[SSE] ensure activated active=" . activeHwnd . " target=" . hwnd)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         if (activeHwnd != hwnd && retryPass < 4)
             SetTimer(ObjBindMethod(ScreenshotEditorPlugin, "ScreenshotEditorEnsureActivated"), -160)
@@ -4006,7 +4046,8 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:var(--bg);color:v
         if (oldPath != "" && oldPath != newPath && FileExist(oldPath)) {
             try FileDelete(oldPath)
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e)
     } finally {
         if (pG)
             try Gdip_DeleteGraphics(pG)
@@ -4028,7 +4069,8 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:var(--bg);color:v
         this.ScreenshotPreviewBounds := Map("x", 0, "y", 0, "w", width, "h", height)
         this.ScreenshotPreviewShell_ApplyBounds()
         try this.ScreenshotPreviewWV2Ctrl.NotifyParentWindowPositionChanged()
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -4065,7 +4107,8 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:var(--bg);color:v
         this.GuiID_ScreenshotZoomTip.Show("NA x" . tx . " y" . ty)
 
         SetTimer(ObjBindMethod(ScreenshotEditorPlugin, "ScreenshotEditorHideZoomTip"), -1200)
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -4073,7 +4116,8 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:var(--bg);color:v
     try {
         if (IsObject(this.GuiID_ScreenshotZoomTip) && this.GuiID_ScreenshotZoomTip != 0)
             this.GuiID_ScreenshotZoomTip.Hide()
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -4156,7 +4200,8 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:var(--bg);color:v
             try {
                 if (IsObject(this.GuiID_ScreenshotToolbarTip))
                     this.GuiID_ScreenshotToolbarTip.Destroy()
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             this.GuiID_ScreenshotToolbarTip := 0
             this.ScreenshotToolbarTipTextCtrl := 0
@@ -4167,7 +4212,8 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:var(--bg);color:v
                 if (IsObject(this.GuiID_ScreenshotZoomTip)) {
                     this.GuiID_ScreenshotZoomTip.Destroy()
                 }
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             this.GuiID_ScreenshotZoomTip := 0
             this.ScreenshotZoomTipTextCtrl := 0
@@ -4177,7 +4223,8 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:var(--bg);color:v
                 if (IsObject(this.GuiID_ScreenshotTextHint)) {
                     this.GuiID_ScreenshotTextHint.Destroy()
                 }
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             this.GuiID_ScreenshotTextHint := 0
             this.ScreenshotTextHintTextCtrl := 0
@@ -4231,7 +4278,8 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:var(--bg);color:v
                         if FileExist(p)
                             FileDelete(p)
                     }
-                } catch {
+                } catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
             }
         }
@@ -4265,7 +4313,8 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:var(--bg);color:v
         this.ScreenshotEditorBaseHeight := 0
         ScreenshotEditorPlugin._SyncHub()
         try EndScreenshotUiSession()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     } catch as err {
     }
@@ -4344,7 +4393,8 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:var(--bg);color:v
         if (ty < vt)
             ty := anchorY + 14
         this.GuiID_ScreenshotToolbarTip.Show("NA x" . tx . " y" . ty)
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -4353,7 +4403,8 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:var(--bg);color:v
     try {
         if (this.GuiID_ScreenshotToolbarTip && this.GuiID_ScreenshotToolbarTip != 0)
             this.GuiID_ScreenshotToolbarTip.Hide()
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -4470,7 +4521,8 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:var(--bg);color:v
             MenuItems.Push({Text: "关闭", Icon: "×", SvgIcon: this.ScreenshotEditorMenuSvgIconPath("close"), Action: (*) => this.CloseScreenshotEditor()})
         }
         ShowDarkStylePopupMenuAt(MenuItems, MouseX + 2, MouseY + 2)
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -4519,7 +4571,8 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:var(--bg);color:v
         this.ScreenshotToolbar_ApplyBounds()
         SetTimer(ObjBindMethod(ScreenshotEditorPlugin, "ScreenshotToolbar_RefreshComposition"), -30)
         WinSetAlwaysOnTop("On", "ahk_id " . this.GuiID_ScreenshotToolbar.Hwnd)
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -4570,7 +4623,8 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:var(--bg);color:v
         MenuItems.Push({Text: "水平翻转", Icon: "⇋", SvgIcon: this.ScreenshotEditorMenuSvgIconPath("flip_h"), Action: (*) => this.ScreenshotEditorTransformImage("flip_h")})
         MenuItems.Push({Text: "垂直翻转", Icon: "⇵", SvgIcon: this.ScreenshotEditorMenuSvgIconPath("flip_v"), Action: (*) => this.ScreenshotEditorTransformImage("flip_v")})
         ShowDarkStylePopupMenuAt(MenuItems, mx + 140, my + 2)
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -4755,7 +4809,8 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:var(--bg);color:v
         if (py + panelH > vB)
             py := Max(vT, vB - panelH - 8)
         this.GuiID_ScreenshotColorPicker.Show("NA x" . px . " y" . py . " w" . panelW . " h" . panelH)
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -4774,7 +4829,8 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:var(--bg);color:v
         this.ScreenshotColorPickerAddHistory(colorInfo)
         this.ScreenshotColorPickerRefreshHistoryText()
         TrayTip("鍙栬壊", "宸茶褰?" . colorInfo["hex"], "Iconi 1")
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -4807,7 +4863,8 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:var(--bg);color:v
             this.ScreenshotColorPickerCompareText.Value := this.ScreenshotColorPickerBuildCompareText(colorInfo, this.ScreenshotColorPickerAnchor)
         }
         this.ScreenshotColorPickerRenderMagnifier(mx, my)
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e)
     } finally {
         this.ScreenshotColorPickerTickBusy := false
     }
@@ -4910,7 +4967,8 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:var(--bg);color:v
             SetImage(this.ScreenshotColorPickerMagnifierPic.Hwnd, hBitmap)
             hBitmap := 0
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e)
     } finally {
         if (pPen)
             try Gdip_DeletePen(pPen)
@@ -5147,9 +5205,9 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:var(--bg);color:v
         if (ResultObj.HasProp("Text") && ResultObj.Text != "") {
             return ResultObj.Text
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
-
     ; 濡傛灉娌℃湁 Text 灞炴€ф垨涓虹┖锛屽皾璇曚粠 Words 鏋勫缓
     try {
         if (!ResultObj.HasProp("Words")) {
@@ -5183,7 +5241,8 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:var(--bg);color:v
                     if (w.HasProp("Text")) {
                         simpleText .= w.Text . " "
                     }
-                } catch {
+                } catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
             }
             return Trim(simpleText)
@@ -5293,7 +5352,8 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:var(--bg);color:v
         this.ScreenshotOCRTextLayoutMode := mode
         this.ScreenshotOCRPunctuationMode := punct
         this.ScreenshotOCRDirectCopyEnabled := (String(directCopy) = "1")
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -5396,7 +5456,8 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:var(--bg);color:v
                 bestScore := score
                 bestResult := result
             }
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     return bestResult
@@ -5517,9 +5578,9 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:var(--bg);color:v
         ; 鍒犻櫎涓存椂鏂囦欢
         try {
             FileDelete(TempPath)
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
-
         if (!Result) {
             TrayTip("提示", "OCR 识别失败，请重试", "Iconi 1")
             ToolTip()
@@ -5533,9 +5594,9 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:var(--bg);color:v
             if (Result.HasProp("Text") && Result.Text != "") {
                 cleanedText := Result.Text
             }
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
-
         ; 濡傛灉 Text 涓虹┖锛屽皾璇曟竻娲楀鐞?
         if (cleanedText = "") {
             try {
@@ -5747,9 +5808,9 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:var(--bg);color:v
     try {
         global g_SelSense_MenuActivateOnShow
         g_SelSense_MenuActivateOnShow := true
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
-
     ; 鐩存帴璋冪敤 HubCapsule 鍘熺敓鎺ュ彛锛圫electionSenseCore锛夛紝骞剁敤鈥淐apsLock+C 鍚屾閲嶆帹鈥濅繚璇侀瑙堝尯涓€瀹氭敹鍒版枃鏈?
     try {
         try g_SelSense_PendingText := formatted
@@ -5764,7 +5825,8 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:var(--bg);color:v
         try {
             if FuncExists("SelectionSense_Init")
                 SelectionSense_Init()
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         try {
             SelectionSense_OpenHubCapsuleFromToolbar(false, formatted)
@@ -5784,7 +5846,8 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:var(--bg);color:v
                     TrayTip("草稿本", "已触发 hub_capsule 打开，请稍候...", "Iconi 1")
                     return
                 }
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             ; 鏈€鍚庡厹搴曪細鏃犳硶鎵撳紑鍒欏鍒跺埌鍓创鏉?
             try A_Clipboard := formatted
@@ -5819,7 +5882,8 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:var(--bg);color:v
             attempt := 0
             return
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     SetTimer(this.ScreenshotEditor_ResyncHubPreviewAfterOcrBind(t), -200)
 }
@@ -5836,9 +5900,9 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:var(--bg);color:v
     try {
         if FuncExists("SelectionSense_HubCapsuleHostIsOpen") && SelectionSense_HubCapsuleHostIsOpen()
             opened := true
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
-
     ; 鎴浘 OCR 鍏ュ彛鐨勬湡鏈涙槸锛氫竴瀹氳鈥滄墦寮€骞舵縺娲?HubCapsule鈥?
     ; 浼樺厛璧?SelectionSenseCore 鐨勬爣鍑嗗叆鍙ｏ紙瀹冧細 Navigate HubCapsule.html 骞跺鐞嗘縺娲?鐒︾偣锛?
     if (!opened) {
@@ -5848,7 +5912,8 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:var(--bg);color:v
                 SelectionSense_OpenHubCapsuleFromToolbar(false, t)
                 opened := true
             }
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 
@@ -5860,7 +5925,8 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:var(--bg);color:v
                 FloatingToolbarExecuteButtonAction("NewPrompt", 0)
                 opened := true
             }
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 
@@ -5870,7 +5936,8 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:var(--bg);color:v
                 FloatingToolbar_DeferredToolbarCmd("hub_capsule")
                 opened := true
             }
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 
@@ -5879,16 +5946,17 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:var(--bg);color:v
         g_SelSense_MenuActivateOnShow := true
         if FuncExists("SelectionSense_ShowMenuNearCursor")
             SelectionSense_ShowMenuNearCursor()
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
-
     ; 鑻ュ涓诲凡瀛樺湪涓斿彲瑙佷絾鏈湪鍓嶅彴锛屽啀鍏滃簳婵€娲讳竴娆★紙WebView2 鍐呯劍鐐规湁鏃朵細琚叾浠栫獥鍙ｆ姠璧帮級
     try {
         if (IsSet(g_SelSense_MenuGui) && g_SelSense_MenuGui && IsSet(g_SelSense_MenuVisible) && g_SelSense_MenuVisible
             && IsSet(g_SelSense_MenuShowingHub) && g_SelSense_MenuShowingHub) {
             LegacyGuard_RequestFocus("ScreenshotEditorPlugin", "ahk_id " . g_SelSense_MenuGui.Hwnd, 50, "selsense_menu_focus")
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return opened
 }
@@ -5942,9 +6010,9 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:var(--bg);color:v
         ; 鍒犻櫎涓存椂鏂囦欢
         try {
             FileDelete(TempPath)
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
-
         if (!ocrResult) {
             TrayTip("閿欒", "OCR璇嗗埆澶辫触", "Iconx 2")
             return
@@ -5956,9 +6024,9 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:var(--bg);color:v
             if (ocrResult.HasProp("Text")) {
                 recognizedText := ocrResult.Text
             }
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
-
         if (recognizedText = "") {
             TrayTip("閿欒", "鏈瘑鍒埌鏂囧瓧", "Iconx 2")
             return

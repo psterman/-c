@@ -17,7 +17,8 @@ FocusBroker_Log(event, detail := "") {
             NMER_AsyncLog(Nmer_DebugPath("focus_broker.log"), line)
         else
             FileAppend(line, Nmer_DebugPath("focus_broker.log"), "UTF-8")
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -154,7 +155,8 @@ FocusBroker_AttemptActivate(ctx) {
         cb := ctx["callback"]
         if cb {
             try cb.Call()
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
         return
@@ -171,7 +173,8 @@ FocusBroker_SetForegroundNow(hwnd) {
         try {
             if SCWV_ForegroundPulse(h)
                 return true
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     try DllCall("ShowWindow", "Ptr", h, "Int", 9) ; SW_RESTORE

@@ -1,6 +1,30 @@
 ; LegacyClipboardListView.ahk — 原生 ListView 剪贴板管理器 GUI
 ; 由 CursorHelper 主脚本拆分；依赖主脚本全局变量与 OnWindowSize 等共用函数。
 
+_LCLV_AppendKeywordSearch(&whereConditions, &queryParams, keyword, hasFTS5Table) {
+    keyword := Trim(String(keyword))
+    if (keyword = "")
+        return
+    keywordLen := StrLen(keyword)
+    useLikeQuery := (keywordLen <= 2) || !RegExMatch(keyword, "^[\w\s]+$")
+    if (hasFTS5Table && !useLikeQuery && keywordLen > 3) {
+        ftsQuery := SqlSafe_Fts5Escape(keyword)
+        if (!InStr(keyword, " "))
+            ftsQuery .= '*'
+        whereConditions.Push("ID IN (SELECT rowid FROM ClipboardHistory WHERE ClipboardHistory MATCH '" . ftsQuery . "')")
+    } else {
+        whereConditions.Push("(Content LIKE '%' || ? || '%' OR SourceApp LIKE '%' || ? || '%')")
+        queryParams.Push(keyword)
+        queryParams.Push(keyword)
+    }
+}
+
+_LCLV_RunClipQuery(SQL, &ResultTable, queryParams*) {
+    if (queryParams.Length > 0)
+        return SqlSafe_GetTable(ClipboardFTS5DB, &ResultTable, SQL, queryParams*)
+    return ClipboardFTS5DB.GetTable(SQL, &ResultTable)
+}
+
 ; ===================== 剪贴板管理面板 =====================
 
 ; 关闭剪贴板面板（辅助函数）
@@ -1395,9 +1419,9 @@ RefreshClipboardListView() {
                     SearchKeyword := Trim(SearchEdit.Value)
                 }
             }
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
-        
         ; 获取限制值
         EverythingLimit := ClipboardManagementEverythingLimit > 0 ? ClipboardManagementEverythingLimit : 50
         
@@ -1428,387 +1452,36 @@ RefreshClipboardListView() {
             ; 这样可以确保当没有搜索关键词时，查询所有剪贴板数据
             ; 1. 剪贴板数据
             whereConditions := []
+            queryParams := []
             
             if (SearchKeyword != "") {
-                ; 转义关键词（用于 LIKE 查询）
-                escapedKeyword := StrReplace(SearchKeyword, "'", "''")
-                escapedKeyword := StrReplace(escapedKeyword, "\", "\\")
-                escapedKeyword := StrReplace(escapedKeyword, "%", "\%")
-                escapedKeyword := StrReplace(escapedKeyword, "_", "\_")
-                
-                ; 检查 FTS5 虚拟表是否存在
+
+            
                 SQL := "SELECT name FROM sqlite_master WHERE type='table' AND name='ClipboardHistory'"
+
+            
                 table := ""
+
+            
                 hasFTS5Table := false
+
+            
                 if (ClipboardFTS5DB.GetTable(SQL, &table)) {
+
+            
                     if (table.HasRows && table.Rows.Length > 0) {
+
+            
                         hasFTS5Table := true
-                    }
-                }
-                
-                ; 对于短关键词（1-2个字符）或包含特殊字符的，使用 LIKE 查询
-                ; 【修复】参考 ClipboardHistoryPanel：使用简化的正则表达式，移除 Unicode 转义
-                keywordLen := StrLen(SearchKeyword)
-                useLikeQuery := (keywordLen <= 2) || !RegExMatch(SearchKeyword, "^[\w\s]+$")
-                
-                ; 【修复】确保短关键词（<=2个字符）始终使用 LIKE 查询，避免 FTS5 查询问题
-                if (hasFTS5Table && !useLikeQuery && keywordLen > 3) {
-                    ; 使用 FTS5 MATCH 语法（仅适用于长关键词且不包含中文的情况）
-                    ftsEscapedKeyword := StrReplace(SearchKeyword, "'", "''")
-                    ftsEscapedKeyword := StrReplace(ftsEscapedKeyword, "\", "\\")
-                    ftsEscapedKeyword := StrReplace(ftsEscapedKeyword, '"', '""')
-                    
-                    ; 如果关键词包含空格，使用短语匹配；否则使用全文匹配（不使用前缀匹配，因为中文词可能不是独立词）
-                    if (InStr(ftsEscapedKeyword, " ")) {
-                        ftsQuery := '"' . ftsEscapedKeyword . '"'
-                    } else {
-                        ; 修复：对于中文单字或词，使用全文匹配而不是前缀匹配
-                        ftsQuery := ftsEscapedKeyword
-                    }
-                    
-                    ; 使用 FTS5 表进行搜索（MATCH 语法）
-                    ; 只搜索 FTS5 表的内容，不搜索 DataType 字段（DataType 过滤由标签条件处理）
-                    whereConditions.Push("ID IN (SELECT rowid FROM ClipboardHistory WHERE ClipboardHistory MATCH '" . ftsQuery . "')")
-                } else {
-                    ; 使用 LIKE 查询（适用于短关键词、包含中文的关键词或 FTS5 不可用）
-                    ; 搜索 Content 和 SourceApp 字段（DataType 过滤由标签条件处理）
-                    ; 【修复】确保 LIKE 查询正确构建，使用单引号包裹转义后的关键词
-                    whereConditions.Push("(Content LIKE '%" . escapedKeyword . "%' OR SourceApp LIKE '%" . escapedKeyword . "%')")
-                }
-            }
+
             
-            ; 构建SQL查询（从 ClipMain 表查询，但使用 FTS5 进行搜索）
-            ; 【修复】参考 ClipboardHistoryPanel：当 whereConditions 为空时，查询所有数据（不添加 WHERE 子句）
-            SQL := "SELECT " . selectFields . " FROM ClipMain"
-            if (whereConditions.Length > 0) {
-                SQL .= " WHERE " . whereConditions[1]
-                Loop whereConditions.Length - 1 {
-                    SQL .= " AND " . whereConditions[A_Index + 1]
-                }
-            }
-            ; 【修复】使用正确的排序字段（参考 ClipboardHistoryPanel 使用 LastCopyTime 或 Timestamp）
-            orderByField := hasLastCopyTime ? "LastCopyTime" : "Timestamp"
-            SQL .= " ORDER BY " . orderByField . " DESC LIMIT " . EverythingLimit
+                    }
+
             
-            ; 【调试】记录SQL查询（启用调试日志）
-            FileAppend("[" . FormatTime(, "yyyy-MM-dd HH:mm:ss") . "] 全部标签SQL查询: " . SQL . "`n", A_ScriptDir "\clipboard_debug.log")
+                }
+
             
-            ResultTable := 0
-            ; 【修复】确保查询执行成功，并正确处理结果
-            querySuccess := ClipboardFTS5DB.GetTable(SQL, &ResultTable)
-            if (querySuccess && ResultTable && ResultTable.HasProp("Rows")) {
-                ; 【调试】记录查询结果数量
-                FileAppend("[" . FormatTime(, "yyyy-MM-dd HH:mm:ss") . "] 全部标签查询成功，结果数: " . (ResultTable.HasProp("Rows") ? ResultTable.Rows.Length : 0) . "`n", A_ScriptDir "\clipboard_debug.log")
-                
-                ; 【修复】创建列名映射，使用 Map 对象访问而非数组索引
-                columnNames := []
-                columnIndexMap := Map()
-                if (ResultTable.HasNames && ResultTable.ColumnNames.Length > 0) {
-                    columnNames := ResultTable.ColumnNames
-                    Loop columnNames.Length {
-                        colName := columnNames[A_Index]
-                        columnIndexMap[colName] := A_Index
-                    }
-                }
-                
-                for Index, Row in ResultTable.Rows {
-                    ; 【修复】使用 Map 方式访问 Row 对象，而非数组索引
-                    rowData := Map()
-                    
-                    if (columnIndexMap.Count > 0) {
-                        ; 使用列名映射访问（正确方式）
-                        if (columnIndexMap.Has("ID")) {
-                            rowData["ID"] := Row[columnIndexMap["ID"]]
-                        }
-                        if (columnIndexMap.Has("Content")) {
-                            rowData["Content"] := Row[columnIndexMap["Content"]]
-                        }
-                        if (columnIndexMap.Has("DataType")) {
-                            rowData["DataType"] := Row[columnIndexMap["DataType"]]
-                        }
-                        if (columnIndexMap.Has("SourceApp")) {
-                            rowData["SourceApp"] := Row[columnIndexMap["SourceApp"]]
-                        }
-                        if (columnIndexMap.Has("SourcePath")) {
-                            rowData["SourcePath"] := Row[columnIndexMap["SourcePath"]]
-                        }
-                        if (columnIndexMap.Has("CharCount")) {
-                            rowData["CharCount"] := Row[columnIndexMap["CharCount"]]
-                        }
-                        if (columnIndexMap.Has("Timestamp")) {
-                            rowData["Timestamp"] := Row[columnIndexMap["Timestamp"]]
-                        }
-                        if (columnIndexMap.Has("LastCopyTime")) {
-                            rowData["LastCopyTime"] := Row[columnIndexMap["LastCopyTime"]]
-                        }
-                        if (columnIndexMap.Has("CopyCount")) {
-                            rowData["CopyCount"] := Row[columnIndexMap["CopyCount"]]
-                        }
-                        if (columnIndexMap.Has("ImagePath")) {
-                            rowData["ImagePath"] := Row[columnIndexMap["ImagePath"]]
-                        }
-                    } else {
-                        ; 后备方案：按固定顺序读取
-                        if (Row.HasProp("Length") && Row.Length >= 1) {
-                            rowData["ID"] := Row[1]
-                        }
-                        if (Row.HasProp("Length") && Row.Length >= 2) {
-                            rowData["Content"] := Row[2]
-                        }
-                        if (Row.HasProp("Length") && Row.Length >= 3) {
-                            rowData["DataType"] := Row[3]
-                        }
-                        if (Row.HasProp("Length") && Row.Length >= 4) {
-                            rowData["SourceApp"] := Row[4]
-                        }
-                        if (Row.HasProp("Length") && Row.Length >= 5) {
-                            rowData["SourcePath"] := Row[5]
-                        }
-                        if (Row.HasProp("Length") && Row.Length >= 6) {
-                            rowData["CharCount"] := Row[6]
-                        }
-                        if (Row.HasProp("Length") && Row.Length >= 7) {
-                            rowData["Timestamp"] := Row[7]
-                        }
-                        if (Row.HasProp("Length") && Row.Length >= 8) {
-                            rowData["LastCopyTime"] := Row[8]
-                        }
-                        if (Row.HasProp("Length") && Row.Length >= 9) {
-                            rowData["CopyCount"] := Row[9]
-                        }
-                        if (Row.HasProp("Length") && Row.Length >= 10) {
-                            rowData["ImagePath"] := Row[10]
-                        }
-                    }
-                    
-                    ; 确保所有必需字段都有值
-                    if (!rowData.Has("ID") || rowData["ID"] = "") {
-                        continue
-                    }
-                    if (!rowData.Has("Content") || rowData["Content"] = "") {
-                        continue
-                    }
-                    
-                    ID := Integer(rowData["ID"])
-                    Content := String(rowData["Content"])
-                    DataType := rowData.Has("DataType") && rowData["DataType"] != "" ? String(rowData["DataType"]) : "Text"
-                    SourceApp := rowData.Has("SourceApp") && rowData["SourceApp"] != "" ? String(rowData["SourceApp"]) : ""
-                    SourcePath := rowData.Has("SourcePath") && rowData["SourcePath"] != "" ? String(rowData["SourcePath"]) : ""
-                    CharCount := rowData.Has("CharCount") && rowData["CharCount"] != "" && rowData["CharCount"] != 0 ? Integer(rowData["CharCount"]) : 0
-                    Timestamp := rowData.Has("Timestamp") && rowData["Timestamp"] != "" ? String(rowData["Timestamp"]) : ""
-                    LastCopyTime := rowData.Has("LastCopyTime") && rowData["LastCopyTime"] != "" ? String(rowData["LastCopyTime"]) : Timestamp
-                    CopyCount := rowData.Has("CopyCount") && rowData["CopyCount"] != "" && rowData["CopyCount"] != 0 ? Integer(rowData["CopyCount"]) : 1
-                            
-                            IconIndex := 0
-                            if (SourcePath != "" && FileExist(SourcePath)) {
-                                if (IconCache.Has(SourcePath)) {
-                                    IconIndex := IconCache[SourcePath]
-                                } else {
-                                    try {
-                                        IconIndex := IL_Add(ClipboardImageList, SourcePath, 0)
-                                        if (IconIndex > 0) {
-                                            IconCache[SourcePath] := IconIndex
-                                        }
-                                    } catch {
-                                    }
-                                }
-                            }
-                            
-                            ClipboardItems.Push({ID: ID, Content: Content, DataType: DataType, SourceApp: SourceApp, SourcePath: SourcePath, CharCount: CharCount, Timestamp: Timestamp, LastCopyTime: LastCopyTime, CopyCount: CopyCount, IconIndex: IconIndex})
-                            TotalItems++
-                        }
-                }
-            
-            ; 2. 文件数据（如果有搜索关键词）
-            ; 【修复说明】文件数据只在有搜索关键词时查询是合理的，因为查询所有文件会非常慢
-            ; 但如果用户期望"全部"标签显示所有文件，可以考虑添加一个选项或限制数量
-            if (SearchKeyword != "" && StrLen(SearchKeyword) > 1) {
-                try {
-                    EverythingResults := GetEverythingResults(SearchKeyword, EverythingLimit, true)
-                    for index, result in EverythingResults {
-                        if (Type(result) = "Map") {
-                            path := result["Path"]
-                            isDirectory := result["IsDirectory"]
-                            fileSize := result.Has("Size") ? result["Size"] : 0
-                            dateModified := result.Has("DateModified") ? result["DateModified"] : 0
-                            
-                            SplitPath(path, &FileName, &DirPath, &Ext, &NameNoExt)
-                            
-                            IconIndex := 0
-                            if (IconCache.Has(path)) {
-                                IconIndex := IconCache[path]
-                            } else {
-                                try {
-                                    IconIndex := IL_Add(ClipboardImageList, path, 0)
-                                    if (IconIndex > 0) {
-                                        IconCache[path] := IconIndex
-                                    }
-                                } catch {
-                                }
-                            }
-                            
-                            sizeStr := ""
-                            if (!isDirectory && fileSize > 0) {
-                                if (fileSize < 1024) {
-                                    sizeStr := fileSize . " B"
-                                } else if (fileSize < 1048576) {
-                                    sizeStr := Round(fileSize / 1024, 2) . " KB"
-                                } else if (fileSize < 1073741824) {
-                                    sizeStr := Round(fileSize / 1048576, 2) . " MB"
-                                } else {
-                                    sizeStr := Round(fileSize / 1073741824, 2) . " GB"
-                                }
-                            }
-                            
-                            dateStr := ""
-                            if (dateModified > 0) {
-                                try {
-                                    fileTime := Buffer(8)
-                                    NumPut("Int64", dateModified, fileTime)
-                                    localFileTime := Buffer(8)
-                                    if (DllCall("FileTimeToLocalFileTime", "Ptr", fileTime.Ptr, "Ptr", localFileTime.Ptr)) {
-                                        systemTime := Buffer(16)
-                                        if (DllCall("FileTimeToSystemTime", "Ptr", localFileTime.Ptr, "Ptr", systemTime.Ptr)) {
-                                            year := NumGet(systemTime, 0, "UShort")
-                                            month := NumGet(systemTime, 2, "UShort")
-                                            day := NumGet(systemTime, 4, "UShort")
-                                            hour := NumGet(systemTime, 6, "UShort")
-                                            minute := NumGet(systemTime, 8, "UShort")
-                                            dateStr := Format("{:04d}-{:02d}-{:02d} {:02d}:{:02d}", year, month, day, hour, minute)
-                                        }
-                                    }
-                                } catch {
-                                }
-                            }
-                            
-                            fileItem := Map()
-                            fileItem["ID"] := 0
-                            fileItem["Content"] := path
-                            fileItem["DataType"] := isDirectory ? "Folder" : "File"
-                            fileItem["SourceApp"] := "文件系统"
-                            fileItem["SourcePath"] := path
-                            fileItem["CharCount"] := 0
-                            fileItem["Timestamp"] := dateStr
-                            fileItem["LastCopyTime"] := dateStr
-                            fileItem["CopyCount"] := 1
-                            fileItem["IconIndex"] := IconIndex
-                            fileItem["FileSize"] := sizeStr
-                            
-                            ClipboardItems.Push(fileItem)
-                            TotalItems++
-                        }
-                    }
-                } catch {
-                }
-            }
-            
-            ; 3. 提示词数据（如果有搜索关键词）
-            if (SearchKeyword != "") {
-                try {
-                    TemplateResults := SearchPromptTemplates(SearchKeyword, EverythingLimit, 0)
-                    for index, templateResult in TemplateResults {
-                        if (Type(templateResult) = "Map" && templateResult.Has("Content")) {
-                            templateItem := Map()
-                            templateItem["ID"] := templateResult.Has("ID") ? templateResult["ID"] : 0
-                            templateItem["Content"] := templateResult["Content"]
-                            templateItem["DataType"] := "Template"
-                            templateItem["SourceApp"] := templateResult.Has("Metadata") && templateResult["Metadata"].Has("Category") ? templateResult["Metadata"]["Category"] : "提示词"
-                            templateItem["SourcePath"] := ""
-                            templateItem["CharCount"] := StrLen(templateResult["Content"])
-                            templateItem["Timestamp"] := ""
-                            templateItem["LastCopyTime"] := ""
-                            templateItem["CopyCount"] := 1
-                            templateItem["IconIndex"] := 0
-                            templateItem["FileSize"] := "-"
-                            templateItem["Title"] := templateResult.Has("Title") ? templateResult["Title"] : ""
-                            
-                            ClipboardItems.Push(templateItem)
-                            TotalItems++
-                        }
-                    }
-                } catch {
-                }
-            }
-            
-            ; 4. 配置项数据（软件内部选项，如果有搜索关键词）
-            if (SearchKeyword != "") {
-                try {
-                    ConfigResults := SearchConfigItems(SearchKeyword, EverythingLimit, 0)
-                    for index, configResult in ConfigResults {
-                        if (Type(configResult) = "Map" && configResult.Has("Content")) {
-                            configItem := Map()
-                            configItem["ID"] := configResult.Has("ID") ? configResult["ID"] : 0
-                            configItem["Content"] := configResult["Content"]
-                            configItem["DataType"] := "Config"
-                            configItem["SourceApp"] := configResult.Has("DataTypeName") ? configResult["DataTypeName"] : "配置项"
-                            configItem["SourcePath"] := ""
-                            configItem["CharCount"] := StrLen(configResult["Content"])
-                            configItem["Timestamp"] := ""
-                            configItem["LastCopyTime"] := ""
-                            configItem["CopyCount"] := 1
-                            configItem["IconIndex"] := 0
-                            configItem["FileSize"] := "-"
-                            configItem["Title"] := configResult.Has("Title") ? configResult["Title"] : ""
-                            ; 保存配置项的元数据，用于跳转
-                            if (configResult.Has("Metadata")) {
-                                configItem["Metadata"] := configResult["Metadata"]
-                            }
-                            if (configResult.Has("ActionParams")) {
-                                configItem["ActionParams"] := configResult["ActionParams"]
-                            }
-                            
-                            ClipboardItems.Push(configItem)
-                            TotalItems++
-                        }
-                    }
-                } catch {
-                }
-            }
-        } else if (CurrentCategory == "CapsLockC") {
-            ; ========== CapsLock+C：显示DataType为Stack的数据 ==========
-            whereConditions := []
-            whereConditions.Push("DataType = 'Stack'")
-            
-            if (SearchKeyword != "") {
-                ; 转义关键词（用于 LIKE 查询）
-                escapedKeyword := StrReplace(SearchKeyword, "'", "''")
-                escapedKeyword := StrReplace(escapedKeyword, "\", "\\")
-                escapedKeyword := StrReplace(escapedKeyword, "%", "\%")
-                escapedKeyword := StrReplace(escapedKeyword, "_", "\_")
-                
-                ; 检查 FTS5 虚拟表是否存在
-                SQL := "SELECT name FROM sqlite_master WHERE type='table' AND name='ClipboardHistory'"
-                table := ""
-                hasFTS5Table := false
-                if (ClipboardFTS5DB.GetTable(SQL, &table)) {
-                    if (table.HasRows && table.Rows.Length > 0) {
-                        hasFTS5Table := true
-                    }
-                }
-                
-                ; 对于短关键词（1-3个字符）或包含特殊字符的，使用 LIKE 查询
-                keywordLen := StrLen(SearchKeyword)
-                useLikeQuery := (keywordLen <= 3) || !RegExMatch(SearchKeyword, "^[\w\s\u4e00-\u9fff]+$")
-                
-                if (hasFTS5Table && !useLikeQuery) {
-                    ; 使用 FTS5 MATCH 语法（适用于长关键词，>=4个字符）
-                    ftsEscapedKeyword := StrReplace(SearchKeyword, "'", "''")
-                    ftsEscapedKeyword := StrReplace(ftsEscapedKeyword, "\", "\\")
-                    ftsEscapedKeyword := StrReplace(ftsEscapedKeyword, '"', '""')
-                    
-                    ; 如果关键词包含空格，使用短语匹配；否则使用全文匹配
-                    if (InStr(ftsEscapedKeyword, " ")) {
-                        ftsQuery := '"' . ftsEscapedKeyword . '"'
-                    } else {
-                        ftsQuery := ftsEscapedKeyword
-                    }
-                    
-                    ; 使用 FTS5 表进行搜索（MATCH 语法）
-                    whereConditions.Push("ID IN (SELECT rowid FROM ClipboardHistory WHERE ClipboardHistory MATCH '" . ftsQuery . "')")
-                } else {
-                    ; 使用 LIKE 查询（适用于短关键词或 FTS5 不可用）
-                    whereConditions.Push("(Content LIKE '%" . escapedKeyword . "%' OR SourceApp LIKE '%" . escapedKeyword . "%')")
-                }
+                _LCLV_AppendKeywordSearch(whereConditions, &queryParams, SearchKeyword, hasFTS5Table)
             }
             
             ; 构建SQL查询
@@ -1823,7 +1496,7 @@ RefreshClipboardListView() {
             orderByField := hasLastCopyTime ? "LastCopyTime" : "Timestamp"
             SQL .= " ORDER BY " . orderByField . " DESC LIMIT " . EverythingLimit
             ResultTable := 0
-            if (ClipboardFTS5DB.GetTable(SQL, &ResultTable) && ResultTable && ResultTable.HasProp("Rows")) {
+            if (_LCLV_RunClipQuery(SQL, &ResultTable, queryParams*) && ResultTable && ResultTable.HasProp("Rows")) {
                 ; 创建列名映射
                 columnNames := []
                 columnIndexMap := Map()
@@ -1953,7 +1626,8 @@ RefreshClipboardListView() {
                                 if (IconIndex > 0) {
                                     IconCache[SourcePath] := IconIndex
                                 }
-                            } catch {
+                            } catch as _e {
+                                NmerCatch(A_ThisFunc, _e) 
                             }
                         }
                     }
@@ -1965,48 +1639,37 @@ RefreshClipboardListView() {
         } else if (CurrentCategory == "Text") {
             ; ========== 文本：显示DataType为Text的数据 ==========
             whereConditions := []
+            queryParams := []
             whereConditions.Push("DataType = 'Text'")
             
             if (SearchKeyword != "") {
-                ; 转义关键词（用于 LIKE 查询）
-                escapedKeyword := StrReplace(SearchKeyword, "'", "''")
-                escapedKeyword := StrReplace(escapedKeyword, "\", "\\")
-                escapedKeyword := StrReplace(escapedKeyword, "%", "\%")
-                escapedKeyword := StrReplace(escapedKeyword, "_", "\_")
-                
-                ; 检查 FTS5 虚拟表是否存在
+
+            
                 SQL := "SELECT name FROM sqlite_master WHERE type='table' AND name='ClipboardHistory'"
+
+            
                 table := ""
+
+            
                 hasFTS5Table := false
+
+            
                 if (ClipboardFTS5DB.GetTable(SQL, &table)) {
+
+            
                     if (table.HasRows && table.Rows.Length > 0) {
+
+            
                         hasFTS5Table := true
+
+            
                     }
+
+            
                 }
-                
-                ; 对于短关键词（1-3个字符）或包含特殊字符的，使用 LIKE 查询
-                keywordLen := StrLen(SearchKeyword)
-                useLikeQuery := (keywordLen <= 3) || !RegExMatch(SearchKeyword, "^[\w\s\u4e00-\u9fff]+$")
-                
-                if (hasFTS5Table && !useLikeQuery) {
-                    ; 使用 FTS5 MATCH 语法（适用于长关键词，>=4个字符）
-                    ftsEscapedKeyword := StrReplace(SearchKeyword, "'", "''")
-                    ftsEscapedKeyword := StrReplace(ftsEscapedKeyword, "\", "\\")
-                    ftsEscapedKeyword := StrReplace(ftsEscapedKeyword, '"', '""')
-                    
-                    ; 如果关键词包含空格，使用短语匹配；否则使用全文匹配
-                    if (InStr(ftsEscapedKeyword, " ")) {
-                        ftsQuery := '"' . ftsEscapedKeyword . '"'
-                    } else {
-                        ftsQuery := ftsEscapedKeyword
-                    }
-                    
-                    ; 使用 FTS5 表进行搜索（MATCH 语法）
-                    whereConditions.Push("ID IN (SELECT rowid FROM ClipboardHistory WHERE ClipboardHistory MATCH '" . ftsQuery . "')")
-                } else {
-                    ; 使用 LIKE 查询（适用于短关键词或 FTS5 不可用）
-                    whereConditions.Push("(Content LIKE '%" . escapedKeyword . "%' OR SourceApp LIKE '%" . escapedKeyword . "%')")
-                }
+
+            
+                _LCLV_AppendKeywordSearch(whereConditions, &queryParams, SearchKeyword, hasFTS5Table)
             }
             
             ; 构建SQL查询
@@ -2021,7 +1684,7 @@ RefreshClipboardListView() {
             orderByField := hasLastCopyTime ? "LastCopyTime" : "Timestamp"
             SQL .= " ORDER BY " . orderByField . " DESC LIMIT " . EverythingLimit
             ResultTable := 0
-            if (ClipboardFTS5DB.GetTable(SQL, &ResultTable) && ResultTable && ResultTable.HasProp("Rows")) {
+            if (_LCLV_RunClipQuery(SQL, &ResultTable, queryParams*) && ResultTable && ResultTable.HasProp("Rows")) {
                 ; 创建列名映射
                 columnNames := []
                 columnIndexMap := Map()
@@ -2151,7 +1814,8 @@ RefreshClipboardListView() {
                                 if (IconIndex > 0) {
                                     IconCache[SourcePath] := IconIndex
                                 }
-                            } catch {
+                            } catch as _e {
+                                NmerCatch(A_ThisFunc, _e) 
                             }
                         }
                     }
@@ -2163,48 +1827,37 @@ RefreshClipboardListView() {
         } else if (CurrentCategory == "Code") {
             ; ========== 代码：显示DataType为Code的数据 ==========
             whereConditions := []
+            queryParams := []
             whereConditions.Push("DataType = 'Code'")
             
             if (SearchKeyword != "") {
-                ; 转义关键词（用于 LIKE 查询）
-                escapedKeyword := StrReplace(SearchKeyword, "'", "''")
-                escapedKeyword := StrReplace(escapedKeyword, "\", "\\")
-                escapedKeyword := StrReplace(escapedKeyword, "%", "\%")
-                escapedKeyword := StrReplace(escapedKeyword, "_", "\_")
-                
-                ; 检查 FTS5 虚拟表是否存在
+
+            
                 SQL := "SELECT name FROM sqlite_master WHERE type='table' AND name='ClipboardHistory'"
+
+            
                 table := ""
+
+            
                 hasFTS5Table := false
+
+            
                 if (ClipboardFTS5DB.GetTable(SQL, &table)) {
+
+            
                     if (table.HasRows && table.Rows.Length > 0) {
+
+            
                         hasFTS5Table := true
+
+            
                     }
+
+            
                 }
-                
-                ; 对于短关键词（1-3个字符）或包含特殊字符的，使用 LIKE 查询
-                keywordLen := StrLen(SearchKeyword)
-                useLikeQuery := (keywordLen <= 3) || !RegExMatch(SearchKeyword, "^[\w\s\u4e00-\u9fff]+$")
-                
-                if (hasFTS5Table && !useLikeQuery) {
-                    ; 使用 FTS5 MATCH 语法（适用于长关键词，>=4个字符）
-                    ftsEscapedKeyword := StrReplace(SearchKeyword, "'", "''")
-                    ftsEscapedKeyword := StrReplace(ftsEscapedKeyword, "\", "\\")
-                    ftsEscapedKeyword := StrReplace(ftsEscapedKeyword, '"', '""')
-                    
-                    ; 如果关键词包含空格，使用短语匹配；否则使用全文匹配
-                    if (InStr(ftsEscapedKeyword, " ")) {
-                        ftsQuery := '"' . ftsEscapedKeyword . '"'
-                    } else {
-                        ftsQuery := ftsEscapedKeyword
-                    }
-                    
-                    ; 使用 FTS5 表进行搜索（MATCH 语法）
-                    whereConditions.Push("ID IN (SELECT rowid FROM ClipboardHistory WHERE ClipboardHistory MATCH '" . ftsQuery . "')")
-                } else {
-                    ; 使用 LIKE 查询（适用于短关键词或 FTS5 不可用）
-                    whereConditions.Push("(Content LIKE '%" . escapedKeyword . "%' OR SourceApp LIKE '%" . escapedKeyword . "%')")
-                }
+
+            
+                _LCLV_AppendKeywordSearch(whereConditions, &queryParams, SearchKeyword, hasFTS5Table)
             }
             
             ; 构建SQL查询
@@ -2219,7 +1872,7 @@ RefreshClipboardListView() {
             orderByField := hasLastCopyTime ? "LastCopyTime" : "Timestamp"
             SQL .= " ORDER BY " . orderByField . " DESC LIMIT " . EverythingLimit
             ResultTable := 0
-            if (ClipboardFTS5DB.GetTable(SQL, &ResultTable) && ResultTable && ResultTable.HasProp("Rows")) {
+            if (_LCLV_RunClipQuery(SQL, &ResultTable, queryParams*) && ResultTable && ResultTable.HasProp("Rows")) {
                 ; 创建列名映射
                 columnNames := []
                 columnIndexMap := Map()
@@ -2349,7 +2002,8 @@ RefreshClipboardListView() {
                                 if (IconIndex > 0) {
                                     IconCache[SourcePath] := IconIndex
                                 }
-                            } catch {
+                            } catch as _e {
+                                NmerCatch(A_ThisFunc, _e) 
                             }
                         }
                     }
@@ -2361,48 +2015,37 @@ RefreshClipboardListView() {
         } else if (CurrentCategory == "Link") {
             ; ========== 链接：显示DataType为Link的数据 ==========
             whereConditions := []
+            queryParams := []
             whereConditions.Push("DataType = 'Link'")
             
             if (SearchKeyword != "") {
-                ; 转义关键词（用于 LIKE 查询）
-                escapedKeyword := StrReplace(SearchKeyword, "'", "''")
-                escapedKeyword := StrReplace(escapedKeyword, "\", "\\")
-                escapedKeyword := StrReplace(escapedKeyword, "%", "\%")
-                escapedKeyword := StrReplace(escapedKeyword, "_", "\_")
-                
-                ; 检查 FTS5 虚拟表是否存在
+
+            
                 SQL := "SELECT name FROM sqlite_master WHERE type='table' AND name='ClipboardHistory'"
+
+            
                 table := ""
+
+            
                 hasFTS5Table := false
+
+            
                 if (ClipboardFTS5DB.GetTable(SQL, &table)) {
+
+            
                     if (table.HasRows && table.Rows.Length > 0) {
+
+            
                         hasFTS5Table := true
+
+            
                     }
+
+            
                 }
-                
-                ; 对于短关键词（1-3个字符）或包含特殊字符的，使用 LIKE 查询
-                keywordLen := StrLen(SearchKeyword)
-                useLikeQuery := (keywordLen <= 3) || !RegExMatch(SearchKeyword, "^[\w\s\u4e00-\u9fff]+$")
-                
-                if (hasFTS5Table && !useLikeQuery) {
-                    ; 使用 FTS5 MATCH 语法（适用于长关键词，>=4个字符）
-                    ftsEscapedKeyword := StrReplace(SearchKeyword, "'", "''")
-                    ftsEscapedKeyword := StrReplace(ftsEscapedKeyword, "\", "\\")
-                    ftsEscapedKeyword := StrReplace(ftsEscapedKeyword, '"', '""')
-                    
-                    ; 如果关键词包含空格，使用短语匹配；否则使用全文匹配
-                    if (InStr(ftsEscapedKeyword, " ")) {
-                        ftsQuery := '"' . ftsEscapedKeyword . '"'
-                    } else {
-                        ftsQuery := ftsEscapedKeyword
-                    }
-                    
-                    ; 使用 FTS5 表进行搜索（MATCH 语法）
-                    whereConditions.Push("ID IN (SELECT rowid FROM ClipboardHistory WHERE ClipboardHistory MATCH '" . ftsQuery . "')")
-                } else {
-                    ; 使用 LIKE 查询（适用于短关键词或 FTS5 不可用）
-                    whereConditions.Push("(Content LIKE '%" . escapedKeyword . "%' OR SourceApp LIKE '%" . escapedKeyword . "%')")
-                }
+
+            
+                _LCLV_AppendKeywordSearch(whereConditions, &queryParams, SearchKeyword, hasFTS5Table)
             }
             
             ; 构建SQL查询
@@ -2417,7 +2060,7 @@ RefreshClipboardListView() {
             orderByField := hasLastCopyTime ? "LastCopyTime" : "Timestamp"
             SQL .= " ORDER BY " . orderByField . " DESC LIMIT " . EverythingLimit
             ResultTable := 0
-            if (ClipboardFTS5DB.GetTable(SQL, &ResultTable) && ResultTable && ResultTable.HasProp("Rows")) {
+            if (_LCLV_RunClipQuery(SQL, &ResultTable, queryParams*) && ResultTable && ResultTable.HasProp("Rows")) {
                 ; 创建列名映射
                 columnNames := []
                 columnIndexMap := Map()
@@ -2547,7 +2190,8 @@ RefreshClipboardListView() {
                                 if (IconIndex > 0) {
                                     IconCache[SourcePath] := IconIndex
                                 }
-                            } catch {
+                            } catch as _e {
+                                NmerCatch(A_ThisFunc, _e) 
                             }
                         }
                     }
@@ -2559,48 +2203,37 @@ RefreshClipboardListView() {
         } else if (CurrentCategory == "Image") {
             ; ========== 图片：显示DataType为Image的数据 ==========
             whereConditions := []
+            queryParams := []
             whereConditions.Push("DataType = 'Image'")
             
             if (SearchKeyword != "") {
-                ; 转义关键词（用于 LIKE 查询）
-                escapedKeyword := StrReplace(SearchKeyword, "'", "''")
-                escapedKeyword := StrReplace(escapedKeyword, "\", "\\")
-                escapedKeyword := StrReplace(escapedKeyword, "%", "\%")
-                escapedKeyword := StrReplace(escapedKeyword, "_", "\_")
-                
-                ; 检查 FTS5 虚拟表是否存在
+
+            
                 SQL := "SELECT name FROM sqlite_master WHERE type='table' AND name='ClipboardHistory'"
+
+            
                 table := ""
+
+            
                 hasFTS5Table := false
+
+            
                 if (ClipboardFTS5DB.GetTable(SQL, &table)) {
+
+            
                     if (table.HasRows && table.Rows.Length > 0) {
+
+            
                         hasFTS5Table := true
+
+            
                     }
+
+            
                 }
-                
-                ; 对于短关键词（1-3个字符）或包含特殊字符的，使用 LIKE 查询
-                keywordLen := StrLen(SearchKeyword)
-                useLikeQuery := (keywordLen <= 3) || !RegExMatch(SearchKeyword, "^[\w\s\u4e00-\u9fff]+$")
-                
-                if (hasFTS5Table && !useLikeQuery) {
-                    ; 使用 FTS5 MATCH 语法（适用于长关键词，>=4个字符）
-                    ftsEscapedKeyword := StrReplace(SearchKeyword, "'", "''")
-                    ftsEscapedKeyword := StrReplace(ftsEscapedKeyword, "\", "\\")
-                    ftsEscapedKeyword := StrReplace(ftsEscapedKeyword, '"', '""')
-                    
-                    ; 如果关键词包含空格，使用短语匹配；否则使用全文匹配
-                    if (InStr(ftsEscapedKeyword, " ")) {
-                        ftsQuery := '"' . ftsEscapedKeyword . '"'
-                    } else {
-                        ftsQuery := ftsEscapedKeyword
-                    }
-                    
-                    ; 使用 FTS5 表进行搜索（MATCH 语法）
-                    whereConditions.Push("ID IN (SELECT rowid FROM ClipboardHistory WHERE ClipboardHistory MATCH '" . ftsQuery . "')")
-                } else {
-                    ; 使用 LIKE 查询（适用于短关键词或 FTS5 不可用）
-                    whereConditions.Push("(Content LIKE '%" . escapedKeyword . "%' OR SourceApp LIKE '%" . escapedKeyword . "%')")
-                }
+
+            
+                _LCLV_AppendKeywordSearch(whereConditions, &queryParams, SearchKeyword, hasFTS5Table)
             }
             
             ; 构建SQL查询
@@ -2615,7 +2248,7 @@ RefreshClipboardListView() {
             orderByField := hasLastCopyTime ? "LastCopyTime" : "Timestamp"
             SQL .= " ORDER BY " . orderByField . " DESC LIMIT " . EverythingLimit
             ResultTable := 0
-            if (ClipboardFTS5DB.GetTable(SQL, &ResultTable) && ResultTable && ResultTable.HasProp("Rows")) {
+            if (_LCLV_RunClipQuery(SQL, &ResultTable, queryParams*) && ResultTable && ResultTable.HasProp("Rows")) {
                 ; 创建列名映射
                 columnNames := []
                 columnIndexMap := Map()
@@ -2745,7 +2378,8 @@ RefreshClipboardListView() {
                                 if (IconIndex > 0) {
                                     IconCache[SourcePath] := IconIndex
                                 }
-                            } catch {
+                            } catch as _e {
+                                NmerCatch(A_ThisFunc, _e) 
                             }
                         }
                     }
@@ -2765,7 +2399,7 @@ RefreshClipboardListView() {
             orderByField := hasLastCopyTime ? "LastCopyTime" : "Timestamp"
             SQL := "SELECT " . selectFields . " FROM ClipMain " . (WhereClause != "" ? WhereClause : "") . " ORDER BY " . orderByField . " DESC LIMIT " . EverythingLimit
             ResultTable := 0
-            if (ClipboardFTS5DB.GetTable(SQL, &ResultTable) && ResultTable && ResultTable.HasProp("Rows")) {
+            if (_LCLV_RunClipQuery(SQL, &ResultTable, queryParams*) && ResultTable && ResultTable.HasProp("Rows")) {
                 ; 创建列名映射
                 columnNames := []
                 columnIndexMap := Map()
@@ -2895,7 +2529,8 @@ RefreshClipboardListView() {
                                 if (IconIndex > 0) {
                                     IconCache[SourcePath] := IconIndex
                                 }
-                            } catch {
+                            } catch as _e {
+                                NmerCatch(A_ThisFunc, _e) 
                             }
                         }
                     }
@@ -3785,9 +3420,9 @@ OnClipboardListViewWMNotify(wParam, lParam, Msg, Hwnd) {
                 }
             }
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
-    
     ; 检查是否是剪贴板管理窗口的消息
     if (!ClipboardManagerHwnd || Hwnd != ClipboardManagerHwnd) {
         return  ; 不是我们的窗口，不处理
@@ -4587,7 +4222,8 @@ OnClipboardSearchChange(Control, *) {
         try {
             SetTimer(ClipboardSearchTimer, 0)
             ClipboardSearchTimer := 0
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     
@@ -4638,7 +4274,8 @@ DebouncedClipboardSearch(*) {
                 if (SearchNextBtn && IsObject(SearchNextBtn)) {
                     SearchNextBtn.Visible := false
                 }
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
         

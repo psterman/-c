@@ -1,0 +1,2 @@
+﻿exe=C:\Program Files\AutoHotkey\v2\AutoHotkey64.exe
+mode=plain

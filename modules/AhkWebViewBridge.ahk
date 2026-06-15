@@ -99,7 +99,8 @@ class AhkInterface {
                 return "err:no_card_id"
             _AhkBridge_AgentDebugTrace("bridge", "submit_ok", "card=" . cid . " req=" . rid . " prov=" . prov)
             try CommandPalette_AgentDebugNoteSubmit(cid, rid, prov, "bridge_quick")
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             return "ok|" . cid . "|" . rid . "|" . prov
         } catch as e {
@@ -144,7 +145,8 @@ class AhkInterface {
                 return "err:no_card_id"
             if FuncExists("CommandPalette_AgentDebugNoteSubmit")
                 try CommandPalette_AgentDebugNoteSubmit(cid, rid, prov, "bridge")
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
             _AhkBridge_AgentDebugTrace("bridge", "submit_ok", "card=" . cid . " req=" . rid . " prov=" . prov)
             return "ok|" . cid . "|" . rid . "|" . prov
@@ -230,7 +232,8 @@ class AhkInterface {
         try {
             if FuncExists("NiumaMobileBrowser_SetChromeSheetOpen")
                 NiumaMobileBrowser_SetChromeSheetOpen(!!Integer(open))
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return "ok"
     }
@@ -416,7 +419,8 @@ class AhkInterface {
             global MainScriptDir
             if IsSet(MainScriptDir) && MainScriptDir != ""
                 return MainScriptDir
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return A_ScriptDir
     }
@@ -486,6 +490,47 @@ class AhkInterface {
     GetLatestSnapshotCache() {
         return this.GetBrowserSnapshot()
     }
+
+    /**
+     * 设置中心 LLM 测试（仅供诊断；正常流程走 postMessage 异步，避免 WebView 同步 COM 卡死）
+     */
+    StudioTestLlm(payloadJson, testId := "", flatKey := "", flatProv := "", flatBase := "", flatModel := "") {
+        try {
+            if !FuncExists("ConfigWebView_ExecuteStudioLlmTest")
+                return '{"type":"testUserStudioLlmResult","ok":false,"error":"ConfigWebView 未加载"}'
+            tid := Trim(String(testId))
+            json := Trim(String(payloadJson))
+            if FuncExists("ConfigWebView_LogStudioLlmTest")
+                ConfigWebView_LogStudioLlmTest("hostobj StudioTestLlm testId=" . tid . " keyLen=" . StrLen(Trim(String(flatKey)))
+                    . " jsonLen=" . StrLen(json))
+            msg := Map(
+                "payloadJson", json,
+                "testId", tid,
+                "llmApiKey", Trim(String(flatKey)),
+                "llmProvider", Trim(String(flatProv)),
+                "llmBaseUrl", Trim(String(flatBase)),
+                "llmModel", Trim(String(flatModel))
+            )
+            payload := FuncExists("ConfigWebView_BuildLlmTestPayload")
+                ? ConfigWebView_BuildLlmTestPayload(msg)
+                : Map()
+            if !(payload is Map)
+                payload := Map()
+            if FuncExists("ConfigWebView_RunUserStudioLlmTest") {
+                SetTimer(ConfigWebView_RunUserStudioLlmTest.Bind(payload, tid), -1)
+                return '{"type":"testUserStudioLlmResult","ok":true,"async":true,"testId":"' . tid . '"}'
+            }
+            result := ConfigWebView_ExecuteStudioLlmTest(payload, tid)
+            return Jxon_Dump(result)
+        } catch as e {
+            if FuncExists("ConfigWebView_LogStudioLlmTest")
+                ConfigWebView_LogStudioLlmTest("hostobj err=" . e.Message)
+            return '{"type":"testUserStudioLlmResult","ok":false,"error":"' . StrReplace(e.Message, '"', "'") . '"}'
+        }
+    }
+
+    /** 探测设置页宿主对象是否可用 */
+    PingStudioBridge(_hint := "") => "ok"
 }
 
 _AhkBridge_AgentSubmitReady() {
@@ -522,7 +567,8 @@ _AhkBridge_AgentWireLog(event, detail := "") {
             g_CmdPal_AgentWireLogDispatch(event, detail)
         else
             CommandPalette_AgentWireLog(event, detail)
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 

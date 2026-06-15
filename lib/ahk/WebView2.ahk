@@ -227,12 +227,14 @@ class WebView2 {
 						msg := String(e)
 					}
 					try OutputDebug("[WebView2] add_handler failed: " . msg)
-					catch {
+					catch as _e {
+					    NmerCatch(A_ThisFunc, _e) 
 					}
 					try {
 						if FuncExists("NMER_Log")
 							NMER_Log("webview2", "add_handler_fail", msg)
-					} catch {
+					} catch as _e {
+					    NmerCatch(A_ThisFunc, _e) 
 					}
 					return 0
 				}

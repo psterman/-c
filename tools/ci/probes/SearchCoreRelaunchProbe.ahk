@@ -48,7 +48,8 @@ SCRP_WriteReport(exitCode := 0) {
     try {
         if FileExist(g_SCRP_Report)
             FileDelete(g_SCRP_Report)
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try FileAppend(body, g_SCRP_Report, "UTF-8")
     catch {

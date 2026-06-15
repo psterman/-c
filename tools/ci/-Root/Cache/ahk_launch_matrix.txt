@@ -1,0 +1,15 @@
+﻿ahk_launch_matrix
+ts=2026-06-15 10:25:47.662
+root=-Root
+candidate_count=2
+variant exe="C:\Program Files\AutoHotkey\v2\AutoHotkey64.exe" mode=plain exit=0 out_exists=1 err=""
+variant exe="C:\Program Files\AutoHotkey\v2\AutoHotkey64.exe" mode=plain_with_cwd exit=0 out_exists=1 err=""
+variant exe="C:\Program Files\AutoHotkey\v2\AutoHotkey64.exe" mode=errorstdout exit=0 out_exists=1 err=""
+variant exe="C:\Program Files\AutoHotkey\v2\AutoHotkey64.exe" mode=errorstdout_with_cwd exit=0 out_exists=1 err=""
+variant exe="C:\Program Files\AutoHotkey\v2\AutoHotkey.exe" mode=plain exit=0 out_exists=1 err=""
+variant exe="C:\Program Files\AutoHotkey\v2\AutoHotkey.exe" mode=plain_with_cwd exit=0 out_exists=1 err=""
+variant exe="C:\Program Files\AutoHotkey\v2\AutoHotkey.exe" mode=errorstdout exit=0 out_exists=1 err=""
+variant exe="C:\Program Files\AutoHotkey\v2\AutoHotkey.exe" mode=errorstdout_with_cwd exit=0 out_exists=1 err=""
+winner_exe=C:\Program Files\AutoHotkey\v2\AutoHotkey64.exe
+winner_mode=plain
+result=PASS

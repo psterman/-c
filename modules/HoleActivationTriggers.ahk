@@ -60,10 +60,12 @@ HoleTriggers_DiagLog(msg) {
             DirCreate(dir)
         ts := FormatTime(A_Now, "yyyy-MM-dd HH:mm:ss")
         FileAppend("[" . ts . "] " . String(msg) . "`r`n", g_HoleTrig_DiagPath, "UTF-8")
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try NativeDropDiag_Log(String(msg))
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -79,7 +81,8 @@ HoleTriggers_ShouldCaptureGestures() {
         try {
             if SelectionSense_IsHoleCaptureEnabled()
                 return true
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     return HoleTriggers_IsHoleModeActive()
@@ -117,7 +120,8 @@ HoleTriggers_IsHoleModeActive() {
         try {
             if SelectionSense_IsHoleCaptureEnabled()
                 return true
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     global g_HoleRuntimeEnabled
@@ -277,7 +281,8 @@ HoleTriggers_IsRButtonReallyUp() {
     try {
         if GetKeyState("RButton", "P")
             return false
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return true
 }
@@ -296,7 +301,8 @@ HoleTriggers_StartRButtonHoldPoll() {
 
 HoleTriggers_StopRButtonHoldPoll() {
     try SetTimer(HoleTriggers_OnRButtonHoldTick, 0)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -314,7 +320,8 @@ HoleTriggers_ClearRButtonCaptureState(keepLock := false) {
     g_HoleTrig_HoldPollLastTick := 0
     g_HoleTrig_Points := []
     try HoleTriggers_ClearGestureTrail()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if !keepLock
         g_HoleTrig_RButtonLockUntilUp := false
@@ -465,7 +472,8 @@ HoleTriggers_EnableGestureHotkeys() {
         g_HoleTrig_HotkeysOn := true
     } catch as e {
         try NativeDropDiag_Log("[HoleTrigger] hotkey_on_fail msg=" . e.Message)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 }
@@ -537,7 +545,8 @@ HoleTriggers_FreeCircle_Reset(reason := "") {
     g_HoleTrig_FreePts := []
     g_HoleTrig_FreeLastMoveTick := 0
     try SetTimer(HoleTriggers_FreeCircleFinalize, 0)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -634,7 +643,8 @@ HoleTriggers_InstallMouseHook() {
         g_HoleTrig_MouseHook := DllCall("SetWindowsHookExW", "Int", 14, "Ptr", g_HoleTrig_MouseHookCb, "Ptr", 0, "UInt", 0, "Ptr")
         if !g_HoleTrig_MouseHook {
             try NativeDropDiag_Log("[HoleTrigger] mouse_hook_install_fail err=" . A_LastError)
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             try CallbackFree(g_HoleTrig_MouseHookCb)
             g_HoleTrig_MouseHookCb := 0
@@ -743,7 +753,8 @@ HoleTriggers_GetGestureStrictness() {
             return 1.28
         if (InStr(title, "Floating Toolbar"))
             return 1.2
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return 1.0
 }
@@ -753,7 +764,8 @@ HoleTriggers_ShouldIgnoreGestureAtPoint(x, y) {
         try {
             if GDHO_IsLauncherLayerActive()
                 return true
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     try {
@@ -766,7 +778,8 @@ HoleTriggers_ShouldIgnoreGestureAtPoint(x, y) {
             if (cls = "UnityWndClass" || cls = "UnrealWindow")
                 return true
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return false
 }
@@ -804,7 +817,8 @@ HoleTriggers_GestureTrailPoint(screenX, screenY) {
         g_HoleTrig_TrailMatchState := false
         if FuncExists("GDHO_ShowStarryPassthroughOnly")
             try GDHO_ShowStarryPassthroughOnly("gesture_trail")
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if (g_HoleTrig_TrailLastTick > 0 && (now - g_HoleTrig_TrailLastTick) < Integer(g_HoleTrig_TrailThrottleMs))
@@ -813,7 +827,8 @@ HoleTriggers_GestureTrailPoint(screenX, screenY) {
     try {
         cli := GDHO_PolicyScreenToStarryClient(Integer(screenX), Integer(screenY))
         GDHO_RunStarryJS("try{window.HoleOverlay?.gestureTrailPoint?.(" . Integer(cli.x) . "," . Integer(cli.y) . ");}catch(_e){}")
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -823,7 +838,8 @@ HoleTriggers_GestureTrailSetMatch(matched, dir := "") {
     m := matched ? "true" : "false"
     d := StrReplace(StrReplace(Trim(String(dir)), "\", "\\"), "'", "\'")
     try GDHO_RunStarryJS("try{window.HoleOverlay?.gestureTrailSetMatch?.(" . m . ",'" . d . "');}catch(_e){}")
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -877,10 +893,12 @@ HoleTriggers_AppendPointWithTrail(mx, my) {
     if !HoleTriggers_AppendPoint(mx, my)
         return false
     try HoleTriggers_GestureTrailPoint(mx, my)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try HoleTriggers_UpdateCircleTrailPreview()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return true
 }
@@ -920,12 +938,14 @@ HoleTriggers_HoleUiIsVisible() {
     try {
         if GDHO_IsLauncherLayerActive()
             return true
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try {
         if GDHO_IsStarryHostVisible()
             return true
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return false
 }
@@ -942,12 +962,14 @@ HoleTriggers_PresentHoleUi(ax, ay, reason := "gesture") {
         if GDHO_IsDecoupled() {
             if !GDHO_IsLauncherLayerActive() && FuncExists("GDHO_ClearGestureHolePresentation") {
                 try GDHO_ClearGestureHolePresentation("gesture_present:" . rsn)
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
             }
             if !lightPresent {
                 try GDHO_PrepareDecoupledHoleForTextSelection("gesture:" . rsn)
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
             }
         }
@@ -963,7 +985,8 @@ HoleTriggers_PresentHoleUi(ax, ay, reason := "gesture") {
         HoleTriggers_DiagLog("[HoleTrigger] present_session_fail msg=" . e1.Message)
     }
     try GDHO_UpdateHoleCenterFromPolicy(ix, iy)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if !IsObject(GDHO_STAR_GUI) {
         try GDHO_CreateStarryGui()
@@ -972,7 +995,8 @@ HoleTriggers_PresentHoleUi(ax, ay, reason := "gesture") {
         }
     }
     try GDHO_EnsureStarryOnScreenForLauncher()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     presented := false
     try {
@@ -991,7 +1015,8 @@ HoleTriggers_PresentHoleUi(ax, ay, reason := "gesture") {
     }
     if !presented {
         try GDHO_ArmLauncherLayerShow("hole_trig:" . rsn)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if !presented {
@@ -1022,7 +1047,8 @@ HoleTriggers_EnsureGestureToastGui() {
         return
     if g_HoleTrig_ToastGui {
         try g_HoleTrig_ToastGui.Destroy()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         g_HoleTrig_ToastGui := 0
         g_HoleTrig_ToastTextCtrl := 0
@@ -1042,7 +1068,8 @@ HoleTriggers_HideGestureToast(reason := "") {
     try {
         if g_HoleTrig_ToastGui
             g_HoleTrig_ToastGui.Hide()
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if (reason != "")
         HoleTriggers_DiagLog("[HoleTrigger] toast_hide reason=" . String(reason))
@@ -1074,7 +1101,8 @@ HoleTriggers_IsGestureHotkeyContext() {
         try {
             if VK_ToolbarLayoutHasContextMenuItems()
                 return false
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     return true
@@ -1111,7 +1139,8 @@ HoleTriggers_ActivateAtScreen(x, y, reason := "gesture") {
                 "weakPreview", true
             ))
             try GDHO_ArmLauncherLayerShow("gesture_req:" . String(reason))
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             HoleTriggers_DiagLog("[HoleTrigger] request_open_fallback reason=" . String(reason))
         } catch as e2 {
@@ -1137,12 +1166,14 @@ HoleTriggers_ActivateAtScreen(x, y, reason := "gesture") {
         }
     }
     try HoleTriggers_ClearGestureTrail()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     HoleTriggers_DiagLog("[HoleTrigger] activate_result ok=" . (ok ? "1" : "0") . " reason=" . String(reason)
         . " launcher=" . (HoleTriggers_HoleUiIsVisible() ? "1" : "0"))
     try HoleTriggers_NotifyGestureResult(ok, ax, ay, reason)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return !!ok
 }
@@ -1153,7 +1184,8 @@ HoleTriggers_ResetGesture() {
     g_HoleTrig_Points := []
     g_HoleTrig_StartTick := 0
     try SetTimer(HoleTriggers_TrackPointer, 0)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -1161,7 +1193,8 @@ HoleTriggers_RButtonWatchTick(*) {
     global g_HoleTrig_RButtonWatch, g_HoleTrig_Points
     if !g_HoleTrig_RButtonWatch {
         try SetTimer(HoleTriggers_RButtonWatchTick, 0)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return
     }
@@ -1202,11 +1235,13 @@ HoleTriggers_OnRButtonDown(*) {
         return
     }
     try HoleTriggers_HideGestureToast("rbutton_down")
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     HoleTriggers_FreeCircle_Reset("rbutton_down")
     try HoleTriggers_ClearGestureTrail()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     g_HoleTrig_HoldActivatedThisPress := false
     HoleTriggers_DiagLog("[HoleTrigger] rbutton_down x=" . mx . " y=" . my . " cw=" . (HoleTriggers_IsCircleCwEnabled() ? "1" : "0")
@@ -1231,7 +1266,8 @@ HoleTriggers_OnRButtonDown(*) {
     SetTimer(HoleTriggers_TrackPointer, g_HoleTrig_TrackIntervalMs)
     if HoleTriggers_AnyCircleEnabled()
         try HoleTriggers_GestureTrailPoint(mx, my)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     if HoleTriggers_IsRButtonHoldEnabled()
         HoleTriggers_StartRButtonHoldPoll()
@@ -1286,7 +1322,8 @@ HoleTriggers_TrackPointer(*) {
         if HoleTriggers_ShouldBreakHoldForCircle(dist) {
             g_HoleTrig_RButtonWatch := true
             try SetTimer(HoleTriggers_RButtonWatchTick, g_HoleTrig_TrackIntervalMs)
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
     }
@@ -1528,7 +1565,8 @@ HoleTriggers_OnRButtonUp(*) {
     MouseGetPos(&mx, &my)
     HoleTriggers_AppendPointWithTrail(mx, my)
     try HoleTriggers_UpdateCircleTrailPreview(true)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     pts := g_HoleTrig_Points
     pathLen := HoleTriggers_ComputePathLength(pts)
@@ -1551,7 +1589,8 @@ HoleTriggers_OnRButtonUp(*) {
         g_HoleTrig_HoldPollLastTick := 0
         g_HoleTrig_HoldActivatedThisPress := false
         try HoleTriggers_ClearGestureTrail()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         if HoleTriggers_CanActivateNow(circleReason)
             HoleTriggers_ActivateAtScreen(mx, my, circleReason)
@@ -1560,7 +1599,8 @@ HoleTriggers_OnRButtonUp(*) {
         return
     }
     try HoleTriggers_ClearGestureTrail()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if HoleTriggers_IsRButtonHoldEnabled() {
         global g_HoleTrig_HoldStillAccumMs

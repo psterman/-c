@@ -229,7 +229,8 @@ NativeDrop_SetHoleSolid(isSolid := false, requestFocus := false) {
         try {
             if GDHO_IsLauncherLayerActive()
                 return
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if (FuncExists("GDHO_IsDecoupled") && GDHO_IsDecoupled()) {
@@ -245,12 +246,14 @@ NativeDrop_SetHoleSolid(isSolid := false, requestFocus := false) {
                 skipHide := false
                 if FuncExists("GDHO_IsTextHoleUserPanelActive") {
                     try skipHide := GDHO_IsTextHoleUserPanelActive()
-                    catch {
+                    catch as _e {
+                        NmerCatch(A_ThisFunc, _e) 
                     }
                 }
                 if FuncExists("GDHO_IsPanelDragProtected") {
                     try skipHide := (skipHide || GDHO_IsPanelDragProtected())
-                    catch {
+                    catch as _e {
+                        NmerCatch(A_ThisFunc, _e) 
                     }
                 }
                 if !skipHide
@@ -292,7 +295,8 @@ NativeDrop_SetHoleSolid(isSolid := false, requestFocus := false) {
         . " manualMode=" . (GDHO_MANUAL_PANEL_MODE ? "1" : "0")
         . " ex_after=0x" . Format("{:X}", exAfter)
         . " bit_WS_EX_TRANSPARENT=" . (!!(exAfter & 0x20) ? "1" : "0"))
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if (wantSolid && requestFocus)
         NativeDrop_EnsureHostFocus()
@@ -304,14 +308,16 @@ NativeDrop_EnsureHostFocus() {
         try {
             if GDHO_IsPanelDragProtected()
                 return
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if FuncExists("GDHO_IsTextHoleUserPanelActive") {
         try {
             if GDHO_IsTextHoleUserPanelActive()
                 return
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if (FuncExists("GDHO_IsDecoupled") && GDHO_IsDecoupled() && IsSet(GDHO_PANEL_VISIBLE) && GDHO_PANEL_VISIBLE)
@@ -330,7 +336,8 @@ NativeDrop_EnsureHostFocus() {
     try {
         if !WinActive("ahk_id " . focusGui.Hwnd)
             WinActivate("ahk_id " . focusGui.Hwnd)
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 

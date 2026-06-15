@@ -14460,6 +14460,89 @@ body.niuma-confirm-open{overflow:hidden}
     });
   }
 
+  function canUseUnifiedHttpChat(cfg) {
+    if (!hostBridgeAvailable() || !cfg) return false;
+    var p = P[cfg.provider] || P.openai;
+    if (p.transport === 'openclaw' || cfg.provider === 'hermes') return false;
+    if (Array.isArray(cfg.userContentParts) && cfg.userContentParts.length) return false;
+    return true;
+  }
+
+  function hostUnifiedHttpChat(cfg, opts) {
+    opts = opts || {};
+    var timeoutMs = Math.max(5000, Number(opts.timeoutMs || 120000));
+    if (!hostBridgeAvailable()) return Promise.reject(new Error('宿主桥未就绪'));
+    return new Promise(function (resolve, reject) {
+      var reqId = 'llmchat_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
+      var done = false;
+      function cleanup() {
+        try {
+          window.chrome.webview.removeEventListener('message', onMsg);
+        } catch (_) {}
+      }
+      var timer = setTimeout(function () {
+        if (done) return;
+        done = true;
+        cleanup();
+        try {
+          post({ type: 'niuma_llm_http_cancel', reqId: reqId });
+        } catch (_) {}
+        reject(new Error('请求超时（' + timeoutMs + 'ms）'));
+      }, timeoutMs + 500);
+      function onMsg(ev) {
+        var d = ev && ev.data;
+        if (typeof d === 'string') {
+          try {
+            d = JSON.parse(d);
+          } catch (_) {
+            return;
+          }
+        }
+        if (!d || d.type !== 'niuma_llm_http_chat_result' || String(d.reqId || '') !== reqId) return;
+        if (done) return;
+        done = true;
+        clearTimeout(timer);
+        cleanup();
+        if (d.ok) resolve({ ok: true, status: Number(d.status || 200), text: decodeApiText(String(d.text || '')) });
+        else reject(new Error(formatHostHttpError(Number(d.status || 0), String(d.text || ''), String(d.error || ''))));
+      }
+      try {
+        window.chrome.webview.addEventListener('message', onMsg);
+        post({
+          type: 'niuma_llm_http_chat',
+          reqId: reqId,
+          messagesJson: JSON.stringify(opts.messages || []),
+          userText: String(opts.userText || ''),
+          maxTokens: Number(opts.maxTokens || 4096),
+          timeoutMs: timeoutMs,
+          model: String((cfg && cfg.model) || ''),
+          provider: String((cfg && cfg.provider) || '')
+        });
+      } catch (e) {
+        if (!done) {
+          done = true;
+          clearTimeout(timer);
+          cleanup();
+          reject(e);
+        }
+      }
+    });
+  }
+
+  async function reqUnifiedHttpChat(cfg) {
+    var p = P[cfg.provider] || P.openai;
+    var messages;
+    if (cfg.provider === 'minimax' && typeof minimaxUsesAnthropic === 'function' && !minimaxUsesAnthropic(cfg.baseUrl))
+      messages = oaMsgs(cfg);
+    else if (p.transport === 'anthropic') messages = claudeMsgs(cfg);
+    else if (p.transport === 'gemini') messages = oaMsgs(cfg);
+    else messages = oaMsgs(cfg);
+    var r = await hostUnifiedHttpChat(cfg, { messages: messages, maxTokens: 4096, timeoutMs: 120000 });
+    var c = String((r && r.text) || '').trim();
+    if (!c) throw new Error('响应中没有可显示的内容。');
+    return c;
+  }
+
   function hostBridgeRequest(type, payload, timeoutMs) {
     return new Promise(function (resolve, reject) {
       if (!hostBridgeAvailable()) {
@@ -22220,8 +22303,11 @@ body.niuma-confirm-open{overflow:hidden}
     try {
       var p = P[cfg.provider] || P.openai,
         content = '';
-      if (cfg.provider === 'minimax') content = await reqMinimax(cfg);
+      if (cfg.provider === 'minimax' && canUseUnifiedHttpChat(cfg)) content = await reqUnifiedHttpChat(cfg);
+      else if (cfg.provider === 'minimax') content = await reqMinimax(cfg);
+      else if (p.transport === 'anthropic' && canUseUnifiedHttpChat(cfg)) content = await reqUnifiedHttpChat(cfg);
       else if (p.transport === 'anthropic') content = await reqClaude(cfg);
+      else if (p.transport === 'gemini' && canUseUnifiedHttpChat(cfg)) content = await reqUnifiedHttpChat(cfg);
       else if (p.transport === 'gemini') content = await reqGemini(cfg);
       else if (p.transport === 'openclaw') {
         cstatForSession(sid, 'OpenClaw：正在发送到 Gateway…');
@@ -22256,7 +22342,8 @@ body.niuma-confirm-open{overflow:hidden}
             }
           }
         });
-      } else content = await reqOpenAI(cfg);
+      } else if (canUseUnifiedHttpChat(cfg)) content = await reqUnifiedHttpChat(cfg);
+      else content = await reqOpenAI(cfg);
       if (typeof ocIsSystemOrMetaText === 'function' && ocIsSystemOrMetaText(content)) content = '';
       if (typeof ocLooksLikeThinkingPreambleOnly === 'function' && ocLooksLikeThinkingPreambleOnly(content)) content = '';
       if (paletteExecCtx && paletteExecCtx.reqId && p0.transport === 'openclaw') {

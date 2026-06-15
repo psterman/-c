@@ -28,13 +28,15 @@ ToggleToolbarAndPanel(*) {
             RestoreAIListPanel()
             if (!FloatingBubbleIsVisible) {
                 try ShowFloatingBubble()
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
             }
         } else {
             if (FloatingBubbleIsVisible) {
                 try HideFloatingBubble()
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
             }
             if (FloatingToolbarIsVisible) {
@@ -150,9 +152,9 @@ ShowFloatingToolbarUnifiedContextMenu(anchorX, anchorY) {
         searchBusy := false
     }
     try OutputDebug("[FTBCTX] show menu mode=" . mode . " search_busy=" . (searchBusy ? "1" : "0") . " anchor=" . Integer(anchorX) . "," . Integer(anchorY))
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
-
     try {
         if (IsSet(g_Commands) && g_Commands is Map && g_Commands.Has("CommandList") && g_Commands["CommandList"] is Map) {
             cmdList := g_Commands["CommandList"]
@@ -186,7 +188,8 @@ ShowFloatingToolbarUnifiedContextMenu(anchorX, anchorY) {
                     }
                 } else {
                     try OutputDebug("[FTBCTX] skip floating_bar scene menu mode=" . mode . " search_busy=" . (searchBusy ? "1" : "0") . " count=" . sceneMenus["floating_bar"].Length)
-                    catch {
+                    catch as _e {
+                        NmerCatch(A_ThisFunc, _e) 
                     }
                 }
             }
@@ -213,9 +216,9 @@ ShowFloatingToolbarUnifiedContextMenu(anchorX, anchorY) {
                 }
             }
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
-
     if (MenuItems.Length = 0) {
         fallbackIds := []
         try fallbackIds := _VK_DefaultSceneMenuFloatingToolbarMenuCmds()
@@ -240,13 +243,13 @@ ShowFloatingToolbarUnifiedContextMenu(anchorX, anchorY) {
         MenuItems.Push({ Text: "（右键菜单暂无命令）", Icon: "·", Action: (*) => 0 })
 
     try FloatingToolbar_AppendActivationModeMenuItems(&MenuItems, mode, seenMenuSlots)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
-
     try OutputDebug("[FTBCTX] menu items=" . MenuItems.Length . " floating_scene=" . (useFloatingSceneMenu ? "1" : "0"))
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
-
     n := MenuItems.Length
     MenuHeight := n * MenuItemHeight + Padding * 2
     MenuWidth := 280
@@ -300,9 +303,11 @@ CapsLockChordInputBlocked(*) {
             if FuncExists("SearchCenter_ShouldUseWebView") && SearchCenter_ShouldUseWebView()
                 && FuncExists("SCWV_IsHostForegroundActive") && SCWV_IsHostForegroundActive()
                 return true
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return false
 }
@@ -314,7 +319,8 @@ CapsLockChordPhysDown(*) {
 }
 
 GetCapsLockState() {
-    global CapsLock, g_CapsLockChordSessionActive
+    global CapsLock
+    global g_CapsLockChordSessionActive := false
     physDown := false
     try physDown := GetKeyState("CapsLock", "P")
     catch {
@@ -331,13 +337,15 @@ GetCapsLockState() {
         ; 搜索中心已进入输入态后，若物理 CapsLock 已松开，就不要再让宿主残留的 CapsLock 变量继续劫持普通字母输入。
         if (!physDown && FuncExists("SCWV_IsRevealedToUser") && SCWV_IsRevealedToUser())
             return false
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try {
         ; 搜索框聚焦时一律退出 Caps 和弦态，避免 CapsLock+F 开 SC 后 Backspace/字母仍被当热键
         if FuncExists("SCWV_IsSearchInputFocused") && SCWV_IsSearchInputFocused()
             return false
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     ; 和弦态：必须物理按住 CapsLock；仅在 CapsLock:: KeyWait 会话内允许变量 CapsLock 兜底（防驱动抖动）
     if physDown
@@ -370,11 +378,13 @@ IsSearchCenterActive() {
             try {
                 if FuncExists("SCWV_IsHostForegroundActive") && SCWV_IsHostForegroundActive()
                     return true
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             return false
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if (!GuiID_SearchCenter || GuiID_SearchCenter = 0)
         return false
@@ -399,7 +409,8 @@ SearchCenter_ShouldCaptureGlobalHotkeys(*) {
             if cpHwnd && WinActive("ahk_id " . cpHwnd)
                 return false
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try {
         if SearchCenter_ShouldUseWebView() {
@@ -408,7 +419,8 @@ SearchCenter_ShouldCaptureGlobalHotkeys(*) {
                 return true
             return false
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return true
 }
@@ -420,7 +432,8 @@ SearchCenter_ShouldCaptureLegacyListHotkeys(*) {
     try {
         if SearchCenter_ShouldUseWebView()
             return false
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return true
 }
@@ -431,12 +444,14 @@ SearchCenter_CapsChordHotIf(*) {
     try {
         if SearchCenter_ShouldUseWebView() && FuncExists("SCWV_ScCapsInputAllowed") && !SCWV_ScCapsInputAllowed()
             return false
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try {
         if FuncExists("VK_IsTypingPassthroughContext") && VK_IsTypingPassthroughContext()
             return false
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return true
 }
@@ -450,7 +465,8 @@ SearchCenter_CapsChordKey(ch) {
             if (c != "")
                 Send("{Raw}" . c)
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -463,7 +479,8 @@ SearchCenter_HandleCapsChordKey(ch) {
     try dbg := SearchCenterCapsChord_Debug
     wr := "?"
     try wr := g_SCWV_Ready ? "1" : "0"
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if dbg
         OutputDebug("SC_CapsChord key=" . k
@@ -473,7 +490,8 @@ SearchCenter_HandleCapsChordKey(ch) {
     try SCWV_Log("caps_chord", "key=" . k . " active=" . (IsSearchCenterActive() ? "1" : "0") . " gcls=" . (GetCapsLockState() ? "1" : "0") . " ready=" . wr)
     if !IsSearchCenterActive() {
         try SCWV_Log("caps_chord_skip", "key=" . k . " reason=not_active")
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         if dbg
             OutputDebug("SC_CapsChord abort: !IsSearchCenterActive key=" . k)
@@ -482,26 +500,30 @@ SearchCenter_HandleCapsChordKey(ch) {
     try {
         if FuncExists("SCWV_ScCapsInputAllowed") && !SCWV_ScCapsInputAllowed() {
             try SCWV_Log("caps_chord_skip", "key=" . k . " reason=sc_caps_blocked")
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             return false
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try {
         if FuncExists("VK_IsTypingPassthroughContext") && VK_IsTypingPassthroughContext() {
             try SCWV_Log("caps_chord_skip", "key=" . k . " reason=typing_passthrough")
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             return false
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
-
     cmdId := VK_SearchCenterResolveCapsChordCmd(k)
     if (cmdId = "") {
         try SCWV_Log("caps_chord_skip", "key=" . k . " reason=resolve_empty")
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         if dbg
             OutputDebug("SC_CapsChord abort: resolve empty key=" . k)
@@ -510,9 +532,9 @@ SearchCenter_HandleCapsChordKey(ch) {
     if dbg
         OutputDebug("SC_CapsChord run cmdId=" . cmdId)
     try SCWV_Log("caps_chord_cmd", "key=" . k . " cmd=" . cmdId)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
-
     ; 与 CapsLock+F/G 等一致：必须标记组合键已消费并恢复按下前的逻辑大写状态，
     ; 否则 CapsLock 松手时仍走「单击切换大小写」，表现为只亮/灭大写灯而忽略 sc_* 语义。
     global CapsLock2
@@ -533,9 +555,9 @@ SearchCenter_SelectCategoryByKey(categoryKey) {
             SCWV_PostJson('{"type":"setCategory","category":"' . categoryKey . '"}')
             return true
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
-
     try {
         categories := GetSearchCenterCategories()
         for idx, cat in categories {
@@ -544,7 +566,8 @@ SearchCenter_SelectCategoryByKey(categoryKey) {
                 return true
             }
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return false
 }
@@ -557,9 +580,9 @@ SearchCenter_ToggleEngineByValue(engineValue) {
             SCWV_PostJson('{"type":"toggleEngine","engine":"' . engineValue . '"}')
             return true
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
-
     try {
         currentCat := GetSearchCenterCurrentCategoryKey()
         engines := GetSortedSearchEngines(currentCat)
@@ -569,7 +592,8 @@ SearchCenter_ToggleEngineByValue(engineValue) {
                 return true
             }
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return false
 }
@@ -580,13 +604,14 @@ SearchCenter_SetFilterByKey(filterType) {
             SCWV_PostJson('{"type":"setFilter","filterType":"' . filterType . '"}')
             return true
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
-
     try {
         SearchCenterFilterClickHandler(filterType)
         return true
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return false
 }
@@ -596,7 +621,8 @@ SearchCenter_SetCapsHintActive(isActive) {
         if (SearchCenter_ShouldUseWebView() && IsSearchCenterActive()) {
             SCWV_PostJson('{"type":"capsHint","active":' . (isActive ? "true" : "false") . '}')
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -608,7 +634,8 @@ SearchCenter_FlashCapsHintKey(key) {
         if (SearchCenter_ShouldUseWebView() && IsSearchCenterActive()) {
             SCWV_PostCapsHintPressGuarded(k)
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -658,7 +685,8 @@ CapsLock_ScheduleNormalizeAfterChord() {
 
 ; 命令面板/搜索中心等 Web 输入面打开：取消延迟切换并恢复按下 CapsLock 前的逻辑大写（不强制 Off）
 CapsLock_RestoreForUiTypingOpen() {
-    global CapsLock, CapsLock2, CapsLockInitialStateForChord, g_CapsLockChordSessionActive
+    global CapsLock, CapsLock2, CapsLockInitialStateForChord
+    global g_CapsLockChordSessionActive := false
     SetTimer(CapsLock_DeferredSingleTapToggle, 0)
     SetTimer(CapsLock_DeferredNormalize_Tick, 0)
     CapsLock := false
@@ -667,14 +695,16 @@ CapsLock_RestoreForUiTypingOpen() {
     try CapsLock_ApplyLogicalState(CapsLockInitialStateForChord)
     catch {
         try SetCapsLockState("Off")
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 }
 
 ; 关闭命令面板/搜索中心等 Web 面后：取消延迟单击切换，物理键未按住时强制灭大写灯
 CapsLock_NormalizeAfterUiClose() {
-    global CapsLock, CapsLock2, CapsLockInitialStateForChord, g_CapsLockChordSessionActive
+    global CapsLock, CapsLock2, CapsLockInitialStateForChord
+    global g_CapsLockChordSessionActive := false
     SetTimer(CapsLock_DeferredSingleTapToggle, 0)
     SetTimer(CapsLock_DeferredNormalize_Tick, 0)
     CapsLock := false
@@ -682,18 +712,22 @@ CapsLock_NormalizeAfterUiClose() {
     g_CapsLockChordSessionActive := false
     physDown := false
     try physDown := GetKeyState("CapsLock", "P")
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try Send("{CapsLock up}")
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if physDown {
         try CapsLock_ApplyLogicalState(CapsLockInitialStateForChord)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     } else {
         try SetCapsLockState("Off")
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     CapsLock_ScheduleNormalizeAfterChord()
@@ -769,7 +803,8 @@ WailsInput_KillAllInstances() {
         if !pid
             break
         try ProcessClose(pid)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         Sleep(120)
     }
@@ -935,7 +970,8 @@ LaunchHtmlInNewWindow(htmlPath) {
         }
         Run('explorer.exe "' . htmlPath . '"')
         return true
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return false
 }
@@ -945,8 +981,7 @@ WailsInput_FocusWebInput() {
         . "var i=document.getElementById('command-input');"
         . "if(i){i.focus();var n=i.value.length;i.setSelectionRange(n,n);}"
         . "try{window.go.main.App.SetInputImeReady()}catch(e){}"
-    if FuncExists("WailsWhisper_RunJsInInputHost")
-        WailsWhisper_RunJsInInputHost(js)
+    WailsNative_RunJsInInputHost(js)
     hwnd := 0
     for q in ["ahk_exe nmer-wails-input.exe", "NMER Wails Input"] {
         if WinExist(q) {
@@ -1098,7 +1133,8 @@ CapsLock:: {
     global CapsLock, CapsLock2, IsCommandMode, PanelVisible, VoiceInputActive, VoiceSearchActive, VoiceInputMethod, VoiceInputPaused, CapsLockHoldTimeSeconds
     global CapsLockInitialStateForChord
     global VKHoldVisible, CapsLockHoldVkEnabled
-    global LastCapsLockTapTick, g_CapsLockChordSessionActive
+    global LastCapsLockTapTick
+    global g_CapsLockChordSessionActive := false
 
     g_CapsLockChordSessionActive := true
     try {
@@ -1142,19 +1178,8 @@ CapsLock:: {
     
     ; 记录按下时间
     CapsLockPressTime := A_TickCount
-    
-    ; Wails 输入框 Whisper 录音：录音中短按 CapsLock 结束并识别
-    if (FuncExists("WailsWhisper_TryStopOnCapsRelease") && WailsWhisper_TryStopOnCapsRelease()) {
-        KeyWait("CapsLock")
-        SetTimer(SearchCenter_CapsHintOnTimer, 0)
-        SearchCenter_SetCapsHintActive(false)
-        CapsLock_ApplyLogicalState(InitialCapsLockState)
-        CapsLock := false
-        CapsLock2 := false
-        return
-    }
 
-    ; 如果正在语音输入或语音搜索，处理暂停/恢复逻辑
+    ; 如果正在语音搜索，处理暂停/恢复逻辑
     global VoiceInputActive, VoiceSearchActive
     if (VoiceInputActive || VoiceSearchActive) {
         ; 设置定时器：300ms 后清除 CapsLock2（用于检测是否按了其他键）
@@ -1252,29 +1277,23 @@ CapsLock:: {
         VKHoldVisible := false
     }
     
-    ; 双击 CapsLock：拉起 Raycast 命令面板（WebView2）；再次双击可结束 Whisper 录音并识别
+    ; 双击 CapsLock：拉起命令面板（WebView2）
     if (IsCapsDoubleClick) {
         SetTimer(CapsLock_DeferredSingleTapToggle, 0)
-        if (FuncExists("WailsWhisper_IsRecording") && WailsWhisper_IsRecording()) {
-            if FuncExists("WailsWhisper_StopAndTranscribe")
-                SetTimer(WailsWhisper_StopAndTranscribe, -30)
-        } else {
-            ok := false
-            try {
-                if (CommandPaletteUseWebView)
-                    ok := SurfaceIntent_Open("command_palette")
-                else if FuncExists("ActivateWailsInputBox")
-                    ok := ActivateWailsInputBox()
-            } catch as e {
-                try TrayTip("命令面板", "打开失败: " . e.Message, "Icon!")
-                catch {
-                }
-            }
-            if ok {
-                if FuncExists("WailsWhisper_OnInputActivated")
-                    WailsWhisper_OnInputActivated()
+        ok := false
+        try {
+            if (CommandPaletteUseWebView)
+                ok := SurfaceIntent_Open("command_palette")
+            else if FuncExists("ActivateWailsInputBox")
+                ok := ActivateWailsInputBox()
+        } catch as e {
+            try TrayTip("命令面板", "打开失败: " . e.Message, "Icon!")
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
+        if ok && FuncExists("WailsNative_OnWailsActivated")
+            WailsNative_OnWailsActivated()
         CapsLock_RestoreForUiTypingOpen()
         SetTimer(ClearCapsLockTimer, -100)
         return
@@ -2165,7 +2184,17 @@ CreateClipboardAction() {
 
 ClipboardButtonAction(*) {
     HideCursorPanel()
-    ShowClipboardManager()
+    try {
+        if FuncExists("SurfaceIntent_OpenClipboardPanel")
+            SurfaceIntent_OpenClipboardPanel(Map("triggerSource", "cursor_panel", "reason", "cursor_panel_clipboard"))
+        else if FuncExists("SurfaceIntent_Open")
+            SurfaceIntent_Open("clipboard_panel", Map("triggerSource", "cursor_panel", "reason", "cursor_panel_clipboard"))
+        else
+            ShowClipboardManager()
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e)
+        try ShowClipboardManager()
+    }
 }
 
 ; ===================== 创建语音输入动作 =====================
@@ -2200,7 +2229,15 @@ HideCursorPanel() {
 ; ===================== 从面板打开配置 =====================
 OpenConfigFromPanel(*) {
     HideCursorPanel()
-    ShowConfigGUI()
+    try {
+        if FuncExists("SurfaceIntent_OpenConfig")
+            SurfaceIntent_OpenConfig(Map("triggerSource", "cursor_panel", "reason", "cursor_panel_config"))
+        else
+            ShowConfigGUI()
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e)
+        try ShowConfigGUI()
+    }
 }
 
 ; ===================== 执行 Cursor 快捷键 =====================

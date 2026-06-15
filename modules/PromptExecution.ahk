@@ -22,7 +22,8 @@ PromptExecution_LogGuard(tag, detail := "") {
             NMER_AsyncLog(Nmer_DebugPath("prompt_execution_guard.log"), line)
         else
             FileAppend(line, Nmer_DebugPath("prompt_execution_guard.log"), "UTF-8")
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -35,7 +36,8 @@ PromptExecution_BeginCopySelectionAsync(oldClipboard, doneCb) {
     ticket := g_PromptExecution_CopyTicket
     g_PromptExecution_CopyState := Map("ticket", ticket, "start", A_TickCount, "tries", 0, "old", oldClipboard, "done", doneCb)
     try A_Clipboard := ""
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if WinActive("ahk_exe Cursor.exe") {
         Send("{Esc}")
@@ -89,7 +91,8 @@ PromptExecution_CopyFinish(ticket, selectedCode) {
     doneCb := g_PromptExecution_CopyState["done"]
     old := g_PromptExecution_CopyState["old"]
     try A_Clipboard := old
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     g_PromptExecution_CopyState := 0
     if IsObject(doneCb) {

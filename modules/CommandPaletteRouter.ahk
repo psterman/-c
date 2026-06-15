@@ -4,7 +4,8 @@ CommandPaletteRouter_Log(message) {
     try {
         if FuncExists("Nmer_WailsBridgeLog")
             Nmer_WailsBridgeLog("cp_router " . String(message))
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -12,12 +13,14 @@ Nmer_CommandPaletteHost(*) {
     try {
         if FuncExists("Nmer_LegacySurfaceLifecycleEnabled") && Nmer_LegacySurfaceLifecycleEnabled()
             return "ahk"
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try {
         if FuncExists("Nmer_WailsBridgeForceNmerOnly") && Nmer_WailsBridgeForceNmerOnly()
             return "ahk"
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if !(FuncExists("Nmer_WailsBridgeEnabled") && Nmer_WailsBridgeEnabled())
         return "ahk"
@@ -27,7 +30,8 @@ Nmer_CommandPaletteHost(*) {
         wb := flags.Get("wailsBridge", Map())
         if (wb is Map)
             host := StrLower(Trim(String(wb.Get("commandPaletteHost", "ahk"))))
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return (host = "wails") ? "wails" : "ahk"
 }
@@ -58,7 +62,8 @@ CommandPaletteRouter_Hide(meta := 0) {
     host := Nmer_CommandPaletteHost()
     if (host = "wails" && FuncExists("CommandPaletteWails_Hide")) {
         try return CommandPaletteWails_Hide()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if FuncExists("CommandPalette_Hide")
@@ -77,16 +82,19 @@ CommandPaletteRouter_Dispose(reason := "") {
     if (host = "wails") {
         if FuncExists("CommandPaletteWails_Dispose") {
             try CommandPaletteWails_Dispose(reason)
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
         if FuncExists("CommandPaletteWails_RetireAhkWebView")
             try CommandPaletteWails_RetireAhkWebView("router_dispose")
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         else if FuncExists("CommandPalette_DisposeAhkWebViewIfRetired")
             try CommandPalette_DisposeAhkWebViewIfRetired("router_dispose")
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         return
     }

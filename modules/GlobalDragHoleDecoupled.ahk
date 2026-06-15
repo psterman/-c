@@ -133,7 +133,8 @@ GDHO_GetInteractionPhase() {
         try {
             if SelectionSense_IsSelectionHolePreviewActive()
                 return GDHO_PHASE_WEAK_PREVIEW
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if (g_GDHO_InteractionPhase = GDHO_PHASE_CLOSING)
@@ -172,7 +173,8 @@ GDHO_CanOpenGestureHole(reason := "") {
         try {
             if HoleActivation_IsGestureGraceActive()
                 return true
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     ph := GDHO_GetInteractionPhase()
@@ -189,7 +191,8 @@ GDHO_ArmGestureOpenGrace(ms := 3200) {
     g_GDHO_SuppressSelectionAutoHide := true
     if FuncExists("HoleActivation_ArmGestureGrace") {
         try HoleActivation_ArmGestureGrace(ms)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 }
@@ -200,7 +203,8 @@ GDHO_IsGestureOpenGraceActive() {
         return true
     if FuncExists("HoleActivation_IsGestureGraceActive") {
         try return HoleActivation_IsGestureGraceActive()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     return false
@@ -215,7 +219,8 @@ GDHO_BeginGestureLauncherSession(ax, ay, reason := "gesture") {
     g_GDHO_SuppressSelectionAutoHide := false
     if FuncExists("HoleActivation_ClearGestureGrace") {
         try HoleActivation_ClearGestureGrace()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     GDHO_CURSOR_X := ix
@@ -223,15 +228,18 @@ GDHO_BeginGestureLauncherSession(ax, ay, reason := "gesture") {
     GDHO_EXPANDED_HOLD := false
     GDHO_IS_SUCKING := false
     try GDHO_UpdateHoleCenterFromPolicy(ix, iy)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if (GDHO_CX > 50 && GDHO_CY > 50) {
         try GDHO_RememberOnScreenHoleCenter(GDHO_CX, GDHO_CY)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     try GDHO_SetInteractionPhase(GDHO_PHASE_IDLE, "gesture_launcher:" . String(reason))
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try NativeDropDiag_Log("[TextHole] gesture_launcher_session x=" . ix . " y=" . iy . " cx=" . GDHO_CX . " cy=" . GDHO_CY . " reason=" . String(reason))
     return true
@@ -248,23 +256,28 @@ GDHO_BeginGestureHoleSession(ax, ay, reason := "gesture") {
     GDHO_IS_SUCKING := false
     if FuncExists("SelectionSense_ArmHoleGesturePreview") {
         try SelectionSense_ArmHoleGesturePreview(ix, iy)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     try GDHO_UpdateHoleCenterFromPolicy(ix, iy)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if (GDHO_CX > 50 && GDHO_CY > 50) {
         try GDHO_RememberOnScreenHoleCenter(GDHO_CX, GDHO_CY)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     try GDHO_SetInteractionPhase(GDHO_PHASE_WEAK_PREVIEW, "gesture_begin:" . String(reason))
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if FuncExists("GDHO_TextHole_OnSelectionPreviewStart") {
         try GDHO_TextHole_OnSelectionPreviewStart("", ix, iy)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     try NativeDropDiag_Log("[TextHole] gesture_session_begin x=" . ix . " y=" . iy . " cx=" . GDHO_CX . " cy=" . GDHO_CY . " reason=" . String(reason))
@@ -657,7 +670,8 @@ GDHO_ShouldSkipSelectionPreviewRestart(newText := "") {
         try {
             if GDHO_ShouldKeepTextHolePanel()
                 return true
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     tNew := Trim(String(newText))
@@ -685,7 +699,8 @@ GDHO_PanelDragSetOpaque(enable := true) {
             GDHO_WV2_CTRL_PANEL.DefaultBackgroundColor := 0xFF0A0E14
         else
             GDHO_WV2_CTRL_PANEL.DefaultBackgroundColor := 0x00000000
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -702,7 +717,8 @@ GDHO_SetPanelClickThrough(enable := true, reason := "") {
         else
             ex := (ex & ~0x20) | 0x08000000
         DllCall("SetWindowLongPtr", "Ptr", hwnd, "Int", -20, "Ptr", ex, "Ptr")
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try GDHO_PanelDragSetOpaque(!enable)
     if enable {
@@ -776,7 +792,8 @@ GDHO_SyncPanelCapturedPreview() {
     try {
         if GDHO_RunPanelJS("try{window.HolePanel?.ensurePanelLoaded?.();window.HolePanel?.onHostShowLauncher?.(" . jsBody . ");}catch(_e){}")
             return true
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return false
 }
@@ -897,17 +914,20 @@ GDHO_PrepareDecoupledHoleForTextSelection(reason := "activation_hole") {
     if !GDHO_IsDecoupled()
         return false
     try GDHO_UnpinFromDesktop()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try GDHO_UnlockTextHoleUserPanel()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     g_GDHO_UserTextHolePanelEngaged := false
     g_GDHO_TextHolePanelLocked := false
     GDHO_EXPANDED_HOLD := false
     GDHO_IS_SUCKING := false
     try GDHO_DismissLauncherUI("prepare_hole:" . String(reason))
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if GDHO_VISIBLE {
         if FuncExists("GDHO_RequestClose")
@@ -922,7 +942,8 @@ GDHO_PrepareDecoupledHoleForTextSelection(reason := "activation_hole") {
     g_GDHO_PostSuckTimerArmed := false
     g_GDHO_StarryLauncherOpen := false
     try GDHO_ResetTextHoleSession()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try GDHO_SetInteractionPhase(GDHO_PHASE_IDLE, "prepare_hole:" . String(reason))
     if FuncExists("GDHO_HideStarryHost")
@@ -947,29 +968,35 @@ GDHO_ClearGestureHolePresentation(reason := "gesture_clear") {
     g_GDHO_SuppressSelectionAutoHide := false
     if FuncExists("HoleActivation_ClearGestureGrace") {
         try HoleActivation_ClearGestureGrace()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     try GDHO_DisarmTextHoleProximityPoll()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try GDHO_EndSelectionPreviewForPanel()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     g_SelSense_TextCaptured := false
     g_SelSense_AllowTextHoleGesture := false
     g_SelSense_HoleDragPhase := "idle"
     try SetTimer(SelectionSense_HideHoleAfterSelection, 0)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if FuncExists("GDHO_SetInteractionPhase") {
         try GDHO_SetInteractionPhase(GDHO_PHASE_IDLE, r)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if FuncExists("GDHO_IsStarryLauncherMode") && GDHO_IsStarryLauncherMode() && GDHO_UseLauncherLayer() {
         try GDHO_RunStarryJS("window.HoleOverlay?.hideSilent?.()")
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         ; 已在 dismiss/hide_launcher 链上时勿再 HideStarryAfterPanel→DismissLauncherUI，否则会无限递归。
         skipStarryDismiss := InStr(r, "dismiss") || InStr(r, "hide_launcher") || InStr(r, "hide_starry_after_panel")
@@ -977,28 +1004,33 @@ GDHO_ClearGestureHolePresentation(reason := "gesture_clear") {
             if skipStarryDismiss {
                 if FuncExists("GDHO_HideStarryHost")
                     try GDHO_HideStarryHost("clear_gesture_direct:" . r)
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
                 GDHO_VISIBLE := false
                 GDHO_ACTIVE := false
             } else {
                 if FuncExists("GDHO_HideStarryAfterPanel")
                     try GDHO_HideStarryAfterPanel("clear_gesture:" . r)
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
                 if FuncExists("GDHO_HideStarryHost")
                     try GDHO_HideStarryHost("clear_gesture:" . r)
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
             }
         }
         try GDHO_SetStarryClickThrough(true, "clear_gesture:" . r)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if FuncExists("HoleTriggers_OnLauncherDismissed") {
         try HoleTriggers_OnLauncherDismissed(r)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     try NativeDropDiag_Log("[TextHole] clear_gesture_presentation reason=" . r . " vis=" . (GDHO_VISIBLE ? "1" : "0"))
@@ -1019,12 +1051,14 @@ GDHO_PresentGestureHoleAt(mx, my, reason := "gesture") {
         . " phase=" . GDHO_GetInteractionPhase())
     if GDHO_IsDecoupled() && !GDHO_CanOpenGestureHole(reason) {
         try GDHO_PrepareDecoupledHoleForTextSelection("gesture_present:" . String(reason))
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if !IsObject(GDHO_STAR_GUI) {
         try GDHO_CreateStarryGui()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     sessionOk := true
@@ -1037,11 +1071,13 @@ GDHO_PresentGestureHoleAt(mx, my, reason := "gesture") {
     if GDHO_UseLauncherLayer() {
         global GDHO_LAUNCHER_EMBED_STARFIELD
         try GDHO_UpdateHoleCenterFromPolicy(ax, ay)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         if !GDHO_LAUNCHER_EMBED_STARFIELD {
             try GDHO_ShowStarryPassthroughOnly("gesture:" . String(reason))
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             if !GDHO_EnsureStarryOnScreenForLauncher() {
                 try {
@@ -1049,31 +1085,37 @@ GDHO_PresentGestureHoleAt(mx, my, reason := "gesture") {
                         GDHO_CreateStarryGui()
                     if IsObject(GDHO_STAR_GUI)
                         GDHO_STAR_GUI.Show("NA")
-                } catch {
+                } catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
                 try GDHO_EnsureStarryOnScreenForLauncher()
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
             }
         }
         try ok := GDHO_ShowLauncherLayerForced("gesture:" . String(reason))
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         if !ok && FuncExists("GDHO_ForceShowLauncherLayerByPolicy") {
             try ok := GDHO_ForceShowLauncherLayerByPolicy(ax, ay, "gesture_present:" . String(reason))
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
         if !GDHO_LAUNCHER_EMBED_STARFIELD {
             try GDHO_SetStarryClickThrough(false, "gesture_interactive")
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
         rGesture := StrLower(Trim(String(reason)))
         armProx := !(InStr(rGesture, "free_circle") || InStr(rGesture, "circle_cw") || InStr(rGesture, "circle_ccw"))
         if armProx && FuncExists("GDHO_ArmTextHoleProximityPoll") {
             try GDHO_ArmTextHoleProximityPoll()
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
         if (ok || GDHO_LAUNCHER_VISIBLE || g_GDHO_StarryLauncherOpen)
@@ -1087,14 +1129,16 @@ GDHO_PresentGestureHoleAt(mx, my, reason := "gesture") {
         try {
             if ok := GDHO_ForceShowLauncherLayerByPolicy(ax, ay, "gesture_drag_fallback:" . String(reason))
                 return true
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if FuncExists("GDHO_ShowTextDragAt") {
         try {
             if GDHO_ShowTextDragAt(ax, ay, true, true)
                 return true
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     try NativeDropDiag_Log("[TextHole] gesture_open_fail reason=" . String(reason) . " session=" . (sessionOk ? "1" : "0"))
@@ -1113,11 +1157,13 @@ GDHO_ForceApplyAppearanceMode(mode := "hole") {
     g_ActivationApplyLastTick := 0
     cfg := (IsSet(ConfigFile) && ConfigFile != "") ? ConfigFile : Nmer_ResolveConfigFile()
     try IniWrite(m, cfg, "Appearance", "ActivationMode")
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if (m != "hole" && FuncExists("FloatingToolbar_CancelReturnToHoleAfterNiuma")) {
         try FloatingToolbar_CancelReturnToHoleAfterNiuma()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if FuncExists("ApplyAppearanceActivationMode")
@@ -1284,12 +1330,14 @@ GDHO_TraceTopology(extra := "") {
     try {
         if IsObject(GDHO_STAR_GUI)
             starHwnd := GDHO_STAR_GUI.Hwnd
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try {
         if IsObject(GDHO_PANEL_GUI)
             panelHwnd := GDHO_PANEL_GUI.Hwnd
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     topo := GDHO_IsDecoupled() ? "decoupled" : "legacy"
     msg := "topology=" . topo . " star_hwnd=" . starHwnd . " panel_hwnd=" . panelHwnd
@@ -1453,7 +1501,8 @@ GDHO_CreatePanelGui() {
     }
     if IsObject(GDHO_WV2_CTRL_PANEL) {
         try GDHO_WV2_CTRL_PANEL.Close()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     GDHO_WV2_CTRL_PANEL := 0
@@ -1463,7 +1512,8 @@ GDHO_CreatePanelGui() {
     g_GDHO_PanelCreateStartedTick := 0
     if IsObject(GDHO_PANEL_GUI) {
         try GDHO_PANEL_GUI.Destroy()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     GDHO_PANEL_GUI := 0
@@ -1495,7 +1545,8 @@ GDHO_ApplyPanelNoActivateStyle() {
         ex := DllCall("GetWindowLongPtr", "Ptr", GDHO_PANEL_GUI.Hwnd, "Int", -20, "Ptr")
         ex := (ex & ~0x20) | 0x08000000
         DllCall("SetWindowLongPtr", "Ptr", GDHO_PANEL_GUI.Hwnd, "Int", -20, "Ptr", ex, "Ptr")
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -1609,7 +1660,8 @@ GDHO_EnsurePanelShowPosition(mx := "", my := "", forceNearCursor := false) {
             GDHO_PANEL_LAST_Y := rect.y
             try GDHO_PANEL_GUI.Move(rect.x, rect.y, Integer(GDHO_PANEL_W), Integer(GDHO_PANEL_H))
             return
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     GDHO_SyncPanelPositionNearCursor(mx, my)
@@ -1641,7 +1693,8 @@ GDHO_SyncPanelPositionNearCursor(mx, my) {
             py := waT + 8
         if (py + Integer(GDHO_PANEL_H) > waB - 8)
             py := waB - Integer(GDHO_PANEL_H) - 8
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     GDHO_PANEL_LAST_X := px
     GDHO_PANEL_LAST_Y := py
@@ -1653,7 +1706,8 @@ GDHO_MovePanelHostScreen(sx, sy) {
     dragMove := false
     if FuncExists("GDHO_IsPanelDragProtected") {
         try dragMove := GDHO_IsPanelDragProtected()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if !dragMove && GDHO_P0_BlockHostMoveHide("move_panel_host_screen") {
@@ -1687,7 +1741,8 @@ GDHO_MovePanelHostScreen(sx, sy) {
             x := waL + 8
         if (y < waT + 8)
             y := waT + 8
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     GDHO_PANEL_LAST_X := x
     GDHO_PANEL_LAST_Y := y
@@ -1742,7 +1797,8 @@ GDHO_ApplyPanelHostScreenRect(sx, sy, sw := "", sh := "") {
             x := waL + 8
         if (y < waT + 8)
             y := waT + 8
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     GDHO_PANEL_LAST_X := x
     GDHO_PANEL_LAST_Y := y
@@ -2080,7 +2136,8 @@ GDHO_GetTextHoleLauncherMode() {
             if (v = "starry" || v = "panel" || v = "both" || v = "a" || v = "b")
                 mode := (v = "a") ? "starry" : ((v = "b") ? "panel" : v)
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return mode
 }
@@ -2185,7 +2242,8 @@ GDHO_SyncHoleCenterFromStarryWindow() {
                 try GDHO_RememberOnScreenHoleCenter(GDHO_CX, GDHO_CY)
                 return
             }
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     rem := GDHO_GetRememberedHoleCenter()
@@ -2210,7 +2268,8 @@ GDHO_ApplyLauncherNoActivateStyle() {
         ex := DllCall("GetWindowLongPtr", "Ptr", GDHO_LAUNCHER_GUI.Hwnd, "Int", -20, "Ptr")
         ex := (ex & ~0x20) | 0x08000000 ; WS_EX_NOACTIVATE：显示启动层不抢前台，避免最大化窗口被系统还原
         DllCall("SetWindowLongPtr", "Ptr", GDHO_LAUNCHER_GUI.Hwnd, "Int", -20, "Ptr", ex, "Ptr")
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -2312,7 +2371,8 @@ GDHO_ApplyLauncherHostChildPassthrough(enable := false, reason := "") {
             else
                 ex &= ~0x20
             DllCall("SetWindowLongPtr", "Ptr", hwnd, "Int", -20, "Ptr", ex, "Ptr")
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         hwnd := DllCall("GetWindow", "Ptr", hwnd, "UInt", 2, "Ptr")
     }
@@ -2338,7 +2398,8 @@ GDHO_ApplyLauncherLayerInteractive(reason := "") {
         ex := DllCall("GetWindowLongPtr", "Ptr", hwnd, "Int", -20, "Ptr")
         ex := (ex & ~0x20) | 0x08000000
         DllCall("SetWindowLongPtr", "Ptr", hwnd, "Int", -20, "Ptr", ex, "Ptr")
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try GDHO_ApplyLauncherHostChildPassthrough(false, "launcher_interactive:" . Trim(String(reason)))
     if FuncExists("GDHO_SetWebOlePassthrough")
@@ -2355,12 +2416,14 @@ GDHO_DismissLauncherUI(reason := "") {
     try GDHO_SuppressEmbeddedStarryLauncher()
     if GDHO_UseLauncherLayer() {
         try GDHO_HideLauncherLayer("dismiss_ui:" . String(reason))
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if FuncExists("GDHO_ClearGestureHolePresentation") {
         try GDHO_ClearGestureHolePresentation("dismiss_launcher:" . String(reason))
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 }
@@ -2388,7 +2451,8 @@ GDHO_RegisterLauncherEscHotkey() {
     try {
         if IsObject(g_GDHO_LauncherEscHotkey)
             g_GDHO_LauncherEscHotkey.Delete()
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     g_GDHO_LauncherEscHotkey := 0
     try {
@@ -2404,7 +2468,8 @@ GDHO_UnregisterLauncherEscHotkey() {
     if !IsObject(g_GDHO_LauncherEscHotkey)
         return
     try g_GDHO_LauncherEscHotkey.Delete()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     g_GDHO_LauncherEscHotkey := 0
 }
@@ -2490,7 +2555,8 @@ GDHO_ApplyCircularRegionOnHwnd(hwnd, w := 0, h := 0) {
         rgn := DllCall("gdi32\CreateEllipticRgn", "Int", -1, "Int", -1, "Int", iw + 2, "Int", ih + 2, "Ptr")
         if rgn
             return !!DllCall("user32\SetWindowRgn", "Ptr", hwnd, "Ptr", rgn, "Int", 1)
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return false
 }
@@ -2499,7 +2565,8 @@ GDHO_ClearCircularRegionOnHwnd(hwnd) {
     if !hwnd
         return
     try DllCall("user32\SetWindowRgn", "Ptr", hwnd, "Ptr", 0, "Int", 1)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -2559,7 +2626,8 @@ GDHO_SyncStarryBackdropForLauncher(reason := "") {
         return true
     }
     try GDHO_AlignStarryHostToLauncherLayer("backdrop:" . String(reason))
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     hx := rect.w // 2
     hy := rect.h // 2
@@ -2606,7 +2674,8 @@ GDHO_ApplyStarryHostChildPassthrough(enable := true, reason := "") {
             else
                 ex &= ~0x20
             DllCall("SetWindowLongPtr", "Ptr", hwnd, "Int", -20, "Ptr", ex, "Ptr")
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         hwnd := DllCall("GetWindow", "Ptr", hwnd, "UInt", 2, "Ptr")
     }
@@ -2621,7 +2690,8 @@ GDHO_RaiseLauncherAboveStarry() {
         ; HWND_TOPMOST：启动层必须在星空之上接收点击（hWndInsertAfter=星空会把启动层压到下面）
         DllCall("SetWindowPos", "Ptr", GDHO_LAUNCHER_GUI.Hwnd, "Ptr", -1
             , "Int", 0, "Int", 0, "Int", 0, "Int", 0, "UInt", 0x0013)
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try GDHO_SetStarryClickThrough(true, "raise_launcher_above_starry")
     try GDHO_ApplyStarryHostChildPassthrough(true, "raise_launcher_above_starry")
@@ -2630,7 +2700,8 @@ GDHO_RaiseLauncherAboveStarry() {
 
 GDHO_DeferStarryLauncherSuppress(*) {
     try GDHO_SuppressEmbeddedStarryLauncher()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -2965,7 +3036,8 @@ GDHO_HideLauncherLayer(reason := "") {
     if !GDHO_LAUNCHER_VISIBLE && !IsObject(GDHO_LAUNCHER_GUI) {
         if shouldClearSession && FuncExists("GDHO_ClearGestureHolePresentation") {
             try GDHO_ClearGestureHolePresentation("hide_launcher_early:" . rs)
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
         return
@@ -2987,7 +3059,8 @@ GDHO_HideLauncherLayer(reason := "") {
         try GDHO_ApplyStarryHostChildPassthrough(false, "hide_launcher_layer")
     if shouldClearSession && FuncExists("GDHO_ClearGestureHolePresentation") {
         try GDHO_ClearGestureHolePresentation("hide_launcher:" . rs)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     try NativeDropDiag_Log("[TextHole] hide_launcher_layer reason=" . String(reason))
@@ -3064,7 +3137,8 @@ GDHO_UpdateHoleCenterFromPolicy(screenX := 0, screenY := 0) {
                     try GDHO_RememberOnScreenHoleCenter(GDHO_CX, GDHO_CY)
                     return
                 }
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
         rem := GDHO_GetRememberedHoleCenter()
@@ -3129,7 +3203,8 @@ GDHO_GetHoleCenterScreenCoords() {
                 WinGetPos(&sx, &sy, &sw, &sh, "ahk_id " GDHO_STAR_GUI.Hwnd)
                 if !GDHO_IsHostParkedPos(sx, sy)
                     return { x: sx + (sw // 2), y: sy + (sh // 2) }
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
         rem := GDHO_GetRememberedHoleCenter()
@@ -3303,7 +3378,8 @@ GDHO_LauncherSearchHandoffWatch(*) {
     }
     if !vis {
         try vis := IsSearchCenterActive()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     try busy := SearchCenter_IsOpeningOrBusy()
@@ -3514,7 +3590,8 @@ GDHO_PanelOpenManualPage() {
     try {
         if GDHO_RunPanelJS("try{document.body.classList.remove('overlay-hole-mode');window.HolePanel?.resetPanelLayout?.();window.HolePanel?.ensurePanelLoaded?.();window.HolePanel?.openManualWithText?.(" . jsBody . ");}catch(_e){}")
             return true
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return false
 }
@@ -3550,7 +3627,8 @@ GDHO_OpenNiumaChatFromLauncher(*) {
         try GDHO_PrepareDecoupledHoleForTextSelection("niuma_handoff_open")
     AppearanceActivationMode := "toolbar"
     try IniWrite("toolbar", ConfigFile, "Appearance", "ActivationMode")
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if FuncExists("GDHO_ForceApplyAppearanceMode") {
         try GDHO_ForceApplyAppearanceMode("toolbar")
@@ -3926,7 +4004,8 @@ GDHO_ShouldDeferStarryCloseForTextHole(reason := "") {
         try {
             if GDHO_TextHolePresentAllowed()
                 return true
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if GDHO_IsGestureOpenGraceActive()
@@ -3935,7 +4014,8 @@ GDHO_ShouldDeferStarryCloseForTextHole(reason := "") {
         try {
             if SelectionSense_IsSelectionHolePreviewActive() && (InStr(r, "drag_idle") || InStr(r, "drag_release") || InStr(r, "hide_overlay"))
                 return true
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     return false
@@ -4269,7 +4349,8 @@ GDHO_RaisePanelAboveStarry() {
         anchor := GDHO_LAUNCHER_GUI.Hwnd
     try {
         DllCall("SetWindowPos", "Ptr", GDHO_PANEL_GUI.Hwnd, "Ptr", anchor, "Int", 0, "Int", 0, "Int", 0, "Int", 0, "UInt", 0x0013)
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -4279,6 +4360,8 @@ GDHO_RunStarryJS(js) {
     ready := GDHO_IsDecoupled() ? GDHO_STAR_READY : GDHO_READY
     if !(wv && ready)
         return false
+    if FuncExists("Nmer_WsHubTokenInjectPrefix")
+        js := Nmer_WsHubTokenInjectPrefix() . String(js)
     try {
         wv.ExecuteScript(js)
         return true
@@ -4291,6 +4374,8 @@ GDHO_RunPanelJS(js) {
     global GDHO_WV2_PANEL, GDHO_PANEL_READY
     if !(GDHO_WV2_PANEL && GDHO_PANEL_READY)
         return false
+    if FuncExists("Nmer_WsHubTokenInjectPrefix")
+        js := Nmer_WsHubTokenInjectPrefix() . String(js)
     try {
         GDHO_WV2_PANEL.ExecuteScript(js)
         return true
@@ -4305,14 +4390,16 @@ GDHO_OnStarryWebViewCreated(ctrl) {
     global g_GDHO_PanelCreateInFlight, GDHO_WV2_CTRL_PANEL, GDHO_PANEL_GUI
     if !GDHO_IsCurrentToken(g_GDHO_CreateToken) {
         try ctrl.Close()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return
     }
     if !IsObject(GDHO_STAR_GUI) {
         g_GDHO_StarryCreateInFlight := false
         try ctrl.Close()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return
     }
@@ -4366,7 +4453,8 @@ GDHO_OnPanelWebViewCreated(ctrl) {
     if !IsObject(GDHO_PANEL_GUI) || !GDHO_PANEL_GUI.Hwnd {
         try NativeDropDiag_Log("[TextHole] panel_webview_abort reason=no_panel_gui")
         try ctrl.Close()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return
     }
@@ -4374,11 +4462,13 @@ GDHO_OnPanelWebViewCreated(ctrl) {
         if IsObject(ctrl) && ctrl.Hwnd && (Integer(ctrl.Hwnd) != Integer(GDHO_PANEL_GUI.Hwnd)) {
             try NativeDropDiag_Log("[TextHole] panel_webview_abort reason=hwnd_mismatch panel=" . GDHO_PANEL_GUI.Hwnd . " ctrl=" . ctrl.Hwnd)
             try ctrl.Close()
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             return
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if !IsObject(ctrl) || !ctrl.HasProp("CoreWebView2") {
         try NativeDropDiag_Log("[TextHole] panel_webview_create_failed")
@@ -4416,7 +4506,8 @@ GDHO_ApplyHostMappingFor(wv2) {
             ApplyUnifiedWebViewAssets(wv2)
             return
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try wv2.SetVirtualHostNameToFolderMapping("app.local", A_ScriptDir, 0)
 }
@@ -4427,7 +4518,8 @@ GDHO_OnLauncherWebViewCreated(ctrl) {
     g_GDHO_LauncherCreateInFlight := false
     if !IsObject(GDHO_LAUNCHER_GUI) || !GDHO_LAUNCHER_GUI.Hwnd {
         try ctrl.Close()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return
     }
@@ -4507,7 +4599,8 @@ GDHO_OnLauncherWebMessage(sender, args) {
         raw := args.TryGetWebMessageAsString()
         if (raw != "")
             msg := Jxon_Load(raw)
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if !(msg is Map) {
         try {
@@ -4519,7 +4612,8 @@ GDHO_OnLauncherWebMessage(sender, args) {
                 if (m is Map)
                     msg := m
             }
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if !(msg is Map)
@@ -4627,7 +4721,8 @@ GDHO_OnPanelNavigationCompleted(sender, args) {
             || Trim(String(g_GDHO_PendingPanelText)) != "")
         if FuncExists("GDHO_ShouldKeepTextHolePanel") {
             try forceKeepPanel := (forceKeepPanel || GDHO_ShouldKeepTextHolePanel())
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
         if (forceKeepPanel || (FuncExists("GDHO_ShouldShowDecoupledPanel") && GDHO_ShouldShowDecoupledPanel("panel_nav_completed"))) {
@@ -4657,7 +4752,8 @@ GDHO_OnPanelWebMessage(sender, args) {
         raw := args.TryGetWebMessageAsString()
         if (raw != "")
             msg := Jxon_Load(raw)
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if !(msg is Map) {
         try {
@@ -4669,7 +4765,8 @@ GDHO_OnPanelWebMessage(sender, args) {
                 if (m is Map)
                     msg := m
             }
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if !(msg is Map)
@@ -4850,7 +4947,8 @@ GDHO_HidePanel(reason := "") {
                 try GDHO_Trace("hide_panel_skip reason=" . String(reason) . " policy=panel_drag")
                 return
             }
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if !GDHO_MayAutoHideTextHolePanel(r0) {
@@ -4891,7 +4989,8 @@ GDHO_ParkPanel() {
                 try GDHO_Trace("park_panel_skip policy=panel_drag")
                 return
             }
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if FuncExists("GDHO_IsTextHoleUserPanelActive") {
@@ -4900,7 +4999,8 @@ GDHO_ParkPanel() {
                 try GDHO_Trace("park_panel_skip policy=panel_engaged")
                 return
             }
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if !IsObject(GDHO_PANEL_GUI)
@@ -4952,17 +5052,20 @@ GDHO_HardRecycleDecoupled(reason := "") {
     global g_GDHO_LauncherCreateInFlight, g_GDHO_PendingLauncherShow
     if IsObject(GDHO_WV2_CTRL_STAR) {
         try GDHO_WV2_CTRL_STAR.Close()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if IsObject(GDHO_WV2_CTRL_PANEL) {
         try GDHO_WV2_CTRL_PANEL.Close()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if IsObject(GDHO_WV2_CTRL_LAUNCHER) {
         try GDHO_WV2_CTRL_LAUNCHER.Close()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     GDHO_WV2_CTRL_STAR := 0
@@ -4979,17 +5082,20 @@ GDHO_HardRecycleDecoupled(reason := "") {
     GDHO_LAUNCHER_READY := false
     if IsObject(GDHO_STAR_GUI) {
         try GDHO_STAR_GUI.Destroy()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if IsObject(GDHO_PANEL_GUI) {
         try GDHO_PANEL_GUI.Destroy()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if IsObject(GDHO_LAUNCHER_GUI) {
         try GDHO_LAUNCHER_GUI.Destroy()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     GDHO_STAR_GUI := 0

@@ -219,9 +219,9 @@ var (
 	cfFileGroupDescriptorW uint16
 	cfHTML                 uint16
 	cfURILIST              uint16
-
-	gateFollow bool
-	wsListen   string
+	gateFollow             bool
+	wsListen               string
+	wsToken                string
 )
 
 func main() {
@@ -236,10 +236,12 @@ func main() {
 	monitor := flag.String("monitor", "custom", "receiver area: custom|primary|all|rect")
 	rect := flag.String("rect", "", "rect as x,y,w,h (used when --monitor rect)")
 	wsAddr := flag.String("ws", "127.0.0.1:18790", "WebSocket listen address")
+	wsTokenFlag := flag.String("ws-token", "", "WebSocket auth token (required when set)")
 	gateFollowFlag := flag.Bool("gate-follow", true, "gate bridge window: only follow cursor during OLE drag")
 	flag.Parse()
 	gateFollow = *gateFollowFlag
 	wsListen = *wsAddr
+	wsToken = strings.TrimSpace(*wsTokenFlag)
 	rx, ry, _, _ := resolveReceiverRect(*monitor, *rect, *x, *y, *w, *h)
 	if *gateFollowFlag {
 		rx, ry = parkX, parkY

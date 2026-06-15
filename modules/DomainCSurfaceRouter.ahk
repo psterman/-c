@@ -4,7 +4,8 @@ DomainCSurfaceRouter_Log(message) {
     try {
         if FuncExists("Nmer_WailsBridgeLog")
             Nmer_WailsBridgeLog("domainc_router " . String(message))
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -12,12 +13,14 @@ DomainC_Router_ShouldUseAhk(*) {
     try {
         if FuncExists("Nmer_LegacySurfaceLifecycleEnabled") && Nmer_LegacySurfaceLifecycleEnabled()
             return true
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try {
         if FuncExists("Nmer_WailsBridgeForceNmerOnly") && Nmer_WailsBridgeForceNmerOnly()
             return true
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if !(FuncExists("Nmer_WailsBridgeEnabled") && Nmer_WailsBridgeEnabled())
         return true
@@ -33,7 +36,8 @@ DomainC_Router_ReadHostFlag(flagName, defaultHost := "ahk") {
         wb := flags.Get("wailsBridge", Map())
         if (wb is Map)
             host := StrLower(Trim(String(wb.Get(flagName, defaultHost))))
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return (host = "wails") ? "wails" : "ahk"
 }
@@ -90,7 +94,8 @@ SearchCenterRouter_Hide(persistSelection := false) {
     host := Nmer_SearchCenterHost()
     if (host = "wails" && FuncExists("SearchCenterWails_Hide")) {
         try return SearchCenterWails_Hide(persistSelection)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if FuncExists("SCWV_Hide")
@@ -103,7 +108,8 @@ SearchCenterRouter_Dispose(reason := "") {
     DomainCSurfaceRouter_Log("sc_dispose host=" . host . " reason=" . String(reason))
     if (host = "wails" && FuncExists("SearchCenterWails_Dispose")) {
         try SearchCenterWails_Dispose(reason)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if FuncExists("SCWV_Dispose")
@@ -130,7 +136,8 @@ ConfigWebViewRouter_Hide(*) {
     host := Nmer_ConfigWebviewHost()
     if (host = "wails" && FuncExists("ConfigWebViewWails_Hide")) {
         try return ConfigWebViewWails_Hide()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if FuncExists("ConfigWebView_Close")
@@ -143,7 +150,8 @@ ConfigWebViewRouter_Dispose(reason := "") {
     DomainCSurfaceRouter_Log("config_dispose host=" . host . " reason=" . String(reason))
     if (host = "wails" && FuncExists("ConfigWebViewWails_Dispose")) {
         try ConfigWebViewWails_Dispose(reason)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if FuncExists("ConfigWebView_Dispose")

@@ -29,6 +29,7 @@ if (-not (Test-Path -LiteralPath $mainAhk)) {
     $mainAhk = Nmer-ResolveMainAhk -Root $Root
 }
 $scwv = Join-Path $Root "modules\SearchCenterWebViewCore.ahk"
+$scwvBridge = Join-Path $Root "modules\ScwvSearchCoreBridge.ahk"
 $tools = Join-Path $Root "modules\ToolsPaths.ahk"
 $lifecycle = Join-Path $Root "modules\SearchCoreLifecycle.ahk"
 
@@ -59,9 +60,17 @@ $checks = @(
     },
     [pscustomobject]@{
         Name = "scwv_running_requires_health_gate"
-        Pass = (Select-String -LiteralPath $scwv -Pattern 'Nmer_SearchCenterCoreHealthy\(\)' -Quiet) `
-            -and (Select-String -LiteralPath $scwv -Pattern 'g_SCWV_GoStartPhase := "RUNNING"' -Quiet) `
-            -and (Test-NoPattern -Path $scwv -Pattern 'if ProcessExist\("SearchCenterCore\.exe"\)\s*\{\s*g_SCWV_GoStartPhase := "RUNNING"')
+        Pass = (
+            (
+                (Select-String -LiteralPath $scwv -Pattern 'Nmer_SearchCenterCoreHealthy\(\)' -Quiet) -or
+                ((Test-Path -LiteralPath $scwvBridge) -and (Select-String -LiteralPath $scwvBridge -Pattern 'Nmer_SearchCenterCoreHealthy\(\)' -Quiet))
+            ) -and (
+                (Select-String -LiteralPath $scwv -Pattern 'g_SCWV_GoStartPhase := "RUNNING"' -Quiet) -or
+                ((Test-Path -LiteralPath $scwvBridge) -and (Select-String -LiteralPath $scwvBridge -Pattern 'g_SCWV_GoStartPhase := "RUNNING"' -Quiet))
+            ) -and (Test-NoPattern -Path $scwv -Pattern 'if ProcessExist\("SearchCenterCore\.exe"\)\s*\{\s*g_SCWV_GoStartPhase := "RUNNING"') -and (
+                -not (Test-Path -LiteralPath $scwvBridge) -or (Test-NoPattern -Path $scwvBridge -Pattern 'if ProcessExist\("SearchCenterCore\.exe"\)\s*\{\s*g_SCWV_GoStartPhase := "RUNNING"')
+            )
+        )
         Detail = "SCWV sets RUNNING only behind health gate, not immediately after ProcessExist"
     },
     [pscustomobject]@{

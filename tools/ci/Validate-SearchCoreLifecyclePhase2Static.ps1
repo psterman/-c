@@ -30,6 +30,7 @@ function Get-AhkFnSnippet {
 $lifecycle = Join-Path $Root "modules\SearchCoreLifecycle.ahk"
 $tools = Join-Path $Root "modules\ToolsPaths.ahk"
 $scwv = Join-Path $Root "modules\SearchCenterWebViewCore.ahk"
+$scwvBridge = Join-Path $Root "modules\ScwvSearchCoreBridge.ahk"
 $mainAhk = Join-Path $Root "牛马.ahk"
 if (-not (Test-Path -LiteralPath $mainAhk)) {
     $mainAhk = Nmer-ResolveMainAhk -Root $Root
@@ -37,7 +38,13 @@ if (-not (Test-Path -LiteralPath $mainAhk)) {
 $toolsRaw = if (Test-Path -LiteralPath $tools) { Get-Content -LiteralPath $tools -Raw -Encoding UTF8 } else { "" }
 $mainRaw = if (Test-Path -LiteralPath $mainAhk) { Get-Content -LiteralPath $mainAhk -Raw -Encoding UTF8 } else { "" }
 $scwvRestart = Get-AhkFnSnippet -Path $scwv -FnPattern '^_SCWV_RestartSearchCore\(' -MaxLines 25
+if (($scwvRestart -eq "") -and (Test-Path -LiteralPath $scwvBridge)) {
+    $scwvRestart = Get-AhkFnSnippet -Path $scwvBridge -FnPattern '^_SCWV_RestartSearchCore\(' -MaxLines 25
+}
 $scwvLaunch = Get-AhkFnSnippet -Path $scwv -FnPattern '^_SCWV_StartSearchCoreLaunch\(' -MaxLines 25
+if (($scwvLaunch -eq "") -and (Test-Path -LiteralPath $scwvBridge)) {
+    $scwvLaunch = Get-AhkFnSnippet -Path $scwvBridge -FnPattern '^_SCWV_StartSearchCoreLaunch\(' -MaxLines 25
+}
 
 $checks = @(
     [pscustomobject]@{

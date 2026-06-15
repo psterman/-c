@@ -257,7 +257,8 @@ NiumaTtyd_GetShell() {
         r := Trim(String(r))
         if (r != "")
             s := r
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if (StrLen(s) > 800)
         s := "cmd.exe"
@@ -273,7 +274,8 @@ NiumaTtyd_SaveShellIni(shell) {
     try {
         cf := Nmer_ResolveConfigFile()
         IniWrite(sh, cf, "NiumaTtyd", "Shell")
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -294,7 +296,8 @@ NiumaTtyd_WorkDir() {
             u := String(EnvGet("USERPROFILE"))
             if (u != "" && !RegExMatch(u, "[^\x00-\x7F]") && DirExist(u))
                 return u
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         if DirExist("C:\\")
             return "C:\\"
@@ -329,7 +332,8 @@ NiumaTtyd_StartProcess() {
             FileAppend(
                 (FormatTime(, "yyyy-MM-dd HH:mm:ss")) . " ttyd Run failed: " . e.Message . "`n",
                 A_ScriptDir . "\NiumaTtyd_debug.log", "UTF-8")
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return false
     }
@@ -435,7 +439,8 @@ NiumaTtyd_EnsureReadyProbeDone(rid, ok) {
 NiumaTtyd_Restart(waitMs := 20000) {
     try {
         Run(A_ComSpec . ' /c "taskkill /F /IM ttyd.exe 2>nul"', , "Hide")
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     Sleep(120)
     return NiumaTtyd_EnsureReady(waitMs)
@@ -452,7 +457,8 @@ NiumaTtyd_StopProcess() {
         try {
             if (StrLower(ProcessGetName(pid2)) = "ttyd.exe")
                 ProcessClose(pid2)
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     NiumaTtyd_Pid := 0
@@ -522,7 +528,8 @@ NiumaTtyd_NotifyWeb(wv2, ok, errMsg, baseUrl, reqId := "", engine := "") {
                     FloatingToolbar_PushNodeStatus(eng, "ready", payload.Has("baseUrl") ? String(payload["baseUrl"]) : "", 0)
                 if FuncExists("FloatingToolbar_PushAudit")
                     FloatingToolbar_PushAudit(eng, "终端已就绪", "success", payload.Has("baseUrl") ? String(payload["baseUrl"]) : "")
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         } else {
             WebView_QueuePayload(wv2, Map(
@@ -537,10 +544,12 @@ NiumaTtyd_NotifyWeb(wv2, ok, errMsg, baseUrl, reqId := "", engine := "") {
                     FloatingToolbar_PushNodeStatus(eng, "error", errMsg, 0)
                 if FuncExists("FloatingToolbar_PushAudit")
                     FloatingToolbar_PushAudit(eng, "终端错误: " . (errMsg = "" ? "终端未就绪" : errMsg), "error")
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -583,7 +592,8 @@ NiumaTtyd_MapRemoveKey(mapObj, key) {
     try {
         if mapObj.Has(key)
             mapObj.Delete(key)
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -592,7 +602,8 @@ NiumaTtyd_LogShell(engine, shell, note := "") {
         FileAppend(
             (FormatTime(, "yyyy-MM-dd HH:mm:ss")) . " ttyd shell [" . engine . "] " . note . ": " . shell . "`n",
             A_ScriptDir . "\NiumaTtyd_debug.log", "UTF-8")
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -613,7 +624,8 @@ NiumaTtyd_GetTtydShellForEngine(engine) {
             NiumaTtyd_LogShell(eng, r, "ini_ttyd")
             return r
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if (eng = "ollama_cli") {
         sh := NiumaTtyd_ShellForOllamaCli()
@@ -670,7 +682,8 @@ NiumaTtyd_GetShellForEngine(engine) {
             NiumaTtyd_LogShell(eng, r, "ini_legacy")
             return r
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if (eng = "ollama_cli") {
         sh := NiumaTtyd_ShellForOllamaCli()
@@ -870,7 +883,8 @@ NiumaTtyd_NotifyWebOnPortReady(port) {
         return
     try {
         NiumaTtyd_NotifyWeb(wv2, true, "", NiumaTtyd_BaseUrlForEngine(eng), "", eng)
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -907,14 +921,16 @@ NiumaTtyd_StartProcessOnPort(port, shellCommand) {
             try FileAppend(
                 (FormatTime(, "yyyy-MM-dd HH:mm:ss")) . " ttyd started port " . p . " pid " . pid . " cmd=" . shell . "`n",
                 A_ScriptDir . "\NiumaTtyd_debug.log", "UTF-8")
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
     } catch as e {
         try FileAppend(
             (FormatTime(, "yyyy-MM-dd HH:mm:ss")) . " ttyd Run port " . p . " failed: " . e.Message . "`n",
             A_ScriptDir . "\NiumaTtyd_debug.log", "UTF-8")
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return false
     }
@@ -940,7 +956,8 @@ NiumaTtyd_StartProcessForEngine(engine, forceRestart := false) {
             ; 进程存活不等于可用：必须同时 HTTP 可达，避免复用僵死 ttyd
             if (ep > 0 && ProcessExist(ep) && httpOk)
                 return true
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if !forceRestart && IsObject(g_NiumaTtydEngineStartTick) && g_NiumaTtydEngineStartTick.Has(eng) {
@@ -1004,7 +1021,8 @@ NiumaTtyd_StopEngine(engine) {
         NiumaTtyd_MapRemoveKey(g_NiumaTtydEnginePids, eng)
         if (pid > 0) {
             try ProcessClose(pid)
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
     }

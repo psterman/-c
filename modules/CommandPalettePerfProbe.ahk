@@ -17,7 +17,8 @@ Nmer_CpPerfProbePaths(*) {
 Nmer_CpPerfProbeLog(line) {
     paths := Nmer_CpPerfProbePaths()
     try FileAppend("[" . A_Now . "] " . String(line) . "`n", paths["log"], "UTF-8")
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -47,7 +48,8 @@ Nmer_CpPerfProbeWriteResult(id, ok, pass, code, detail := "", extra := 0) {
     try {
         if FileExist(paths["req"])
             FileDelete(paths["req"])
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try {
         if FileExist(paths["res"])
@@ -57,7 +59,8 @@ Nmer_CpPerfProbeWriteResult(id, ok, pass, code, detail := "", extra := 0) {
             f.Write(Jxon_Dump(body))
             f.Close()
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -81,7 +84,8 @@ Nmer_CpPerfProbeShowCp(*) {
     g_CmdPal_ShowRequestedTick := A_TickCount
     if FuncExists("CommandPalette_PerfLog")
         try CommandPalette_PerfLog("show_requested")
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     if FuncExists("CommandPalette_DoShow")
         CommandPalette_DoShow()
@@ -108,7 +112,8 @@ Nmer_CpPerfProbeYield(ms := 400) {
     while (A_TickCount < deadline) {
         if FuncExists("CommandPalette_DrainWebMessageQueue")
             try CommandPalette_DrainWebMessageQueue()
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         Sleep(30)
     }
@@ -159,7 +164,8 @@ Nmer_CpPerfProbePrepareFresh() {
     Nmer_CpPerfProbeYield(380)
     if FuncExists("CommandPalette_Dispose")
         try CommandPalette_Dispose("perf_probe_fresh")
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     Nmer_CpPerfProbeYield(280)
 }
@@ -428,7 +434,8 @@ Nmer_CpPerfProbePoll(*) {
     if (raw = "" || StrLen(raw) > 65536) {
         Nmer_CpPerfProbeWriteResult("", false, false, "PROBE_JSON_INVALID", "empty_or_oversize")
         try FileDelete(paths["req"])
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return
     }
@@ -437,12 +444,14 @@ Nmer_CpPerfProbePoll(*) {
     catch as errJson {
         Nmer_CpPerfProbeWriteResult("", false, false, "PROBE_JSON_INVALID", SubStr(String(errJson.Message), 1, 120))
         try FileDelete(paths["req"])
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return
     }
     try FileDelete(paths["req"])
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if !(req is Map) {
         Nmer_CpPerfProbeWriteResult("", false, false, "PROBE_JSON_INVALID", "expected_object")

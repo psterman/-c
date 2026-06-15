@@ -5,6 +5,10 @@
 
 [English](readme.en.md) | 简体中文
 
+> **开发者**：首次参与定制或改仓库前请阅读 [AGENTS.md](AGENTS.md)。`local/` 下已存在配置**不会**在启动时被自动覆盖（仅缺失时迁移）。文档中未经 `Run-MinimalGate` 或实机验证的说明请自行核对。
+>
+> **企业 / 运维**（密钥 DPAPI、导出 zip、清理）：[docs/nmer-enterprise-ops.md](../docs/nmer-enterprise-ops.md)
+
 为 <a href="https://cursor.sh/" target="_blank">Cursor</a> 编辑器打造的 Windows 效率神器！通过「CapsLock 牛马召唤器」快捷键方案，让 Cursor 做牛做马，替你扛下繁琐工作，编程效率狂飙 100%～
 
 ## ✨ 牛马核心特色
@@ -70,10 +74,9 @@
 | `searchcore/` | Go 搜索内核（含 `SearchCenterCore.exe`） |
 | `tools/` | 桥接工具、诊断脚本、rg/openlist 等 |
 | `config/user_studio.defaults.json` | 智能定制模板；首次打开设置页会在 `local/` 生成本地 `user_studio.json` |
-| `local/` | 用户私有数据（API Key、主配置、OpenClaw 状态），勿提交 Git |
+| `local/` | 用户私有数据（主配置、OpenClaw 状态）；**API Key 经 DPAPI 存 `secrets.vault.json`**，`user_studio.json` 无明文，勿提交 Git |
 | `Data/` | 运行时数据（截图、Chat 附件等），可备份 |
 | `Cache/` | 日志与缓存，可定期清空（不含 OpenClaw 状态） |
-| `tools/whisper-stt/` | 本地语音：运行 `setup-whisper.ps1` 安装模型 |
 | `md/` | 项目文档（README、AGENTS、软件介绍、技术 docs） |
 | `md/docs/` | 开发者/高级用户技术说明 |
 | `archive/` | 历史原型代码，与当前版本无关 |
@@ -180,7 +183,7 @@
 ### 深度调教（调试模式）
 1. **查看错误信息**：牛马出错会弹出消息框，记录错误内容方便排查
 2. **检查配置文件**：`local/CursorShortcut.ini`，可手动编辑（注意格式）
-3. **重置牛马**：删除 `local/CursorShortcut.ini`，重新运行脚本，恢复默认设置
+3. **重置牛马**：删除 `local/CursorShortcut.ini` 后重跑可恢复默认；**API Key 在 vault**，重置定制请用设置内「还原默认定制」。排障见 [docs/nmer-enterprise-ops.md](../docs/nmer-enterprise-ops.md)。
 
 ## 🛠️ 高级调教技巧
 ### 自定义打工话术

@@ -9,7 +9,8 @@ CommandPalette_AgentShadowWriteLog(event, detail := "") {
     if !FuncExists("CommandPalette_AgentLog")
         return
     try CommandPalette_AgentLog("shadow_" . String(event), String(detail))
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -83,7 +84,8 @@ CommandPalette_AgentShadowBuildCards() {
                 arr.Push(CommandPalette_AgentCardToSummaryDto(c))
             else if FuncExists("CommandPalette_AgentCardToSyncDto")
                 arr.Push(CommandPalette_AgentCardToSyncDto(c))
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     return Map("cards", arr, "summary", useSummary)

@@ -35,25 +35,29 @@ GDHO_P0_BlockHostMoveHide(reason := "") {
         try {
             if GDHO_IsPanelDragProtected() && (InStr(r, "move_panel") || InStr(r, "panel_host") || InStr(r, "apply_panel"))
                 return false
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if FuncExists("GDHO_IsTextHolePanelOpen") {
         try {
             if GDHO_IsTextHolePanelOpen() && (InStr(r, "sync_panel") || InStr(r, "move_panel") || InStr(r, "ensure") || InStr(r, "present") || InStr(r, "show_panel"))
                 return false
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if FuncExists("GDHO_ShouldKeepTextHolePanel") {
         try {
             if GDHO_ShouldKeepTextHolePanel() && (InStr(r, "sync_panel") || InStr(r, "move_panel") || InStr(r, "panel_host") || InStr(r, "apply_panel"))
                 return false
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     try NativeDropDiag_Log("[P0] block_move_hide reason=" . r)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return true
 }
@@ -95,7 +99,8 @@ GDHO_WS_Send(evtType, screenX := "", screenY := "", text := "", reason := "") {
         if (!g_GDHO_P0_LastHttpFailTick || (now - g_GDHO_P0_LastHttpFailTick > 8000)) {
             g_GDHO_P0_LastHttpFailTick := now
             try NativeDropDiag_Log("[P0] ws_http_fail type=" . typ . " err=" . e.Message)
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
     }

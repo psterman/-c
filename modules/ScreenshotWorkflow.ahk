@@ -43,7 +43,8 @@ ExecuteScreenshotWithMenu(fromFloatingDeferred := false) {
     global g_ExecuteScreenshotWithMenuBusy, FloatingToolbar_ScheduleRestoreAfterScreenshot
     global g_ScreenshotSuspendActivationToken
     try OutputDebug("[SSWF] begin fromFloatingDeferred=" . (fromFloatingDeferred ? "1" : "0") . " busy=" . (g_ExecuteScreenshotWithMenuBusy ? "1" : "0"))
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     ; 涓庣儹閿?瀹氭椂鍣ㄧ嚎绋嬬珵鎬侊細Sleep 璁╁嚭鎵ц鏉冨墠 busy 妫€鏌ヤ笌璧嬪€奸』鍘熷瓙鍖栵紱Deferred 璺緞鍦?Sleep 鍓嶉鍗?busy锛岄伩鍏嶇浜屾 Deferred 鍙犲姞鍏ュ彛
     prevCrit := Critical("On")
@@ -102,7 +103,8 @@ ExecuteScreenshotWithMenu(fromFloatingDeferred := false) {
         ScreenshotWaiting := true
         ScreenshotImageDetected := false
         try OutputDebug("[SSWF] waiting armed")
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         if (DebugGui) {
             UpdateDebugStep(DebugGui, 4, "绛夊緟鐘舵€佸凡璁剧疆", true)
@@ -138,7 +140,8 @@ ExecuteScreenshotWithMenu(fromFloatingDeferred := false) {
             Send("#+{s}")
         }
         try OutputDebug("[SSWF] capture sent mode=" . captureMode . " seq_before=" . ClipboardSeqBeforeShot)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         if (DebugGui) {
             UpdateDebugStep(DebugGui, 5, "鎴浘瑙﹀彂鍛戒护宸插彂閫侊紙" . captureMode . "锛?", true)
@@ -188,7 +191,8 @@ ExecuteScreenshotWithMenu(fromFloatingDeferred := false) {
                 if (!CapturedClipNow && CapturedFileNow = "")
                     try ScreenshotCapturePayload(&CapturedClipNow, &CapturedFileNow, 1200)
                 try OutputDebug("[SSWF] screenshot detected via ScreenshotImageDetected elapsed_ms=" . ElapsedTime)
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
                 if (DebugGui) {
                     UpdateDebugStep(DebugGui, 8, "OnClipboardChange 妫€娴嬪埌鍥剧墖锛屾埅鍥惧畬鎴愶紒", true)
@@ -336,7 +340,8 @@ ExecuteScreenshotWithMenu(fromFloatingDeferred := false) {
             if (outputTarget = "clipboard") {
                 ScreenshotFlowRestoreFloatingToolbarIfNeeded()
                 try OutputDebug("[SSWF] clipboard-only output, no preview")
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
                 if (DebugGui) {
                     UpdateDebugStep(DebugGui, 13, "杈撳嚭鐩爣=浠呭壀璐存澘锛岃烦杩囨埅鍥惧姪鎵嬮瑙?", true)
@@ -344,7 +349,8 @@ ExecuteScreenshotWithMenu(fromFloatingDeferred := false) {
                 }
                 TrayTip("提示", "截图已复制到剪贴板", "Iconi 1")
                 try EndScreenshotUiSession(screenshotSessionToken)
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
                 return
             }
@@ -354,11 +360,13 @@ ExecuteScreenshotWithMenu(fromFloatingDeferred := false) {
             }
             try {
                 try OutputDebug("[SSWF] calling ShowScreenshotEditor")
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
                 ShowScreenshotEditor(DebugGui)
                 try OutputDebug("[SSWF] ShowScreenshotEditor returned")
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
                 if (DebugGui) {
                     UpdateDebugStep(DebugGui, 13, "ShowScreenshotEditor() 璋冪敤鎴愬姛", true)
@@ -385,7 +393,8 @@ ExecuteScreenshotWithMenu(fromFloatingDeferred := false) {
         } else {
             ; 鎴浘瓒呮椂鎴栧彇娑堬紝鎭㈠鏃у壀璐存澘
             try OutputDebug("[SSWF] screenshot timeout/cancel elapsed_ms=" . ElapsedTime)
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             if (DebugGui) {
                 UpdateDebugStep(DebugGui, 9, "鎴浘瓒呮椂鎴栧彇娑?(绛夊緟浜?" . Round(ElapsedTime/1000) . " 绉?", false)
@@ -398,12 +407,14 @@ ExecuteScreenshotWithMenu(fromFloatingDeferred := false) {
             }
             ScreenshotFlowRestoreFloatingToolbarIfNeeded()
             try EndScreenshotUiSession(screenshotSessionToken)
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
     } catch as e {
         try OutputDebug("[SSWF] exception: " . e.Message)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         if (DebugGui) {
             UpdateDebugStep(DebugGui, 0, "鍙戠敓寮傚父: " . e.Message . "`n鏂囦欢: " . (e.File ? e.File : "鏈煡") . "`n琛屽彿: " . (e.Line ? e.Line : "鏈煡"), false)
@@ -418,7 +429,8 @@ ExecuteScreenshotWithMenu(fromFloatingDeferred := false) {
         }
         ScreenshotFlowRestoreFloatingToolbarIfNeeded()
         try EndScreenshotUiSession(screenshotSessionToken)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     } finally {
@@ -1067,7 +1079,8 @@ IsClipboardImagePayload() {
     try {
         if (GetClipboardType() = "image")
             return true
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try {
         files := GetClipboardFileDropList()
@@ -1080,7 +1093,8 @@ IsClipboardImagePayload() {
                     return true
             }
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try {
         t := Trim(String(A_Clipboard))
@@ -1089,7 +1103,8 @@ IsClipboardImagePayload() {
             if (ext2 = "png" || ext2 = "jpg" || ext2 = "jpeg" || ext2 = "bmp" || ext2 = "gif" || ext2 = "webp")
                 return true
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return false
 }
@@ -1146,7 +1161,8 @@ ScreenshotCapturePayload(&outClip, &outFilePath, waitMs := 3200) {
                     return true
                 }
             }
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         try {
             fp := ScreenshotFindLatestSavedImage(240)
@@ -1154,7 +1170,8 @@ ScreenshotCapturePayload(&outClip, &outFilePath, waitMs := 3200) {
                 outFilePath := fp
                 return true
             }
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         Sleep(step)
         elapsed += step
@@ -1178,7 +1195,8 @@ OCR_FromFileBestEffort(filePath, lang := "zh-CN") {
                 bestScore := score
                 bestResult := result
             }
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     return bestResult

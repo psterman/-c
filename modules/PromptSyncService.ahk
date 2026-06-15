@@ -7,7 +7,8 @@ PSS_CursorShortcutIniPath() {
 
 PSS_IniWritePQP(Key, Value) {
     try IniWrite(Value, PSS_CursorShortcutIniPath(), "PromptQuickPad", Key)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -50,7 +51,8 @@ PromptQuickPad_ReloadCapsLockBSettings() {
         PromptQuickPad_CapsLockBDefaultTitle := PSS_CleanText(rawTitle, "摘录")
         PromptQuickPad_CapsLockBDefaultCategory := PSS_CleanText(rawCategory, "")
         PromptQuickPad_CapsLockBDefaultTags := PSS_CleanText(rawTags, "")
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if (Trim(PromptQuickPad_CapsLockBDefaultTitle) = "")
         PromptQuickPad_CapsLockBDefaultTitle := "摘录"

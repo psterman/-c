@@ -70,6 +70,13 @@ func handleHoleEventHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *wsHub) handleWS(w http.ResponseWriter, r *http.Request) {
+	if wsToken != "" {
+		got := strings.TrimSpace(r.URL.Query().Get("token"))
+		if got == "" || got != wsToken {
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			return
+		}
+	}
 	conn, err := wsUpgrader.Upgrade(w, r, nil)
 	if err != nil {
 		return

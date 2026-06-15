@@ -79,7 +79,8 @@ OnClipboardChangeHandler_Example(Type) {
             }
             ; ===========================================
             
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     

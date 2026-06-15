@@ -189,13 +189,15 @@ SurfaceDisposeProbe_Notify(msg, isErr := false) {
     try TrayTip(String(msg), title, isErr ? "Icon! 4" : "Iconi 4")
     catch {
         try MsgBox(String(msg), title, (isErr ? 0x10 : 0x40) | 0x1000)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     try {
         if FuncExists("SurfaceManager_RecordEvent")
             SurfaceManager_RecordEvent(isErr ? "palette_probe_error" : "palette_probe_ok", "", Map("message", msg))
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 

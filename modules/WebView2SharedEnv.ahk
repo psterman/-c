@@ -43,10 +43,12 @@ WebView2_EnsureSharedEnvBlocking() {
         if CoreAsyncStrictMode
             NMER_AsyncLog(Nmer_DebugPath("wv2_shared_env.log"), "[" . A_Now . "][sync_blocked] WebView2_EnsureSharedEnvBlocking rejected`r`n")
     }
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try OutputDebug("[WV2] blocking shared env request rejected on hot path")
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return 0
 }
@@ -65,7 +67,8 @@ _WV2_OnSharedEnvPromiseResolved(env) {
         try cb.Call(env, 0)
         catch {
             try cb.Call()
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
     }
@@ -85,7 +88,8 @@ _WV2_OnSharedEnvPromiseRejected(err) {
         try cb.Call(0, err)
         catch {
             try cb.Call()
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
     }
@@ -106,7 +110,8 @@ WebView2_OnSharedEnvReady(onReady?) {
         try onReady.Call(g_WV2SharedEnv, 0)
         catch {
             try onReady.Call()
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
         return
@@ -135,17 +140,20 @@ WebView2_CopyWebMessageJson(args, maxLen := 4194304) {
                 t := args.TryGetWebMessageAsString()
                 if (t != "")
                     s := "" . t
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             if (s = "") {
                 try {
                     if args.HasProp("WebMessageAsJson")
                         s := "" . String(args.WebMessageAsJson)
-                } catch {
+                } catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
             }
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if (s = "")
         return ""
@@ -167,16 +175,20 @@ WebView2_ForceHostRedraw(hwnd) {
     if !hwnd
         return
     try DllCall("InvalidateRect", "Ptr", hwnd, "Ptr", 0, "Int", 1)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try DllCall("UpdateWindow", "Ptr", hwnd)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try DllCall("RedrawWindow", "Ptr", hwnd, "Ptr", 0, "Ptr", 0, "UInt", 0x105)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try DllCall("SetWindowPos", "Ptr", hwnd, "Ptr", 0, "Int", 0, "Int", 0, "Int", 0, "Int", 0, "UInt", 0x0037)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -190,7 +202,8 @@ WebView2_CreateWithSharedEnvAsync(hwnd, callback, reason := "") {
     else
         g_WV2_CreateQueue.Push(item)
     try NMER_AsyncLog(Nmer_DebugPath("wv2_shared_env.log"), "[" . A_Now . "][create_enqueue] reason=" . String(reason) . " qlen=" . g_WV2_CreateQueue.Length . " pri=" . (WebView2_IsHighPriorityCreateReason(reason) ? "1" : "0") . "`r`n")
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     WebView2_DrainCreateQueue()
 }
@@ -215,11 +228,13 @@ _WV2_OnCreateQueueItemDone(ctrl, cb, reason) {
     try {
         if cb
             cb.Call(ctrl)
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e)
     } finally {
         g_WV2_CreateBusy := false
         try NMER_AsyncLog(Nmer_DebugPath("wv2_shared_env.log"), "[" . A_Now . "][create_done] reason=" . String(reason) . "`r`n")
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         SetTimer(WebView2_DrainCreateQueue, -1)
     }
@@ -232,17 +247,20 @@ WebView2_PrepareForScriptReload() {
     try {
         if FuncExists("Nmer_WailsBridgePrepareForScriptReload")
             Nmer_WailsBridgePrepareForScriptReload()
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try {
         if FuncExists("NiumaMobileBrowser_PrepareForScriptReload")
             NiumaMobileBrowser_PrepareForScriptReload()
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try {
         if FuncExists("ScWebEmbedProbePrepareForScriptReload")
             ScWebEmbedProbePrepareForScriptReload()
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     g_WV2SharedEnv := 0
     g_WV2EnvCreatePromise := 0
@@ -253,24 +271,28 @@ WebView2_PrepareForScriptReload() {
     g_WV2_CreateQueue := []
     g_WV2_CreateBusy := false
     try OutputDebug("[WV2] PrepareForScriptReload: shared env reset")
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
 _WV2_CreateWithSharedEnvReady(hwnd, callback, reason, env, err := 0) {
     if err || !env {
         try OutputDebug("[WV2] shared env failed reason=" . reason)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         try callback.Call(err ? err : 0)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return
     }
     try WebView2.create(hwnd, callback, env)
     catch as e {
         try callback.Call(e)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 }
@@ -339,7 +361,8 @@ NMER_AsyncLog(logPath, line) {
             g_NMER_AsyncLogTimerArmed := true
             SetTimer(NMER_AsyncLogFlush, -250)
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -362,7 +385,8 @@ NMER_AsyncLogFlush(*) {
             for _, line in q
                 buf .= line
             FileAppend(buf, p, "UTF-8")
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 }

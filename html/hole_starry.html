@@ -228,49 +228,6 @@
       padding: 12px;
     }
 
-    .transcript-panel {
-      position: absolute;
-      left: 50%;
-      top: 50%;
-      transform: translate(-50%, -50%);
-      width: min(380px, 92vw);
-      max-height: min(280px, 42vh);
-      padding: 14px 16px;
-      border-radius: 14px;
-      border: 1px solid rgba(255, 255, 255, 0.22);
-      background: rgba(8, 10, 18, 0.88);
-      color: rgba(245, 248, 255, 0.96);
-      font: 500 13px/1.55 "Segoe UI", "Microsoft YaHei", sans-serif;
-      text-align: left;
-      overflow: auto;
-      white-space: pre-wrap;
-      word-break: break-word;
-      opacity: 0;
-      pointer-events: none;
-      z-index: 20;
-      transition: opacity 280ms ease, transform 320ms ease;
-      box-shadow: 0 10px 36px rgba(0, 0, 0, 0.55);
-    }
-    .transcript-panel.show {
-      opacity: 1;
-      pointer-events: auto;
-      transform: translate(-50%, -50%) scale(1);
-    }
-    .transcript-panel.loading {
-      color: rgba(200, 220, 255, 0.92);
-      font-style: normal;
-    }
-    .transcript-panel.error {
-      color: #ffb4b4;
-    }
-    .transcript-title {
-      font-size: 11px;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      color: rgba(180, 200, 255, 0.75);
-      margin-bottom: 8px;
-    }
-
     #root.swallow-flash::after {
       content: '';
       position: fixed;
@@ -316,10 +273,6 @@
           <canvas id="galaxyCanvas"></canvas>
         </div>
       </div>
-      <div id="transcriptPanel" class="transcript-panel" aria-live="polite">
-        <div class="transcript-title">语音转文本</div>
-        <div id="transcriptBody">拖动音频到黑洞开始识别</div>
-      </div>
     </div>
     <div id="holeSceneLauncher" aria-label="场景启动器"></div>
   </div>
@@ -345,9 +298,17 @@
       const canvas = document.getElementById('galaxyCanvas');
       const ctx = canvas.getContext('2d', { alpha: false });
       const holeBody = document.getElementById('holeBody');
-      const transcriptPanel = document.getElementById('transcriptPanel');
-      const transcriptBody = document.getElementById('transcriptBody');
-      const HOLE_WS_URL = 'ws://127.0.0.1:18790/hole';
+      function nmerHoleWsUrl() {
+        const base = 'ws://127.0.0.1:18790/hole';
+        const tok = String(window.__NMER_WS_TOKEN__ || '');
+        return tok ? (base + '?token=' + encodeURIComponent(tok)) : base;
+      }
+      const HOLE_WS_URL = nmerHoleWsUrl();
+      const HOLE_WS_TOKEN = String(window.__NMER_WS_TOKEN__ || '');
+      if (!HOLE_WS_TOKEN && (window.chrome?.webview || location.hostname === 'app.local')) {
+        console.warn('[hole_starry] __NMER_WS_TOKEN__ 为空：WebSocket 将不带 token（与未配置 NMER_WS_HUB_TOKEN 时兼容）');
+      }
+      window.HOLE_WS = { url: HOLE_WS_URL, token: HOLE_WS_TOKEN };
       let holeSocket = null;
       let gravityBoostUntil = 0;
       let interactionState = 'idle';
@@ -476,17 +437,6 @@
       }
 
 
-      function setTranscript(text, status) {
-        if (!transcriptPanel || !transcriptBody) return;
-        const st = String(status || 'ready').toLowerCase();
-        const txt = String(text || '');
-        transcriptBody.textContent = txt || (st === 'loading' ? '正在识别语音…' : '拖动音频到黑洞开始识别');
-        transcriptPanel.classList.remove('loading', 'error', 'show');
-        if (st === 'loading') transcriptPanel.classList.add('loading', 'show');
-        else if (st === 'error') transcriptPanel.classList.add('error', 'show');
-        else if (txt) transcriptPanel.classList.add('show');
-      }
-
       function setP(v) {
         p = Math.max(0, Math.min(1, Number(v) || 0));
         root.style.setProperty('--p', String(p));
@@ -517,7 +467,6 @@
         const st = String((msg && msg.state) || 'idle');
         interactionState = st;
         if (st === 'idle') {
-          if (transcriptPanel) transcriptPanel.classList.remove('show');
           window.__gdhoOlePassthrough = false;
           root.classList.remove('ole-passthrough');
           window.HoleOverlay.setSleepMode(true);
@@ -525,7 +474,6 @@
           return;
         }
         if (st === 'weak_preview') {
-          if (transcriptPanel) transcriptPanel.classList.remove('show');
           window.HoleOverlay.setSleepMode(false);
           root.classList.add('show');
           setP(0.55);
@@ -757,12 +705,8 @@
         },
         setStyle: () => {},
         setTheme: () => {},
-        setNativeState: (o) => {
-          if (!o || typeof o !== 'object') return;
-          if (typeof o.previewText === 'string') setTranscript(o.previewText, o.transcriptStatus || 'ready');
-          else if (typeof o.transcriptStatus === 'string') setTranscript('', o.transcriptStatus);
-        },
-        setTranscript: (text, status) => setTranscript(text, status),
+        setNativeState: () => {},
+        setTranscript: () => {},
         setOlePassthrough: (on) => {
           const enable = !!on;
           window.__gdhoOlePassthrough = enable;

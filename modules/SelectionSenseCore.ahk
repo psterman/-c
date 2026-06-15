@@ -52,6 +52,7 @@ global g_HubCapsule_DragTimerArmed := false
 global g_HubCapsule_DiagSeq := 0
 global g_HubCapsule_WatchdogGen := -1
 global g_HubCapsule_ShowRetryGen := -1
+global g_HubCapsule_Minimized := false
 ; HubCapsule：堆叠选择/推送（供 CapsLock+C/V 使用）
 global g_HubCapsule_SelectedText := ""
 global g_SelSense_PendingHubSegments := []  ; Hub 鏈?ready 鏃舵殏瀛樺緟 push 鐨勬枃鏈
@@ -85,7 +86,8 @@ SelectionSense_Diag_Log(msg) {
     try NativeDropDiag_Log("selection " . String(msg))
     catch {
         try OutputDebug("[SelectionSense] " . String(msg))
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 }
@@ -1045,7 +1047,8 @@ SelectionSense_ZipRawContainsAny(zipPath, needles) {
             prev := (StrLen(scan) > overlap) ? SubStr(scan, -overlap + 1) : scan
         }
         f.Close()
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return false
 }
@@ -1202,7 +1205,8 @@ SelectionSense_HubDict_InstallEcdictOneClick(taskId := "") {
         if !DirExist(workDir)
             DirCreate(workDir)
         try FileDelete(reportPath)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         SelectionSense_HubDictInstall_ReportLine(reportPath, "启动一键安装流程")
         SelectionSense_HubDictInstall_ReportLine(reportPath, "工作目录: " . workDir)
@@ -1262,7 +1266,8 @@ SelectionSense_HubDict_InstallEcdictOneClick(taskId := "") {
             return Map("ok", false, "message", "下载包不存在，安装失败")
         ; 先清理旧解压目录，避免因覆盖/同名导致 7z 返回 warning(1)。
         try DirDelete(extractDir, 1)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         if !DirExist(extractDir)
             DirCreate(extractDir)
@@ -1691,13 +1696,16 @@ SelectionSense_WindowDescribe(hwnd) {
         return "hwnd=0"
     desc := "hwnd=" . hwnd
     try desc .= " class=" . WinGetClass("ahk_id " hwnd)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try desc .= " title=" . WinGetTitle("ahk_id " hwnd)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try desc .= " exe=" . WinGetProcessName("ahk_id " hwnd)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return desc
 }
@@ -1782,7 +1790,8 @@ SelectionSense_IsDropBridgeHwnd(hwnd) {
             return true
         if (cls = "NMER_NativeDropBridge" || cls = "NMERNativeDropBridge")
             return true
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return false
 }
@@ -1833,7 +1842,8 @@ SelectionSense_OnLButtonDown(*) {
                 SelectionSense_Diag_Log("lbutton_down skip=text_hole_panel")
                 return
             }
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if FuncExists("GDHO_IsPanelDragProtected") {
@@ -1842,7 +1852,8 @@ SelectionSense_OnLButtonDown(*) {
                 SelectionSense_Diag_Log("lbutton_down skip=panel_drag")
                 return
             }
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     g_SelSense_HoleRouteSerial += 1
@@ -1862,13 +1873,15 @@ SelectionSense_OnLButtonDown(*) {
                         SelectionSense_Diag_Log("lbutton_down skip=panel_blocks_starry")
                         return
                     }
-                } catch {
+                } catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
             }
             SelectionSense_Diag_Log("lbutton_down phase=armed_click")
             if FuncExists("GDHO_TryCommitTextHoleOnClick") {
                 try GDHO_TryCommitTextHoleOnClick(g_SelSense_LButtonDownX, g_SelSense_LButtonDownY)
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
             }
             return
@@ -1878,7 +1891,8 @@ SelectionSense_OnLButtonDown(*) {
         SelectionSense_Diag_Log("lbutton_down phase=dragging")
         if FuncExists("GDHO_HandoffTextDragToPanel") {
             try GDHO_HandoffTextDragToPanel(g_SelSense_LButtonDownX, g_SelSense_LButtonDownY, "lbutton_text_drag")
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
     } else {
@@ -1889,7 +1903,8 @@ SelectionSense_OnLButtonDown(*) {
     }
     if (g_SelSense_HoleDragPhase = "selecting") {
         try SelectionSense_HideDragHintToast("new_press")
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 }
@@ -1900,12 +1915,14 @@ SelectionSense_IsHoleCaptureEnabled() {
         return false
     if FuncExists("GDHO_IsHoleOnlyMode") {
         try return GDHO_IsHoleOnlyMode()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if FuncExists("IsHoleRuntimeEnabledByActivationMode") {
         try return IsHoleRuntimeEnabledByActivationMode()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     return false
@@ -1935,14 +1952,16 @@ SelectionSense_IsSelectionHolePreviewActive() {
         try {
             if GDHO_IsTextHoleUserPanelActive()
                 return false
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if FuncExists("GDHO_IsTextHolePanelOpen") {
         try {
             if GDHO_IsTextHolePanelOpen()
                 return false
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     ph := StrLower(Trim(String(g_SelSense_HoleDragPhase)))
@@ -1980,7 +1999,8 @@ SelectionSense_ShouldBlockBridgeTextDrag() {
             cfgTh := Integer(NativeDropTextMoveThresholdPx)
             if (cfgTh > 0)
                 dragThreshold := Max(10, Floor(cfgTh * 0.35))
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         heldMs := A_TickCount - g_SelSense_LButtonDownTick
         if (dist >= dragThreshold && heldMs >= 45)
@@ -2020,14 +2040,16 @@ SelectionSense_OnHoleDragSessionEnded() {
         try {
             if GDHO_IsTextHolePanelOpen()
                 return
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if FuncExists("GDHO_IsTextSelectionPreviewReady") {
         try {
             if GDHO_IsTextSelectionPreviewReady()
                 return
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if FuncExists("GDHO_ResetTextHoleCommitState")
@@ -2046,7 +2068,8 @@ SelectionSense_SuppressHoleAfterSelection() {
     try {
         if FuncExists("NativeDropBridge_ResetSessionAsync")
             NativeDropBridge_ResetSessionAsync("selection_captured", 60)
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -2065,7 +2088,8 @@ SelectionSense_OnLButtonUp(*) {
                 SelectionSense_Diag_Log("lbutton_up skip=text_hole_panel")
                 return
             }
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if FuncExists("GDHO_IsPanelDragProtected") {
@@ -2074,7 +2098,8 @@ SelectionSense_OnLButtonUp(*) {
                 SelectionSense_Diag_Log("lbutton_up skip=panel_drag")
                 return
             }
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if SelectionSense_CursorOverOurUi() {
@@ -2112,9 +2137,9 @@ SelectionSense_OnLButtonUp(*) {
     }
 
     try SelectionSense_ResetIncidentalTextDragSession()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
-
     if (holeCapture || hubPreviewActive) {
         delayMs := Max(1, SelectionSense_CopyDelayMsEffective())
         SelectionSense_Diag_Log("lbutton_up trigger=process_deferred hole=" . SelectionSense_Diag_Bool(holeCapture) . " hub=" . SelectionSense_Diag_Bool(hubPreviewActive) . " delay_ms=" . delayMs)
@@ -2167,13 +2192,16 @@ SelectionSense_ProcessDeferred(*) {
     winClass := ""
     winTitle := ""
     try procName := WinGetProcessName("A")
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try winClass := WinGetClass("A")
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try winTitle := WinGetTitle("A")
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     SelectionSense_Diag_Log("process begin hub_preview=" . SelectionSense_Diag_Bool(hubPreviewActive) . " clip_wait=" . g_SelSense_ClipWaitSec . " proc=" . procName . " class=" . winClass . " title=" . winTitle)
 
@@ -2239,7 +2267,8 @@ SelectionSense_ProcessDeferredCollectClipboard(ticket, clipSaved, hubPreviewActi
         try {
             if (clipSaved != "")
                 A_Clipboard := clipSaved
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         SelectionSense_Diag_Log("process collect skip=tray_menu_open ticket=" . ticket)
         return
@@ -2266,20 +2295,22 @@ SelectionSense_ProcessDeferredCollectClipboard(ticket, clipSaved, hubPreviewActi
     try {
         if (clipSaved != "")
             A_Clipboard := clipSaved
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
-
     if (text = "") {
         SelectionSense_Diag_Log("process empty_clipboard timeout=1 ticket=" . ticket)
         global g_SelSense_HoleDragPhase
         g_SelSense_HoleDragPhase := "idle"
         try SelectionSense_HideDragHintToast("empty_clip")
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         SelectionSense_ClearLastSelected()
         if hubPreviewActive {
             try FloatingToolbar_NotifySelectionClear()
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
         return
@@ -2312,11 +2343,13 @@ SelectionSense_ProcessDeferredCollectClipboard(ticket, clipSaved, hubPreviewActi
     SelectionSense_Diag_Log("process text len=" . StrLen(text) . " sig=" . sig . " phase=" . g_SelSense_HoleDragPhase . " preview=" . SubStr(text, 1, 48))
     SelectionSense_TryActivateHoleFromSelection(text)
     try SelectionSense_SuppressHoleAfterSelection()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if hubPreviewActive {
         try FloatingToolbar_NotifySelectionChange(text)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         SelectionSense_QueueHubPreviewUpdate(text)
     }
@@ -2332,7 +2365,8 @@ SelectionSense_ResetIncidentalTextDragSession() {
             if FuncExists("NativeDropBridge_ResetSessionAsync")
                 NativeDropBridge_ResetSessionAsync("selection_release", 60)
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try {
         isText := (GDHO_PAYLOAD = "text" || NativeDropSessionPayload = "text")
@@ -2344,7 +2378,8 @@ SelectionSense_ResetIncidentalTextDragSession() {
             if FuncExists("GDHO_ResetSession")
                 GDHO_ResetSession()
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try {
         if (GDHO_VISIBLE && (GDHO_PAYLOAD = "text" || NativeDropSessionPayload = "text")
@@ -2354,7 +2389,8 @@ SelectionSense_ResetIncidentalTextDragSession() {
             if FuncExists("GDHO_RequestClose")
                 GDHO_RequestClose("selection_release_visible")
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -2382,7 +2418,8 @@ SelectionSense_EnsureDragHintToast() {
         return
     if g_SelSense_DragHintGui {
         try g_SelSense_DragHintGui.Destroy()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         g_SelSense_DragHintGui := 0
         g_SelSense_DragHintIconCtrl := 0
@@ -2404,7 +2441,8 @@ SelectionSense_HideDragHintToast(reason := "") {
     try {
         if g_SelSense_DragHintGui
             g_SelSense_DragHintGui.Hide()
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     SelectionSense_Diag_Log("drag_hint hide reason=" . String(reason))
 }
@@ -2423,7 +2461,8 @@ SelectionSense_DragHintAnimTick(*) {
             SelectionSense_HideDragHintToast("native_drop")
             return
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if GetKeyState("LButton", "P") {
         CoordMode("Mouse", "Screen")
@@ -2438,7 +2477,8 @@ SelectionSense_DragHintAnimTick(*) {
     icons := ["⬇", "↧", "⬇"]
     g_SelSense_DragHintPulse := Mod(g_SelSense_DragHintPulse + 1, icons.Length)
     try g_SelSense_DragHintIconCtrl.Value := icons[g_SelSense_DragHintPulse + 1]
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -2459,7 +2499,8 @@ SelectionSense_ShowDragHintToast(selectedText, anchorX := "", anchorY := "") {
             SelectionSense_Diag_Log("drag_hint skip=native_drop_drag")
             return
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     t := ""
     try t := Trim(String(selectedText))
@@ -2476,7 +2517,8 @@ SelectionSense_ShowDragHintToast(selectedText, anchorX := "", anchorY := "") {
     SelectionSense_EnsureDragHintToast()
     g_SelSense_DragHintPulse := 0
     try g_SelSense_DragHintIconCtrl.Value := "⬇"
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     g_SelSense_DragHintHideSerial += 1
     hideSerial := g_SelSense_DragHintHideSerial
@@ -2496,10 +2538,12 @@ SelectionSense_ShowDragHintToast(selectedText, anchorX := "", anchorY := "") {
             ty := vt + vh - th - 4
         g_SelSense_DragHintGui.Show("NA x" . tx . " y" . ty . " w" . tw . " h" . th . " NoActivate")
         try WinSetTransColor("010101", g_SelSense_DragHintGui.Hwnd)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         try WinSetAlwaysOnTop(1, "ahk_id " . g_SelSense_DragHintGui.Hwnd)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         g_SelSense_DragHintVisible := true
         SetTimer(SelectionSense_DragHintAnimTick, 380)
@@ -2516,7 +2560,8 @@ SelectionSense_OpenHolePreviewAt(ax, ay, selectedText := "") {
         try {
             if !GDHO_IsHoleOnlyMode()
                 return false
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     t := Trim(String(selectedText))
@@ -2562,7 +2607,8 @@ SelectionSense_TryActivateHoleFromSelection(selectedText) {
         try {
             if !HoleTriggers_IsTextSelectEnabled()
                 return
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if FuncExists("GDHO_CanOpenWeakPreview") {
@@ -2571,7 +2617,8 @@ SelectionSense_TryActivateHoleFromSelection(selectedText) {
                 SelectionSense_Diag_Log("hole_preview_skip reason=interaction_phase phase=" . GDHO_GetInteractionPhase())
                 return
             }
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     t := Trim(String(selectedText))
@@ -2585,7 +2632,8 @@ SelectionSense_TryActivateHoleFromSelection(selectedText) {
                 SelectionSense_Diag_Log("hole_preview_skip reason=user_panel_until_exit")
                 return
             }
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if FuncExists("GDHO_ShouldSkipSelectionPreviewRestart") {
@@ -2594,7 +2642,8 @@ SelectionSense_TryActivateHoleFromSelection(selectedText) {
                 SelectionSense_Diag_Log("hole_preview_skip reason=panel_active")
                 return
             }
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     SelectionSense_OpenHolePreviewAt(ax, ay, t)
@@ -2609,7 +2658,8 @@ SelectionSense_HideHoleAfterSelection(*) {
                 SelectionSense_Diag_Log("hole hide skip=interaction_phase phase=" . GDHO_GetInteractionPhase())
                 return
             }
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if FuncExists("GDHO_IsTextHoleUserPanelActive") {
@@ -2618,7 +2668,8 @@ SelectionSense_HideHoleAfterSelection(*) {
                 SelectionSense_Diag_Log("hole hide skip=panel_locked")
                 return
             }
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if g_GDHO_SuppressSelectionAutoHide {
@@ -2636,22 +2687,26 @@ SelectionSense_HideHoleAfterSelection(*) {
             try SetTimer(SelectionSense_HideHoleAfterSelection, -450)
             return
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if FuncExists("GDHO_IsTextHoleUserPanelActive") {
         try {
             if GDHO_IsTextHoleUserPanelActive() {
                 SelectionSense_Diag_Log("hole hide skip_panel_open")
                 try SelectionSense_HideDragHintToast("selection_hide")
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
                 if FuncExists("GDHO_HideStarryKeepPanel")
                     try GDHO_HideStarryKeepPanel("selection_timeout_starry")
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
                 return
             }
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if FuncExists("GDHO_IsTextHolePanelOpen") {
@@ -2659,15 +2714,18 @@ SelectionSense_HideHoleAfterSelection(*) {
             if GDHO_IsTextHolePanelOpen() {
                 SelectionSense_Diag_Log("hole hide skip_panel_open")
                 try SelectionSense_HideDragHintToast("selection_hide")
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
                 if FuncExists("GDHO_HideStarryKeepPanel")
                     try GDHO_HideStarryKeepPanel("selection_timeout_starry")
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
                 return
             }
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if FuncExists("GDHO_TextHolePresentAllowed") {
@@ -2677,7 +2735,8 @@ SelectionSense_HideHoleAfterSelection(*) {
                 try SetTimer(SelectionSense_HideHoleAfterSelection, -2200)
                 return
             }
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if FuncExists("GDHO_IsTextHoleAwaitingExpand") {
@@ -2687,12 +2746,14 @@ SelectionSense_HideHoleAfterSelection(*) {
                 try SetTimer(SelectionSense_HideHoleAfterSelection, -2200)
                 return
             }
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if FuncExists("GDHO_AbortTextHoleCommit") {
         try GDHO_AbortTextHoleCommit("selection_copy_timeout")
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if FuncExists("GDHO_ShouldKeepTextHolePanel") {
@@ -2700,27 +2761,32 @@ SelectionSense_HideHoleAfterSelection(*) {
             if GDHO_ShouldKeepTextHolePanel() {
                 SelectionSense_Diag_Log("hole hide skip_panel_protected")
                 try SelectionSense_HideDragHintToast("selection_hide")
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
                 return
             }
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     SelectionSense_Diag_Log("hole hide now")
     if FuncExists("GDHO_ClearTextDragHandoff")
         GDHO_ClearTextDragHandoff()
     try SelectionSense_HideDragHintToast("selection_hide")
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if FuncExists("GDHO_HidePanel") {
         try GDHO_HidePanel("selection_copy_timeout")
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if FuncExists("SelectionSense_OnHoleDragSessionEnded") {
         try SelectionSense_OnHoleDragSessionEnded()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     try GDHO_RequestClose("selection_copy_timeout")
@@ -2739,7 +2805,8 @@ HubCapsule_Log(event, detail := "") {
             NMER_AsyncLog(Nmer_DebugPath("hubcapsule_runtime.log"), line)
         else
             FileAppend(line, Nmer_DebugPath("hubcapsule_runtime.log"), "UTF-8")
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -2918,7 +2985,8 @@ HubCapsule_ResetRuntime(reason := "") {
     try {
         if g_SelSense_MenuGui
             g_SelSense_MenuGui.Destroy()
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     g_SelSense_MenuGui := 0
     g_SelSense_MenuCtrl := 0
@@ -2950,7 +3018,22 @@ SelectionSense_EnsureMenuHost() {
     WebView2_CreateWithSharedEnvAsync(g_SelSense_MenuGui.Hwnd, (ctrl) => SelectionSense_OnMenuWebViewCreated(ctrl, gen), "hubcapsule")
 }
 
-SelectionSense_OnMenuHostSize(*) {
+SelectionSense_OnMenuHostSize(GuiObj, MinMax, Width, Height) {
+    static hubWasMin := false
+    global g_SelSense_MenuShowingHub, g_HubCapsule_Minimized
+    if g_SelSense_MenuShowingHub {
+        if (MinMax = -1) {
+            hubWasMin := true
+            g_HubCapsule_Minimized := true
+            NmerPanel_OnGuiMinimized(MinMax, "scratchpad")
+            return
+        }
+        if (MinMax >= 0 && hubWasMin) {
+            g_HubCapsule_Minimized := false
+            NmerPanel_OnGuiRestoredFromMinimize(MinMax, true, "scratchpad")
+            hubWasMin := false
+        }
+    }
     SelectionSense_ApplyMenuBounds()
 }
 
@@ -3148,7 +3231,8 @@ SelectionSense_OnMenuWebMessage(sender, args) {
     if (typ = "selection_menu_ai") {
         SelectionSense_HideMenu()
         try PromptQuickPad_OpenCaptureDraft(txt, true)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return
     }
@@ -3271,7 +3355,8 @@ SelectionSense_OnMenuWebMessage(sender, args) {
                 }
             } catch as _e {
                 try A_Clipboard := p
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
             }
         }
@@ -3507,14 +3592,16 @@ SelectionSense_HubCapsule_PushThemeToWeb(overrideMode := "") {
         try {
             if IsObject(Func("ReadPersistedThemeMode"))
                 tm := ReadPersistedThemeMode()
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         if (tm = "")
             tm := IsSet(ThemeMode) ? ThemeMode : "dark"
     }
     tm := (StrLower(tm) = "light") ? "light" : "dark"
     try WebView_QueuePayload(g_SelSense_MenuWV2, Map("type", "set_theme", "themeMode", tm))
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -3541,7 +3628,8 @@ SelectionSense_SendDockConfig() {
                 ))
             }
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try WebView_QueuePayload(g_SelSense_MenuWV2, Map("type", "nmDockConfig", "sceneToolbarLayout", arr))
 }
@@ -3557,7 +3645,8 @@ SelectionSense_ExecuteDockCmd(msg) {
     try {
         _ExecuteCommand(cmdId0)
         return
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     m0 := Map(
         "Title", "dock",
@@ -3713,14 +3802,17 @@ SelectionSense_PushHubCtxMenuSpec() {
     try {
         if IsSet(_VK_SceneCtxMenuItemsJson)
             spec := _VK_SceneCtxMenuItemsJson("scratchpad")
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     items := []
     try items := Jxon_Load(spec)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try WebView_QueuePayload(g_SelSense_MenuWV2, Map("type", "hub_ctx_menu_spec", "items", items))
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -3878,8 +3970,51 @@ SelectionSense_ShowMenuRetryTick(*) {
     SelectionSense_ShowMenuNearCursor(true)
 }
 
+SelectionSense_HubCapsuleIsMinimized(*) {
+    global g_SelSense_MenuGui, g_SelSense_MenuShowingHub, g_HubCapsule_Minimized
+    if !g_SelSense_MenuShowingHub || !g_SelSense_MenuGui
+        return false
+    if g_HubCapsule_Minimized
+        return true
+    try return NmerPanel_IsMinimized(g_SelSense_MenuGui.Hwnd)
+    catch {
+        return false
+    }
+}
+
+SelectionSense_MinimizeHubCapsuleHost(reason := "") {
+    global g_SelSense_MenuGui, g_SelSense_MenuVisible, g_SelSense_MenuShowingHub, g_HubCapsule_Minimized
+    if !(g_SelSense_MenuShowingHub && g_SelSense_MenuGui && g_SelSense_MenuVisible)
+        return false
+    g_HubCapsule_Minimized := true
+    return NmerPanel_MinimizeGui(g_SelSense_MenuGui, "scratchpad")
+}
+
+SelectionSense_RestoreHubCapsuleHost(reason := "") {
+    global g_SelSense_MenuGui, g_SelSense_MenuShowingHub, g_SelSense_MenuVisible, g_HubCapsule_Minimized
+    if !g_SelSense_MenuShowingHub || !g_SelSense_MenuGui
+        return false
+    g_HubCapsule_Minimized := false
+    NmerPanel_RestoreGui(g_SelSense_MenuGui)
+    try FloatingToolbar_PageDockEnter("scratchpad")
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
+    }
+    try WinShow("ahk_id " . g_SelSense_MenuGui.Hwnd)
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
+    }
+    g_SelSense_MenuVisible := true
+    try SelectionSense_ApplyMenuBounds()
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
+    }
+    return true
+}
+
 SelectionSense_CloseHubCapsuleHost(reason := "") {
-    global g_HubCapsule_Generation
+    global g_HubCapsule_Generation, g_HubCapsule_Minimized
+    g_HubCapsule_Minimized := false
     SelectionSense_CancelShowMenuRetry()
     HubCapsule_StopWatchdog()
     g_HubCapsule_Generation += 1
@@ -3949,7 +4084,8 @@ SelectionSense_ShowMenuNearCursor(internalIntent := false) {
         try {
             if !Nmer_RectCenterOnScreen(sx, sy, w, h, Nmer_GetPopupScreenIndex())
                 savedOk := false
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if savedOk {
@@ -4209,7 +4345,8 @@ SelectionSense_Init() {
     }
     try SelectionSense_PrewarmHubCapsule()
     try SelectionSense_HideDragHintToast("init")
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 

@@ -52,7 +52,8 @@ _CP_LogAsync(event, detail := "") {
             NMER_AsyncLog(Nmer_DebugPath("clipboard_panel_runtime.log"), line)
         else
             FileAppend(line, Nmer_DebugPath("clipboard_panel_runtime.log"), "UTF-8")
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -82,32 +83,27 @@ CP_SearchAsync(url, callback := 0, timeoutMs := 2600, reqId := 0) {
 
 _CP_EnsureSearchCoreRunning() {
     global g_CP_BackendHealth, g_CP_LastHealthTick
-    if FuncExists("NmerService_Ensure") {
-        st := NmerService_Ensure("searchcore", "clipboard", false)
-    } else if FuncExists("SearchCore_EnsureStatus") {
-        st := SearchCore_EnsureStatus(false, "clipboard")
-        if !(st is Map) || !st.Has("status")
-            return false
-        status := String(st["status"])
-        ok := (status = "healthy" || status = "started" || status = "process_only")
+    if FuncExists("SearchCore_EnsureHttpReady") {
+        ok := SearchCore_EnsureHttpReady("clipboard")
         if ok {
-            if (status = "healthy") {
-                g_CP_BackendHealth := true
-                g_CP_LastHealthTick := A_TickCount
-            } else {
-                SetTimer((*) => CP_HealthProbeAsync(), -80)
-            }
+            g_CP_BackendHealth := true
+            g_CP_LastHealthTick := A_TickCount
         }
         return ok
     }
-    if FuncExists("Nmer_StartSearchCenterCoreStatus") {
+    st := 0
+    if FuncExists("NmerService_Ensure")
+        st := NmerService_Ensure("searchcore", "clipboard", false)
+    else if FuncExists("SearchCore_EnsureStatus")
+        st := SearchCore_EnsureStatus(false, "clipboard")
+    else if FuncExists("Nmer_StartSearchCenterCoreStatus")
         st := Nmer_StartSearchCenterCoreStatus(false, "clipboard")
-        if !(st is Map) || !st.Has("status")
-            return false
-        status := String(st["status"])
-        ok := (status = "healthy" || status = "started" || status = "process_only")
+    if (st is Map) {
+        ok := FuncExists("SearchCore_StatusHttpReady")
+            ? SearchCore_StatusHttpReady(st)
+            : ((String(st["status"]) = "healthy" || String(st["status"]) = "started"))
         if ok {
-            if (status = "healthy") {
+            if (st.Has("healthOk") && st["healthOk"]) {
                 g_CP_BackendHealth := true
                 g_CP_LastHealthTick := A_TickCount
             } else {
@@ -138,7 +134,8 @@ _CP_MergeCtxMenuIntoClipJson(body) {
     try {
         if IsSet(_VK_SceneCtxMenuItemsJson)
             specStr := _VK_SceneCtxMenuItemsJson("clipboard")
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try {
         m["ctxMenuSpec"] := (%"Jxon_Load"%).Call(specStr)
@@ -332,7 +329,8 @@ _CP_HasClipMainColumn(colName) {
                 }
             }
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return false
 }
@@ -383,7 +381,8 @@ CP_IsForeground() {
     global g_CP_UnifiedRedirectEnabled
     if g_CP_UnifiedRedirectEnabled {
         try return SCWV_IsClipboardUnifiedActive()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     global g_CP_Gui, g_CP_Visible
@@ -421,7 +420,10 @@ CP_Show() {
     if !g_CP_Gui
         CP_Init()
 
-    if g_CP_Visible {
+    if g_CP_Gui
+        NmerPanel_RestoreGui(g_CP_Gui)
+
+    if g_CP_Visible && g_CP_Gui && NmerPanel_IsShown(g_CP_Gui.Hwnd) {
         try LegacyGuard_RequestFocus("ClipboardPanel", g_CP_Gui.Hwnd, 25, "cp_show_already_visible", 220)
         WebView2_MoveFocusProgrammatic(g_CP_Ctrl)
         SetTimer(_CP_DeferredMoveFocus100, -100)
@@ -434,14 +436,16 @@ CP_Show() {
             _CP_CenterWindow()
             g_CP_Gui.Show()
             try WinMaximize("ahk_id " . g_CP_Gui.Hwnd)
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
     } else {
         _CP_CenterWindow()
         g_CP_Gui.Show()
         try WinMaximize("ahk_id " . g_CP_Gui.Hwnd)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     g_CP_Visible := true
@@ -527,7 +531,8 @@ CP_Dispose(reason := "") {
     global g_CP_Gui, g_CP_Ctrl, g_CP_WV2, g_CP_Ready, g_CP_Visible, g_CP_FocusPending
     global g_CP_WM_ActivateHideCallback, g_CP_SearchTimer
     try CP_Hide()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     SurfaceManager_CloseWebViewControl(g_CP_Ctrl)
     g_CP_Ctrl := 0
@@ -570,7 +575,8 @@ CP_SetSearchText(keyword, runSearch := true, focusInput := true) {
         try {
             WebView_QueuePayload(g_CP_WV2, payload)
             return true
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     return false
@@ -605,7 +611,8 @@ _CP_WM_ACTIVATE(wParam, lParam, msg, hwnd) {
         try {
             if ThemeApply_IsInProgress()
                 return
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         if (g_CP_LastShown && (A_TickCount - g_CP_LastShown < 500))
             return
@@ -613,7 +620,8 @@ _CP_WM_ACTIVATE(wParam, lParam, msg, hwnd) {
         try {
             if (FloatingToolbar_IsForegroundToolbarOrChild())
                 return
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         g_CP_WM_ActivateHideCallback := _CP_DeferredHideIfStillInactive.Bind()
         SetTimer(g_CP_WM_ActivateHideCallback, -380)
@@ -631,7 +639,8 @@ _CP_DeferredHideIfStillInactive(*) {
     } catch as e {
         return
     }
-    CP_Hide()
+    if IsObject(g_CP_Gui)
+        NmerPanel_MinimizeGui(g_CP_Gui, "clipboard")
 }
 
 ; ===================== 窗口居中 =====================
@@ -745,8 +754,16 @@ _CP_OnNavigationCompleted(sender, args) {
 }
 
 _CP_OnGuiResize(GuiObj, MinMax, Width, Height) {
-    if MinMax = -1
+    static cpWasMin := false
+    if (MinMax = -1) {
+        cpWasMin := true
+        NmerPanel_OnGuiMinimized(MinMax, "clipboard")
         return
+    }
+    if (MinMax >= 0) {
+        NmerPanel_OnGuiRestoredFromMinimize(MinMax, cpWasMin, "clipboard")
+        cpWasMin := false
+    }
     _CP_ApplyBounds()
 }
 
@@ -931,7 +948,8 @@ _CP_SendDockConfig() {
                 ))
             }
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     CP_SendToWeb(Map("type", "nmDockConfig", "sceneToolbarLayout", arr))
 }
@@ -947,7 +965,8 @@ _CP_ExecuteDockCmd(msg) {
     try {
         _ExecuteCommand(cmdId0)
         return
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     m0 := Map(
         "Title", "dock",
@@ -990,18 +1009,21 @@ _CP_GetThemeMode() {
             if (Trim(String(raw)) != "")
                 return _CP_NormalizeThemeToken(raw, "dark")
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try {
         fn := Func("ReadPersistedThemeMode")
         if IsObject(fn)
             return _CP_NormalizeThemeToken(fn.Call(), "dark")
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try {
         global ThemeMode
         return _CP_NormalizeThemeToken(ThemeMode, "dark")
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return "dark"
 }
@@ -1097,7 +1119,14 @@ _CP_LoadItems(keyword := "", filterType := "all", offset := 0, limit := 30) {
         SQL .= " ORDER BY IsFavorite DESC, " . orderBy . " DESC, ID DESC LIMIT " . limit . " OFFSET " . offset
 
         table := ""
-        if ClipboardFTS5DB.GetTable(SQL, &table) {
+        if (IsSet(g_CP_LastKeywordParams) && g_CP_LastKeywordParams.Length > 0) {
+            if !SqlSafe_GetTable(ClipboardFTS5DB, &table, SQL, g_CP_LastKeywordParams*)
+                table := ""
+        } else if ClipboardFTS5DB.GetTable(SQL, &table) {
+        } else {
+            table := ""
+        }
+        if IsObject(table) && table {
             if table.HasRows && table.Rows.Length > 0 {
                 columnIndexMap := Map()
                 if table.HasNames && table.ColumnNames.Length > 0 {
@@ -1133,11 +1162,19 @@ _CP_GetTotalCount(keyword := "", filterType := "all") {
             SQL .= " WHERE " . whereClause
 
         table := ""
-        if ClipboardFTS5DB.GetTable(SQL, &table) {
+        if (IsSet(g_CP_LastKeywordParams) && g_CP_LastKeywordParams.Length > 0) {
+            if !SqlSafe_GetTable(ClipboardFTS5DB, &table, SQL, g_CP_LastKeywordParams*)
+                table := ""
+        } else if ClipboardFTS5DB.GetTable(SQL, &table) {
+        } else {
+            table := ""
+        }
+        if IsObject(table) && table {
             if table.HasRows && table.Rows.Length > 0
                 return Integer(table.Rows[1][1])
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return 0
 }
@@ -1184,9 +1221,9 @@ _CP_BuildSelectFields() {
                 }
             }
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
-
     fields := "ID, Content, SourceApp, DataType, CharCount, Timestamp, ImagePath, IsFavorite"
     if hasLastCopyTime
         fields .= ", LastCopyTime"
@@ -1244,7 +1281,8 @@ _CP_GetOrderField() {
                 }
             }
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return "Timestamp"
 }
@@ -1282,8 +1320,43 @@ _CP_AppendTimeConditions(&conditions) {
     }
 }
 
+_CP_BuildSearchConditions(&conditions, keyword) {
+    global g_CP_LastKeywordParams
+    keyword := Trim(keyword)
+    if (keyword = "")
+        return
+
+    keywordLen := StrLen(keyword)
+    useLike := (keywordLen <= 2) || !RegExMatch(keyword, "^[\w\s]+$")
+
+    hasFTS5 := false
+    try {
+        global ClipboardFTS5DB
+        table := ""
+        if ClipboardFTS5DB.GetTable("SELECT name FROM sqlite_master WHERE type='table' AND name='ClipboardHistory'", &table) {
+            if table.HasRows && table.Rows.Length > 0
+                hasFTS5 := true
+        }
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e)
+    }
+
+    if hasFTS5 && !useLike && keywordLen > 3 {
+        ftsQuery := SqlSafe_Fts5Escape(keyword)
+        if (!InStr(keyword, " "))
+            ftsQuery .= '*'
+        conditions.Push("ID IN (SELECT rowid FROM ClipboardHistory WHERE ClipboardHistory MATCH '" . ftsQuery . "')")
+        return
+    }
+
+    conditions.Push("(LOWER(Content) LIKE '%' || ? || '%' OR LOWER(SourceApp) LIKE '%' || ? || '%')")
+    g_CP_LastKeywordParams.Push(keyword)
+    g_CP_LastKeywordParams.Push(keyword)
+}
+
 _CP_BuildWhereClause(keyword, filterType := "all") {
-    global ClipboardFTS5DB
+    global g_CP_LastKeywordParams
+    g_CP_LastKeywordParams := []
     keyword := Trim(keyword)
     filterType := _CP_NormalizeFilterType(filterType)
 
@@ -1305,36 +1378,7 @@ _CP_BuildWhereClause(keyword, filterType := "all") {
     if keyword = ""
         return conditions.Length > 0 ? _CP_JoinConditions(conditions) : ""
 
-    escapedKeyword := StrReplace(keyword, "'", "''")
-    escapedKeyword := StrReplace(escapedKeyword, "\", "\\")
-    escapedLike := StrReplace(escapedKeyword, "%", "\%")
-    escapedLike := StrReplace(escapedLike, "_", "\_")
-
-    keywordLen := StrLen(keyword)
-    useLike := (keywordLen <= 2) || !RegExMatch(keyword, "^[\w\s]+$")
-
-    hasFTS5 := false
-    try {
-        table := ""
-        if ClipboardFTS5DB.GetTable("SELECT name FROM sqlite_master WHERE type='table' AND name='ClipboardHistory'", &table) {
-            if table.HasRows && table.Rows.Length > 0
-                hasFTS5 := true
-        }
-    } catch {
-    }
-
-    if hasFTS5 && !useLike {
-        ftsKeyword := StrReplace(keyword, "'", "''")
-        ftsKeyword := StrReplace(ftsKeyword, '"', '""')
-        if InStr(ftsKeyword, " ")
-            ftsQuery := '"' . ftsKeyword . '"'
-        else
-            ftsQuery := ftsKeyword . '*'
-        conditions.Push("ID IN (SELECT rowid FROM ClipboardHistory WHERE ClipboardHistory MATCH '" . ftsQuery . "')")
-        return _CP_JoinConditions(conditions)
-    }
-
-    conditions.Push("(LOWER(Content) LIKE '%" . escapedLike . "%' OR LOWER(SourceApp) LIKE '%" . escapedLike . "%')")
+    _CP_BuildSearchConditions(&conditions, keyword)
     return _CP_JoinConditions(conditions)
 }
 
@@ -1381,7 +1425,8 @@ _CP_BuildItemsJson(msgType, items, total := 0, hasMore := false) {
     try {
         if IsSet(_VK_SceneCtxMenuItemsJson)
             spec := _VK_SceneCtxMenuItemsJson("clipboard")
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     json .= '],"total":' . total . ',"hasMore":' . (hasMore ? "true" : "false") . ',"engineMode":"' . g_CP_EngineMode . '","ctxMenuSpec":' . spec . "}"
     return json
@@ -1465,9 +1510,9 @@ _CP_GetClipRow(id) {
         return row
     try {
         selectFields := _CP_BuildSelectFields()
-        SQL := "SELECT " . selectFields . " FROM ClipMain WHERE ID = " . id
+        SQL := "SELECT " . selectFields . " FROM ClipMain WHERE ID = ?"
         table := ""
-        if ClipboardFTS5DB.GetTable(SQL, &table) {
+        if SqlSafe_GetTable(ClipboardFTS5DB, &table, SQL, id) {
             if table.HasRows && table.Rows.Length > 0 {
                 columnIndexMap := Map()
                 if table.HasNames && table.ColumnNames.Length > 0 {
@@ -1685,8 +1730,7 @@ _CP_DoDelete(id) {
         return
 
     try {
-        SQL := "DELETE FROM ClipMain WHERE ID = " . id
-        if ClipboardFTS5DB.Exec(SQL) {
+        if SqlSafe_Exec(ClipboardFTS5DB, "DELETE FROM ClipMain WHERE ID = ?", id) {
             CP_SendToWeb('{"type":"deleted","id":' . id . '}')
         }
     } catch as err {
@@ -1702,17 +1746,16 @@ _CP_DoPin(id) {
         return
 
     try {
-        SQL := "SELECT IsFavorite FROM ClipMain WHERE ID = " . id
+        SQL := "SELECT IsFavorite FROM ClipMain WHERE ID = ?"
         table := ""
         currentState := 0
-        if ClipboardFTS5DB.GetTable(SQL, &table) {
+        if SqlSafe_GetTable(ClipboardFTS5DB, &table, SQL, id) {
             if table.HasRows && table.Rows.Length > 0
                 currentState := Integer(table.Rows[1][1])
         }
 
         newState := currentState ? 0 : 1
-        SQL := "UPDATE ClipMain SET IsFavorite = " . newState . " WHERE ID = " . id
-        if ClipboardFTS5DB.Exec(SQL) {
+        if SqlSafe_Exec(ClipboardFTS5DB, "UPDATE ClipMain SET IsFavorite = ? WHERE ID = ?", newState, id) {
             CP_SendToWeb('{"type":"pinned","id":' . id . ',"state":' . newState . '}')
         }
     } catch as err {
@@ -1987,9 +2030,9 @@ _CP_DoGetPreview(id) {
 
     try {
         selectFields := _CP_BuildSelectFields()
-        SQL := "SELECT " . selectFields . " FROM ClipMain WHERE ID = " . id
+        SQL := "SELECT " . selectFields . " FROM ClipMain WHERE ID = ?"
         table := ""
-        if ClipboardFTS5DB.GetTable(SQL, &table) {
+        if SqlSafe_GetTable(ClipboardFTS5DB, &table, SQL, id) {
             if table.HasRows && table.Rows.Length > 0 {
                 columnIndexMap := Map()
                 if table.HasNames && table.ColumnNames.Length > 0 {

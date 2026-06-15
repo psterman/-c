@@ -437,7 +437,8 @@ CreateHistoryImageList(ListViewCtrl) {
             ; 如果设置失败，清理 ImageList
             try {
                 IL_Destroy(HistoryImageList)
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             HistoryImageList := 0
         }
@@ -804,51 +805,31 @@ RefreshHistoryData(keyword := "", offset := 0, limit := 0) {
             ; 构建WHERE条件
             ; 支持全域搜索：当 HistorySelectedTag 为空时，不添加 DataType 过滤，可以搜索所有类型
             whereConditions := []
+            queryParams := []
             
             ; 添加关键词搜索条件（优先使用 FTS5 MATCH 语法）
             ; 关键词搜索不受标签限制，可以跨所有 DataType 进行搜索
             ; 参考 SearchCenter 的实现，确保关键词经过 Trim 处理
             keyword := Trim(keyword)
             if (keyword != "") {
-                ; 转义关键词（用于 LIKE 查询）
-                escapedKeyword := StrReplace(keyword, "'", "''")
-                escapedKeyword := StrReplace(escapedKeyword, "\", "\\")
-                escapedKeyword := StrReplace(escapedKeyword, "%", "\%")
-                escapedKeyword := StrReplace(escapedKeyword, "_", "\_")
-                
                 ; 对于短关键词（1-2个字符）或包含特殊字符的，使用 LIKE 查询
                 ; FTS5 对单个字符或数字的匹配不够可靠
                 keywordLen := StrLen(keyword)
                 useLikeQuery := (keywordLen <= 2) || !RegExMatch(keyword, "^[\w\s]+$")
-                
+
                 if (hasFTS5Table && !useLikeQuery) {
                     ; 使用 FTS5 MATCH 语法（适用于长关键词）
-                    ; FTS5 语法说明：
-                    ; - keyword* 表示前缀匹配（以 keyword 开头的词）
-                    ; - "phrase" 表示短语匹配
-                    ; - 多个词用空格分隔表示 AND
-                    ; 转义特殊字符（FTS5 需要特殊处理）
-                    ftsEscapedKeyword := StrReplace(keyword, "'", "''")
-                    ftsEscapedKeyword := StrReplace(ftsEscapedKeyword, "\", "\\")
-                    ftsEscapedKeyword := StrReplace(ftsEscapedKeyword, '"', '""')
-                    
-                    ; 如果关键词包含空格，使用短语匹配；否则使用前缀匹配
-                    if (InStr(ftsEscapedKeyword, " ")) {
-                        ; 包含空格，使用短语匹配
-                        ftsQuery := '"' . ftsEscapedKeyword . '"'
-                    } else {
-                        ; 单个词，使用前缀匹配
-                        ftsQuery := ftsEscapedKeyword . '*'
-                    }
-                    
-                    ; 使用 FTS5 表进行搜索（MATCH 语法）
-                    ; 注意：FTS5 MATCH 需要使用单引号包裹查询字符串
-                    ; 搜索 Content 和 SourceApp 等核心字段，不受 DataType 限制（全域搜索）
+                    ; 通过 SqlSafe_Fts5Escape 安全地构建 FTS5 匹配表达式
+                    ftsQuery := SqlSafe_Fts5Escape(keyword)
+                    if (!InStr(keyword, " "))
+                        ftsQuery .= '*'
+                    ; FTS5 MATCH 值必须用单引号包裹
                     whereConditions.Push("ID IN (SELECT rowid FROM ClipboardHistory WHERE ClipboardHistory MATCH '" . ftsQuery . "')")
                 } else {
-                    ; 使用 LIKE 查询（适用于短关键词或 FTS5 不可用）
-                    ; 搜索 Content 和 SourceApp 字段，不受 DataType 限制（全域搜索）
-                    whereConditions.Push("(Content LIKE '%" . escapedKeyword . "%' OR SourceApp LIKE '%" . escapedKeyword . "%')")
+                    ; 使用参数化 LIKE 查询（适用于短关键词或 FTS5 不可用）
+                    whereConditions.Push("(Content LIKE '%' || ? || '%' OR SourceApp LIKE '%' || ? || '%')")
+                    queryParams.Push(keyword)
+                    queryParams.Push(keyword)
                 }
             }
             
@@ -913,7 +894,7 @@ RefreshHistoryData(keyword := "", offset := 0, limit := 0) {
             ; OutputDebug("ClipboardHistoryPanel 搜索关键词: " . keyword . ", 标签: " . HistorySelectedTag . "`n")
             
             table := ""
-            querySuccess := ClipboardFTS5DB.GetTable(SQL, &table)
+            querySuccess := SqlSafe_GetTable(ClipboardFTS5DB, &table, SQL, queryParams*)
             if (querySuccess) {
                 if (table.HasRows && table.Rows.Length > 0) {
                     ; 获取列名（用于验证列顺序）
@@ -1701,7 +1682,8 @@ OnHistorySearchChange(*) {
     if (HistorySearchTimer != 0) {
         try {
             SetTimer(HistorySearchTimer, 0)  ; 取消定时器
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     
@@ -1845,7 +1827,8 @@ ProcessImagePreview() {
             if (HistoryImagePreviewTimer != 0) {
                 try {
                     SetTimer(HistoryImagePreviewTimer, 0)
-                } catch {
+                } catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
                 HistoryImagePreviewTimer := 0
             }
@@ -2076,7 +2059,8 @@ ShowImagePreviewImmediately(imagePath) {
         if (HistoryImagePreviewGUI != 0) {
             try {
                 HistoryImagePreviewGUI.Destroy()
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             HistoryImagePreviewGUI := 0
         }
@@ -2449,8 +2433,8 @@ HistoryContextMenuDelete(*) {
             rowData := HistoryDisplayCache[rowNum]
             if (rowData.Has("ID") && rowData["ID"] != "") {
                 try {
-                    SQL := "DELETE FROM ClipMain WHERE ID = " . rowData["ID"]
-                    if (ClipboardFTS5DB.Exec(SQL)) {
+                    SQL := "DELETE FROM ClipMain WHERE ID = ?"
+                    if (SqlSafe_Exec(ClipboardFTS5DB, SQL, rowData["ID"])) {
                         deletedCount++
                     }
                 } catch as err {
@@ -2783,7 +2767,8 @@ HideColorSummaryPanel() {
         try {
             ColorSummaryGUI.Hide()
             ColorSummaryIsVisible := false
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 }
@@ -2828,7 +2813,8 @@ RefreshColorSummaryPanel() {
     if (ColorSummaryIsVisible && ColorSummaryGUI != 0) {
         try {
             ColorSummaryGUI.Destroy()
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         ColorSummaryGUI := 0
         ColorSummaryIsVisible := false
@@ -3379,7 +3365,8 @@ HideHistoryImagePreview(*) {
     if (HistoryImagePreviewTimer != 0) {
         try {
             SetTimer(HistoryImagePreviewTimer, 0)
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         HistoryImagePreviewTimer := 0
     }
@@ -3389,7 +3376,8 @@ HideHistoryImagePreview(*) {
         try {
             HistoryImagePreviewGUI.Hide()
             HistoryImagePreviewIsVisible := false
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 }
@@ -3577,14 +3565,18 @@ HandleStackCopy() {
         if (hasCopyCount) {
             SQL .= ", CopyCount"
         }
-        SQL .= ") VALUES ('" . escapedContent . "', '" . escapedSourceApp . "'"
+        SQL .= ") VALUES (?, ?"
+        insertParams := [clipboardContent, SourceApp]
         if (hasSourcePath) {
-            SQL .= ", '" . escapedSourcePath . "'"
+            SQL .= ", ?"
+            insertParams.Push(SourcePath)
         }
         if (hasIconPath) {
-            SQL .= ", '" . escapedIconPath . "'"
+            SQL .= ", ?"
+            insertParams.Push(IconPath)
         }
-        SQL .= ", 'Stack', " . charCount . ", datetime('now', 'localtime')"
+        SQL .= ", 'Stack', ?, datetime('now', 'localtime')"
+        insertParams.Push(charCount)
         if (hasLastCopyTime) {
             SQL .= ", datetime('now', 'localtime')"
         }
@@ -3593,7 +3585,7 @@ HandleStackCopy() {
         }
         SQL .= ")"
         
-        if (ClipboardFTS5DB.Exec(SQL)) {
+        if (SqlSafe_Exec(ClipboardFTS5DB, SQL, insertParams*)) {
             ; 获取刚插入的记录ID
             recordID := ClipboardFTS5DB.LastInsertRowID()
             if (recordID > 0) {
@@ -3653,9 +3645,9 @@ HandleStackPaste() {
         ; 从数据库读取所有叠加内容
         allContent := []
         for index, recordID in StackClipboardItems {
-            SQL := "SELECT Content FROM ClipMain WHERE ID = " . recordID
+            SQL := "SELECT Content FROM ClipMain WHERE ID = ?"
             table := ""
-            if (ClipboardFTS5DB.GetTable(SQL, &table)) {
+            if (SqlSafe_GetTable(ClipboardFTS5DB, &table, SQL, recordID)) {
                 if (table.HasRows && table.Rows.Length > 0) {
                     content := table.Rows[1][1]
                     if (content != "" && StrLen(content) > 0) {
@@ -3768,8 +3760,8 @@ HistoryDeleteSelected(*) {
         
         if (itemID > 0 && ClipboardFTS5DB && ClipboardFTS5DB != 0) {
             try {
-                SQL := "DELETE FROM ClipMain WHERE ID = " . itemID
-                if (ClipboardFTS5DB.Exec(SQL)) {
+                SQL := "DELETE FROM ClipMain WHERE ID = ?"
+                if (SqlSafe_Exec(ClipboardFTS5DB, SQL, itemID)) {
                     ; 刷新数据
                     RefreshHistoryData()
                     TrayTip("提示", "已删除", "Iconi 1")
@@ -3824,9 +3816,9 @@ HistoryPasteToCursor(*) {
                         CursorPath := IniRead(ConfigFile, "General", "CursorPath", "")
                     }
                 }
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
-            
             ; 如果配置文件没有，使用默认路径
             if (CursorPath = "" || !FileExist(CursorPath)) {
                 DefaultCursorPath := "C:\Users\" . A_UserName . "\AppData\Local\Cursor\Cursor.exe"
@@ -3977,11 +3969,8 @@ HistoryImportClipboard(*) {
         importedCount := 0
         for index, item in importedItems {
             if (item != "") {
-                escapedContent := StrReplace(item, "'", "''")
-                escapedContent := StrReplace(escapedContent, "\", "\\")
-                
-                SQL := "INSERT INTO ClipMain (Content, SourceApp, DataType, Timestamp) VALUES ('" . escapedContent . "', 'Import', 'Text', datetime('now', 'localtime'))"
-                if (ClipboardFTS5DB.Exec(SQL)) {
+                SQL := "INSERT INTO ClipMain (Content, SourceApp, DataType, Timestamp) VALUES (?, 'Import', 'Text', datetime('now', 'localtime'))"
+                if (SqlSafe_Exec(ClipboardFTS5DB, SQL, item)) {
                     importedCount++
                 }
             }

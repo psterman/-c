@@ -79,7 +79,8 @@ UserStudio_ResolveInstallRoot(doc) {
     root := Trim(String(opt.Get("niumaInstallRoot", "")))
     if (root != "") {
         try root := UserStudio_NormalizeWinPath(root)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         if DirExist(root)
             return root
@@ -286,7 +287,8 @@ UserStudio_DefaultDocument() {
             parsed := _US_JxonLoad(raw)
             if (parsed is Map)
                 return UserStudio_NormalizeDoc(parsed)
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     return UserStudio_NormalizeDoc(Map(
@@ -313,7 +315,7 @@ UserStudio_LlmPresetFor(prov) {
     prov := UserStudio_NormalizeLlmProvider(prov)
     switch prov {
         case "minimax":
-            return Map("baseUrl", "https://api.minimaxi.com/anthropic", "model", "MiniMax-M2.7")
+            return Map("baseUrl", "https://api.minimax.io/anthropic", "model", "MiniMax-M2.7")
         case "gemini":
             return Map("baseUrl", "https://generativelanguage.googleapis.com/v1beta", "model", "gemini-2.5-flash")
         case "deepseek":
@@ -348,7 +350,8 @@ UserStudio_CoerceTokenFromSecretInput(value, defaults := "") {
             id := Trim(String(value.Get("id", "")))
             if (src = "env" && id != "")
                 return Trim(String(EnvGet(id)))
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return ""
     }
@@ -375,7 +378,8 @@ UserStudio_ExtractOpenClawGatewayToken(cfg) {
     try {
         if cfg.Has("secrets") && cfg["secrets"] is Map && cfg["secrets"].Has("defaults")
             defaults := cfg["secrets"]["defaults"]
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try {
         if cfg.Has("gateway") {
@@ -406,7 +410,8 @@ UserStudio_ExtractOpenClawGatewayToken(cfg) {
                 }
             }
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return ""
 }
@@ -417,7 +422,8 @@ UserStudio_FindOpenClawCliExe() {
         appData := Trim(String(EnvGet("APPDATA")))
         if (appData != "")
             candidates.Push(appData . "\npm\openclaw.cmd")
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if (A_AppData != "")
         candidates.Push(A_AppData . "\npm\openclaw.cmd")
@@ -466,7 +472,8 @@ UserStudio_OpenClawGatewayCliOk(timeoutMs := 9000) {
     while ProcessExist(pid) {
         if (A_TickCount > deadline) {
             try ProcessClose(pid)
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             try FileDelete(out)
             return false
@@ -542,7 +549,8 @@ UserStudio_TcpPortOpen(host, port, timeoutMs := 2500) {
         return false
     } finally {
         try DllCall("ws2_32\closesocket", "UPtr", sock)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 }
@@ -550,7 +558,8 @@ UserStudio_TcpPortOpen(host, port, timeoutMs := 2500) {
 UserStudio_ProbeOpenClawGateway(base, token, timeoutMs := 12000) {
     if FuncExists("LlmApiPing_TestOpenClaw") {
         try return LlmApiPing_TestOpenClaw(base, token, timeoutMs)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     token := UserStudio_NormalizeApiKey(token)
@@ -571,7 +580,8 @@ UserStudio_ProbeOpenClawGateway(base, token, timeoutMs := 12000) {
         try {
             if LlmApiPing_OpenClawHttpReachable(host, port, Min(3000, Max(800, Integer(timeoutMs))))
                 return Map("ok", true, "error", "", "elapsedMs", A_TickCount - t0, "via", "http")
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     tcpMs := Min(8000, Max(1500, Integer(timeoutMs) // 2))
@@ -632,7 +642,8 @@ UserStudio_ParseOpenClawCliStdout(raw) {
             if (parsed != "")
                 return UserStudio_NormalizeApiKey(String(parsed))
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     dq := Chr(34)
     if RegExMatch(raw, "^" . dq . "(.+)" . dq . "$", &m)
@@ -668,7 +679,8 @@ UserStudio_FetchOpenClawTokenViaCli(timeoutMs := 20000) {
         Run(cmd, , "Hide", &pid)
     } catch as eRun {
         try UserStudio_LogOpenClawProbe("cli_run_fail err=" . eRun.Message)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return Map("token", "", "source", "")
     }
@@ -679,7 +691,8 @@ UserStudio_FetchOpenClawTokenViaCli(timeoutMs := 20000) {
         if (A_TickCount > deadline) {
             try ProcessClose(pid)
             try UserStudio_LogOpenClawProbe("cli_get_timeout ms=" . timeoutMs)
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             try FileDelete(outFile)
             return Map("token", "", "source", "")
@@ -697,7 +710,8 @@ UserStudio_FetchOpenClawTokenViaCli(timeoutMs := 20000) {
     } catch as eCli {
         try FileDelete(outFile)
         try UserStudio_LogOpenClawProbe("cli_get_fail err=" . eCli.Message)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     return Map("token", "", "source", "")
@@ -742,13 +756,15 @@ UserStudio_ResolveOpenClawUserHome() {
         up := Trim(String(EnvGet("USERPROFILE")))
         if (up != "")
             dirs.Push(up)
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try {
         localApp := Trim(String(EnvGet("LOCALAPPDATA")))
         if (localApp != "")
             dirs.Push(localApp)
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if (A_AppData != "") {
         homeFromRoaming := RegExReplace(A_AppData, "\\AppData\\Roaming$", "")
@@ -762,7 +778,8 @@ UserStudio_ResolveOpenClawUserHome() {
         hpHome := hd . hp
         if (hpHome != "")
             dirs.Push(hpHome)
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     for _, dir in dirs {
         dir := Trim(String(dir))
@@ -788,7 +805,8 @@ UserStudio_OpenClawConfigFileCandidates() {
         up := Trim(String(EnvGet("USERPROFILE")))
         if (up != "")
             paths.Push(up . "\.openclaw\openclaw.json")
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if (A_AppData != "") {
         hm := Trim(RegExReplace(A_AppData, "\\AppData\\Roaming$", ""))
@@ -803,7 +821,8 @@ UserStudio_OpenClawConfigFileCandidates() {
             for _, name in names
                 paths.Push(up . "\.openclaw\" . name)
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if (home != "") {
         for _, name in names
@@ -816,7 +835,8 @@ UserStudio_OpenClawConfigFileCandidates() {
             for _, name in names
                 paths.Push(stateDir . "\" . name)
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     paths.Push(A_AppData . "\openclaw\openclaw.json")
     paths.Push(A_AppData . "\clawhub\openclaw.json")
@@ -924,7 +944,8 @@ UserStudio_LogOpenClawProbe(lines*) {
         for _, ln in lines
             buf .= FormatTime(A_Now, "yyyy-MM-dd HH:mm:ss") . " " . String(ln) . "`n"
         FileAppend(buf, path, "UTF-8")
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -946,7 +967,8 @@ UserStudio_ReadOpenClawGatewayToken(fastProbe := false) {
                     tok := UserStudio_ExtractOpenClawGatewayToken(cfg)
                 } catch as eJxon {
                     try UserStudio_LogOpenClawProbe("jxon_fail path=" . path . " err=" . eJxon.Message)
-                    catch {
+                    catch as _e {
+                        NmerCatch(A_ThisFunc, _e) 
                     }
                 }
             }
@@ -970,7 +992,8 @@ UserStudio_ReadOpenClawGatewayToken(fastProbe := false) {
             }
         } catch as ePath {
             try UserStudio_LogOpenClawProbe("read_fail path=" . path . " err=" . ePath.Message)
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
     }
@@ -1002,7 +1025,8 @@ UserStudio_ReadOpenClawGatewayToken(fastProbe := false) {
         "tried=" . tried.Length,
         "cli=" . UserStudio_FindOpenClawCliExe()
     )
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return Map("token", "", "source", "", "host", "127.0.0.1", "port", 18789, "tried", tried)
 }
@@ -1014,13 +1038,15 @@ UserStudio_ProbeOpenClawGatewayToken(fastProbe := false) {
         envTok := Trim(String(EnvGet("OPENCLAW_GATEWAY_TOKEN")))
         if (envTok != "")
             return Map("token", envTok, "source", "env:OPENCLAW_GATEWAY_TOKEN", "host", host, "port", port)
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try {
         envPwd := Trim(String(EnvGet("OPENCLAW_GATEWAY_PASSWORD")))
         if (envPwd != "")
             return Map("token", envPwd, "source", "env:OPENCLAW_GATEWAY_PASSWORD", "host", host, "port", port)
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     info := UserStudio_ReadOpenClawGatewayToken(!!fastProbe)
     tok := Trim(String(info.Get("token", "")))
@@ -1042,7 +1068,8 @@ UserStudio_ProbeOpenClawGatewayToken(fastProbe := false) {
                         "port", Integer(fb.Get("port", port))
                     )
             }
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     return info
@@ -1053,7 +1080,8 @@ UserStudio_HermesAddDataDir(dirs, seen, path) {
     if (path = "")
         return
     try path := RTrim(path, "\/")
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if seen.Has(path)
         return
@@ -1073,11 +1101,13 @@ UserStudio_ListHermesDataDirs() {
         h := Trim(String(EnvGet("HERMES_HOME")))
         if (h != "")
             UserStudio_HermesAddDataDir(dirs, seen, h)
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     up := ""
     try up := Trim(String(EnvGet("USERPROFILE")))
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if (up = "")
         up := A_UserName ? "C:\Users\" . A_UserName : A_AppData
@@ -1100,13 +1130,15 @@ UserStudio_LocalAppDataDir() {
             p := RegExReplace(A_AppData, "\\Roaming$", "\\Local", , 1)
             if (p != A_AppData && DirExist(p))
                 cached := p
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if (cached = "") {
         up := ""
         try up := Trim(EnvGet("USERPROFILE"))
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         if (up = "")
             up := A_UserName ? "C:\Users\" . A_UserName : ""
@@ -1127,11 +1159,13 @@ UserStudio_ResolveHermesHome() {
         h := Trim(String(EnvGet("HERMES_HOME")))
         if (h != "")
             return h
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     up := ""
     try up := Trim(String(EnvGet("USERPROFILE")))
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if (up = "")
         up := A_UserName ? "C:\Users\" . A_UserName : A_AppData
@@ -1171,7 +1205,8 @@ UserStudio_CollectHermesProbeMeta() {
     }
     up := ""
     try up := Trim(String(EnvGet("USERPROFILE")))
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if (up != "") {
         p2 := up . "\.hermes\.env"
@@ -1267,7 +1302,8 @@ UserStudio_QuickReadHermesApiServerKey() {
         pushPath(la . "\hermes\.env")
     up := ""
     try up := Trim(EnvGet("USERPROFILE"))
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if (up != "") {
         pushPath(up . "\.hermes\.env")
@@ -1424,7 +1460,8 @@ UserStudio_GuessLanIPv4() {
             if (ip != "" && RegExMatch(ip, "^\d{1,3}(\.\d{1,3}){3}$"))
                 return ip
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return ""
 }
@@ -1434,14 +1471,16 @@ UserStudio_BuildHermesRemoteBundle(advertiseHost := "", label := "") {
         cfg0 := UserStudio_ReadHermesApiConfig()
         if (Trim(String(cfg0.Get("key", ""))) = "")
             try UserStudio_EnsureHermesApiServerEnv()
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
     }
     cfg := UserStudio_ReadHermesApiConfig()
     key := Trim(String(cfg.Get("key", "")))
     if (key = "") {
         try key := UserStudio_ReadNiumaHermesKey()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if (key = "")
@@ -1474,7 +1513,8 @@ UserStudio_BuildHermesRemoteBundle(advertiseHost := "", label := "") {
 UserStudio_UriDecode(s) {
     if FuncExists("CloudPlayer_UrlDecodeToken") {
         try return CloudPlayer_UrlDecodeToken(s)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     t := StrReplace(String(s), "+", " ")
@@ -1613,7 +1653,8 @@ UserStudio_FindHermesCliExe() {
             candidates.Push(la . "\hermes\hermes-agent\venv\Scripts\hermes.exe")
             candidates.Push(la . "\hermes\hermes-agent\apps\desktop\release\win-unpacked\Hermes.exe")
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     candidates.Push("C:\Program Files\hermes\hermes.exe")
     for _, p in candidates {
@@ -1736,7 +1777,8 @@ UserStudio_DiscoverHermesInstall() {
     gatewayCmd := UserStudio_FindHermesGatewayCmd()
     desktopRunning := false
     try desktopRunning := !!ProcessExist("Hermes.exe")
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     gw := UserStudio_ReadHermesGatewayState()
     gwRunning := false
@@ -1839,19 +1881,22 @@ UserStudio_ReadHermesApiConfig() {
     try {
         if UserStudio_HermesEnvTruthy(EnvGet("API_SERVER_ENABLED"))
             enabled := true
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try {
         eh := Trim(String(EnvGet("API_SERVER_HOST")))
         if (eh != "")
             host := eh
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try {
         ep := Trim(String(EnvGet("API_SERVER_PORT")))
         if (ep != "" && ep ~= "^\d+$")
             port := Integer(ep)
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try {
         ek := UserStudio_NormalizeApiKey(EnvGet("API_SERVER_KEY"))
@@ -1859,7 +1904,8 @@ UserStudio_ReadHermesApiConfig() {
             key := ek
             source := "env:API_SERVER_KEY"
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     dot := UserStudio_ReadHermesDotEnv()
     if (dot is Map) {
@@ -1915,7 +1961,8 @@ UserStudio_ProbeHermesApiServer(base, key, timeoutMs := 12000) {
                 httpOk := true
             else if r is Map && Integer(r.Get("status", 0)) = 401
                 authFail := true
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         if !httpOk && !authFail {
             url2 := "http://" . host . ":" . port . "/v1/models"
@@ -1925,7 +1972,8 @@ UserStudio_ProbeHermesApiServer(base, key, timeoutMs := 12000) {
                     httpOk := true
                 else if r2 is Map && Integer(r2.Get("status", 0)) = 401
                     authFail := true
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
     }
@@ -1983,7 +2031,8 @@ UserStudio_ProbeHermesApiServer(base, key, timeoutMs := 12000) {
 UserStudio_ProbeHermesGatewayToken(ensureEnv := false) {
     if (ensureEnv && FuncExists("UserStudio_EnsureHermesApiServerEnv")) {
         try UserStudio_EnsureHermesApiServerEnv()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     cfg := UserStudio_ReadHermesApiConfig()
@@ -2042,7 +2091,8 @@ UserStudio_ReadNiumaHermesKey() {
                         return k
                 }
             }
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     try {
@@ -2052,7 +2102,8 @@ UserStudio_ReadNiumaHermesKey() {
             if (k != "")
                 return k
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return ""
 }
@@ -2070,14 +2121,16 @@ UserStudio_ReadNiumaOpenClawKey() {
                 if (k != "")
                     return k
             }
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     try {
         kStudio := UserStudio_ExtractOpenClawKeyFromDoc(UserStudio_Get())
         if (kStudio != "")
             return kStudio
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return ""
 }
@@ -2169,7 +2222,8 @@ UserStudio_MergeWithRuntimePaths(doc) {
         paths["cursor"] := CursorPath
     if (paths["autohotkey"] = "") {
         try paths["autohotkey"] := A_AhkPath
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     doc["paths"] := paths
@@ -2192,11 +2246,14 @@ UserStudio_Load(*) {
         }
     } else {
         try UserStudio_Save(doc)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     doc := UserStudio_MergeWithRuntimePaths(doc)
     doc := UserStudio_MergeLlmFromNiumaSync(doc)
+    if FuncExists("UserStudio_FillSecretsFromVault")
+        doc := UserStudio_FillSecretsFromVault(doc)
     g_UserStudio := doc
     g_UserStudioLoaded := true
     return doc
@@ -2212,14 +2269,16 @@ UserStudio_SyncFromNiumaFile(*) {
     ocAfter := UserStudio_ExtractOpenClawKeyFromDoc(doc)
     if (keyAfter != "" && keyAfter != keyBefore) {
         try UserStudio_Save(doc)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     } else if (keyAfter != "" || ocAfter != ocBefore) {
         global g_UserStudio
         g_UserStudio := doc
         if (ocAfter != "" && ocAfter != ocBefore) {
             try UserStudio_Save(doc)
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
     }
@@ -2275,7 +2334,8 @@ UserStudio_MergeLlmFromNiumaSync(doc) {
         if (Trim(String(doc["llm"].Get("model", ""))) = "" && Trim(String(llmIn.Get("model", ""))) != "")
             doc["llm"]["model"] := Trim(String(llmIn["model"]))
         doc := UserStudio_NormalizeDoc(doc)
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return doc
 }
@@ -2287,6 +2347,19 @@ UserStudio_WriteNiumaLlmSync(docOrLlm) {
     apiKeys := Map()
     if (docOrLlm.Has("llm") && docOrLlm["llm"] is Map)
         llm := docOrLlm["llm"]
+    if FuncExists("Nmer_Llm_ManagerEnabled") && Nmer_Llm_ManagerEnabled() && FuncExists("Nmer_Llm_GetActive") {
+        try {
+            active := Nmer_Llm_GetActive()
+            if (active is Map) && active.Count > 0
+                llm := Map(
+                    "provider", active.Get("vendor", llm.Get("provider", "openai")),
+                    "apiKey", active.Get("apiKey", llm.Get("apiKey", "")),
+                    "baseUrl", active.Get("baseUrl", llm.Get("baseUrl", "")),
+                    "model", active.Get("model", llm.Get("model", ""))
+                )
+        } catch {
+        }
+    }
     if (docOrLlm.Has("options") && docOrLlm["options"] is Map) {
         opt := UserStudio_NormalizeNiumaOptions(docOrLlm["options"])
         if (opt.Has("llmApiKeys") && opt["llmApiKeys"] is Map) {
@@ -2299,15 +2372,11 @@ UserStudio_WriteNiumaLlmSync(docOrLlm) {
         }
     }
     UserStudio_EnsureConfigDir()
+    prov := UserStudio_NormalizeLlmProvider(llm.Get("provider", "openai"))
     key := Trim(String(llm.Get("apiKey", "")))
-    if (key = "" && apiKeys.Count = 0)
-        return
-    if (key = "") {
-        prov := UserStudio_NormalizeLlmProvider(llm.Get("provider", "openai"))
-        if apiKeys.Has(prov)
-            key := apiKeys[prov]
-    }
-    if (key = "")
+    if (key = "" && apiKeys.Has(prov))
+        key := apiKeys[prov]
+    if (key = "" && prov != "ollama")
         return
     try {
         f := FileOpen(UserStudio_NiumaLlmSyncPath(), "w", "UTF-8")
@@ -2324,7 +2393,8 @@ UserStudio_WriteNiumaLlmSync(docOrLlm) {
             "updatedAt", FormatTime(, "yyyy-MM-dd HH:mm:ss")
         )))
         f.Close()
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -2335,16 +2405,59 @@ UserStudio_Get() {
     return g_UserStudio
 }
 
+UserStudio_FillSecretsFromVault(doc) {
+    if !(doc is Map) || !FuncExists("Nmer_SecretStore_Get")
+        return doc
+    if doc.Has("apiKeys") && doc["apiKeys"] is Map {
+        for k, v in doc["apiKeys"] {
+            if (Trim(String(v)) = "") {
+                plain := Nmer_SecretStore_Get("apiKeys." . k)
+                if (plain != "")
+                    doc["apiKeys"][k] := plain
+            }
+        }
+    }
+    if doc.Has("llm") && doc["llm"] is Map {
+        if (Trim(String(doc["llm"].Get("apiKey", ""))) = "") {
+            plain := Nmer_SecretStore_Get("llm.apiKey")
+            if (plain != "")
+                doc["llm"]["apiKey"] := plain
+        }
+    }
+    if doc.Has("options") && doc["options"] is Map {
+        if !doc["options"].Has("llmApiKeys") || !(doc["options"]["llmApiKeys"] is Map)
+            doc["options"]["llmApiKeys"] := Map()
+        for k, v in doc["options"]["llmApiKeys"] {
+            if (Trim(String(v)) = "") {
+                plain := Nmer_SecretStore_Get("options.llmApiKeys." . k)
+                if (plain != "")
+                    doc["options"]["llmApiKeys"][k] := plain
+            }
+        }
+    }
+    return doc
+}
+
+UserStudio_PersistSecretsToVault(doc) {
+    if !(doc is Map) || !FuncExists("Nmer_SecretStore_MigrateDocument")
+        return doc
+    Nmer_SecretStore_MigrateDocument(&doc)
+    return doc
+}
+
 UserStudio_Save(doc) {
     global g_UserStudio, g_UserStudioLoaded
     UserStudio_EnsureConfigDir()
     doc := UserStudio_NormalizeDoc(doc)
+    if FuncExists("UserStudio_PersistSecretsToVault")
+        doc := UserStudio_PersistSecretsToVault(doc)
     doc["updatedAt"] := FormatTime(, "yyyy-MM-dd HH:mm:ss")
     path := UserStudio_Path()
     try {
         if FileExist(path)
             FileCopy(path, UserStudio_BackupPath(), 1)
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     f := FileOpen(path, "w", "UTF-8")
     if !f
@@ -2363,10 +2476,12 @@ UserStudio_RestoreDefaults(*) {
         return Map("ok", false, "error", e.Message)
     }
     try UserStudio_ApplyPathsToGlobals(doc)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try UserStudio_SyncTtydToIni(doc)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return Map("ok", true, "error", "", "studio", doc)
 }
@@ -2395,7 +2510,8 @@ UserStudio_ImportFrom(path) {
         UserStudio_Save(doc)
         UserStudio_ApplyPathsToGlobals(doc)
         try UserStudio_SyncTtydToIni(doc)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return Map("ok", true, "error", "", "studio", doc)
     } catch as e {
@@ -2411,7 +2527,8 @@ UserStudio_ApplyPathsToGlobals(doc) {
     cp := Trim(String(paths.Get("cursor", "")))
     if (cp != "") {
         try cp := UserStudio_NormalizeWinPath(cp)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         if FileExist(cp) {
             CursorPath := cp
@@ -2443,7 +2560,8 @@ UserStudio_CoerceWebMap(val) {
                 parsed := _US_JxonLoad(s)
                 if (parsed is Map)
                     return parsed
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
         return Map()
@@ -2501,7 +2619,8 @@ UserStudio_NormalizeCardProviders(raw) {
                             cards.Push(pv)
                     }
                 }
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
     }
@@ -2575,7 +2694,8 @@ UserStudio_ApplyLlmCardsFlat(msg) {
                 }
                 doc["options"]["llmApiKeys"] := keys
             }
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     modelsJson := Trim(String(msg.Get("modelsJson", "")))
@@ -2592,7 +2712,8 @@ UserStudio_ApplyLlmCardsFlat(msg) {
                 }
                 doc["options"]["llmModels"] := models
             }
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     prov := UserStudio_NormalizeLlmProvider(msg.Get("llmProvider", doc["llm"].Get("provider", "openai")))
@@ -2609,7 +2730,8 @@ UserStudio_ApplyLlmCardsFlat(msg) {
     doc := UserStudio_NormalizeDoc(doc)
     UserStudio_Save(doc)
     try UserStudio_WriteNiumaLlmSync(doc)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return doc
 }
@@ -2677,11 +2799,13 @@ UserStudio_ApplyFromWebPayload(payload) {
     cur := UserStudio_NormalizeDoc(cur)
     UserStudio_Save(cur)
     try UserStudio_WriteNiumaLlmSync(cur)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     UserStudio_ApplyPathsToGlobals(cur)
     try UserStudio_SyncTtydToIni(cur)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return cur
 }
@@ -2705,12 +2829,29 @@ UserStudio_GetTtydWorkDir() {
         try {
             if DirExist(wd)
                 return wd
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
-    if FuncExists("NiumaTtyd_WorkDir")
-        return Func("NiumaTtyd_WorkDir").Call()
-    return A_ScriptDir
+    if FuncExists("NiumaTtyd_WorkDir") {
+        try return NiumaTtyd_WorkDir()
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e, "NiumaTtyd_WorkDir")
+        }
+    }
+    d := String(A_ScriptDir)
+    if RegExMatch(d, "[^\x00-\x7F]") {
+        try {
+            u := String(EnvGet("USERPROFILE"))
+            if (u != "" && !RegExMatch(u, "[^\x00-\x7F]") && DirExist(u))
+                return u
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
+        }
+        if DirExist("C:\")
+            return "C:\"
+    }
+    return d
 }
 
 UserStudio_SyncTtydToIni(doc) {
@@ -2730,7 +2871,8 @@ UserStudio_SyncTtydToIni(doc) {
         IniWrite(String(Integer(ttyd.Get("port", 7691))), cf, "NiumaTtyd", "studio_cli_port")
         wd := Trim(String(ttyd.Get("workDir", "")))
         IniWrite(wd, cf, "NiumaTtyd", "studio_cli_workdir")
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -2741,14 +2883,26 @@ UserStudio_TtydPayloadForWeb() {
     if (port < 1024 || port > 65535)
         port := 7691
     baseUrl := "http://127.0.0.1:" . port . "/"
-    if FuncExists("NiumaTtyd_BaseUrlForEngine")
-        baseUrl := Func("NiumaTtyd_BaseUrlForEngine").Call("studio_cli")
+    if FuncExists("NiumaTtyd_BaseUrlForEngine") {
+        try baseUrl := NiumaTtyd_BaseUrlForEngine("studio_cli")
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e, "NiumaTtyd_BaseUrlForEngine")
+        }
+    }
     exeOk := false
-    if FuncExists("NiumaTtyd_ExePath")
-        exeOk := FileExist(Func("NiumaTtyd_ExePath").Call())
+    if FuncExists("NiumaTtyd_ExePath") {
+        try exeOk := FileExist(NiumaTtyd_ExePath())
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e, "NiumaTtyd_ExePath")
+        }
+    }
     httpOk := false
-    if FuncExists("NiumaTtyd_IsHttpReadyOnPort")
-        try httpOk := Func("NiumaTtyd_IsHttpReadyOnPort").Call(port, 400)
+    if FuncExists("NiumaTtyd_IsHttpReadyOnPort") {
+        try httpOk := NiumaTtyd_IsHttpReadyOnPort(port, 400)
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e, "NiumaTtyd_IsHttpReadyOnPort")
+        }
+    }
     return Map(
         "shell", ttyd.Get("shell", "cmd.exe"),
         "workDir", ttyd.Get("workDir", ""),
@@ -2794,7 +2948,8 @@ UserStudio_BuildOverview() {
     modules.Push(Map("id", "pqp", "name", "Prompt Quick-Pad", "on", FuncExists("PromptQuickPad_Show")))
     act := "toolbar"
     try act := NormalizeAppearanceActivationMode(AppearanceActivationMode)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return Map(
         "appName", "牛马 nmer",
@@ -2862,7 +3017,7 @@ UserStudio_PayloadForWeb() {
         }
         optOut["llmCardProviders"] := cardProviders
     }
-    return Map(
+    payload := Map(
         "version", doc["version"],
         "updatedAt", doc["updatedAt"],
         "llm", Map(
@@ -2877,6 +3032,9 @@ UserStudio_PayloadForWeb() {
         "niumaContext", UserStudio_GetNiumaContext(),
         "overview", UserStudio_BuildOverview()
     )
+    if FuncExists("Nmer_Llm_BuildUnifiedPayload")
+        payload["llmUnified"] := Nmer_Llm_BuildUnifiedPayload()
+    return payload
 }
 
 UserStudio_BrowsePath(field, filterDesc := "可执行文件 (*.exe)") {
@@ -2908,7 +3066,8 @@ UserStudio_BrowsePath(field, filterDesc := "可执行文件 (*.exe)") {
     if (selected = "")
         return ""
     try selected := UserStudio_NormalizeWinPath(selected)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return selected
 }
@@ -2916,12 +3075,14 @@ UserStudio_BrowsePath(field, filterDesc := "可执行文件 (*.exe)") {
 UserStudio_NormalizeApiKey(key) {
     if FuncExists("LlmApiPing_NormalizeApiKey") {
         try return LlmApiPing_NormalizeApiKey(key)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if FuncExists("ConfigWebView_NormalizeApiKey") {
         try return ConfigWebView_NormalizeApiKey(key)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     key := Trim(String(key))

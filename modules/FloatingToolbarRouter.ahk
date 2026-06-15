@@ -6,7 +6,8 @@ FloatingToolbarRouter_Log(message) {
     try {
         if FuncExists("Nmer_WailsBridgeLog")
             Nmer_WailsBridgeLog("ftb_router " . String(message))
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -16,7 +17,8 @@ Nmer_FloatingToolbarHost(*) {
     try {
         if FuncExists("Nmer_WailsBridgeForceNmerOnly") && Nmer_WailsBridgeForceNmerOnly()
             return "ahk"
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     host := "ahk"
     try {
@@ -24,7 +26,8 @@ Nmer_FloatingToolbarHost(*) {
         wb := flags.Get("wailsBridge", Map())
         if (wb is Map)
             host := StrLower(Trim(String(wb.Get("floatingToolbarHost", "ahk"))))
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if (host = "hybrid")
         return "hybrid"
@@ -32,7 +35,8 @@ Nmer_FloatingToolbarHost(*) {
         try {
             if FuncExists("Nmer_LegacySurfaceLifecycleEnabled") && Nmer_LegacySurfaceLifecycleEnabled()
                 return "ahk"
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return "wails"
     }
@@ -87,12 +91,14 @@ FloatingToolbarRouter_Hide(meta := 0) {
     host := Nmer_FloatingToolbarHost()
     if (host = "hybrid" && FuncExists("FloatingToolbarWails_HideHybrid")) {
         try return !!FloatingToolbarWails_HideHybrid(meta)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if (host = "wails" && FuncExists("FloatingToolbarWails_Hide")) {
         try return !!FloatingToolbarWails_Hide(meta)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if FuncExists("HideFloatingToolbar")
@@ -105,13 +111,15 @@ FloatingToolbarRouter_Dispose(reason := "") {
     FloatingToolbarRouter_Log("dispose host=" . host . " reason=" . String(reason))
     if (host = "hybrid" && FuncExists("FloatingToolbarWails_DisposeHybrid")) {
         try FloatingToolbarWails_DisposeHybrid(reason)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return
     }
     if (host = "wails" && FuncExists("FloatingToolbarWails_Dispose")) {
         try FloatingToolbarWails_Dispose(reason)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         if !FloatingToolbarRouter_AhkGuiExists()
             return

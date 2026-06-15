@@ -54,7 +54,8 @@ ClipboardFTS5_GetStartupSqlStatements() {
 ClipboardFTS5_StopExternalDbLockers() {
     if FuncExists("SCWV_BroadcastHostLifecycle") {
         try SCWV_BroadcastHostLifecycle("clip_db_recovery", "clip_db_recovery")
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if FuncExists("SearchCore_Shutdown") {
@@ -63,7 +64,8 @@ ClipboardFTS5_StopExternalDbLockers() {
     }
     if ProcessExist("SearchCenterCore.exe") {
         try ProcessClose("SearchCenterCore.exe")
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         Sleep(350)
     }
@@ -75,7 +77,8 @@ ClipboardFTS5_ClearWalSidecars(dbPath) {
     n := 0
     loop 3 {
         try n += Nmer_SqliteClearWalSidecars(dbPath)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         if (A_Index < 3)
             Sleep(80)
@@ -103,7 +106,8 @@ ClipboardFTS5_ResetDbFiles(dbPath, tag := "recover") {
     ClipboardFTS5_StopExternalDbLockers()
     if FuncExists("Nmer_SqliteBackupDbFile")
         try Nmer_SqliteBackupDbFile(dbPath, tag)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     ClipboardFTS5_ClearWalSidecars(dbPath)
     if FuncExists("Nmer_SqliteResetDbFile")
@@ -124,7 +128,8 @@ ClipboardFTS5_EnableWalMode(db) {
     try {
         if db.Exec("PRAGMA journal_mode = WAL;")
             return true
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return false
 }
@@ -158,7 +163,8 @@ ClipboardFTS5_OpenDbWithRecovery(dbPath) {
             return db
         } catch as e {
             try db.CloseDB()
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             Sleep(120)
             isIo := InStr(e.Message, "disk I/O") || InStr(e.Message, "IOERR") || InStr(e.Message, "locked")
@@ -1072,11 +1078,6 @@ SaveToClipboardFTS5(content, SourceApp := "Unknown", detectedType := "") {
             return false
         }
         
-        ; 转义单引号（将单引号替换为双单引号）
-        escapedContent := StrReplace(content, "'", "''")
-        ; 转义反斜杠（SQLite 中反斜杠需要转义）
-        escapedContent := StrReplace(escapedContent, "\", "\\")
-        
         ; 获取应用信息（路径、图标）
         appInfo := GetApplicationInfo()
         if (SourceApp = "Unknown" && appInfo["SourceApp"] != "Unknown") {
@@ -1084,14 +1085,6 @@ SaveToClipboardFTS5(content, SourceApp := "Unknown", detectedType := "") {
         }
         SourcePath := appInfo["SourcePath"]
         IconPath := appInfo["IconPath"]
-        
-        ; 转义路径中的特殊字符
-        escapedSourceApp := StrReplace(SourceApp, "'", "''")
-        escapedSourceApp := StrReplace(escapedSourceApp, "\", "\\")
-        escapedSourcePath := StrReplace(SourcePath, "'", "''")
-        escapedSourcePath := StrReplace(escapedSourcePath, "\", "\\")
-        escapedIconPath := StrReplace(IconPath, "'", "''")
-        escapedIconPath := StrReplace(escapedIconPath, "\", "\\")
         
         ; 分类内容类型（如果未提供检测类型，则自动分类）
         if (detectedType != "" && detectedType != "Text") {
@@ -1108,9 +1101,6 @@ SaveToClipboardFTS5(content, SourceApp := "Unknown", detectedType := "") {
         if (imageRef != "") {
             dataType := "Image"
         }
-        escapedImageRef := StrReplace(imageRef, "'", "''")
-        escapedImageRef := StrReplace(escapedImageRef, "\", "\\")
-        
         ; 计算统计信息
         stats := CalculateTextStats(content)
         charCount := stats["CharCount"]
@@ -1164,13 +1154,13 @@ SaveToClipboardFTS5(content, SourceApp := "Unknown", detectedType := "") {
         if (hasCopyCount) {
             SQL .= ", CopyCount"
         }
-        SQL .= " FROM ClipMain WHERE Content = '" . escapedContent . "' ORDER BY ID DESC LIMIT 1"
-        
+        SQL .= " FROM ClipMain WHERE Content = ? ORDER BY ID DESC LIMIT 1"
+
         table := ""
         copyCount := 1
         existingID := 0
-        
-        if (ClipboardFTS5DB.GetTable(SQL, &table)) {
+
+        if (SqlSafe_GetTable(ClipboardFTS5DB, &table, SQL, content)) {
             if (table.HasRows && table.Rows.Length > 0) {
                 existingID := table.Rows[1][1]
                 if (hasCopyCount && table.Rows[1].Length > 1) {
@@ -1178,64 +1168,90 @@ SaveToClipboardFTS5(content, SourceApp := "Unknown", detectedType := "") {
                 }
             }
         }
-        
+
         ; 如果已存在，更新记录；否则插入新记录
         if (existingID > 0) {
             ; 更新现有记录：更新最后复制时间和复制次数
             SQL := "UPDATE ClipMain SET "
+            params := []
             if (hasLastCopyTime) {
                 SQL .= "LastCopyTime = datetime('now', 'localtime'), "
             }
             if (hasCopyCount) {
-                SQL .= "CopyCount = " . copyCount . ", "
+                SQL .= "CopyCount = ?, "
+                params.Push(copyCount)
             }
-            SQL .= "SourceApp = '" . escapedSourceApp . "'"
+            SQL .= "SourceApp = ?"
+            params.Push(SourceApp)
             if (hasSourcePath) {
-                SQL .= ", SourcePath = '" . escapedSourcePath . "'"
+                SQL .= ", SourcePath = ?"
+                params.Push(SourcePath)
             }
             if (hasIconPath) {
-                SQL .= ", IconPath = '" . escapedIconPath . "'"
+                SQL .= ", IconPath = ?"
+                params.Push(IconPath)
             }
-            SQL .= ", DataType = '" . dataType . "'"
-            SQL .= ", CharCount = " . charCount
+            SQL .= ", DataType = ?"
+            params.Push(dataType)
+            SQL .= ", CharCount = ?"
+            params.Push(charCount)
             if (imageRef != "") {
-                SQL .= ", ImagePath = '" . escapedImageRef . "'"
+                SQL .= ", ImagePath = ?"
+                params.Push(imageRef)
             }
-            SQL .= " WHERE ID = " . existingID
+            SQL .= " WHERE ID = ?"
+            params.Push(existingID)
         } else {
-            ; 插入新记录（动态构建字段列表）
-            SQL := "INSERT INTO ClipMain (Content, SourceApp"
+            ; 插入新记录 — 动态构建列名、占位符和参数
+            cols := ["Content", "SourceApp"]
+            placeholders := ["?", "?"]
+            params := [content, SourceApp]
+
             if (hasSourcePath) {
-                SQL .= ", SourcePath"
+                cols.Push("SourcePath")
+                placeholders.Push("?")
+                params.Push(SourcePath)
             }
             if (hasIconPath) {
-                SQL .= ", IconPath"
+                cols.Push("IconPath")
+                placeholders.Push("?")
+                params.Push(IconPath)
             }
-            SQL .= ", DataType, CharCount, ImagePath, Timestamp"
+            cols.Push("DataType")
+            cols.Push("CharCount")
+            cols.Push("ImagePath")
+            cols.Push("Timestamp")
+            placeholders.Push("?")
+            placeholders.Push("?")
+            placeholders.Push("?")
+            placeholders.Push("datetime('now', 'localtime')")
+            params.Push(dataType)
+            params.Push(charCount)
+            params.Push(imageRef)
+
             if (hasLastCopyTime) {
-                SQL .= ", LastCopyTime"
+                cols.Push("LastCopyTime")
+                placeholders.Push("datetime('now', 'localtime')")
             }
             if (hasCopyCount) {
-                SQL .= ", CopyCount"
+                cols.Push("CopyCount")
+                placeholders.Push("1")
             }
-            SQL .= ") VALUES ('" . escapedContent . "', '" . escapedSourceApp . "'"
-            if (hasSourcePath) {
-                SQL .= ", '" . escapedSourcePath . "'"
+
+            colStr := ""
+            valStr := ""
+            Loop cols.Length {
+                if (A_Index > 1) {
+                    colStr .= ", "
+                    valStr .= ", "
+                }
+                colStr .= cols[A_Index]
+                valStr .= placeholders[A_Index]
             }
-            if (hasIconPath) {
-                SQL .= ", '" . escapedIconPath . "'"
-            }
-            SQL .= ", '" . dataType . "', " . charCount . ", '" . escapedImageRef . "', datetime('now', 'localtime')"
-            if (hasLastCopyTime) {
-                SQL .= ", datetime('now', 'localtime')"
-            }
-            if (hasCopyCount) {
-                SQL .= ", 1"
-            }
-            SQL .= ")"
+            SQL := "INSERT INTO ClipMain (" . colStr . ") VALUES (" . valStr . ")"
         }
-        
-        if (!ClipboardFTS5DB.Exec(SQL)) {
+
+        if (!SqlSafe_Exec(ClipboardFTS5DB, SQL, params*)) {
             ; 如果 Exec 失败，返回 false 并保留错误信息
             return false
         }
@@ -1296,7 +1312,8 @@ CaptureClipboardToFTS5() {
                     if okAny
                         return true
                 }
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             ; 继续后续文本兜底（部分应用会同时写入 CF_TEXT 路径）
         }
@@ -1352,7 +1369,8 @@ ClipboardFTS5_ImportDroppedNonImageFiles(fileListText, SourceApp) {
             } else {
                 anyOk := true
             }
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         try stmt.Free()
     }

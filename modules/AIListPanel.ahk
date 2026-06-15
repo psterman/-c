@@ -194,11 +194,13 @@ PromptQuickPad_PushDataToWeb(msgType := "init") {
     try {
         if IsSet(_VK_SceneCtxMenuItemsJson)
             pqpSpec := _VK_SceneCtxMenuItemsJson("prompts")
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     pqpItems := []
     try pqpItems := Jxon_Load(pqpSpec)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     payload := Map(
         "type", msgType,
@@ -214,7 +216,8 @@ PromptQuickPad_PushDataToWeb(msgType := "init") {
         "pqpCtxMenuSpec", pqpItems
     )
     try PQP_SendToWeb(payload)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -228,7 +231,8 @@ PQP_SendCaptureOpen(initialText := "", expanded := true) {
         "chromeVisible", PromptQuickPad_CaptureChromeVisible ? true : false
     )
     try PQP_SendToWeb(m)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -278,20 +282,23 @@ PromptQuickPad_ProcessWebMessage(msg) {
             PromptQuickPad_SaveItemEditFromWeb(msg)
         case "syncExport":
             try PQP_SendToWeb(Map("type", "syncExportResult", "snapshot", PromptQuickPad_SyncExportSnapshot()))
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         case "syncImport":
             snap := msg.Has("snapshot") ? msg["snapshot"] : 0
             merge := !(msg.Has("merge") && !msg["merge"])
             ok := PromptQuickPad_SyncImportSnapshot(snap, merge)
             try PQP_SendToWeb(Map("type", "syncImportResult", "ok", ok ? true : false))
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         case "syncGetSince":
             since := msg.Has("since") ? String(msg["since"]) : ""
             arr := PromptQuickPad_SyncGetEntriesSince(since)
             try PQP_SendToWeb(Map("type", "syncSinceResult", "since", since, "entries", arr))
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         case "pqpScCtxCmd":
             cmdId0 := msg.Has("cmdId") ? String(msg["cmdId"]) : ""
@@ -355,7 +362,8 @@ PromptQuickPad_SaveDraftFromWeb(msg) {
     PromptQuickPad_RefreshListView()
     m := Map("type", "captureDraftFill", "title", title, "category", cat, "tags", tags, "body", body)
     try PQP_SendToWeb(m)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     TrayTip("已保存到 prompts.json", "Prompt Quick-Pad", "Iconi 1")
 }
@@ -383,7 +391,8 @@ PromptQuickPad_LoadDraftFromMergedIndex(mi) {
         "category", (Trim(PromptQuickPad_CapsLockBDefaultCategory) = "" ? "未分类" : PromptQuickPad_CapsLockBDefaultCategory),
         "tags", PromptQuickPad_CapsLockBDefaultTags, "body", body)
     try PQP_SendToWeb(m)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -396,7 +405,8 @@ PromptQuickPad_PasteByMergedIndex(mi) {
     if content = ""
         return
     try A_Clipboard := ""
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try A_Clipboard := content
     catch {
@@ -408,7 +418,8 @@ PromptQuickPad_PasteByMergedIndex(mi) {
         return
     }
     try HideAIListPanel()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     TrayTip("已复制提示词，请粘贴", "Prompt Quick-Pad", "Iconi 1")
 }
@@ -702,7 +713,8 @@ PromptQuickPad_SaveToDisk() {
             return
         f.Write(Jxon_Dump(clean))
         f.Close()
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -876,7 +888,8 @@ PromptQuickPad_ClearCategoryStrip() {
     global PromptQuickPadCategoryStrip, PromptQuickPadCategoryCtrlByName
     for c in PromptQuickPadCategoryStrip {
         try c.Destroy()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     PromptQuickPadCategoryStrip := []
@@ -892,7 +905,8 @@ PromptQuickPad_StyleCategoryTabs() {
         try {
             ctrl.Opt("Background" . bg . " c" . tc)
             ctrl.SetFont((active ? "s10 Bold c" : "s10 Norm c") . tc, "Segoe UI")
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 }
@@ -943,7 +957,8 @@ PromptQuickPad_SaveCaptureExpandedToIni() {
     global PromptQuickPad_CaptureExpanded
     cfg := Nmer_ResolveConfigFile()
     try IniWrite(PromptQuickPad_CaptureExpanded ? "1" : "0", cfg, "PromptQuickPad", "CapturePanelExpanded")
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -952,7 +967,8 @@ PromptQuickPad_UpdateCaptureToggleText() {
     if PromptQuickPadCaptureToggle = 0
         return
     try PromptQuickPadCaptureToggle.Text := PromptQuickPad_CaptureExpanded ? "▼ 摘录 / 采集（点击收起）" : "▶ 摘录 / 采集（点击展开）"
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -966,7 +982,8 @@ PromptQuickPad_ApplyCaptureControlsVisibility() {
     draftVis := PromptQuickPad_CaptureChromeVisible && PromptQuickPad_CaptureExpanded
     if PromptQuickPadCaptureToggle != 0 {
         try PromptQuickPadCaptureToggle.Visible := PromptQuickPad_CaptureChromeVisible
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     for ctrl in [
@@ -978,7 +995,8 @@ PromptQuickPad_ApplyCaptureControlsVisibility() {
         if ctrl = 0
             continue
         try ctrl.Visible := draftVis
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 }
@@ -1035,16 +1053,20 @@ PromptQuickPad_RefreshDraftCategoryCombo() {
         return
     cur := ""
     try cur := Trim(PromptQuickPad_cbDraftCategory.Text)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try PromptQuickPad_cbDraftCategory.Delete()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try PromptQuickPad_cbDraftCategory.Add(PromptQuickPad_BuildDraftCategoryChoices())
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try PromptQuickPad_cbDraftCategory.Text := (cur = "" ? "未分类" : cur)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -1098,7 +1120,8 @@ PromptQuickPad_FillCaptureDraftContent(initialText := "") {
         return
     PromptQuickPad_edDraftContent.Value := initialText
     try PromptQuickPad_edDraftContent.Focus()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -1192,7 +1215,8 @@ PromptQuickPad_ApplyWebCaptureDraft(initialText := "", forceExpand := true) {
         SetTimer(_PQP_DeferredCapturePush, -300)
     }
     try LegacyGuard_RequestFocus("AIListPanel.Host", "ahk_id " . PromptQuickPad_GetHostHwnd(), 45, "restore_host_focus")
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -1232,10 +1256,12 @@ PromptQuickPad_OpenCaptureDraft(initialText := "", forceExpand := true) {
     if Trim(initialText, " `t`r`n") != ""
         SetTimer(PromptQuickPad_FlushPendingCaptureDraft, -60)
     try ControlFocus(PromptQuickPad_edDraftContent)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try LegacyGuard_RequestFocus("AIListPanel.Main", "ahk_id " . AIListPanelGUI.Hwnd, 50, "show_panel_focus")
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -1354,7 +1380,8 @@ PromptQuickPad_RelayoutMainControls(clientW := 0, clientH := 0) {
             if avail < 100
                 avail := 100
             PromptQuickPadListLV.ModifyCol(4, avail)
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if PromptQuickPadStatusText != 0
@@ -1562,7 +1589,8 @@ PromptQuickPad_PasteRow(row) {
     if content = ""
         return
     try A_Clipboard := ""
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try A_Clipboard := content
     catch {
@@ -1574,7 +1602,8 @@ PromptQuickPad_PasteRow(row) {
         return
     }
     try HideAIListPanel()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     TrayTip("宸插鍒舵彁绀鸿瘝锛岃绮樿创", "Prompt Quick-Pad", "Iconi 1")
 }
@@ -1652,7 +1681,8 @@ PromptQuickPad_LoadPinFromIni() {
 PromptQuickPad_SavePinToIni() {
     global PromptQuickPad_PinTop
     try IniWrite(PromptQuickPad_PinTop ? "1" : "0", Nmer_ResolveConfigFile(), "PromptQuickPad", "AlwaysOnTop")
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -1668,7 +1698,8 @@ PromptQuickPad_TogglePinTop(*) {
     PromptQuickPad_SavePinToIni()
     if AIListPanelGUI {
         try AIListPanelGUI.Opt(PromptQuickPad_PinTop ? "+AlwaysOnTop" : "-AlwaysOnTop")
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if PromptQuickPad_ShouldUseWebView()
@@ -1686,7 +1717,8 @@ PromptQuickPad_DestroyCtxMenu() {
     PromptQuickPadCtxMenuSel := 0
     if PromptQuickPadCtxMenuGUI {
         try PromptQuickPadCtxMenuGUI.Destroy()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         PromptQuickPadCtxMenuGUI := 0
     }
@@ -1695,7 +1727,8 @@ PromptQuickPad_DestroyCtxMenu() {
 PromptQuickPad_CtxMenuClick(act, *) {
     PromptQuickPad_DestroyCtxMenu()
     try act()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -1717,7 +1750,8 @@ PromptQuickPad_CtxItemHoverPhase2(ItemIndex, *) {
         PromptQuickPadCtxMenuGUI["MenuItemText" . ItemIndex].Opt("cFFFFFF")
         if PromptQuickPadCtxMenuGUI.HasProp("MenuItemIcon" . ItemIndex)
             PromptQuickPadCtxMenuGUI["MenuItemIcon" . ItemIndex].Opt("cFFFFFF")
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -1732,7 +1766,8 @@ PromptQuickPad_CtxItemHover(ItemIndex) {
             PromptQuickPadCtxMenuGUI["MenuItemText" . PromptQuickPadCtxMenuSel].Opt("cff6600")
             if PromptQuickPadCtxMenuGUI.HasProp("MenuItemIcon" . PromptQuickPadCtxMenuSel)
                 PromptQuickPadCtxMenuGUI["MenuItemIcon" . PromptQuickPadCtxMenuSel].Opt("cff6600")
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     PromptQuickPadCtxMenuSel := ItemIndex
@@ -1741,7 +1776,8 @@ PromptQuickPad_CtxItemHover(ItemIndex) {
         PromptQuickPadCtxMenuGUI["MenuItemText" . ItemIndex].Opt("cffb366")
         if PromptQuickPadCtxMenuGUI.HasProp("MenuItemIcon" . ItemIndex)
             PromptQuickPadCtxMenuGUI["MenuItemIcon" . ItemIndex].Opt("cffb366")
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     fn := PromptQuickPad_CtxItemHoverPhase2.Bind(ItemIndex)
     PromptQuickPadCtxHoverTimer := fn
@@ -1785,7 +1821,8 @@ PromptQuickPad_CheckCtxMenuMouse(*) {
                 if PromptQuickPadCtxMenuGUI.HasProp("MenuItemIcon" . PromptQuickPadCtxMenuSel)
                     PromptQuickPadCtxMenuGUI["MenuItemIcon" . PromptQuickPadCtxMenuSel].Opt("cff6600")
                 PromptQuickPadCtxMenuSel := 0
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
         return
@@ -1802,7 +1839,8 @@ PromptQuickPad_CheckCtxMenuMouse(*) {
                 if PromptQuickPadCtxMenuGUI.HasProp("MenuItemIcon" . PromptQuickPadCtxMenuSel)
                     PromptQuickPadCtxMenuGUI["MenuItemIcon" . PromptQuickPadCtxMenuSel].Opt("cff6600")
                 PromptQuickPadCtxMenuSel := 0
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
         return
@@ -1826,7 +1864,8 @@ PromptQuickPad_CheckCtxMenuMouse(*) {
                 if PromptQuickPadCtxMenuGUI.HasProp("MenuItemIcon" . PromptQuickPadCtxMenuSel)
                     PromptQuickPadCtxMenuGUI["MenuItemIcon" . PromptQuickPadCtxMenuSel].Opt("cff6600")
                 PromptQuickPadCtxMenuSel := 0
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
     }
@@ -1900,7 +1939,8 @@ PromptQuickPad_ShowDarkCtxMenuAt(MenuItems, posX, posY) {
 
     PromptQuickPadCtxMenuGUI.Show("x" . posX . " y" . posY . " w" . MenuWidth . " h" . MenuHeight)
     try LegacyGuard_RequestFocus("AIListPanel.CtxMenu", "ahk_id " . PromptQuickPadCtxMenuGUI.Hwnd, 50, "show_ctx_menu_focus")
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     SetTimer(PromptQuickPad_CheckCtxMenuMouse, 50)
     SetTimer(PromptQuickPad_CloseCtxMenuIfOutside, 100)
@@ -1911,7 +1951,8 @@ PromptQuickPad_ShowRowContextMenu(RowOneBased, mx := unset, my := unset) {
     if RowOneBased < 1 || PromptQuickPadListLV = 0
         return
     try PromptQuickPadListLV.Modify(RowOneBased, "Select Vis")
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if !IsSet(mx) || !IsSet(my)
         DllCall("GetCursorPos", "int*", &mx := 0, "int*", &my := 0)
@@ -2024,7 +2065,8 @@ PromptQuickPad_OpenViewWeb(shell, mergedIndex) {
         "editable", false
     )
     try PQP_SendToWeb(payload)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -2049,7 +2091,8 @@ PromptQuickPad_OpenEditWeb(shell, mergedIndex) {
         "allowTags", allowTags
     )
     try PQP_SendToWeb(payload)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -2059,30 +2102,36 @@ PromptQuickPad_SaveBuiltinPrompt(KeyName, NewContent) {
     if KeyName = "Explain" {
         Prompt_Explain := NewContent
         try IniWrite(NewContent, cfg, "Settings", "Prompt_Explain")
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         try IniWrite(NewContent, cfg, "Prompts", "Explain")
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return
     }
     if KeyName = "Refactor" {
         Prompt_Refactor := NewContent
         try IniWrite(NewContent, cfg, "Settings", "Prompt_Refactor")
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         try IniWrite(NewContent, cfg, "Prompts", "Refactor")
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return
     }
     if KeyName = "Optimize" {
         Prompt_Optimize := NewContent
         try IniWrite(NewContent, cfg, "Settings", "Prompt_Optimize")
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         try IniWrite(NewContent, cfg, "Prompts", "Optimize")
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 }
@@ -2096,20 +2145,25 @@ PromptQuickPad_SaveTemplateContent(TemplateID, NewTitle, NewCategory, NewContent
         if tid != TemplateID
             continue
         try T.Title := NewTitle
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         try T.Category := NewCategory
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         try T.Content := NewContent
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         PromptTemplates[idx] := T
         try SavePromptTemplates()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         try RefreshPromptListView()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return true
     }
@@ -2288,7 +2342,8 @@ PromptQuickPad_CenterAndMaximizeOnActiveMonitor() {
                 targetMon := A_Index
                 break
             }
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     try MonitorGetWorkArea(targetMon, &left, &top, &right, &bottom)
@@ -2317,10 +2372,12 @@ PromptQuickPad_CenterAndMaximizeOnActiveMonitor() {
     AIListPanelWindowW := normalW
     AIListPanelWindowH := normalH
     try gGui.Show("x" . centerX . " y" . centerY . " w" . normalW . " h" . normalH)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try WinMaximize("ahk_id " . gGui.Hwnd)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -2334,11 +2391,13 @@ ShowAIListPanel_WebView(openForCapture := false, forceCenterMaximize := false) {
     if AIListPanelIsVisible && PQP_IsVisible() {
         if forceCenterMaximize {
             try WinRestore("ahk_id " . PQP_GetGuiHwnd())
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             PromptQuickPad_CenterAndMaximizeOnActiveMonitor()
             try LegacyGuard_RequestFocus("AIListPanel.PQP", "ahk_id " . PQP_GetGuiHwnd(), 50, "restore_pqp_focus")
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             return
         }
@@ -2408,7 +2467,8 @@ ShowAIListPanel_WebView(openForCapture := false, forceCenterMaximize := false) {
         HotIfWinActive("ahk_id " . hostHwnd)
         AIListPanelEscHotkey := Hotkey("Escape", PromptQuickPad_OnEsc, "On")
         HotIfWinActive()
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -2427,7 +2487,8 @@ HideAIListPanel() {
 
     if PromptQuickPad_ShouldUseWebView() {
         try SaveAIListPanelPosition()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         try {
             h := PromptQuickPad_GetHostHwnd()
@@ -2441,7 +2502,8 @@ HideAIListPanel() {
             }
         } catch {
             try HotIfWinActive()
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
         SurfaceIntent_Close("prompt_quick_pad")
@@ -2483,7 +2545,8 @@ ShowPromptQuickPadListOnly() {
     PromptQuickPad_RelayoutMainControls()
     if AIListPanelSearchInput != 0 {
         try AIListPanelSearchInput.Focus()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 }
@@ -2527,7 +2590,8 @@ AIListPanelFollowToolbar() {
                 SaveAIListPanelPosition()
             }
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -2547,7 +2611,8 @@ SaveAIListPanelPosition() {
         IniWrite(String(y), ConfigFile, "WindowPositions", "AIListPanel_Y")
         IniWrite(String(w), ConfigFile, "WindowPositions", "AIListPanel_W")
         IniWrite(String(h), ConfigFile, "WindowPositions", "AIListPanel_H")
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -2658,7 +2723,8 @@ PromptQuickPad_RegisterCaptureHotkey() {
     global PromptQuickCaptureHotkey
     if PromptQuickPadCaptureHotkeyObj != 0 {
         try PromptQuickPadCaptureHotkeyObj.Off()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         PromptQuickPadCaptureHotkeyObj := 0
     }
@@ -2715,7 +2781,8 @@ PromptQuickPad_ShowJsonFormatHelp(*) {
             "body", PromptQuickPad_GetJsonHelpBody()
         )
         try PQP_SendToWeb(payload)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return
     }

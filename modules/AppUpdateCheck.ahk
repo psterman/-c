@@ -25,7 +25,8 @@ AppUpdateCheck_LoadLocalVersion() {
                 if (doc is Map)
                     ver := Trim(String(doc.Get("version", "")))
             }
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if (ver = "")
@@ -118,12 +119,14 @@ AppUpdateCheck_OpenUrl(url) {
         r := DllCall("Shell32\ShellExecuteW", "ptr", 0, "wstr", "open", "wstr", u, "ptr", 0, "ptr", 0, "int", 1, "ptr")
         if (r > 32)
             return true
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try {
         Run(u)
         return true
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return false
 }
@@ -152,7 +155,8 @@ AppUpdateCheck_NotifyUi() {
         try {
             if ConfigWebView_HostAlive()
                 ConfigWebView_Send(Map("type", "appUpdateStatus", "payload", AppUpdateCheck_PayloadForWeb()))
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     AppUpdateCheck_RefreshTrayTip()
@@ -174,7 +178,8 @@ AppUpdateCheck_ApplyResult(latestVer, releaseUrl, fromFallback := false) {
         g_AppUpdate_ReleaseUrl := NMER_RELEASES_PAGE
     g_AppUpdate_LastCheckTick := A_TickCount
     try NMER_Log("update", "check_done", "local=" . cv . " remote=" . lv . " has=" . (g_AppUpdate_HasUpdate ? "1" : "0") . " fb=" . (fromFallback ? "1" : "0"))
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     AppUpdateCheck_NotifyUi()
 }

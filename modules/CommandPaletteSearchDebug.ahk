@@ -23,7 +23,8 @@ CommandPalette_HandleSearchDebug() {
     try CommandPalette_ShowSearchDebug(true, "search")
     catch as e {
         try TrayTip("命令面板", "无法打开诊断: " . e.Message, "Iconx 2")
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 }
@@ -58,19 +59,23 @@ CommandPalette_ShowSearchDebug(activate := true, tab := "search") {
     global g_CmdPalDbg_Gui
     if IsObject(g_CmdPalDbg_Gui) && g_CmdPalDbg_Gui.Hwnd {
         try WinSetAlwaysOnTop(1, "ahk_id " . g_CmdPalDbg_Gui.Hwnd)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         if activate {
             try WinActivate("ahk_id " . g_CmdPalDbg_Gui.Hwnd)
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             try DllCall("SetWindowPos", "Ptr", g_CmdPalDbg_Gui.Hwnd, "Ptr", -1, "Int", 0, "Int", 0, "Int", 0, "Int", 0, "UInt", 0x0003)
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
     }
     try TrayTip("命令面板", tab = "agent" ? "已打开诊断 · 动作托管" : "已打开诊断 · 本地搜索", "Iconi 1")
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     SetTimer(CommandPaletteSearchDebug_PushUiState, -80)
     SetTimer(CommandPalette_SearchDebug_PushAgentDebugNow, -160)
@@ -78,7 +83,8 @@ CommandPalette_ShowSearchDebug(activate := true, tab := "search") {
     if g_CmdPalDbg_AgentTabActive {
         if FuncExists("CommandPalette_AgentDebugTrace")
             try CommandPalette_AgentDebugTrace("sys", "panel_open", "诊断窗·动作托管标签", "info")
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         if FuncExists("CommandPalette_AgentDebug_Tick")
             SetTimer(CommandPalette_AgentDebug_Tick, 2000)
@@ -98,7 +104,8 @@ CommandPalette_AutoShowSearchDebug(*) {
     try CommandPalette_ShowSearchDebug(false)
     catch as err {
         try OutputDebug("[CmdPalDbg] auto show: " . err.Message . "`n")
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 }
@@ -129,14 +136,16 @@ CommandPaletteSearchDebug_PositionNearPalette() {
                     y := py - h - 12
                 if (y < 8)
                     y := 8
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
     }
     try g_CmdPalDbg_Gui.Show("x" . x . " y" . y . " w" . w . " h" . h)
     catch {
         try g_CmdPalDbg_Gui.Show()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 }
@@ -160,7 +169,8 @@ CommandPaletteSearchDebug_OnWV2Created(ctrl) {
     g_CmdPalDbg_WV2Pending := false
     if !IsObject(ctrl) {
         try OutputDebug("[CmdPalDbg] WebView2 create failed`n")
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         CommandPaletteSearchDebug_EnsureVisible()
         return
@@ -176,24 +186,29 @@ CommandPaletteSearchDebug_OnWV2Created(ctrl) {
     g_CmdPalDbg_Ctrl := ctrl
     try g_CmdPalDbg_Ctrl.IsVisible := true
     try ApplyWebView2PerformanceSettings(g_CmdPalDbg_WV2)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try {
         s := g_CmdPalDbg_WV2.Settings
         s.IsWebMessageEnabled := true
         s.AreHostObjectsAllowed := true
         s.AreDefaultContextMenusEnabled := false
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try WebView2_RegisterHostBridge(g_CmdPalDbg_WV2)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     g_CmdPalDbg_WV2.add_WebMessageReceived(CommandPaletteSearchDebug_OnWebMessage)
     try g_CmdPalDbg_WV2.add_NavigationCompleted(CommandPaletteSearchDebug_OnNavCompleted)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try ApplyUnifiedWebViewAssets(g_CmdPalDbg_WV2)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     global g_CmdPalDbg_PageReady
     g_CmdPalDbg_PageReady := false
@@ -216,7 +231,8 @@ CommandPaletteSearchDebug_MaybeReloadPage(*) {
     g_CmdPalDbg_LoadedHtmlVer := ver
     g_CmdPalDbg_PageReady := false
     try g_CmdPalDbg_WV2.Navigate(CommandPaletteSearchDebug_BuildPageUrl())
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -238,10 +254,12 @@ CommandPaletteSearchDebug_BuildAgentDebugPullPack() {
 CommandPaletteSearchDebug_PullAgentDebugJson() {
     global g_AgentDbg_PullCache
     try CommandPalette_AgentLoadCards()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try CommandPalette_AgentDebug_RefreshPullCache()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if (g_AgentDbg_PullCache != "")
         return g_AgentDbg_PullCache
@@ -264,7 +282,8 @@ CommandPaletteSearchDebug_BuildPageUrl() {
         path := FuncExists("HtmlPanelPath") ? HtmlPanelPath("CommandPaletteSearchDebug.html") : (A_ScriptDir . "\html\CommandPaletteSearchDebug.html")
         ver := String(FileGetTime(path, "M"))
         url .= (InStr(url, "?") ? "&" : "?") . "v=" . ver
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return url
 }
@@ -277,7 +296,8 @@ CommandPaletteSearchDebug_ParseWebMessage(args) {
             if (m is Map)
                 return m
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try {
         jsonStr := args.WebMessageAsJson
@@ -286,7 +306,8 @@ CommandPaletteSearchDebug_ParseWebMessage(args) {
             m := Jxon_Load(m)
         if (m is Map)
             return m
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return 0
 }
@@ -298,7 +319,8 @@ CommandPaletteSearchDebug_OnClose(*) {
         SetTimer(CommandPalette_AgentDebug_Tick, 0)
     if IsObject(g_CmdPalDbg_Gui)
         try g_CmdPalDbg_Gui.Hide()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
 }
 
@@ -309,7 +331,8 @@ CommandPaletteSearchDebug_OnNavCompleted(*) {
     try {
         path := FuncExists("HtmlPanelPath") ? HtmlPanelPath("CommandPaletteSearchDebug.html") : (A_ScriptDir . "\html\CommandPaletteSearchDebug.html")
         g_CmdPalDbg_LoadedHtmlVer := String(FileGetTime(path, "M"))
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     CommandPaletteSearchDebug_ApplyBounds()
     CommandPaletteSearchDebug_EnsureVisible()
@@ -328,7 +351,8 @@ CommandPaletteSearchDebug_ApplyBounds() {
     try {
         g_CmdPalDbg_Gui.GetClientPos(, , &cw, &ch)
         g_CmdPalDbg_Ctrl.Bounds := { X: 0, Y: 0, Width: cw, Height: ch }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -351,7 +375,8 @@ CommandPaletteSearchDebug_OnWebMessage(sender, args) {
         try CommandPaletteSearchDebug_RunAllProbes(kw)
         catch as e {
             try TrayTip("搜索诊断", "探测失败: " . e.Message, "Iconx 2")
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
         return
@@ -426,7 +451,8 @@ CommandPaletteSearchDebug_InjectPayload(snap) {
         try {
             target.ExecuteScriptAsync(js)
             return true
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     return false
@@ -506,7 +532,8 @@ CommandPaletteSearchDebug_SetWinHttpNoProxy(whr) {
             else
                 whr.SetProxy(args[1], args[2], args[3])
             return true
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     return false
@@ -531,7 +558,8 @@ CommandPaletteSearchDebug_HttpGetAsync(url, callback, opts := 0) {
             return true
         } catch as e2 {
             try callback.Call(Map("ok", false, "error", e1.Message . " / " . e2.Message, "status", 0))
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             return false
         }
@@ -541,7 +569,8 @@ CommandPaletteSearchDebug_HttpGetAsync(url, callback, opts := 0) {
 CommandPaletteSearchDebug_ProbeRow(status, ms, detail := "") {
     msNum := 0
     try msNum := Integer(ms)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if (msNum < 0)
         msNum := 0
@@ -562,7 +591,8 @@ CommandPaletteSearchDebug_ResolveCoreExe() {
     pid := ProcessExist("SearchCenterCore.exe")
     if pid {
         try exe := Trim(String(ProcessGetPath(pid)))
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if (exe = "" || !FileExist(exe)) {
@@ -571,7 +601,8 @@ CommandPaletteSearchDebug_ResolveCoreExe() {
                 cand := Trim(String(Nmer_SearchCenterCoreExe()))
                 if (cand != "" && FileExist(cand))
                     exe := cand
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
     }
@@ -609,7 +640,8 @@ CommandPaletteSearchDebug_BuildSnapshot(heavy := false) {
     }
     activeN := 0
     try activeN := CoreAsyncHttp_GetActiveCount()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     statusRows := [
         Map("k", "SearchCenterCore.exe", "v", proc),
@@ -739,7 +771,8 @@ CommandPaletteSearchDebug_ProbeHealthAsync(seq, useProxy, *) {
 CommandPaletteSearchDebug_BuildSearchUrl(kw, limit := 5) {
     encQ := kw
     try encQ := UriEncode(kw)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return "http://127.0.0.1:8080/search?q=" . encQ . "&type=all&limit=" . Integer(limit) . "&offset=0"
 }

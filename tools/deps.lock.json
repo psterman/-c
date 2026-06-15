@@ -1,0 +1,14 @@
+{
+  "schema": 1,
+  "updated": "2026-06-15",
+  "components": {
+    "autohotkey": { "min": "2.0.18", "note": "AutoHotkey v2" },
+    "webview2": { "min": "1.0.2210.55", "note": "Microsoft Edge WebView2 Runtime" },
+    "go": { "min": "1.22", "note": "SearchCenterCore / native-drop-bridge build" },
+    "search_center_core": {
+      "binary": "tools/search/SearchCenterCore.exe",
+      "health_header": "X-SearchCenterCore-Version",
+      "build_ldflags": "-X main.BuildVersion=<semver>"
+    }
+  }
+}

@@ -15,7 +15,8 @@ SurfaceManager_IsObservationEnabled(*) {
             return true
         if FuncExists("Nmer_SurfaceManagerShadowMode") && Nmer_SurfaceManagerShadowMode()
             return true
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return false
 }
@@ -86,18 +87,21 @@ SurfaceManager_CallName(callable) {
     try {
         if (callable is Func)
             return callable.Name
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try {
         if (callable is BoundFunc) {
             try {
                 if IsObject(callable.Func)
                     return callable.Func.Name
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             return callable.Name
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try return Type(callable)
     catch
@@ -108,7 +112,8 @@ SurfaceManager_SimpleClone(value) {
     if !IsObject(value) {
         t := ""
         try t := Type(value)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         if (t = "Integer" || t = "Float")
             return value + 0.0
@@ -151,7 +156,8 @@ SurfaceManager_RecordEvent(eventType, surfaceId := "", meta := 0) {
         global NMER_TraceSession
         if (IsSet(NMER_TraceSession) && NMER_TraceSession != "")
             payload["traceSession"] := String(NMER_TraceSession)
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if IsObject(meta)
         payload["meta"] := SurfaceManager_SimpleClone(meta)
@@ -163,7 +169,8 @@ SurfaceManager_RecordEvent(eventType, surfaceId := "", meta := 0) {
         if (dir != "" && !DirExist(dir))
             DirCreate(dir)
         FileAppend(Jxon_Dump(payload) . "`r`n", path, "UTF-8")
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -346,10 +353,12 @@ SurfaceManager_CloseWebViewControl(ctrl) {
     if !IsObject(ctrl)
         return
     try ctrl.IsVisible := false
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try ctrl.Close()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -357,7 +366,8 @@ SurfaceManager_DestroyGui(guiObj) {
     if !IsObject(guiObj)
         return
     try guiObj.Destroy()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -673,7 +683,8 @@ SurfaceManager_MeasuredBaseline(*) {
                 }
             }
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     cached := defaults
     return cached
@@ -897,10 +908,12 @@ SurfaceManager_WriteSnapshot(*) {
         arr.Push(row)
     }
     try FileDelete(SurfaceManager_SnapshotPath())
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try FileAppend(Jxon_Dump(arr), SurfaceManager_SnapshotPath(), "UTF-8")
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 

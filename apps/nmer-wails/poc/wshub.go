@@ -25,7 +25,7 @@ const (
 )
 
 var wsUpgrader = websocket.Upgrader{
-	CheckOrigin: func(r *http.Request) bool { return true },
+	CheckOrigin: wsOriginOK,
 }
 
 // HubStatus is exposed to the Wails frontend.
@@ -464,7 +464,45 @@ func (h *Hub) removeClient(id string) {
 	h.notifyStatus()
 }
 
+func hubAuthToken() string {
+	return strings.TrimSpace(os.Getenv("NMER_WS_HUB_TOKEN"))
+}
+
+func wsOriginOK(r *http.Request) bool {
+	origin := strings.TrimSpace(r.Header.Get("Origin"))
+	if origin == "" {
+		return true
+	}
+	lo := strings.ToLower(origin)
+	if lo == "null" {
+		return true
+	}
+	if lo == "https://app.local" || strings.HasPrefix(lo, "https://app.local:") {
+		return true
+	}
+	if strings.HasPrefix(lo, "http://127.0.0.1:") || lo == "http://127.0.0.1" {
+		return true
+	}
+	if strings.HasPrefix(lo, "http://localhost:") || lo == "http://localhost" {
+		return true
+	}
+	return false
+}
+
+func wsAuthOK(r *http.Request) bool {
+	want := hubAuthToken()
+	if want == "" {
+		return true
+	}
+	got := strings.TrimSpace(r.URL.Query().Get("token"))
+	return got != "" && got == want
+}
+
 func (h *Hub) handleWS(w http.ResponseWriter, r *http.Request) {
+	if !wsAuthOK(r) {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
 	conn, err := wsUpgrader.Upgrade(w, r, nil)
 	if err != nil {
 		return

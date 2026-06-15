@@ -22,7 +22,8 @@ FloatingToolbarWails_Log(message) {
             FloatingToolbarRouter_Log(String(message))
         else if FuncExists("Nmer_WailsBridgeLog")
             Nmer_WailsBridgeLog("ftb_wails " . String(message))
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -58,7 +59,8 @@ FloatingToolbarWails_FindWindow(*) {
         hwnd := WinExist("ahk_exe nmer-wails.exe")
         if hwnd
             return hwnd
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try {
         return WinExist("NMER Wails POC")
@@ -81,7 +83,8 @@ FloatingToolbarWails_SyncBridgePid(*) {
     global g_FTBWails_LastBridgePid, g_FTBWails_ShellMounted, g_FTBWails_ShellVisible
     pid := 0
     try pid := ProcessExist("nmer-wails.exe")
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if pid && g_FTBWails_LastBridgePid && pid != g_FTBWails_LastBridgePid {
         g_FTBWails_ShellMounted := false
@@ -105,7 +108,8 @@ FloatingToolbarWails_ActivateWindow(force := false, soft := false) {
     expr := "ahk_id " . hwnd
     if soft {
         try WinShow(expr)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return true
     }
@@ -113,37 +117,45 @@ FloatingToolbarWails_ActivateWindow(force := false, soft := false) {
         try {
             if WinActive(expr)
                 return true
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     try {
         pid := DllCall("GetCurrentProcessId", "UInt")
         DllCall("AllowSetForegroundWindow", "UInt", pid)
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try DllCall("LockSetForegroundWindow", "UInt", 2)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try WinRestore(expr)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     ok := false
     if FuncExists("SCWV_ForegroundPulse") {
         try ok := !!SCWV_ForegroundPulse(hwnd)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if !ok && FuncExists("DomainCWails_ActivateWindow")
         ok := !!DomainCWails_ActivateWindow()
     if !ok {
         try WinShow(expr)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         try WinActivate(expr)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         try ok := WinActive(expr)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if ok
@@ -163,7 +175,8 @@ FloatingToolbarWails_RetireAhkWebView(reason := "shell_phase4") {
         return false
     ok := false
     try ok := !!FloatingToolbar_DisposeAhkWebViewIfRetired(reason)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if ok
         FloatingToolbarWails_Log("ahk_wv2_retired reason=" . String(reason))
@@ -190,7 +203,8 @@ FloatingToolbarWails_HideWindow(entry) {
     global g_FTBWails_ShellVisible
     if FloatingToolbarWails_ShouldUseShell() && FuncExists("Nmer_WailsBridgePostShellFtb") {
         try Nmer_WailsBridgePostShellFtb("hide", String(entry))
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         g_FTBWails_ShellVisible := false
         try SurfaceManager_ObserveHide("floating_toolbar", Map("entry", String(entry), "host", "wails", "shellOnly", 1))
@@ -201,7 +215,8 @@ FloatingToolbarWails_HideWindow(entry) {
         try WinMinimize("ahk_id " . hwnd)
         catch {
             try WinHide("ahk_id " . hwnd)
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
     }
@@ -306,7 +321,8 @@ FloatingToolbarWails_Show(meta := 0) {
         }
         if FuncExists("FloatingToolbarRouter_AhkGuiExists") && FloatingToolbarRouter_AhkGuiExists() {
             try HideFloatingToolbar()
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
         if (shellPhase >= 2) {
@@ -358,7 +374,8 @@ FloatingToolbarWails_Hide(meta := 0) {
     FloatingToolbarWails_HideWindow("FloatingToolbarWails_Hide")
     if FuncExists("FloatingToolbarRouter_AhkGuiExists") && FloatingToolbarRouter_AhkGuiExists() {
         try HideFloatingToolbar()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     return true
@@ -369,7 +386,8 @@ FloatingToolbarWails_Dispose(reason := "") {
     FloatingToolbarWails_StopEgressPump()
     if FloatingToolbarWails_ShouldUseShell() && FuncExists("Nmer_WailsBridgePostShellFtb") {
         try Nmer_WailsBridgePostShellFtb("dispose", "FloatingToolbarWails_Dispose", Map("reason", String(reason)))
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         g_FTBWails_ShellMounted := false
         g_FTBWails_ShellVisible := false
@@ -417,35 +435,41 @@ FloatingToolbarWails_HandleEgressPayload(msg) {
         case "niuma_palette_ai_keys":
             if FuncExists("CommandPalette_OnNiumaPaletteAiKeys")
                 try CommandPalette_OnNiumaPaletteAiKeys(msg)
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
         case "niuma_palette_ai_llm":
             if FuncExists("CommandPalette_OnNiumaPaletteAiLlm")
                 try CommandPalette_OnNiumaPaletteAiLlm(msg)
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
         case "niuma_palette_ai_trace":
             if FuncExists("CommandPalette_AiLog") {
                 step := msg.Has("step") ? String(msg["step"]) : ""
                 det := msg.Has("detail") ? String(msg["detail"]) : ""
                 try CommandPalette_AiLog("shell_" . step, det)
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
             }
         case "niuma_palette_ai_chunk":
             if FuncExists("CommandPalette_OnNiumaPaletteAiChunk")
                 try CommandPalette_OnNiumaPaletteAiChunk(msg)
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
         case "niuma_palette_ai_end":
             if FuncExists("CommandPalette_OnNiumaPaletteAiEnd")
                 try CommandPalette_OnNiumaPaletteAiEnd(msg)
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
         case "niuma_palette_ai_error":
             if FuncExists("CommandPalette_OnNiumaPaletteAiError")
                 try CommandPalette_OnNiumaPaletteAiError(msg)
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
         case "niuma_palette_agent_trace":
             if FuncExists("CommandPalette_AgentDebug_TraceIfAgentReq") {
@@ -453,23 +477,27 @@ FloatingToolbarWails_HandleEgressPayload(msg) {
                 step0 := msg.Has("step") ? String(msg["step"]) : ""
                 det0 := msg.Has("detail") ? String(msg["detail"]) : ""
                 try CommandPalette_AgentDebug_TraceIfAgentReq(reqId0, "shell_ftb", "agent_trace", step0 . " " . det0)
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
             }
         case "niuma_palette_agent_chunk":
             if FuncExists("CommandPalette_OnNiumaPaletteAgentChunk")
                 try CommandPalette_OnNiumaPaletteAgentChunk(msg)
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
         case "niuma_palette_agent_end":
             if FuncExists("CommandPalette_OnNiumaPaletteAgentEnd")
                 try CommandPalette_OnNiumaPaletteAgentEnd(msg)
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
         case "niuma_palette_agent_error":
             if FuncExists("CommandPalette_OnNiumaPaletteAgentError")
                 try CommandPalette_OnNiumaPaletteAgentError(msg)
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
         case "UI_PAINT_READY", "toolbar_ready":
             global g_FTBWails_ShellMounted
@@ -477,7 +505,8 @@ FloatingToolbarWails_HandleEgressPayload(msg) {
         default:
             if FuncExists("FloatingToolbar_ForwardShellEgressMessage")
                 try FloatingToolbar_ForwardShellEgressMessage(msg)
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
     }
 }
@@ -538,7 +567,8 @@ FloatingToolbarWails_RegisterExternalFtb(entry := "hybrid_register") {
         return false
     res := Map("ok", false, "code", "REGISTER_FAIL")
     try res := Nmer_WailsBridgePostShellFtb("register_external", String(entry))
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     ok := (res is Map) && res.Get("ok", false)
     if ok {
@@ -568,7 +598,8 @@ FloatingToolbarWails_RegisterExternalReady(*) {
         FloatingToolbarWails_RegisterExternalFtb("toolbar_ready")
     res := Map("ok", false)
     try res := Nmer_WailsBridgePostShellFtb("ready", "ahk_wv2_ready")
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     ok := (res is Map) && res.Get("ok", false)
     if ok {
@@ -587,10 +618,12 @@ FloatingToolbarWails_HidePocWindow(*) {
         return
     expr := "ahk_id " . hwnd
     try WinHide(expr)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try WinMinimize(expr)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -601,7 +634,8 @@ FloatingToolbarWails_ResetEmbeddedShellState(*) {
     FloatingToolbarWails_StopEgressPump()
     if FuncExists("Nmer_WailsBridgePostShellFtb") && FuncExists("Nmer_WailsBridgeHealthy") && Nmer_WailsBridgeHealthy() {
         try Nmer_WailsBridgePostShellFtb("dispose", "hybrid_reset_embedded")
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     g_FTBWails_HybridRegistered := false
@@ -626,14 +660,16 @@ FloatingToolbarWails_EnsureHybridBridge(*) {
         FloatingToolbarWails_Log("hybrid_bridge_restart mode=embedded")
         FloatingToolbarWails_ResetEmbeddedShellState()
         try Nmer_StartWailsBridge(true)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     bridge := FloatingToolbarWails_EnsureBridge()
     if !(bridge is Map) || !bridge.Get("ok", false) {
         if FuncExists("Nmer_StartWailsBridge") {
             try Nmer_StartWailsBridge(false)
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             bridge := FloatingToolbarWails_EnsureBridge()
         }
@@ -646,7 +682,8 @@ FloatingToolbarWails_EnsureHybridBridge(*) {
     FloatingToolbarWails_EnsureInjectPump()
     if FuncExists("Nmer_HybridManualProbeEnsure")
         try Nmer_HybridManualProbeEnsure()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     return FuncExists("Nmer_WailsBridgeHealthy") && Nmer_WailsBridgeHealthy()
 }
@@ -725,14 +762,16 @@ FloatingToolbarWails_DeliverPayloadHybridFallback(payload) {
         else
             g_FTB_WV2.PostWebMessageAsJson(Jxon_Dump(payload))
         ok := true
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if ok {
         g_FTBWails_HybridInjectFailStreak := 0
         try SurfaceManager_RecordEvent("ftb_hybrid_inject_fallback", "floating_toolbar", Map(
             "type", String(payload.Get("type", ""))
         ))
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         FloatingToolbarWails_Log("hybrid_inject_fallback type=" . String(payload.Get("type", "")))
     }
@@ -767,7 +806,8 @@ FloatingToolbarWails_HideHybrid(meta := 0) {
     global g_FTBWails_HybridReady
     if FuncExists("Nmer_WailsBridgePostShellFtb") && Nmer_WailsBridgeHealthy() {
         try Nmer_WailsBridgePostShellFtb("hide", "FloatingToolbarWails_HideHybrid")
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     g_FTBWails_HybridReady := false
@@ -781,7 +821,8 @@ FloatingToolbarWails_DisposeHybrid(reason := "") {
     FloatingToolbarWails_StopInjectPump()
     if FuncExists("Nmer_WailsBridgePostShellFtb") && Nmer_WailsBridgeHealthy() {
         try Nmer_WailsBridgePostShellFtb("dispose", "FloatingToolbarWails_DisposeHybrid", Map("reason", String(reason)))
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     g_FTBWails_HybridRegistered := false

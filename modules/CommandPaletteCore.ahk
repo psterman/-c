@@ -75,11 +75,13 @@ CommandPalette_AiLog(event, detail := "") {
     }
     line := "[" . ts . "][" . ev . "] " . body
     try OutputDebug("[CmdPalAI] " . line . "`n")
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if (FuncExists("NMER_Log")) {
         try Func("NMER_Log").Call("cmdpal_ai", ev, body)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     try {
@@ -89,7 +91,8 @@ CommandPalette_AiLog(event, detail := "") {
         if (dir != "" && !DirExist(dir))
             DirCreate(dir)
         FileAppend(line . "`r`n", path, "UTF-8")
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -130,7 +133,8 @@ CommandPalette_PerfJsonNumber(value) {
     try {
         if IsNumber(value)
             return String(value)
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return "0"
 }
@@ -165,10 +169,12 @@ CommandPalette_PerfFlush(*) {
             DirCreate(dir)
         for row in buf {
             try FileAppend(CommandPalette_PerfDump(row) . "`n", path, "UTF-8")
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -258,7 +264,8 @@ CommandPalette_ResolveActivationMode() {
             m := Trim(String(NormalizeAppearanceActivationMode(m)))
         else if (FuncExists("FloatingToolbar_NormalizeAppearanceMode"))
             m := Trim(String(FloatingToolbar_NormalizeAppearanceMode(m)))
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     m := Trim(String(m))
     if (m != "toolbar" && m != "hole" && m != "bubble" && m != "tray")
@@ -276,7 +283,8 @@ CommandPalette_ForceOpenNiumaDrawer() {
     }
     if (g_FTB_WV2 && g_FTB_WV2_Ready) {
         try FloatingToolbar_NotifyWebDrawerState(true)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     try FloatingToolbar_OpenNiumaChatDrawer(true)
@@ -297,7 +305,8 @@ CommandPalette_AiStateSnapshot() {
     guiHwnd := 0
     if IsObject(FloatingToolbarGUI) {
         try guiHwnd := FloatingToolbarGUI.Hwnd
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     return "actMode=" . String(AppearanceActivationMode)
@@ -345,7 +354,8 @@ CommandPalette_IsInputActive() {
                 if (WinGetStyle("ahk_id " . hwnd) & 0x10000000)
                     return WinActive("ahk_id " . hwnd)
             }
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     return false
@@ -355,7 +365,8 @@ CommandPalette_GetGuiHwnd() {
     global g_CmdPal_Gui
     if IsObject(g_CmdPal_Gui) {
         try return g_CmdPal_Gui.Hwnd
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     return 0
@@ -373,7 +384,8 @@ CommandPalette_ClearWindowRegion() {
     if !IsObject(g_CmdPal_Gui) || !g_CmdPal_Gui.Hwnd
         return
     try DllCall("user32\SetWindowRgn", "Ptr", g_CmdPal_Gui.Hwnd, "Ptr", 0, "Int", 1)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -398,7 +410,8 @@ CommandPalette_ApplyRoundedRegion(radius := 0) {
         rgn := DllCall("gdi32\CreateRoundRectRgn", "Int", 0, "Int", 0, "Int", iw + 1, "Int", ih + 1, "Int", rad, "Int", rad, "Ptr")
         if rgn
             return !!DllCall("user32\SetWindowRgn", "Ptr", hwnd, "Ptr", rgn, "Int", 1)
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return false
 }
@@ -407,16 +420,19 @@ CommandPalette_ApplyChromaKey() {
     global g_CmdPal_Gui, g_CmdPal_Ctrl
     if IsObject(g_CmdPal_Gui) && g_CmdPal_Gui.Hwnd {
         try WinSetTransColor("010101", "ahk_id " . g_CmdPal_Gui.Hwnd)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         try WinSetTransparent(255, "ahk_id " . g_CmdPal_Gui.Hwnd)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if IsObject(g_CmdPal_Ctrl) {
         ; 对齐黑洞启动层：WebView 透明底 + 宿主 010101 色键；圆外由 Region 裁掉
         try g_CmdPal_Ctrl.DefaultBackgroundColor := 0x00000000
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 }
@@ -442,7 +458,8 @@ CommandPalette_Init() {
     WV2 := _CmdPal_GetWebView2Class()
     if !WV2 {
         try TrayTip("命令面板", "WebView2 未加载，无法创建命令面板", "Icon!")
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return
     }
@@ -463,17 +480,21 @@ CommandPalette_OnWV2Created(ctrl) {
         s.AreDevToolsEnabled := false
         s.IsWebMessageEnabled := true
         s.AreHostObjectsAllowed := true
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try ApplyWebView2PerformanceSettings(g_CmdPal_WV2)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try WebView2_RegisterHostBridge(g_CmdPal_WV2)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     g_CmdPal_WV2.add_WebMessageReceived(CommandPalette_OnWebMessage)
     try g_CmdPal_WV2.add_NavigationCompleted(CommandPalette_OnNavigationCompleted)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try ApplyUnifiedWebViewAssets(g_CmdPal_WV2)
     g_CmdPal_WV2.Navigate(CommandPalette_BuildPageUrl("CommandPalette.html"))
@@ -498,7 +519,8 @@ CommandPalette_MaybeReloadHtml(*) {
     g_CmdPal_HtmlVer := ver
     g_CmdPal_NavigationReady := false
     try g_CmdPal_WV2.Navigate(CommandPalette_BuildPageUrl("CommandPalette.html"))
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -515,7 +537,8 @@ CommandPalette_OnNavigationCompleted(sender, args) {
     try {
         path := FuncExists("HtmlPanelPath") ? HtmlPanelPath("CommandPalette.html") : (A_ScriptDir . "\html\CommandPalette.html")
         g_CmdPal_HtmlVer := String(FileGetTime(path, "M"))
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if g_CmdPal_Visible {
         CommandPalette_PushThemeToWeb()
@@ -548,7 +571,8 @@ CommandPalette_ApplyBounds() {
     rc.right := cw
     rc.bottom := ch
     try g_CmdPal_Ctrl.Bounds := rc
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -578,18 +602,21 @@ CommandPalette_CenterAndShow() {
     g_CmdPal_HasAnchor := true
     g_CmdPal_Revealed := false
     try g_CmdPal_Gui.Show("x" . x . " y" . y . " w" . w . " h" . h)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     CommandPalette_ApplyBounds()
     CommandPalette_SyncHostShape()
     try WinActivate("ahk_id " . g_CmdPal_Gui.Hwnd)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     g_CmdPal_Visible := true
     g_CmdPal_Revealed := true
     CommandPalette_PushThemeToWeb()
     try WebView2_MoveFocusProgrammatic(g_CmdPal_Ctrl)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     SetTimer(CommandPalette_DeferredFocus, -120)
 }
@@ -621,7 +648,8 @@ CommandPalette_DeferredFocus(*) {
     CommandPalette_EnsureWebInputVisible()
     CommandPalette_PushToWeb(Map("type", "palette_focus"))
     try WebView2_MoveFocusProgrammatic(g_CmdPal_Ctrl)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if FuncExists("SearchCenter_ScheduleIMEStabilize")
         SearchCenter_ScheduleIMEStabilize()
@@ -688,11 +716,13 @@ CommandPalette_RetryShow(*) {
         g_CmdPal_PendingShow := false
         if !skipTel {
             try SurfaceTransaction_OnSurfaceFailed("command_palette", Map("entry", "CommandPalette_RetryShow", "reason", "init_timeout"))
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
         try TrayTip("命令面板", "WebView2 初始化超时，请重载脚本后再试", "Icon!")
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return
     }
@@ -764,7 +794,8 @@ CommandPalette_ProbeOc5OfflineEngine() {
         return Map("ok", false, "code", "OC5_L1_RUN_FAIL", "detail", err.Message, "closureCode", "", "via", "node_l1")
     }
     try stdout := FileRead(outPath, "UTF-8")
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try FileDelete(outPath)
     ok := InStr(stdout, "OC5_L1 ok=true") > 0
@@ -851,7 +882,8 @@ CommandPalette_ProbeOc5ProtocolClosure(timeoutMs := 2500) {
     live := Map("pass", false, "code", "OC5_LIVE_UNAVAILABLE", "closed", 0, "repaired", 0, "unclosed", 0, "sampled", 0)
     if FuncExists("CommandPalette_AgentProbeOc5") {
         try live := CommandPalette_AgentProbeOc5()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     web := 0
@@ -880,7 +912,8 @@ CommandPalette_RunOc5ProbeAndPersist(timeoutMs := 2500) {
         if FileExist(path)
             FileDelete(path)
         FileAppend(Jxon_Dump(r), path, "UTF-8")
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     code := String(r.Get("code", "OC5_FAIL"))
     ok := !!r.Get("ok", false)
@@ -914,16 +947,19 @@ CommandPalette_RunOc5ProbeAndPersist(timeoutMs := 2500) {
         try {
             Nmer_ShowAppToast("OC-5 探针", msg, ok ? "ok" : "warn")
             shown := true
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if !shown
         try TrayTip(msg, "OC-5 探针", ok ? "Iconi 4" : "Icon! 4")
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     if FuncExists("CommandPalette_AgentDebugTrace")
         try CommandPalette_AgentDebugTrace("host", "oc5_probe", code . " ok=" . (ok ? 1 : 0), ok ? "info" : "warn")
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     return r
 }
@@ -942,7 +978,8 @@ CommandPalette_ProbeGrayRouteOffline(query := "/search 测试") {
     decision := Map("route", "r1r2", "allowed", false, "reason", "offline_unavailable", "command", "")
     if FuncExists("Nmer_WailsBridgeResolveOfficialRoute")
         try decision := Nmer_WailsBridgeResolveOfficialRoute(query)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     route := String(decision.Get("route", "r1r2"))
     reason := String(decision.Get("reason", ""))
@@ -1055,7 +1092,8 @@ CommandPalette_ProbeGrayRoute(timeoutMs := 4000, query := "/search 测试") {
     if (IsObject(g_CmdPal_WV2) && g_CmdPal_Ready) {
         if FuncExists("CommandPalette_PushWailsBridgeConfig")
             try CommandPalette_PushWailsBridgeConfig()
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         wvMs := timeoutMs > 0 ? timeoutMs : 4000
         web := CommandPalette_ProbeGrayRouteViaPostMessage(wvMs, query)
@@ -1068,7 +1106,8 @@ CommandPalette_ProbeGrayRoute(timeoutMs := 4000, query := "/search 测试") {
 CommandPalette_RunGrayProbeAndPersist(timeoutMs := 4000, query := "/search 测试") {
     if FuncExists("CommandPalette_PushWailsBridgeConfig")
         try CommandPalette_PushWailsBridgeConfig()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     r := CommandPalette_ProbeGrayRoute(timeoutMs, query)
     path := ""
@@ -1084,7 +1123,8 @@ CommandPalette_RunGrayProbeAndPersist(timeoutMs := 4000, query := "/search 测�
         if FileExist(path)
             FileDelete(path)
         FileAppend(Jxon_Dump(r), path, "UTF-8")
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     code := String(r.Get("code", "GRAY_FAIL"))
     ok := !!r.Get("ok", false)
@@ -1117,16 +1157,19 @@ CommandPalette_RunGrayProbeAndPersist(timeoutMs := 4000, query := "/search 测�
         try {
             Nmer_ShowAppToast("A2UI 灰度探针", msg, ok ? "ok" : "warn")
             shown := true
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if !shown
         try TrayTip(msg, "A2UI 灰度探针", ok ? "Iconi 4" : "Icon! 4")
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     if FuncExists("CommandPalette_AgentDebugTrace")
         try CommandPalette_AgentDebugTrace("host", "gray_probe", code . " ok=" . (ok ? 1 : 0), ok ? "info" : "warn")
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     return r
 }
@@ -1164,16 +1207,19 @@ CommandPalette_RunAdapterProbeAndPersist(timeoutMs := 8000) {
                 CommandPalette_AgentDebugTrace("host", "adp_ingest_prep", String(ingest.Get("code", "")), ingest.Get("ok", false) ? "info" : "warn")
             if ingest.Get("ok", false)
                 Sleep(600)
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if FuncExists("CommandPalette_PushWailsBridgeConfig")
         try CommandPalette_PushWailsBridgeConfig()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     if FuncExists("CommandPalette_PushToWeb")
         try CommandPalette_PushToWeb(Map("type", "palette_adp_demo_prepare"))
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     r := CommandPalette_ProbeAdapterOfficialA2ui(timeoutMs)
     path := ""
@@ -1189,7 +1235,8 @@ CommandPalette_RunAdapterProbeAndPersist(timeoutMs := 8000) {
         if FileExist(path)
             FileDelete(path)
         FileAppend(Jxon_Dump(r), path, "UTF-8")
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     code := String(r.Get("code", "ADP_FAIL"))
     ok := !!r.Get("ok", false)
@@ -1225,16 +1272,19 @@ CommandPalette_RunAdapterProbeAndPersist(timeoutMs := 8000) {
         try {
             Nmer_ShowAppToast("Adapter 探针", msg, ok ? "ok" : "warn")
             shown := true
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if !shown
         try TrayTip(msg, "Adapter 探针", ok ? "Iconi 4" : "Icon! 4")
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     if FuncExists("CommandPalette_AgentDebugTrace")
         try CommandPalette_AgentDebugTrace("host", "adp_probe", code . " ok=" . (ok ? 1 : 0), ok ? "info" : "warn")
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     return r
 }
@@ -1252,7 +1302,8 @@ CommandPalette_ProbeAdapterOfflineEngine() {
         return Map("ok", false, "code", "ADP_L2_RUN_FAIL", "detail", err.Message, "via", "node_l2")
     }
     try stdout := FileRead(outPath, "UTF-8")
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try FileDelete(outPath)
     ok := InStr(stdout, "PASS adp-cp-stream") > 0
@@ -1350,13 +1401,15 @@ CommandPalette_ProbeAdapterOfficialA2ui(timeoutMs := 8000) {
     if (IsObject(g_CmdPal_WV2) && g_CmdPal_Ready) {
         if FuncExists("CommandPalette_PushWailsBridgeConfig")
             try CommandPalette_PushWailsBridgeConfig()
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         if FuncExists("CommandPalette_PushToWeb")
             try {
                 CommandPalette_PushToWeb(Map("type", "palette_adp_demo_prepare"))
                 Sleep(350)
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         wvMs := timeoutMs > 0 ? timeoutMs : 8000
         web := CommandPalette_ProbeAdapterViaPostMessage(wvMs)
@@ -1389,7 +1442,8 @@ CommandPalette_PrepareShowLayout() {
     hasCards := false
     if FuncExists("CommandPalette_AgentCardCount") {
         try hasCards := CommandPalette_AgentCardCount() > 0
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if hasCards || Trim(String(g_CmdPal_LayoutMode)) = "" || Trim(String(g_CmdPal_LayoutMode)) = "compact"
@@ -1424,7 +1478,8 @@ CommandPalette_AfterShowBootstrap() {
             else if FuncExists("ShowFloatingToolbar")
                 SetTimer(ShowFloatingToolbar, -80)
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -1435,11 +1490,13 @@ CommandPalette_CommitShow(*) {
     CommandPalette_PrepareShowLayout()
     CommandPalette_CenterAndShow()
     try WebView2_NotifyShown(g_CmdPal_WV2)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     CommandPalette_AfterShowBootstrap()
     try SurfaceManager_ObserveShow("command_palette", Map("entry", "CommandPalette_CommitShow", "ready", 1))
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -1450,7 +1507,8 @@ CommandPalette_DoShow(*) {
     else {
         CapsLock := false
         try SetTimer(CapsLock_DeferredSingleTapToggle, 0)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     SetTimer(CommandPalette_MaybeReloadHtml, -1)
@@ -1552,7 +1610,8 @@ CommandPalette_PushEmptyQuery(*) {
         try {
             if CommandPalette_AgentCardCount() > 0
                 return
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     CommandPalette_HandleQuery("")
@@ -1576,7 +1635,8 @@ CommandPalette_Hide(meta := 0) {
     }
     if (g_CmdPal_AiSession is Map) && !g_CmdPal_AiSession.Get("handoff", false) && !g_CmdPal_AiSession.Get("ended", false) {
         try CommandPalette_HandoffAiToToolbar(true)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     g_CmdPal_Visible := false
@@ -1585,21 +1645,25 @@ CommandPalette_Hide(meta := 0) {
     g_CmdPal_HasAnchor := false
     ; 包 1.1：隐藏时降 WebView2 内存档位并 RESET_STATE
     try WebView2_NotifyHidden(g_CmdPal_WV2)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if IsObject(g_CmdPal_Gui) {
         try g_CmdPal_Gui.Hide()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         CommandPalette_ClearWindowRegion()
     }
     if handoff {
         if FuncExists("FocusBroker_Release") {
             try FocusBroker_Release("CommandPalette", "search_preempt")
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             try FocusBroker_Release("LegacyWinActivate", "search_preempt")
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
     } else if FuncExists("CapsLock_NormalizeAfterUiClose")
@@ -1614,10 +1678,12 @@ CommandPalette_DisposeAhkWebViewIfRetired(reason := "shell_retired") {
     if !(IsObject(g_CmdPal_Gui) && g_CmdPal_Gui.Hwnd)
         return false
     try CommandPalette_Hide()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try SurfaceManager_CloseWebViewControl(g_CmdPal_Ctrl)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     g_CmdPal_Ctrl := 0
     g_CmdPal_WV2 := 0
@@ -1631,7 +1697,8 @@ CommandPalette_DisposeAhkWebViewIfRetired(reason := "shell_retired") {
     try SurfaceManager_DestroyGui(g_CmdPal_Gui)
     catch {
         try g_CmdPal_Gui.Destroy()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     g_CmdPal_Gui := 0
@@ -1640,7 +1707,8 @@ CommandPalette_DisposeAhkWebViewIfRetired(reason := "shell_retired") {
         "reason", String(reason),
         "host", "ahk_retired"
     ))
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return true
 }
@@ -1653,7 +1721,8 @@ CommandPalette_Dispose(reason := "") {
     }
     global g_CmdPal_Gui, g_CmdPal_Ctrl, g_CmdPal_WV2, g_CmdPal_Ready, g_CmdPal_Visible, g_CmdPal_Revealed
     try CommandPalette_Hide()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     SurfaceManager_CloseWebViewControl(g_CmdPal_Ctrl)
     g_CmdPal_Ctrl := 0
@@ -1690,7 +1759,8 @@ CommandPalette_GetWorkAreaAtPoint(px, py, &ml, &mt, &mr, &mb) {
     try MonitorGetWorkArea(idx, &ml, &mt, &mr, &mb)
     catch {
         try MonitorGet(idx, &ml, &mt, &mr, &mb)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     return idx
@@ -1705,11 +1775,13 @@ CommandPalette_MaxHeight(expanded := false) {
             WinGetPos(&wx, &wy, &ww, &wh, g_CmdPal_Gui.Hwnd)
             px := wx + (ww > 0 ? ww : g_CmdPal_Width) // 2
             py := wy + (wh > 0 ? wh : 1) // 2
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     } else {
         try MouseGetPos(&px, &py)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     ml := 0, mt := 0, mr := A_ScreenWidth, mb := A_ScreenHeight
@@ -1754,7 +1826,8 @@ CommandPalette_ApplyHeight(h, expanded := false, actionWorkspace := false) {
         if (y < mt + 8)
             y := mt + 8
         g_CmdPal_Gui.Move(x, y, g_CmdPal_Width, nh)
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     CommandPalette_ApplyBounds()
     SetTimer(CommandPalette_SyncHostShape, -40)
@@ -1778,7 +1851,8 @@ CommandPalette_ApplyMorphHeightStep(token, targetH, step, totalSteps) {
         try {
             WinGetPos(&x, &y, , , g_CmdPal_Gui.Hwnd)
             g_CmdPal_Gui.Move(x, y, g_CmdPal_Width, nh)
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         CommandPalette_ApplyBounds()
     }
@@ -1910,13 +1984,15 @@ CommandPalette_DeliverFtbPayload(payload) {
             else
                 g_FTB_WV2.PostWebMessageAsJson(Jxon_Dump(payload))
             return true
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         if FuncExists("FloatingToolbar_StartPaletteAgentStream") {
             try {
                 if FloatingToolbar_StartPaletteAgentStream(payload)
                     return true
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
     }
@@ -1929,7 +2005,8 @@ CommandPalette_DeliverFtbPayload(payload) {
                 else
                     g_FTB_WV2.PostWebMessageAsJson(Jxon_Dump(payload))
                 return true
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
         if IsObject(g_FTB_WV2) && g_FTB_WV2_Ready && g_FTB_WV2_FrameReady && typ != "host_palette_agent_stream" {
@@ -1939,7 +2016,8 @@ CommandPalette_DeliverFtbPayload(payload) {
                 else
                     g_FTB_WV2.PostWebMessageAsJson(Jxon_Dump(payload))
                 return true
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
         ok := false
@@ -1947,7 +2025,8 @@ CommandPalette_DeliverFtbPayload(payload) {
             ok := !!FloatingToolbarWails_DeliverPayloadHybrid(payload)
         if ok && FuncExists("Nmer_WailsBridgeDrainInjectToFtb")
             try Nmer_WailsBridgeDrainInjectToFtb()
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         return ok
     }
@@ -1965,7 +2044,8 @@ CommandPalette_DeliverFtbPayload(payload) {
         else
             g_FTB_WV2.PostWebMessageAsJson(Jxon_Dump(payload))
         ok := true
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if CommandPalette_InjectFtbHostPayload(payload)
         ok := true
@@ -1977,7 +2057,8 @@ CommandPalette_InvokeFtbPaletteAiSyncScript(reqId, q) {
         try {
             if CommandPalette_DeliverFtbPayload(Map("type", "host_palette_ai_sync", "reqId", String(reqId), "query", String(q)))
                 return true
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     global g_FTB_WV2
@@ -2016,7 +2097,8 @@ CommandPalette_ParseScriptJson(raw) {
         parsed := Jxon_Load(raw)
         if (parsed is Map)
             return parsed
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return Map()
 }
@@ -2027,10 +2109,12 @@ CommandPalette_SyncFtbContextForPalette(prov, reqId := "") {
         ok := false
         if FuncExists("CommandPalette_DeliverFtbPayload") {
             try ok := !!CommandPalette_DeliverFtbPayload(Map("type", "host_request_palette_ai_llm", "reqId", String(reqId), "provider", prov))
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             try CommandPalette_DeliverFtbPayload(Map("type", "niuma_request_studio_context"))
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
         CommandPalette_PullLiveKeysFromFtb()
@@ -2124,6 +2208,23 @@ CommandPalette_InvokeFtbPaletteAiScript(reqId, q, prov) {
 CommandPalette_ResolveAiLlmForProvider(provider := "") {
     global g_CmdPal_LiveAiKeys, g_CmdPal_LiveLlmFromFtb
     prov := CommandPalette_NormalizeAiProvider(provider)
+    if FuncExists("Nmer_Llm_ResolveLegacyLlm") {
+        try {
+            u := Nmer_Llm_ResolveLegacyLlm(prov)
+            if (u is Map) && u.Has("provider") {
+                pk := CommandPalette_NormalizeAiProvider(u.Get("provider", ""))
+                if (prov = "" || prov = pk) {
+                    noKeyOk := (pk = "ollama" || pk = "openclaw" || pk = "hermes")
+                    if (noKeyOk || Trim(String(u.Get("apiKey", ""))) != "") {
+                        CommandPalette_EnsureLlmEndpoint(u, pk)
+                        return u
+                    }
+                }
+            }
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e)
+        }
+    }
     llm := Map("provider", prov, "apiKey", "", "baseUrl", "", "model", "")
     if IsObject(g_CmdPal_LiveLlmFromFtb) && g_CmdPal_LiveLlmFromFtb.Has(prov) {
         live := g_CmdPal_LiveLlmFromFtb[prov]
@@ -2133,7 +2234,8 @@ CommandPalette_ResolveAiLlmForProvider(provider := "") {
             llm["model"] := Trim(String(live.Get("model", "")))
             if FuncExists("LlmApiPing_NormalizeApiKey")
                 try llm["apiKey"] := LlmApiPing_NormalizeApiKey(llm["apiKey"])
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
             if (prov = "kimi") && FuncExists("LlmApiPing_NormalizeMoonshotBase")
                 llm["baseUrl"] := LlmApiPing_NormalizeMoonshotBase(llm["baseUrl"])
@@ -2159,7 +2261,8 @@ CommandPalette_ResolveAiLlmForProvider(provider := "") {
             key := Trim(String(g_CmdPal_LiveAiKeys.Get(prov, "")))
         if FuncExists("LlmApiPing_NormalizeApiKey")
             try key := LlmApiPing_NormalizeApiKey(key)
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         llm["apiKey"] := key
         base := ""
@@ -2176,7 +2279,8 @@ CommandPalette_ResolveAiLlmForProvider(provider := "") {
                     base := Trim(String(pre.Get("baseUrl", "")))
                 if (model = "")
                     model := Trim(String(pre.Get("model", "")))
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
         if (prov = "kimi") && base != "" && FuncExists("LlmApiPing_BaseUrlMatchesProvider") {
@@ -2185,7 +2289,8 @@ CommandPalette_ResolveAiLlmForProvider(provider := "") {
                     preFix := LlmApiPing_PresetFor("kimi")
                     base := Trim(String(preFix.Get("baseUrl", base)))
                 }
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
         llm["baseUrl"] := base
@@ -2201,7 +2306,8 @@ CommandPalette_ResolveAiLlmForProvider(provider := "") {
                 pre := LlmApiPing_PresetFor(prov)
                 llm["baseUrl"] := Trim(String(pre.Get("baseUrl", "")))
                 llm["model"] := Trim(String(pre.Get("model", "")))
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
     }
@@ -2225,7 +2331,8 @@ CommandPalette_EnsureLlmEndpoint(llm, prov := "") {
                 base := Trim(String(pre.Get("baseUrl", "")))
             if (model = "")
                 model := Trim(String(pre.Get("model", "")))
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if (prov = "kimi") {
@@ -2281,13 +2388,15 @@ CommandPalette_StopAiStreamSideEffects(oldReqId := "") {
     rid := Trim(String(oldReqId))
     if (rid != "") && FuncExists("CoreAsyncHttp_Cancel") {
         try CoreAsyncHttp_Cancel(rid)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     ; 仅取消悬浮栏侧 palette 流，禁止广播 niuma_llm_http_cancel *（会误杀命令面板宿主直连）
     if (rid != "") && FuncExists("CommandPalette_DeliverFtbPayload") {
         try CommandPalette_DeliverFtbPayload(Map("type", "host_palette_ai_stream_cancel", "reqId", rid))
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 }
@@ -2302,7 +2411,8 @@ CommandPalette_FormatAiHttpError(status, err, text := "", prov := "") {
             fe := LlmApiPing_FormatHttpError(Map("ok", false, "status", st, "text", body, "error", err), pk != "" ? pk : "openai")
             if (fe != "")
                 return fe
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if (st = 429) || RegExMatch(err, "i)429|too\s*many|rate\s*limit")
@@ -2377,7 +2487,8 @@ CommandPalette_RequestFtbAnswerSync(reqId) {
     try {
         ok := CommandPalette_DeliverFtbPayload(payload)
         try CommandPalette_InvokeFtbPaletteAiSyncScript(reqId, q)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         CommandPalette_AiLog("ai_ftb_sync_req", "reqId=" . reqId . " ok=" . (ok ? 1 : 0))
         return ok
@@ -2470,6 +2581,69 @@ CommandPalette_TryDirectAiFallback(reqId, q, prov, gen, token) {
     CommandPalette_RunDirectAiStream(reqId, q, prov, gen)
 }
 
+CommandPalette_OnDirectLlmUnifiedDone(reqId, gen, cfg, r) {
+    if FuncExists("Nmer_Llm_ParseChatHttpResult")
+        parsed := Nmer_Llm_ParseChatHttpResult(cfg, r)
+    else
+        parsed := r
+    pk := ""
+    if (cfg is Map)
+        pk := CommandPalette_NormalizeAiProvider(cfg.Get("vendor", ""))
+    CommandPalette_OnDirectLlmDone(reqId, gen, pk, parsed)
+}
+
+CommandPalette_RunDirectAiUnifiedSync(reqId, q, cfg, gen) {
+    if !CommandPalette_AiSessionMatches(reqId, false)
+        return
+    if !FuncExists("Nmer_Llm_BuildHttpChat") || !FuncExists("LlmApiPing_HttpSync") {
+        CommandPalette_PushAiStreamError(reqId, gen, "统一 Provider HTTP 模块未加载")
+        return
+    }
+    req := Nmer_Llm_BuildHttpChat(cfg, q, 4096, false)
+    if !req.Get("ok", false) {
+        CommandPalette_PushAiStreamError(reqId, gen, req.Get("message", "请求失败"))
+        return
+    }
+    pk := CommandPalette_NormalizeAiProvider(cfg.Get("vendor", ""))
+    CommandPalette_PushAiStreamChunk(reqId, gen, "🔄 直连 " . pk . "…`n")
+    r := LlmApiPing_HttpSync("POST", req["url"], req["headers"], req["body"], 90000)
+    if FuncExists("Nmer_Llm_ParseChatHttpResult")
+        parsed := Nmer_Llm_ParseChatHttpResult(cfg, r)
+    else
+        parsed := r
+    CommandPalette_OnDirectLlmDone(reqId, gen, pk, parsed)
+}
+
+CommandPalette_TryUnifiedDirectStream(reqId, q, llm, gen) {
+    if !FuncExists("Nmer_Llm_BuildHttpChat")
+        return false
+    cfg := FuncExists("Nmer_Llm_CfgFromLlmMap") ? Nmer_Llm_CfgFromLlmMap(llm) : Nmer_Llm_GetHttpActive()
+    if !(cfg is Map) || cfg.Count = 0
+        return false
+    if FuncExists("Nmer_Llm_IsGatewayVendor") && Nmer_Llm_IsGatewayVendor(cfg.Get("vendor", ""))
+        return false
+    req := Nmer_Llm_BuildHttpChat(cfg, q, 4096, false)
+    if !req.Get("ok", false)
+        return false
+    pk := CommandPalette_NormalizeAiProvider(cfg.Get("vendor", ""))
+    if CommandPalette_HasDirectHttp() {
+        CommandPalette_PushAiStreamChunk(reqId, gen, "🔄 直连 " . pk . "…`n")
+        HttpJsonAsync("POST", req["url"], req["body"], CommandPalette_OnDirectLlmUnifiedDone.Bind(reqId, gen, cfg), Map(
+            "headers", req["headers"],
+            "timeoutMs", 90000,
+            "receiveTimeoutMs", 90000,
+            "tag", "cmdpal_ai_unified",
+            "reqId", reqId
+        ))
+        return true
+    }
+    if FuncExists("LlmApiPing_HttpSync") {
+        SetTimer(CommandPalette_RunDirectAiUnifiedSync.Bind(reqId, q, cfg, gen), -15)
+        return true
+    }
+    return false
+}
+
 CommandPalette_RunDirectAiStream(reqId, q, prov, gen) {
     global g_CmdPal_AiSession
     llm := CommandPalette_ResolveAiLlmForProvider(prov)
@@ -2484,27 +2658,18 @@ CommandPalette_RunDirectAiStream(reqId, q, prov, gen) {
         return
     }
     key := Trim(String(llm.Get("apiKey", "")))
-    if (key = "") {
-        CommandPalette_PushAiStreamError(reqId, gen, "未配置 API Key，请在 Niuma Chat 设置中填写")
+    if (key = "" && p != "ollama") {
+        CommandPalette_PushAiStreamError(reqId, gen, "未配置 API Key，请在设置 → 智能定制中填写")
         return
     }
-    if CommandPalette_HasDirectHttp() {
-        if (p = "minimax")
-            CommandPalette_DirectMinimaxStream(reqId, q, llm, gen)
-        else if (p = "claude")
-            CommandPalette_DirectClaudeStream(reqId, q, llm, gen)
-        else if (p = "kimi")
-            CommandPalette_RunDirectKimiStreamSync(reqId, q, llm, gen)
-        else
-            CommandPalette_DirectOpenAiStream(reqId, q, llm, gen)
+    if FuncExists("Nmer_Llm_IsGatewayVendor") && Nmer_Llm_IsGatewayVendor(p) {
+        CommandPalette_PushAiStreamError(reqId, gen, "当前为 Gateway 协议，请使用 Niuma Chat；命令面板仅支持 HTTP 对话模型")
         return
     }
+    if CommandPalette_TryUnifiedDirectStream(reqId, q, llm, gen)
+        return
     if FuncExists("LlmApiPing_HttpSync") {
-        CommandPalette_AiLog("ai_direct_sync", "reqId=" . reqId . " provider=" . p)
-        if (p = "kimi")
-            SetTimer(CommandPalette_RunDirectKimiStreamSync.Bind(reqId, q, llm, gen), -15)
-        else
-            SetTimer(CommandPalette_RunDirectAiStreamSync.Bind(reqId, q, llm, gen, p), -15)
+        SetTimer(CommandPalette_RunDirectAiUnifiedSync.Bind(reqId, q, FuncExists("Nmer_Llm_CfgFromLlmMap") ? Nmer_Llm_CfgFromLlmMap(llm) : Nmer_Llm_GetHttpActive(), gen), -15)
         return
     }
     CommandPalette_PushAiStreamError(reqId, gen, "悬浮栏未响应且宿主 HTTP 模块未加载，请完全退出并重载 牛马.ahk")
@@ -2518,59 +2683,8 @@ CommandPalette_RunDirectAiStreamSync(reqId, q, llm, gen, provKind) {
         CommandPalette_RunDirectKimiStreamSync(reqId, q, llm, gen)
         return
     }
-    CommandPalette_EnsureLlmEndpoint(llm, pk)
-    key := Trim(String(llm.Get("apiKey", "")))
-    base := Trim(String(llm.Get("baseUrl", "")))
-    model := Trim(String(llm.Get("model", "")))
-    if (model = "")
-        model := "MiniMax-M2.7"
-    url := ""
-    body := ""
-    headers := Map("Content-Type", "application/json")
-    if (pk = "minimax") {
-        url := FuncExists("LlmApiPing_MinimaxAnthropicUrl") ? LlmApiPing_MinimaxAnthropicUrl(base) : (base . "/v1/messages")
-        body := Jxon_Dump(Map("model", model, "max_tokens", 4096, "messages", [Map("role", "user", "content", String(q))], "stream", false))
-        headers["Authorization"] := "Bearer " . key
-        headers["anthropic-version"] := "2023-06-01"
-        CommandPalette_PushAiStreamChunk(reqId, gen, "🔄 宿主直连 MiniMax…`n")
-    } else if (pk = "claude") {
-        url := FuncExists("LlmApiPing_ClaudeMessagesUrl") ? LlmApiPing_ClaudeMessagesUrl(base) : (base . "/v1/messages")
-        body := Jxon_Dump(Map("model", model, "max_tokens", 4096, "messages", [Map("role", "user", "content", String(q))]))
-        headers["x-api-key"] := key
-        headers["anthropic-version"] := "2023-06-01"
-        CommandPalette_PushAiStreamChunk(reqId, gen, "🔄 宿主直连 Claude…`n")
-    } else {
-        url := FuncExists("LlmApiPing_OpenAIChatUrl") ? LlmApiPing_OpenAIChatUrl(base) : (base . "/chat/completions")
-        if FuncExists("LlmApiPing_BuildChatBody")
-            body := LlmApiPing_BuildChatBody(pk, model, q, 4096)
-        else
-            body := Jxon_Dump(Map("model", model, "messages", [Map("role", "user", "content", String(q))], "max_tokens", 4096))
-        headers["Authorization"] := "Bearer " . key
-        CommandPalette_PushAiStreamChunk(reqId, gen, "🔄 宿主直连模型…`n")
-    }
-    r := LlmApiPing_HttpSync("POST", url, headers, body, 90000)
-    if (pk = "kimi") && !(r.Get("ok", false)) && FuncExists("LlmApiPing_KimiChatBodies") && FuncExists("LlmApiPing_OpenAIChatUrl") {
-        st := r.Has("status") ? Integer(r["status"]) : 0
-        if (st = 404 || st = 400) {
-            for _, altBody in LlmApiPing_KimiChatBodies(model, q, 4096) {
-                if (altBody = body)
-                    continue
-                r2 := LlmApiPing_HttpSync("POST", url, headers, altBody, 90000)
-                if r2.Get("ok", false) {
-                    r := r2
-                    break
-                }
-                r := r2
-            }
-        }
-        if !(r.Get("ok", false)) && RegExMatch(model, "i)^kimi-k2") {
-            fb := Map("model", "moonshot-v1-8k", "messages", [Map("role", "user", "content", String(q))], "max_tokens", 4096, "temperature", 0.7)
-            r3 := LlmApiPing_HttpSync("POST", url, headers, Jxon_Dump(fb), 90000)
-            if r3.Get("ok", false)
-                r := r3
-        }
-    }
-    CommandPalette_OnDirectLlmDone(reqId, gen, pk, r)
+    cfg := FuncExists("Nmer_Llm_CfgFromLlmMap") ? Nmer_Llm_CfgFromLlmMap(llm) : Nmer_Llm_GetHttpActive()
+    CommandPalette_RunDirectAiUnifiedSync(reqId, q, cfg, gen)
 }
 
 CommandPalette_DirectMinimaxStream(reqId, q, llm, gen) {
@@ -2723,11 +2837,13 @@ CommandPalette_BuildKimiDirectPlan(q, llm) {
                         if (ab != "")
                             bodies.Push(ab)
                     }
-                } catch {
+                } catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
             } else if FuncExists("LlmApiPing_BuildChatBody") {
                 try bodies.Push(LlmApiPing_BuildChatBody("kimi", mod, q, tok))
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
             }
             for _, body in bodies {
@@ -2955,7 +3071,8 @@ CommandPalette_ExtractLlmAnswer(raw, kind := "") {
                 }
             }
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return raw
 }
@@ -2980,7 +3097,8 @@ CommandPalette_PostFtbPaletteAiStreamInner(reqId, q, prov, isRetry := false) {
         CommandPalette_AiLog("ai_stream_post_err", ePost.Message)
     }
     try CommandPalette_InvokeFtbPaletteAiScript(reqId, q, prov)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return ok
 }
@@ -3050,7 +3168,8 @@ CommandPalette_PostFtbPaletteAiStream(reqId, q, prov) {
     global g_CmdPal_AiSession
     gen := (g_CmdPal_AiSession is Map) ? Integer(g_CmdPal_AiSession.Get("gen", 0)) : 0
     try CommandPalette_PostFtbPaletteAiStreamInner(reqId, q, prov, false)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     CommandPalette_AiLog("ai_stream_posted", "reqId=" . reqId . " provider=" . prov)
     if (g_CmdPal_AiSession is Map) {
@@ -3137,7 +3256,8 @@ CommandPalette_PushAiStreamEnd(reqId, gen, answer := "") {
         CommandPalette_PushToWeb(Map("type", "palette_ai_end", "reqId", reqId, "answer", ans))
     if g_CmdPal_AiSession.Get("handoff", false) && IsObject(g_FTB_WV2) {
         try WebView_QueuePayload(g_FTB_WV2, Map("type", "host_palette_ai_handoff_end", "reqId", reqId))
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 }
@@ -3169,7 +3289,8 @@ CommandPalette_OnNiumaPaletteAiChunk(msg) {
         return
     if FuncExists("CommandPalette_AgentForwardAiEvent")
         try CommandPalette_AgentForwardAiEvent("chunk", msg)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     if FuncExists("CommandPalette_AgentDebug_TraceIfAgentReq") {
         reqId0 := msg.Has("reqId") ? String(msg["reqId"]) : ""
@@ -3194,7 +3315,8 @@ CommandPalette_OnNiumaPaletteAiEnd(msg) {
         return
     if FuncExists("CommandPalette_AgentForwardAiEvent")
         try CommandPalette_AgentForwardAiEvent("end", msg)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     if FuncExists("CommandPalette_AgentDebug_TraceIfAgentReq") {
         reqId0 := msg.Has("reqId") ? String(msg["reqId"]) : ""
@@ -3229,7 +3351,8 @@ CommandPalette_OnNiumaPaletteAiError(msg) {
         return
     if FuncExists("CommandPalette_AgentForwardAiEvent")
         try CommandPalette_AgentForwardAiEvent("error", msg)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     if FuncExists("CommandPalette_AgentDebug_TraceIfAgentReq") {
         reqId0 := msg.Has("reqId") ? String(msg["reqId"]) : ""
@@ -3269,7 +3392,8 @@ CommandPalette_HandoffAiToToolbar(fromHide := false) {
         CommandPalette_CollapsePaletteAfterAi()
     if IsObject(g_FTB_WV2) {
         try WebView_QueuePayload(g_FTB_WV2, Map("type", "host_palette_ai_handoff", "reqId", reqId, "showHud", true))
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 }
@@ -3297,7 +3421,8 @@ CommandPalette_PromoteAiToNiumaChat(msg := 0) {
     CommandPalette_BootstrapNiumaChat("ai_promote", true)
     if FuncExists("FloatingToolbar_OpenNiumaChatAsk") {
         try FloatingToolbar_OpenNiumaChatAsk(q, false)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if (q != "" && FuncExists("FloatingToolbar_SendTextToNiumaChat")) {
@@ -3306,7 +3431,8 @@ CommandPalette_PromoteAiToNiumaChat(msg := 0) {
                 FloatingToolbar_SendTextToNiumaChat(q, false, false, true, prov)
             else
                 FloatingToolbar_SendTextToNiumaChat(q, false, false, true)
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if (ans != "" && FuncExists("FloatingToolbar_SendTextToNiumaChat") && ans != q) {
@@ -3344,7 +3470,8 @@ CommandPalette_InjectPalettePayload(payload) {
     } catch as eInj {
         if FuncExists("CommandPalette_AgentDebugTrace")
             try CommandPalette_AgentDebugTrace("push", "inject_fail", eInj.Message, "err")
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         return false
     }
@@ -3376,11 +3503,13 @@ CommandPalette_PushToWeb(payload) {
     }
     if FuncExists("CommandPalette_InjectPalettePayload")
         try CommandPalette_InjectPalettePayload(payload)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     if FuncExists("CommandPalette_AgentDebug_TracePalettePush")
         try CommandPalette_AgentDebug_TracePalettePush(payload)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     return ok
 }
@@ -3427,13 +3556,15 @@ CommandPalette_ParseWebMessage(args) {
             t := args.TryGetWebMessageAsString()
             if (t != "")
                 raw := "" . t
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         if (raw = "") {
             try {
                 if IsObject(args) && args.HasProp("WebMessageAsJson")
                     raw := "" . String(args.WebMessageAsJson)
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
     }
@@ -3445,7 +3576,8 @@ CommandPalette_ParseWebMessage(args) {
             m := FuncExists("Jxon_LoadSafe") ? Jxon_LoadSafe(m) : Jxon_Load(m)
         if (m is Map)
             return m
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return 0
 }
@@ -3484,7 +3616,8 @@ CommandPalette_DrainWebMessageQueue(*) {
                     m := FuncExists("Jxon_LoadSafe") ? Jxon_LoadSafe(m) : Jxon_Load(m)
                 if (m is Map)
                     CommandPalette_DispatchWebMessage(m)
-            } catch {
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
     } finally {
@@ -3510,7 +3643,8 @@ CommandPalette_DispatchWebMessage(msg) {
         if wailsHost {
             if FuncExists("Nmer_WailsBridgePostShellCp")
                 try Nmer_WailsBridgePostShellCp("ready", "palette_ready")
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
             return
         }
@@ -3555,7 +3689,8 @@ CommandPalette_DispatchWebMessage(msg) {
         g_CmdPal_Oc5ProbeResolver := 0
         if resolver
             try resolver.Call(msg)
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         return
     }
@@ -3571,7 +3706,8 @@ CommandPalette_DispatchWebMessage(msg) {
         g_CmdPal_GrayProbeResolver := 0
         if resolver
             try resolver.Call(msg)
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         return
     }
@@ -3587,7 +3723,8 @@ CommandPalette_DispatchWebMessage(msg) {
         g_CmdPal_AdpProbeResolver := 0
         if resolver
             try resolver.Call(msg)
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         return
     }
@@ -3633,10 +3770,6 @@ CommandPalette_DispatchWebMessage(msg) {
     }
     if (typ = "palette_execute") {
         CommandPalette_HandleExecute(msg)
-        return
-    }
-    if (typ = "palette_voice_toggle") {
-        CommandPalette_HandleVoiceToggle()
         return
     }
     if (typ = "palette_turbo_search") {
@@ -3695,7 +3828,8 @@ CommandPalette_DispatchWebMessage(msg) {
     if (typ = "palette_agent_debug_log") {
         if FuncExists("CommandPalette_AgentWireLog")
             try CommandPalette_AgentWireLog("wm_debug_log", msg.Has("event") ? String(msg["event"]) : "log")
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         try {
             lay := msg.Has("layer") ? String(msg["layer"]) : "palette"
@@ -3706,7 +3840,8 @@ CommandPalette_DispatchWebMessage(msg) {
         } catch as eDbg {
             if FuncExists("CommandPalette_AgentWireLog")
                 try CommandPalette_AgentWireLog("wm_debug_err", eDbg.Message)
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
         }
         return
@@ -3717,7 +3852,8 @@ CommandPalette_DispatchWebMessage(msg) {
             g_AgentDbg_PipelineState := msg["state"]
         if FuncExists("CommandPaletteSearchDebug_PushPayload") {
             try CommandPaletteSearchDebug_PushPayload(Map("type", "cp_pipeline_debug", "state", g_AgentDbg_PipelineState))
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
         return
@@ -3725,13 +3861,15 @@ CommandPalette_DispatchWebMessage(msg) {
     if (typ = "palette_agent_submit") {
         if FuncExists("CommandPalette_AgentWireLog")
             try CommandPalette_AgentWireLog("wm_submit", SubStr(String(msg.Has("text") ? msg["text"] : ""), 1, 80))
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         try CommandPalette_HandleAgentSubmit(msg)
         catch as eSub {
             if FuncExists("CommandPalette_AgentWireLog")
                 try CommandPalette_AgentWireLog("wm_submit_err", eSub.Message)
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
         }
         return
@@ -3772,7 +3910,8 @@ CommandPalette_DispatchWebMessage(msg) {
     if (typ = "palette_agent_prepare_new") {
         if FuncExists("CommandPalette_DeliverFtbPayload")
             try CommandPalette_DeliverFtbPayload(msg)
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         return
     }
@@ -3794,7 +3933,8 @@ CommandPalette_BuildPageUrl(htmlFile) {
         path := FuncExists("HtmlPanelPath") ? HtmlPanelPath(htmlFile) : (A_ScriptDir . "\html\" . htmlFile)
         ver := String(FileGetTime(path, "M"))
         url .= (InStr(url, "?") ? "&" : "?") . "v=" . ver
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return url
 }
@@ -3874,7 +4014,8 @@ CommandPalette_RowText(row, key) {
             return row.Has(key) ? String(row[key]) : ""
         if row.HasProp(key)
             return String(row.%key%)
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return ""
 }
@@ -4053,7 +4194,8 @@ CommandPalette_HandleQuery(q, seq := 0) {
         CommandPalette_PushResults(CommandPalette_BuildActionList(q), seq)
     } catch as e {
         try TrayTip("命令面板", "搜索失败: " . e.Message, "Icon!")
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         CommandPalette_PushResults([], seq)
     }
@@ -4107,22 +4249,13 @@ CommandPalette_HandleExecute(msg) {
     CommandPalette_Hide()
 }
 
-CommandPalette_HandleVoiceToggle() {
-    if FuncExists("WailsWhisper_IsRecording") && WailsWhisper_IsRecording() {
-        if FuncExists("WailsWhisper_StopAndTranscribe")
-            SetTimer(WailsWhisper_StopAndTranscribe, -30)
-        return
-    }
-    if FuncExists("WailsWhisper_StartRecording")
-        WailsWhisper_StartRecording()
-}
-
 CommandPalette_HandleAgentDebug() {
     if FuncExists("CommandPalette_ShowSearchDebug") {
         try CommandPalette_ShowSearchDebug(true, "agent")
         catch as e {
             try TrayTip("命令面板", "无法打开诊断: " . e.Message, "Iconx 2")
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
         return
@@ -4131,7 +4264,8 @@ CommandPalette_HandleAgentDebug() {
         try CommandPalette_AgentDebug_Show(true)
         catch as e {
             try TrayTip("命令面板", "无法打开诊断: " . e.Message, "Iconx 2")
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
     }
@@ -4218,14 +4352,16 @@ CommandPalette_FlushExecHistory(*) {
         return
     path := CommandPalette_ExecFilePath()
     try DirCreate(A_ScriptDir . "\Data")
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try {
         FileDelete(path)
         FileAppend(Jxon_Dump(g_CmdPal_ExecCache), path, "UTF-8")
         g_CmdPal_ExecFileMtime := CommandPalette_ExecReadMtime()
         g_CmdPal_ExecDirty := false
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -4254,7 +4390,8 @@ CommandPalette_GetThemeMode() {
         global ThemeMode
         if IsSet(ThemeMode)
             return CommandPalette_NormalizeThemeToken(ThemeMode)
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return "dark"
 }
@@ -4277,7 +4414,8 @@ CommandPalette_InstallRoot() {
             r := Trim(String(MainScriptDir))
             if (r != "")
                 return r
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     return A_ScriptDir
@@ -4295,28 +4433,35 @@ CommandPalette_ResolveSearchCoreExe() {
             p := Trim(String(Nmer_SearchCenterCoreExe()))
             if (p != "" && FileExist(p))
                 return p
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     return ""
 }
 
 CommandPalette_EnsureSearchCoreRunning() {
+    if FuncExists("SearchCore_EnsureHttpReady")
+        return SearchCore_EnsureHttpReady("palette")
     if FuncExists("NmerService_Ensure") {
         st := NmerService_Ensure("searchcore", "palette", false)
+        if FuncExists("SearchCore_StatusHttpReady")
+            return SearchCore_StatusHttpReady(st)
     } else if FuncExists("SearchCore_EnsureStatus") {
         st := SearchCore_EnsureStatus(false, "palette")
+        if FuncExists("SearchCore_StatusHttpReady")
+            return SearchCore_StatusHttpReady(st)
         if !(st is Map) || !st.Has("status")
             return false
         status := String(st["status"])
-        return (status = "healthy" || status = "started" || status = "process_only")
+        return (status = "healthy" || status = "started")
     }
     if FuncExists("Nmer_StartSearchCenterCoreStatus") {
         st := Nmer_StartSearchCenterCoreStatus(false, "palette")
         if !(st is Map) || !st.Has("status")
             return false
         status := String(st["status"])
-        return (status = "healthy" || status = "started" || status = "process_only")
+        return (status = "healthy" || status = "started")
     }
     if FuncExists("Nmer_StartSearchCenterCore")
         return Nmer_StartSearchCenterCore(false)
@@ -4324,9 +4469,8 @@ CommandPalette_EnsureSearchCoreRunning() {
 }
 
 CommandPalette_IsSearchCoreReady() {
-    if FuncExists("Nmer_SearchCenterCoreHealthy") && Nmer_SearchCenterCoreHealthy()
-        return true
-    ; 进程在但 WinHttp /health 探针失败时仍允许发搜索（避免误等 45s 报 8080 超时）
+    if FuncExists("Nmer_SearchCenterCoreHealthy")
+        return Nmer_SearchCenterCoreHealthy()
     return ProcessExist("SearchCenterCore.exe") ? true : false
 }
 
@@ -4340,7 +4484,8 @@ CommandPalette_MapGoItemFromAny(it) {
         try {
             if it.HasProp(key)
                 m[key] := it.%key%
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     return CommandPalette_MapGoItemToTurbo(m)
@@ -4650,7 +4795,8 @@ CommandPalette_ExecuteGoSearch(keyword, limit, gen, seq := 0) {
     SetTimer(CommandPalette_TurboPendingTimeout, 0)
     encQ := kw
     try encQ := UriEncode(kw)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     q := "q=" . encQ . "&type=all&limit=" . lim . "&offset=0"
     url := "http://127.0.0.1:8080/search?" . q
@@ -4729,7 +4875,8 @@ CommandPalette_PollTurboHttp(pollToken := 0, *) {
         try {
             if (whr.readyState = 4)
                 pr["ready"] := true
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if pr["fatal"] {
@@ -4787,7 +4934,8 @@ CommandPalette_HandleTurboExecute(msg) {
         _SCWV_RecordSearchHistory(query)
     if (path = "") {
         try TrayTip("命令面板", "无法打开：路径为空", "Icon!")
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         CommandPalette_Hide()
         return
@@ -4811,7 +4959,8 @@ CommandPalette_HandleTurboExecute(msg) {
     }
     if !launched {
         try TrayTip("打开失败", errMsg != "" ? errMsg : path, "Iconx 2")
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     CommandPalette_Hide()
@@ -4822,7 +4971,8 @@ CommandPalette_HandleAiStub(query) {
     try {
         if (q != "")
             OutputDebug("[CommandPalette] AI stub query=" . q . "`n")
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     CommandPalette_PushToWeb(Map(
         "type", "palette_ai_status",
@@ -4868,7 +5018,8 @@ CommandPalette_NormalizeAiProvider(id) {
         return ""
     if FuncExists("UserStudio_NormalizeLlmProvider")
         try return UserStudio_NormalizeLlmProvider(p)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     return p
 }
@@ -4964,7 +5115,8 @@ CommandPalette_AiProviderIconUrlForFile(relUnderAssets) {
         return ""
     if FuncExists("BuildAppAssetUrl") {
         try return BuildAppAssetUrl(relUnderAssets)
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     return "https://app.local/assets/" . StrReplace(relUnderAssets, "\", "/")
@@ -5071,7 +5223,8 @@ CommandPalette_CoerceToMap(obj) {
     try {
         for k, v in obj
             out[String(k)] := v
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return out
 }
@@ -5085,7 +5238,8 @@ CommandPalette_MarkKeyedFromApiKeys(keyed, apiKeys) {
         vk := Trim(String(v))
         if FuncExists("UserStudio_NormalizeApiKey")
             try vk := UserStudio_NormalizeApiKey(v)
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         if (pk != "" && vk != "")
             keyed[pk] := true
@@ -5132,7 +5286,8 @@ CommandPalette_ReadNiumaLlmSyncMap() {
             CommandPalette_FillKeyedFromLlmRaw(keyedProbe, raw)
             if (keyedProbe.Count > 0)
                 return Map("sync", Map("apiKeys", keyedProbe, "llm", Map("provider", "")), "raw", raw)
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     return Map("sync", 0, "raw", "")
@@ -5158,16 +5313,19 @@ CommandPalette_BootstrapNiumaChat(reason := "", openDrawer := false) {
     if FuncExists("FloatingToolbar_AhkWebViewEnabled") && !FloatingToolbar_AhkWebViewEnabled() {
         if FuncExists("FloatingToolbarWails_EnsureShellForAgent")
             try FloatingToolbarWails_EnsureShellForAgent(false)
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         else if FuncExists("FloatingToolbarRouter_Show")
             try FloatingToolbarRouter_Show(Map("reason", "cmdpal_bootstrap", "soft", true))
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         if openDrawer {
             if FuncExists("FloatingToolbar_ScheduleNiumaDrawerOpen")
                 try FloatingToolbar_ScheduleNiumaDrawerOpen(100)
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
             CommandPalette_ForceOpenNiumaDrawer()
         }
@@ -5187,15 +5345,18 @@ CommandPalette_BootstrapNiumaChat(reason := "", openDrawer := false) {
         } else {
             AppearanceActivationMode := "toolbar"
             try IniWrite("toolbar", ConfigFile, "Appearance", "ActivationMode")
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
             if FuncExists("GDHO_ForceApplyAppearanceMode") {
                 try GDHO_ForceApplyAppearanceMode("toolbar")
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
             } else if FuncExists("ApplyAppearanceActivationMode") {
                 try ApplyAppearanceActivationMode()
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
             }
         }
@@ -5203,17 +5364,19 @@ CommandPalette_BootstrapNiumaChat(reason := "", openDrawer := false) {
 
     if FuncExists("FloatingToolbar_ClearOverlaySuppression")
         try FloatingToolbar_ClearOverlaySuppression()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     if FuncExists("StartWebViewWarmup")
         try StartWebViewWarmup()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     if FuncExists("WebView2_InitSharedEnvAsync")
         try WebView2_InitSharedEnvAsync()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
-
     if (FloatingToolbarGUI = 0) {
         CommandPalette_AiLog("bootstrap_create_gui", "CreateFloatingToolbarGUI")
         if FuncExists("CreateFloatingToolbarGUI")
@@ -5232,21 +5395,24 @@ CommandPalette_BootstrapNiumaChat(reason := "", openDrawer := false) {
 
     if FuncExists("FloatingToolbar_ShowForActivationMode")
         try FloatingToolbar_ShowForActivationMode()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     if FuncExists("SurfaceIntent_Open")
         try SurfaceIntent_Open("floating_toolbar", Map("reason", "cmdpal_bootstrap"))
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     else if FuncExists("ShowFloatingToolbar")
         try ShowFloatingToolbar()
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
-
     if (g_FTB_WaitingUiFinishedReveal && g_FTB_UI_Ready) {
         if FuncExists("FloatingToolbar_FinishReveal")
             try FloatingToolbar_FinishReveal()
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
     } else if (g_FTB_WaitingUiFinishedReveal && FuncExists("FloatingToolbar_ForceRevealIfStuck")) {
         SetTimer(FloatingToolbar_ForceRevealIfStuck, -1)
@@ -5255,7 +5421,8 @@ CommandPalette_BootstrapNiumaChat(reason := "", openDrawer := false) {
     if openDrawer {
         if FuncExists("FloatingToolbar_ScheduleNiumaDrawerOpen")
             try FloatingToolbar_ScheduleNiumaDrawerOpen(100)
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         if FuncExists("GDHO_NiumaDrawerOpenPump") {
             SetTimer(GDHO_NiumaDrawerOpenPump, -120)
@@ -5335,7 +5502,8 @@ CommandPalette_OnNiumaPaletteAiKeys(msg) {
     active := msg.Has("activeProvider") ? msg["activeProvider"] : ""
     keyN := 0
     try keyN := apiKeys.Count
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     CommandPalette_AiLog("ai_keys_received", "active=" . String(active) . " keyCount=" . keyN)
     CommandPalette_ApplyLiveAiKeys(apiKeys, active)
@@ -5389,11 +5557,13 @@ CommandPalette_BuildAiProviderList() {
             key := Trim(String(llmIn.Get("apiKey", "")))
             if FuncExists("UserStudio_NormalizeApiKey")
                 try key := UserStudio_NormalizeApiKey(key)
-                catch {
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
                 }
             if (active != "" && key != "")
                 keyed[active] := true
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     if (rawLlm != "") {
@@ -5425,7 +5595,8 @@ CommandPalette_BuildAiProviderList() {
                         keyed[pk] := true
                 }
             }
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     items := []
@@ -5598,7 +5769,8 @@ CommandPalette_FlushPendingAiSend(*) {
         g_CmdPal_PendingAiSend := 0
         CommandPalette_AiLog("flush_fail", "timeout after 72 tries | " . CommandPalette_AiStateSnapshot())
         try TrayTip("命令面板", "无法自动打开 Niuma Chat：请查看 Cache\debug\command_palette_ai.log", "Icon!")
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         return
     }
@@ -5675,7 +5847,8 @@ CommandPalette_FlushPendingAiSendIfReady() {
             SurfaceDisposeProbe_TryExecute("dev_surface_dispose_ftb")
     } catch as e {
         try TrayTip("Surface 探针", e.Message, "Iconx 2")
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 }
@@ -5687,7 +5860,8 @@ CommandPalette_FlushPendingAiSendIfReady() {
             SurfaceDisposeProbe_TryExecute("dev_surface_restore_ftb")
     } catch as e {
         try TrayTip("Surface 探针", e.Message, "Iconx 2")
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
 }

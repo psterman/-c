@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>工作区</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="settings-shared.css">
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+  <script src="https://app.local/assets/js/BasePanel.js"></script>
+  <script src="https://app.local/assets/nm-bottom-dock.js"></script>
+  <script src="settings-bridge-child.js?v=llm-child-v4"></script>
+</head>
+<body>
+  <div id="app" class="settings-child">
+    <section id="content">
+      <div id="header"><div class="inline">[ 设置中心 ]</div><div class="inline"><div id="status">等待连接...</div></div></div>
+      <div id="panel"></div>
+      <div id="footer"><button id="btn-cancel" class="btn">取消</button><button id="btn-save" class="btn primary">保存</button></div>
+    </section>
+  </div>
+  <div id="studioLlmAddModal" class="studio-modal" aria-hidden="true">
+    <div class="studio-modal-backdrop" data-studio-modal-close="1"></div>
+    <div class="studio-modal-panel" role="dialog" aria-labelledby="studioLlmAddModalTitle">
+      <div class="title" id="studioLlmAddModalTitle">添加大模型</div>
+      <div class="studio-modal-row">
+        <div class="label">服务商</div>
+        <select id="studioModalProvider" class="ctl" data-nosave="1"></select>
+      </div>
+      <div class="studio-modal-row" id="studioModalOpenClawRow" style="display:none">
+        <button type="button" class="btn primary" id="studioModalOpenClawImport" style="width:100%">一键连接本机 OpenClaw</button>
+        <div class="hint mini" style="margin-top:8px">自动读取本机配置并检测 Gateway（<code>http://127.0.0.1:18789</code>），无需手抄 Token。</div>
+      </div>
+      <div class="hint mini" id="studioModalOpenClawOrManual" style="display:none;margin:4px 0 8px;text-align:center;color:var(--text-dim)">— 或手动填写下方 —</div>
+      <div class="studio-modal-row" id="studioModalHermesRow" style="display:none">
+        <button type="button" class="btn primary" id="studioModalHermesImport" style="width:100%">一键连接本机 Hermes</button>
+        <div class="hint mini" style="margin-top:8px">自动读取 <code>~/.hermes/.env</code> 中的 <code>API_SERVER_KEY</code>，并检测本机 API Server（<code>http://127.0.0.1:8642/v1</code>）。</div>
+      </div>
+      <div class="hint mini" id="studioModalHermesOrManual" style="display:none;margin:4px 0 8px;text-align:center;color:var(--text-dim)">— 或手动填写下方 —</div>
+      <div class="studio-modal-row" id="studioModalApiKeyRow">
+        <div class="label" id="studioModalApiKeyLabel">API Key</div>
+        <input id="studioModalApiKey" class="ctl" type="password" data-nosave="1" autocomplete="off" placeholder="填写该平台密钥">
+      </div>
+      <div class="studio-modal-row" id="studioModalModelRow">
+        <div class="label">模型</div>
+        <select id="studioModalModel" class="ctl" data-nosave="1"></select>
+      </div>
+      <div class="studio-modal-row" id="studioModalMinimaxRow" style="display:none">
+        <div class="label">MiniMax 节点</div>
+        <div class="inline" style="flex-wrap:wrap;gap:8px">
+          <button type="button" class="btn" id="studioModalMinimaxCn">国内 · minimaxi.com</button>
+          <button type="button" class="btn" id="studioModalMinimaxIntl">国际 · minimax.io</button>
+        </div>
+      </div>
+      <div class="hint mini" id="studioModalHint"></div>
+      <label class="studio-llm-default" style="margin-top:8px;display:inline-flex">
+        <input type="checkbox" id="studioModalSetDefault" data-nosave="1"> 设为默认使用
+      </label>
+      <div class="studio-modal-actions">
+        <button type="button" class="btn" id="studioModalCancel">取消</button>
+        <button type="button" class="btn primary" id="studioModalConfirm">添加并保存</button>
+      </div>
+    </div>
+  </div>
+  <script src="https://app.local/assets/js/NmModal.js"></script>
+  <script>window.__SETTINGS_SCOPE__ = { tabs: ["search", "customize"], defaultTab: "search" };</script>
+  <script src="settings-app.js?v=llm-ping-v1"></script>
+</body>
+</html>

@@ -87,7 +87,7 @@ PQP_Init() {
     g_PQP_Gui.BackColor := "1e1e1e"
     g_PQP_Gui.MarginX := 0
     g_PQP_Gui.MarginY := 0
-    g_PQP_Gui.OnEvent("Close", (*) => _PQP_CallExternal("HideAIListPanel"))
+    g_PQP_Gui.OnEvent("Close", (*) => PQP_Hide())
     g_PQP_Gui.OnEvent("Size", _PQP_OnGuiResize)
 
     g_PQP_Gui.Show("w560 h620 Hide")
@@ -138,8 +138,16 @@ _PQP_ApplyBounds() {
 }
 
 _PQP_OnGuiResize(GuiObj, MinMax, Width, Height) {
-    if MinMax = -1
+    static pqpWasMin := false
+    if (MinMax = -1) {
+        pqpWasMin := true
+        NmerPanel_OnGuiMinimized(MinMax, "prompts")
         return
+    }
+    if (MinMax >= 0) {
+        NmerPanel_OnGuiRestoredFromMinimize(MinMax, pqpWasMin, "prompts")
+        pqpWasMin := false
+    }
     _PQP_ApplyBounds()
 }
 
@@ -150,7 +158,8 @@ _PQP_EnsureMaximized(*) {
     try {
         if (WinGetMinMax("ahk_id " . g_PQP_Gui.Hwnd) != 1)
             WinMaximize("ahk_id " . g_PQP_Gui.Hwnd)
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -205,18 +214,21 @@ _PQP_GetThemeMode() {
             if (Trim(String(raw)) != "")
                 return _PQP_NormalizeThemeToken(raw, "dark")
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try {
         fn := Func("ReadPersistedThemeMode")
         if IsObject(fn)
             return _PQP_NormalizeThemeToken(fn.Call(), "dark")
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try {
         global ThemeMode
         return _PQP_NormalizeThemeToken(ThemeMode, "dark")
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return "dark"
 }
@@ -300,7 +312,8 @@ _PQP_SendDockConfig() {
                 ))
             }
         }
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     PQP_SendToWeb(Map("type", "nmDockConfig", "sceneToolbarLayout", arr))
 }
@@ -316,7 +329,8 @@ _PQP_ExecuteDockCmd(msg) {
     try {
         _ExecuteCommand(cmdId0)
         return
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     m0 := Map(
         "Title", "dock",
@@ -376,7 +390,10 @@ PQP_Show() {
     if !g_PQP_Gui
         PQP_Init()
 
-    if g_PQP_Visible {
+    if g_PQP_Gui
+        NmerPanel_RestoreGui(g_PQP_Gui)
+
+    if g_PQP_Visible && g_PQP_Gui && NmerPanel_IsShown(g_PQP_Gui.Hwnd) {
         _PQP_EnsureMaximized()
         try LegacyGuard_RequestFocus("PromptQuickPadCore", g_PQP_Gui.Hwnd, 50, "focus_pqp_visible")
         WebView2_MoveFocusProgrammatic(g_PQP_Ctrl)
@@ -409,12 +426,14 @@ PQP_Show() {
         try Nmer_EnsureGuiMaximizedOnPopupScreen(g_PQP_Gui)
         catch {
             try g_PQP_Gui.Show("Maximize NoActivate")
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
     } else {
         try g_PQP_Gui.Show("Maximize NoActivate")
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     SetTimer(_PQP_EnsureMaximized, -80)
@@ -480,9 +499,17 @@ _PQP_WMDeactivateHideTick(*) {
     try {
         if (FloatingToolbar_IsForegroundToolbarOrChild())
             return
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
-    PQP_Hide()
+    PQP_Minimize()
+}
+
+PQP_Minimize(*) {
+    global g_PQP_Gui, g_PQP_Visible
+    if !g_PQP_Gui || !g_PQP_Visible
+        return
+    NmerPanel_MinimizeGui(g_PQP_Gui, "prompts")
 }
 
 PQP_Hide() {
@@ -519,7 +546,8 @@ PQP_Hide() {
 PQP_Dispose(reason := "") {
     global g_PQP_Gui, g_PQP_Ctrl, g_PQP_WV2, g_PQP_Ready, g_PQP_Visible, g_PQP_FocusPending, g_PQP_SearchTimer
     try PQP_Hide()
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     SurfaceManager_CloseWebViewControl(g_PQP_Ctrl)
     g_PQP_Ctrl := 0
@@ -554,7 +582,8 @@ _PQP_WM_ACTIVATE(wParam, lParam, msg, hwnd) {
         try {
             if (FloatingToolbar_IsForegroundToolbarOrChild())
                 return
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         if (g_PQP_LastShown && (A_TickCount - g_PQP_LastShown < 500))
             return

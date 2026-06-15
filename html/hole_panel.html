@@ -410,7 +410,17 @@
         { id: 'custom', label: '自定义', baseUrl: '', model: '' }
       ];
       let niumaCfgCache = null;
-      const HOLE_WS_URL = 'ws://127.0.0.1:18790/hole';
+      function nmerHoleWsUrl() {
+        const base = 'ws://127.0.0.1:18790/hole';
+        const tok = String(window.__NMER_WS_TOKEN__ || '');
+        return tok ? (base + '?token=' + encodeURIComponent(tok)) : base;
+      }
+      const HOLE_WS_URL = nmerHoleWsUrl();
+      const HOLE_WS_TOKEN = String(window.__NMER_WS_TOKEN__ || '');
+      if (!HOLE_WS_TOKEN && (window.chrome?.webview || location.hostname === 'app.local')) {
+        console.warn('[hole_panel] __NMER_WS_TOKEN__ 为空：WebSocket 将不带 token（与未配置 NMER_WS_HUB_TOKEN 时兼容）');
+      }
+      window.HOLE_WS = { url: HOLE_WS_URL, token: HOLE_WS_TOKEN };
       let holeSocket = null;
       let activeRequestId = null;
       let streamBuffer = '';

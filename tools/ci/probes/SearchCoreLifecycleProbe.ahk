@@ -41,7 +41,8 @@ SCLP_CountJsonlLines() {
                 n += 1
         }
         f.Close()
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return n
 }
@@ -64,7 +65,8 @@ SCLP_JsonlHasEvent(eventName, sinceLine := 0) {
                 return true
         }
         f.Close()
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return false
 }
@@ -92,13 +94,15 @@ SCLP_WriteReport(exitCode := 0) {
     try {
         if FileExist(g_SCLP_Report)
             FileDelete(g_SCLP_Report)
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     ok := false
     try {
         FileAppend(body, g_SCLP_Report, "UTF-8")
         ok := FileExist(g_SCLP_Report)
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if !ok {
         try FileAppend(body, A_Temp . "\searchcore_lifecycle_probe_report.txt", "UTF-8")
@@ -146,7 +150,8 @@ try {
     if (exe != "" && FileExist(exe)) {
         SCLP_EnsureCoreStopped()
         try Run('"' exe '" -base "' MainScriptDir '"', MainScriptDir, "Hide")
-        catch {
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
         if !ProcessExist("SearchCenterCore.exe") {
             SCLP_Assert("t02_skip_no_process", true, "run_failed")

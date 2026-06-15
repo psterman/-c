@@ -186,7 +186,8 @@ AddDebugLog(message) {
         ControlSend("{End}", DebugLogEdit)
         Sleep(10)
         ControlSend("^{End}", DebugLogEdit)
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -372,9 +373,9 @@ OnTestSaveClick(*) {
     SourceApp := "DebugTest"
     try {
         SourceApp := WinGetProcessName("A")
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
-    
     AddDebugLog("尝试保存到数据库...")
     AddDebugLog("内容: " . SubStr(testContent, 1, 100))
     AddDebugLog("来源: " . SourceApp)

@@ -213,6 +213,14 @@
         dom.textContent = card.title || card.id;
         listHost.appendChild(dom);
       },
+      mountActionCardSummary: function (card, listHost) {
+        if (!card || !listHost) return;
+        var dom = doc.createElement("div");
+        dom.id = "card-" + card.id;
+        dom.className = "cmd-action-card";
+        dom.textContent = card.title || card.id;
+        listHost.appendChild(dom);
+      },
       historyFilterEmptyMessage: function () {
         return "当前筛选无任务";
       },

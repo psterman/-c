@@ -70,10 +70,12 @@ func main() {
 	clipHTTPBase = clipHTTPBaseFromAddr(*addr)
 
 	http.HandleFunc("/health", recoverHTTP("health", func(w http.ResponseWriter, r *http.Request) {
+		ver := coreVersion()
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.Header().Set("X-SearchCenterCore", "1")
+		w.Header().Set("X-SearchCenterCore-Version", ver)
 		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte("ok"))
+		_, _ = w.Write([]byte("ok " + ver))
 	}))
 	http.HandleFunc("/search", recoverHTTP("search", func(w http.ResponseWriter, r *http.Request) {
 		handleSearchWithDB(w, r, db, absBase)

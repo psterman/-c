@@ -6,7 +6,8 @@ DomainCWails_Log(surfaceId, message) {
             DomainCSurfaceRouter_Log(String(surfaceId) . " " . String(message))
         else if FuncExists("Nmer_WailsBridgeLog")
             Nmer_WailsBridgeLog("domainc_wails " . String(surfaceId) . " " . String(message))
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 
@@ -15,7 +16,8 @@ DomainCWails_FindWindow(*) {
         hwnd := WinExist("ahk_exe nmer-wails.exe")
         if hwnd
             return hwnd
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try {
         return WinExist("NMER Wails POC")
@@ -40,31 +42,38 @@ DomainCWails_ActivateWindow(*) {
     try {
         pid := DllCall("GetCurrentProcessId", "UInt")
         DllCall("AllowSetForegroundWindow", "UInt", pid)
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try DllCall("LockSetForegroundWindow", "UInt", 2)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try WinRestore(expr)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     if FuncExists("SCWV_ForegroundPulse") {
         try {
             if SCWV_ForegroundPulse(hwnd)
                 return true
-        } catch {
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
         }
     }
     try WinShow(expr)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try WinActivate(expr)
-    catch {
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     try {
         if WinActive(expr)
             return true
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
     return hwnd > 0
 }
@@ -90,7 +99,8 @@ DomainCWails_HideWindow(surfaceId, entry) {
         try WinMinimize("ahk_id " . hwnd)
         catch {
             try WinHide("ahk_id " . hwnd)
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
             }
         }
     }

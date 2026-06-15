@@ -52,7 +52,8 @@ if FileExist(gwPath) {
     try {
         if RegExMatch(FileRead(gwPath, "UTF-8"), '"api_server"\s*:\s*\{[^}]*"state"\s*:\s*"([^"]+)"', &m)
             apiSt := m[1]
-    } catch {
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
     }
 }
 if FileExist(envPath) {
