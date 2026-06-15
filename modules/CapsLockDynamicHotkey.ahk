@@ -79,9 +79,6 @@ HandleDynamicHotkey(PressedKey, ActionType) {
                     return true  ; 已处理（阻止复制）
                 }
                 
-                ; 确保 CapsLock 变量保持为 true，直到复制完成
-                global CapsLock
-                CapsLock := true
                 ; 调用复制函数
                 CapsLockCopy()
             case "V":

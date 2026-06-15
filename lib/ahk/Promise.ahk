@@ -126,22 +126,68 @@ class Promise {
 	/**
 	 * Waits for a promise to be completed.
 	 * Wake up only when a system event or timeout occurs, which takes up less cpu time.
+	 * Falls back to await2 when Win32 message wait is unsafe (WebView2 / nested COM).
 	 * @returns {T}
 	 */
 	await(timeout := -1) {
-		static hEvent := DllCall('CreateEvent', 'ptr', 0, 'int', 1, 'int', 0, 'ptr', 0, 'ptr')
-		static __del := { Ptr: hEvent, __Delete: this => DllCall('CloseHandle', 'ptr', this) }
-		static msg := Buffer(4 * A_PtrSize + 16)
+		try {
+			return this.awaitMsgPump_(timeout)
+		} catch Any as e {
+			try {
+				return this.await2(timeout)
+			} catch {
+				throw e
+			}
+		}
+	}
+	awaitMsgPump_(timeout := -1) {
+		static hEventBox := 0, handlesBuf := 0, msg := 0
+		if !IsObject(hEventBox) {
+			ev := DllCall('CreateEvent', 'ptr', 0, 'int', 0, 'int', 0, 'ptr', 0, 'ptr')
+			if !ev
+				throw Error('CreateEvent failed', -1)
+			hEventBox := { Ptr: ev, __Delete: (this) => DllCall('CloseHandle', 'ptr', this.Ptr) }
+			handlesBuf := Buffer(A_PtrSize, 0)
+			NumPut('Ptr', ev, handlesBuf, 0)
+			msg := Buffer(64, 0)
+		}
 		t := A_TickCount, r := 258, old := Critical(0)
-		while (pending := !ObjHasOwnProp(this, 'status')) && timeout &&
-			(DllCall('PeekMessage', 'ptr', msg, 'ptr', 0, 'uint', 0, 'uint', 0, 'uint', 0) ||
-				1 == r := DllCall('MsgWaitForMultipleObjects', 'uint', 1, 'ptr*', hEvent,
-					'int', 0, 'uint', timeout, 'uint', 7423, 'uint'))
-			Sleep(-1), (timeout < 0) || timeout := Max(timeout - A_TickCount + t, 0)
+		pending := true
+		while pending {
+			if !(IsObject(this))
+				break
+			try pending := !ObjHasOwnProp(this, 'status')
+			catch
+				break
+			if !timeout
+				break
+			pumped := false
+			try pumped := DllCall('PeekMessage', 'ptr', msg, 'ptr', 0, 'uint', 0, 'uint', 0, 'uint', 0)
+			catch
+				break
+			if !pumped {
+				waitSlice := (timeout < 0) ? 50 : Min(Max(timeout, 1), 50)
+				try r := DllCall('MsgWaitForMultipleObjects', 'uint', 1, 'ptr', handlesBuf.Ptr,
+					'int', 0, 'uint', waitSlice, 'uint', 0x04FF, 'uint')
+				catch
+					break
+			}
+			try Sleep(-1)
+			catch
+				break
+			if (timeout >= 0)
+				timeout := Max(timeout - (A_TickCount - t), 0), t := A_TickCount
+		}
 		Critical(old)
-		if !pending && this.status == 'fulfilled'
+		if IsObject(this) && !pending && this.status == 'fulfilled'
 			return this.result
-		throw pending ? r == 0xffffffff ? OSError() : TimeoutError() : (this.thrown := true) && this.result
+		if pending
+			throw (r == 0xffffffff ? OSError() : TimeoutError())
+		if IsObject(this) {
+			this.thrown := true
+			throw this.result
+		}
+		throw Error('Promise await target lost', -1)
 	}
 	static throw() {
 		throw this

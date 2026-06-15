@@ -5788,7 +5788,10 @@ FloatingToolbarToggleButtonAction(action) {
         case "NewPrompt":
             try {
                 if (IsSet(SelectionSense_HubCapsuleHostIsOpen) && SelectionSense_HubCapsuleHostIsOpen()) {
-                    SelectionSense_HideMenu()
+                    if FuncExists("SelectionSense_CloseHubCapsuleHost")
+                        SelectionSense_CloseHubCapsuleHost("toolbar_toggle")
+                    else
+                        SelectionSense_HideMenu()
                     return
                 }
             } catch {

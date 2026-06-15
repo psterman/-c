@@ -4302,7 +4302,9 @@ CommandPalette_ResolveSearchCoreExe() {
 }
 
 CommandPalette_EnsureSearchCoreRunning() {
-    if FuncExists("SearchCore_EnsureStatus") {
+    if FuncExists("NmerService_Ensure") {
+        st := NmerService_Ensure("searchcore", "palette", false)
+    } else if FuncExists("SearchCore_EnsureStatus") {
         st := SearchCore_EnsureStatus(false, "palette")
         if !(st is Map) || !st.Has("status")
             return false

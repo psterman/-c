@@ -90,9 +90,11 @@ VK_ExecCursorHelperCmd(cmdId) {
     global CapsLock, CapsLock2, BatchHotkey, IsCountdownActive
     global g_LastExecutedCmdId
     global HotkeyESC, HotkeyC, HotkeyV, HotkeyX, HotkeyE, HotkeyR, HotkeyO, HotkeyQ, HotkeyZ, HotkeyT
-    global AppearanceActivationMode, ConfigFile
+    global AppearanceActivationMode, ConfigFile, g_CapsLockChordSessionActive
     prevCaps := CapsLock
+    prevSession := g_CapsLockChordSessionActive
     CapsLock := true
+    g_CapsLockChordSessionActive := true
     executed := false
     try {
         switch cmdId {
@@ -834,6 +836,7 @@ VK_ExecCursorHelperCmd(cmdId) {
         OutputDebug("[VK-Exec] error: " . e.Message)
     } finally {
         CapsLock := prevCaps
+        g_CapsLockChordSessionActive := prevSession
     }
     return executed
 }

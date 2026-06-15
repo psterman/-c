@@ -402,7 +402,9 @@ ConfigWebView_NotifyStudioLlmSynced(*) {
 }
 
 ConfigWebView_EnsureSearchCoreRunning() {
-    if FuncExists("SearchCore_EnsureStatus") {
+    if FuncExists("NmerService_Ensure") {
+        st := NmerService_Ensure("searchcore", "config", false)
+    } else if FuncExists("SearchCore_EnsureStatus") {
         st := SearchCore_EnsureStatus(false, "config")
         if !(st is Map) || !st.Has("status")
             return false

@@ -3492,6 +3492,7 @@ const state = {
   subtagAudience: (typeof localStorage !== "undefined" && localStorage.getItem(SC_SUBTAG_AUDIENCE_KEY) === "geek") ? "geek" : "newbie",
   activeSubtags: {},
   hasMore: false,
+  loadingTier: "",
   loading: false,
   loadMoreCooldownUntil: 0,
   isCliCategory: false,
@@ -9200,8 +9201,19 @@ function applyStateNow(payload) {
     state.resultsRaw = incomingResults;
   }
   applySubtagResultView();
+  if (payload.loadingTier != null)
+    state.loadingTier = String(payload.loadingTier || "");
+  const tier = String(state.loadingTier || "");
+  if (incomingResults.length > 0 || keepLocalDraft) {
+    state.loading = false;
+    if (incomingResults.length > 0)
+      state.loadingTier = "";
+  } else if (tier === "shell" || tier === "remote") {
+    state.loading = true;
+  } else {
+    state.loading = false;
+  }
   state.hasMore = !!payload.hasMore;
-  state.loading = false;
   state.isCliCategory = !!payload.isCliCategory;
   state.statusLine = payload.statusLine || "";
   state.recycleBin = Array.isArray(payload.recycleBin) ? payload.recycleBin : [];
@@ -9875,6 +9887,18 @@ if (window.chrome && window.chrome.webview) {
       runSearchNow();
       return;
     }
+  if (payload.type === "hostLifecycle") {
+    const phase = String(payload.phase || "").toLowerCase();
+    if (phase) {
+      state.hostLifecycle = phase;
+      if (phase === "clip_db_recovery") {
+        state.loading = true;
+        state.loadingTier = "remote";
+        state.statusLine = "剪贴板库恢复中，检索服务短暂暂停…";
+      }
+    }
+    return;
+  }
   if (payload.type === "lifecycle") {
     const phase = String(payload.phase || "").toLowerCase();
     if (phase) {

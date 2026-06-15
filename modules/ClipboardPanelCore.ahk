@@ -82,7 +82,9 @@ CP_SearchAsync(url, callback := 0, timeoutMs := 2600, reqId := 0) {
 
 _CP_EnsureSearchCoreRunning() {
     global g_CP_BackendHealth, g_CP_LastHealthTick
-    if FuncExists("SearchCore_EnsureStatus") {
+    if FuncExists("NmerService_Ensure") {
+        st := NmerService_Ensure("searchcore", "clipboard", false)
+    } else if FuncExists("SearchCore_EnsureStatus") {
         st := SearchCore_EnsureStatus(false, "clipboard")
         if !(st is Map) || !st.Has("status")
             return false

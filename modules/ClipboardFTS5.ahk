@@ -52,6 +52,11 @@ ClipboardFTS5_GetStartupSqlStatements() {
 }
 
 ClipboardFTS5_StopExternalDbLockers() {
+    if FuncExists("SCWV_BroadcastHostLifecycle") {
+        try SCWV_BroadcastHostLifecycle("clip_db_recovery", "clip_db_recovery")
+        catch {
+        }
+    }
     if FuncExists("SearchCore_Shutdown") {
         SearchCore_Shutdown("clip_db_recovery")
         return
@@ -168,7 +173,7 @@ ClipboardFTS5_OpenDbWithRecovery(dbPath) {
 ; 创建 Clipboard.db 数据库，开启 WAL 模式，创建 FTS5 虚拟表
 InitClipboardFTS5DB() {
     global ClipboardFTS5DB, ClipboardFTS5DBPath, MainScriptDir
-    ; 多个 UI 都会按需确保数据库。已有连接时直接复用，避免重复迁移和触碰搜索核心。
+    ; 多个 UI 都会按需确保数据库。已有健康连接时直接复用，不触发 recovery / SearchCore 关停。
     if (IsSet(ClipboardFTS5DB) && ClipboardFTS5DB && ClipboardFTS5DB != 0)
         return true
     Nmer_EnsureDataDir()

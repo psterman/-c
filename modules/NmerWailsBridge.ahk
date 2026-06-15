@@ -1265,7 +1265,7 @@ Nmer_StartWailsBridge(*) {
     cmd := '"' . exe . '"'
     workDir := rootForChild != "" ? rootForChild : root
     try {
-        Run(cmd, workDir, "", &pid)
+        Run(cmd, workDir, "Hide", &pid)
     } catch {
         g_Nmer_WailsBridgeLaunching := false
         return false

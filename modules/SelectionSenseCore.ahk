@@ -50,6 +50,8 @@ global g_HubCapsule_OpenPriority := 999
 global g_HubCapsule_DragPending := 0
 global g_HubCapsule_DragTimerArmed := false
 global g_HubCapsule_DiagSeq := 0
+global g_HubCapsule_WatchdogGen := -1
+global g_HubCapsule_ShowRetryGen := -1
 ; HubCapsule：堆叠选择/推送（供 CapsLock+C/V 使用）
 global g_HubCapsule_SelectedText := ""
 global g_SelSense_PendingHubSegments := []  ; Hub 鏈?ready 鏃舵殏瀛樺緟 push 鐨勬枃鏈
@@ -1474,13 +1476,52 @@ SelectionSense_MonitorFromPoint(x, y) {
 }
 
 SelectionSense_HubCapsule_ReadSavedPos(&outX, &outY, &outOk) {
+    outW := 0
+    outH := 0
+    SelectionSense_HubCapsule_ReadSavedRect(&outX, &outY, &outW, &outH, &outOk)
+}
+
+SelectionSense_HubCapsule_SavedSizeValid(w, h) {
+    if (w < 350 || h < 160)
+        return false
+    try {
+        idx := Nmer_GetPopupScreenIndex()
+        MonitorGetWorkArea(idx, &l, &t, &r, &b)
+        workW := r - l
+        workH := b - t
+        ; 拒绝误保存的最大化/近全屏尺寸
+        if (w > Floor(workW * 0.72) || h > Floor(workH * 0.82))
+            return false
+    } catch as _e {
+    }
+    SelectionSense_GetHubCapsuleDefaultSize(&defW, &defH)
+    if (w > defW + 280 || h > defH + 120)
+        return false
+    return true
+}
+
+SelectionSense_HubCapsule_EnsureNormalWindow(hwnd) {
+    if !hwnd
+        return
+    try {
+        if WinGetMinMax("ahk_id " . hwnd) != 0
+            WinRestore("ahk_id " . hwnd)
+    } catch as _e {
+    }
+}
+
+SelectionSense_HubCapsule_ReadSavedRect(&outX, &outY, &outW, &outH, &outOk) {
     outOk := false
     outX := 0
     outY := 0
+    outW := 0
+    outH := 0
     cfg := SelectionSense_HubCapsule_IniPath()
     try {
         xs := IniRead(cfg, "WindowPositions", "HubCapsule_X", "")
         ys := IniRead(cfg, "WindowPositions", "HubCapsule_Y", "")
+        ws := IniRead(cfg, "WindowPositions", "HubCapsule_W", "")
+        hs := IniRead(cfg, "WindowPositions", "HubCapsule_H", "")
         if (xs = "" || xs = "ERROR" || ys = "" || ys = "ERROR")
             return
         xi := Integer(xs)
@@ -1490,9 +1531,36 @@ SelectionSense_HubCapsule_ReadSavedPos(&outX, &outY, &outOk) {
         outX := xi
         outY := yi
         outOk := true
+        if (ws != "" && ws != "ERROR" && hs != "" && hs != "ERROR") {
+            wi := Integer(ws)
+            hi := Integer(hs)
+            if SelectionSense_HubCapsule_SavedSizeValid(wi, hi) {
+                outW := wi
+                outH := hi
+            }
+        }
     } catch as _e {
         outOk := false
     }
+}
+
+SelectionSense_HubCapsule_ApplyOpenLayout() {
+    global g_SelSense_MenuW, g_SelSense_MenuH, g_SelSense_MenuShowingHub
+    if !g_SelSense_MenuShowingHub
+        return
+    sx := sy := sw := sh := 0
+    savedOk := false
+    SelectionSense_HubCapsule_ReadSavedRect(&sx, &sy, &sw, &sh, &savedOk)
+    if savedOk && SelectionSense_HubCapsule_SavedSizeValid(sw, sh) {
+        g_SelSense_MenuW := sw
+        g_SelSense_MenuH := sh
+        return
+    }
+    if SelectionSense_HubCapsule_SavedSizeValid(g_SelSense_MenuW, g_SelSense_MenuH)
+        return
+    SelectionSense_GetHubCapsuleDefaultSize(&hubDefW, &hubDefH)
+    g_SelSense_MenuW := hubDefW
+    g_SelSense_MenuH := hubDefH
 }
 
 ; 淇濆瓨鐨勫乏涓婅 + 褰撳墠绐楀彛灏哄鏄惁浠嶈惤鍦ㄨ櫄鎷熷睆骞曞唴锛堥伩鍏嶅鏄剧ず鍣?鍒嗚鲸鐜囧彉鍖栧悗绐楀彛鈥滃湪灞忓鈥濓級
@@ -1510,14 +1578,27 @@ SelectionSense_HubSavedRectIsOnScreen(sx, sy, ww, hh) {
 }
 
 SelectionSense_HubCapsule_WriteSavedPos() {
-    global g_SelSense_MenuGui, g_SelSense_MenuShowingHub
+    global g_SelSense_MenuGui, g_SelSense_MenuShowingHub, g_SelSense_MenuW, g_SelSense_MenuH
     if !(g_SelSense_MenuGui && g_SelSense_MenuShowingHub)
         return
     try {
-        g_SelSense_MenuGui.GetPos(&px, &py)
+        hwnd := g_SelSense_MenuGui.Hwnd
+        if WinGetMinMax("ahk_id " . hwnd) != 0
+            return
+        g_SelSense_MenuGui.GetPos(&px, &py, &pw, &ph)
+        if (pw < 350)
+            pw := g_SelSense_MenuW
+        if (ph < 160)
+            ph := g_SelSense_MenuH
+        if !SelectionSense_HubCapsule_SavedSizeValid(pw, ph)
+            return
         cfg := SelectionSense_HubCapsule_IniPath()
         IniWrite(px, cfg, "WindowPositions", "HubCapsule_X")
         IniWrite(py, cfg, "WindowPositions", "HubCapsule_Y")
+        IniWrite(pw, cfg, "WindowPositions", "HubCapsule_W")
+        IniWrite(ph, cfg, "WindowPositions", "HubCapsule_H")
+        g_SelSense_MenuW := pw
+        g_SelSense_MenuH := ph
     } catch as _e {
     }
 }
@@ -2749,6 +2830,9 @@ HubCapsule_HandleIntent(intent, payload := 0, priority := 50) {
     reason := payload is Map && payload.Has("reason") ? payload["reason"] : "intent_" . StrLower(String(intent))
     switch StrUpper(String(intent)) {
         case "OPEN":
+            global g_SelSense_MenuShowingHub
+            g_SelSense_MenuShowingHub := true
+            SelectionSense_HubCapsule_ApplyOpenLayout()
             if (g_HubCapsule_Phase = HUB_PHASE_OPEN && SelectionSense_HubCapsuleHostIsOpen()) {
                 SelectionSense_ShowMenuNearCursor(true)
                 return true
@@ -2760,12 +2844,11 @@ HubCapsule_HandleIntent(intent, payload := 0, priority := 50) {
             SelectionSense_ShowMenuNearCursor(true)
             return true
         case "CLOSE":
-            g_HubCapsule_Generation += 1
-            HubCapsule_SetPhase(HUB_PHASE_CLOSING, reason)
-            SelectionSense_HideMenuDirect(reason)
-            HubCapsule_SetPhase(HUB_PHASE_CLOSED, reason)
+            SelectionSense_CloseHubCapsuleHost(reason)
             return true
         case "FORCE_RESET":
+            SelectionSense_CancelShowMenuRetry()
+            HubCapsule_StopWatchdog()
             g_HubCapsule_Generation += 1
             SelectionSense_HideMenuDirect(reason)
             HubCapsule_ResetRuntime(reason)
@@ -2775,26 +2858,48 @@ HubCapsule_HandleIntent(intent, payload := 0, priority := 50) {
 }
 
 HubCapsule_ArmWatchdog(gen) {
-    SetTimer((*) => HubCapsule_WatchdogTick(gen), -250)
+    global g_HubCapsule_WatchdogGen
+    g_HubCapsule_WatchdogGen := Integer(gen)
+    SetTimer(HubCapsule_WatchdogTick, -250)
 }
 
-HubCapsule_WatchdogTick(gen, *) {
-    global g_HubCapsule_Phase, g_HubCapsule_PhaseTick, g_SelSense_MenuReady
-    if !HubCapsule_IsCurrentGeneration(gen)
+HubCapsule_StopWatchdog() {
+    global g_HubCapsule_WatchdogGen
+    g_HubCapsule_WatchdogGen := -1
+    SetTimer(HubCapsule_WatchdogTick, 0)
+}
+
+HubCapsule_WatchdogTick(*) {
+    global g_HubCapsule_WatchdogGen, g_HubCapsule_Phase, g_HubCapsule_PhaseTick, g_SelSense_MenuReady
+    gen := g_HubCapsule_WatchdogGen
+    if (gen < 0 || !HubCapsule_IsCurrentGeneration(gen))
         return
     if (g_HubCapsule_Phase != HUB_PHASE_OPENING)
         return
     if g_SelSense_MenuReady {
         HubCapsule_SetPhase(HUB_PHASE_OPEN, "ready_watchdog")
+        HubCapsule_StopWatchdog()
         return
     }
     elapsed := A_TickCount - g_HubCapsule_PhaseTick
-    if (elapsed > 7000) {
+    openTimeoutMs := 20000
+    if (elapsed > openTimeoutMs) {
+        global g_SelSense_MenuVisible, g_SelSense_MenuWV2
+        if (g_SelSense_MenuVisible && g_SelSense_MenuWV2) {
+            HubCapsule_Log("watchdog_force_ready", "elapsed=" . elapsed)
+            g_SelSense_MenuReady := true
+            HubCapsule_SetPhase(HUB_PHASE_OPEN, "watchdog_force_ready")
+            HubCapsule_StopWatchdog()
+            try g_SelSense_MenuWV2.Reload()
+            catch as _e {
+            }
+            return
+        }
         HubCapsule_Log("watchdog_reset", "elapsed=" . elapsed)
         HubCapsule_SubmitIntent("FORCE_RESET", 5, Map("reason", "opening_timeout"))
         return
     }
-    SetTimer((*) => HubCapsule_WatchdogTick(gen), -250)
+    SetTimer(HubCapsule_WatchdogTick, -250)
 }
 
 HubCapsule_ResetRuntime(reason := "") {
@@ -2836,7 +2941,7 @@ SelectionSense_EnsureMenuHost() {
     g_SelSense_MenuGui.MarginX := 0
     g_SelSense_MenuGui.MarginY := 0
     g_SelSense_MenuGui.Show("w" . g_SelSense_MenuW . " h" . g_SelSense_MenuH . " Hide")
-    g_SelSense_MenuGui.OnEvent("Close", (*) => SelectionSense_HideMenu())
+    g_SelSense_MenuGui.OnEvent("Close", SelectionSense_OnMenuHostCloseRequest)
     g_SelSense_MenuGui.OnEvent("Size", SelectionSense_OnMenuHostSize)
 
     g_HubCapsule_CreateInFlight := true
@@ -2879,12 +2984,44 @@ SelectionSense_OnMenuWebViewCreated(ctrl, gen := 0) {
     WebView2_RegisterHostBridge(g_SelSense_MenuWV2)
 
     g_SelSense_MenuWV2.add_WebMessageReceived(SelectionSense_OnMenuWebMessage)
+    try g_SelSense_MenuWV2.add_NavigationCompleted(SelectionSense_OnMenuNavigationCompleted)
     try ApplyUnifiedWebViewAssets(g_SelSense_MenuWV2)
     global g_SelSense_NextNavPage, g_SelSense_MenuShowingHub
     page := (g_SelSense_NextNavPage != "") ? g_SelSense_NextNavPage : "SelectionMenu.html"
     g_SelSense_NextNavPage := ""
     g_SelSense_MenuShowingHub := (page = "HubCapsule.html")
     g_SelSense_MenuWV2.Navigate(BuildAppLocalUrl(page))
+    if g_SelSense_MenuShowingHub {
+        global g_HubCapsule_Phase, g_HubCapsule_Generation
+        if (g_HubCapsule_Phase = HUB_PHASE_OPENING)
+            HubCapsule_ArmWatchdog(g_HubCapsule_Generation)
+    }
+}
+
+SelectionSense_OnMenuNavigationCompleted(sender, args) {
+    global g_SelSense_MenuReady, g_SelSense_MenuShowingHub, g_SelSense_MenuWV2, g_SelSense_HubCopyTriggerMode
+    global g_SelSense_MenuVisible, g_SelSense_PendingText
+    if !g_SelSense_MenuShowingHub || g_SelSense_MenuReady
+        return
+    ok := true
+    try ok := args.IsSuccess
+    catch {
+        ok := true
+    }
+    if !ok
+        return
+    g_SelSense_MenuReady := true
+    HubCapsule_SetPhase(HUB_PHASE_OPEN, "nav_completed_fallback")
+    SelectionSense_CancelShowMenuRetry()
+    HubCapsule_StopWatchdog()
+    try SelectionSense_HubCapsule_PushThemeToWeb()
+    try SelectionSense_HubCapsule_FlushPendingSegments()
+    try SelectionSense_PushHubCtxMenuSpec()
+    try SelectionSense_SendDockConfig()
+    if g_SelSense_MenuWV2
+        try WebView_QueuePayload(g_SelSense_MenuWV2, Map("type", "hub_preview_state", "copyTriggerMode", g_SelSense_HubCopyTriggerMode))
+    if g_SelSense_MenuVisible && Trim(String(g_SelSense_PendingText)) != ""
+        try SelectionSense_PushHubPreviewText(g_SelSense_PendingText)
 }
 
 SelectionSense_ApplyMenuBounds() {
@@ -2917,6 +3054,9 @@ SelectionSense_ApplyMenuOuterSize(nw, nh) {
     g_SelSense_MenuGui.GetPos(&x, &y)
     try g_SelSense_MenuGui.Move(x, y, nw, nh)
     SelectionSense_ApplyMenuBounds()
+    global g_SelSense_MenuShowingHub
+    if g_SelSense_MenuShowingHub
+        SelectionSense_HubCapsule_WriteSavedPos()
 }
 
 SelectionSense_OnMenuWebMessage(sender, args) {
@@ -2939,8 +3079,11 @@ SelectionSense_OnMenuWebMessage(sender, args) {
         global g_SelSense_MenuReady, g_SelSense_MenuVisible, g_SelSense_PendingText, g_SelSense_HubCopyTriggerMode, g_SelSense_MenuWV2
         global g_SelSense_PendingHubSegments, g_SelSense_MenuShowingHub
         g_SelSense_MenuReady := true
-        if g_SelSense_MenuShowingHub
+        if g_SelSense_MenuShowingHub {
             HubCapsule_SetPhase(HUB_PHASE_OPEN, "selection_menu_ready")
+            SelectionSense_CancelShowMenuRetry()
+            HubCapsule_StopWatchdog()
+        }
         if g_SelSense_MenuShowingHub
             SelectionSense_HubCapsule_PushThemeToWeb()
         try WebView_QueuePayload(g_SelSense_MenuWV2, Map("type", "hub_preview_state", "copyTriggerMode", g_SelSense_HubCopyTriggerMode))
@@ -2962,6 +3105,8 @@ SelectionSense_OnMenuWebMessage(sender, args) {
     if (typ = "hub_ready") {
         ; HubCapsule 就绪后补发待推送片段
         HubCapsule_SetPhase(HUB_PHASE_OPEN, "hub_ready")
+        SelectionSense_CancelShowMenuRetry()
+        HubCapsule_StopWatchdog()
         SelectionSense_HubCapsule_PushThemeToWeb()
         SelectionSense_HubCapsule_FlushPendingSegments()
         SelectionSense_PushHubCtxMenuSpec()
@@ -3008,7 +3153,7 @@ SelectionSense_OnMenuWebMessage(sender, args) {
         return
     }
     if (typ = "selection_menu_dismiss") {
-        SelectionSense_HideMenu()
+        SelectionSense_CloseHubCapsuleHost("selection_menu_dismiss")
         return
     }
     if (typ = "hub_search") {
@@ -3051,6 +3196,8 @@ SelectionSense_OnMenuWebMessage(sender, args) {
         nh := msg.Has("height") ? Integer(msg["height"]) : 0
         if (nw > 0 && nh > 0)
             SelectionSense_ApplyMenuOuterSize(nw, nh)
+        if (typ = "hub_resize_end")
+            SelectionSense_HubCapsule_WriteSavedPos()
         return
     }
     if (typ = "hub_mousedown") {
@@ -3513,9 +3660,8 @@ SelectionSense_HubCapsule_PushSegmentText(text, draftSource := "capslock_copy") 
     ; Ensure HubCapsule host window is visible after CapsLock+C and retry if WebView isn't ready.
     try {
         global g_SelSense_MenuW, g_SelSense_MenuH, g_SelSense_MenuActivateOnShow, g_SelSense_MenuAnchorX, g_SelSense_MenuAnchorY
-        SelectionSense_GetHubCapsuleDefaultSize(&defW, &defH)
-        g_SelSense_MenuW := defW
-        g_SelSense_MenuH := defH
+        g_SelSense_MenuShowingHub := true
+        SelectionSense_HubCapsule_ApplyOpenLayout()
         g_SelSense_MenuActivateOnShow := true
         CoordMode("Mouse", "Screen")
         MouseGetPos(&g_SelSense_MenuAnchorX, &g_SelSense_MenuAnchorY)
@@ -3710,11 +3856,53 @@ SelectionSense_RefreshHubPreviewAfterCopyTick(*) {
     SelectionSense_PushHubPreviewText(text)
 }
 
+SelectionSense_CancelShowMenuRetry() {
+    global g_HubCapsule_ShowRetryGen
+    g_HubCapsule_ShowRetryGen := -1
+    SetTimer(SelectionSense_ShowMenuRetryTick, 0)
+}
+
+SelectionSense_ScheduleShowMenuRetry(gen) {
+    global g_HubCapsule_ShowRetryGen
+    g_HubCapsule_ShowRetryGen := Integer(gen)
+    SetTimer(SelectionSense_ShowMenuRetryTick, -55)
+}
+
+SelectionSense_ShowMenuRetryTick(*) {
+    global g_HubCapsule_ShowRetryGen, g_HubCapsule_Generation, g_HubCapsule_Phase
+    gen := g_HubCapsule_ShowRetryGen
+    if (gen < 0 || gen != g_HubCapsule_Generation)
+        return
+    if (g_HubCapsule_Phase = HUB_PHASE_CLOSED || g_HubCapsule_Phase = HUB_PHASE_CLOSING)
+        return
+    SelectionSense_ShowMenuNearCursor(true)
+}
+
+SelectionSense_CloseHubCapsuleHost(reason := "") {
+    global g_HubCapsule_Generation
+    SelectionSense_CancelShowMenuRetry()
+    HubCapsule_StopWatchdog()
+    g_HubCapsule_Generation += 1
+    HubCapsule_SetPhase(HUB_PHASE_CLOSING, reason)
+    SelectionSense_HideMenuDirect(reason)
+    HubCapsule_SetPhase(HUB_PHASE_CLOSED, reason)
+}
+
+SelectionSense_OnMenuHostCloseRequest(gui, *) {
+    global g_SelSense_MenuShowingHub
+    SelectionSense_CloseHubCapsuleHost(g_SelSense_MenuShowingHub ? "host_close_hub" : "host_close_menu")
+}
+
 SelectionSense_ShowMenuNearCursor(internalIntent := false) {
     static menuShowRetries := 0
     static hubWvWarned := false
     global g_SelSense_MenuGui, g_SelSense_MenuVisible, g_SelSense_PendingText
     global g_SelSense_MenuAnchorX, g_SelSense_MenuAnchorY, g_SelSense_MenuCtrl
+    global g_HubCapsule_Phase, g_HubCapsule_Generation
+    if internalIntent {
+        if (g_HubCapsule_Phase = HUB_PHASE_CLOSED || g_HubCapsule_Phase = HUB_PHASE_CLOSING)
+            return
+    }
     if !internalIntent {
         HubCapsule_SubmitIntent("OPEN", 40, Map("reason", "show_menu_redirect"))
         return
@@ -3729,7 +3917,7 @@ SelectionSense_ShowMenuNearCursor(internalIntent := false) {
     if !g_SelSense_MenuCtrl {
         menuShowRetries++
         if (menuShowRetries < 180)
-            SetTimer((*) => SelectionSense_ShowMenuNearCursor(true), -55)
+            SelectionSense_ScheduleShowMenuRetry(g_HubCapsule_Generation)
         else {
             menuShowRetries := 0
             if !hubWvWarned {
@@ -3742,6 +3930,8 @@ SelectionSense_ShowMenuNearCursor(internalIntent := false) {
     menuShowRetries := 0
 
     global g_SelSense_MenuW, g_SelSense_MenuH, g_SelSense_MenuActivateOnShow, g_SelSense_MenuShowingHub
+    if g_SelSense_MenuShowingHub
+        SelectionSense_HubCapsule_ApplyOpenLayout()
     w := g_SelSense_MenuW
     h := g_SelSense_MenuH
     if (w < 200)
@@ -3793,6 +3983,7 @@ SelectionSense_ShowMenuNearCursor(internalIntent := false) {
 
     doActivate := g_SelSense_MenuActivateOnShow
     showOpt := doActivate ? "" : " NoActivate"
+    try SelectionSense_HubCapsule_EnsureNormalWindow(g_SelSense_MenuGui.Hwnd)
     try g_SelSense_MenuGui.Show("x" . x . " y" . y . " w" . w . " h" . h . showOpt)
     try WinShow("ahk_id " . g_SelSense_MenuGui.Hwnd)
     g_SelSense_MenuVisible := true
@@ -3874,9 +4065,8 @@ SelectionSense_OpenHubCapsuleFromToolbar(useToolbarAnchor := true, pendingTextOv
     global g_SelSense_DoubleCopyHub_LastTick
 
     g_SelSense_DoubleCopyHub_LastTick := 0
-    SelectionSense_GetHubCapsuleDefaultSize(&defW, &defH)
-    g_SelSense_MenuW := defW
-    g_SelSense_MenuH := defH
+    g_SelSense_MenuShowingHub := true
+    SelectionSense_HubCapsule_ApplyOpenLayout()
     g_SelSense_MenuActivateOnShow := true
     ov := Trim(String(pendingTextOverride))
     if (ov != "")

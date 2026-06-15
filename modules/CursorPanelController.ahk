@@ -269,6 +269,9 @@ ShowFloatingToolbarUnifiedContextMenu(anchorX, anchorY) {
     ShowDarkStylePopupMenuAt(MenuItems, posX, posY)
 }
 
+; CapsLock:: KeyWait 会话标记：仅在此会话内允许用 CapsLock 变量兜底 #HotIf（物理键仍优先）
+global g_CapsLockChordSessionActive := false
+
 ; ===================== CapsLock 状态检查函数 =====================
 ; 用于 #HotIf GetCapsLockState() 下的 CapsLock+ 第二键热键。
 ;
@@ -304,19 +307,14 @@ CapsLockChordInputBlocked(*) {
     return false
 }
 
-; 仅检测 CapsLock 是否按住，不经过 InputBlocked（供 CP 可见时 CapsLock+F 抢占搜索）
+; 仅检测 CapsLock 是否物理按住，不经过 InputBlocked（供 CP 可见时 CapsLock+F 抢占搜索）
 CapsLockChordPhysDown(*) {
-    global CapsLock
-    physDown := false
-    try physDown := GetKeyState("CapsLock", "P")
-    catch {
-        physDown := false
-    }
-    return CapsLock || physDown
+    try return GetKeyState("CapsLock", "P")
+    return false
 }
 
 GetCapsLockState() {
-    global CapsLock
+    global CapsLock, g_CapsLockChordSessionActive
     physDown := false
     try physDown := GetKeyState("CapsLock", "P")
     catch {
@@ -341,8 +339,18 @@ GetCapsLockState() {
             return false
     } catch {
     }
-    ; 变量 true（按下分支已置位）或物理仍按住，均可匹配组合键（与逻辑大写灯是否 On 无关）
-    return CapsLock || physDown
+    ; 和弦态：必须物理按住 CapsLock；仅在 CapsLock:: KeyWait 会话内允许变量 CapsLock 兜底（防驱动抖动）
+    if physDown
+        return true
+    if g_CapsLockChordSessionActive && CapsLock
+        return true
+    ; 自愈：残留软件变量不应再激活全局和弦热键
+    if CapsLock {
+        global CapsLock2
+        CapsLock := false
+        try CapsLock2 := false
+    }
+    return false
 }
 
 ; ===================== 面板可见状态检查函数 =====================
@@ -650,11 +658,12 @@ CapsLock_ScheduleNormalizeAfterChord() {
 
 ; 命令面板/搜索中心等 Web 输入面打开：取消延迟切换并恢复按下 CapsLock 前的逻辑大写（不强制 Off）
 CapsLock_RestoreForUiTypingOpen() {
-    global CapsLock, CapsLock2, CapsLockInitialStateForChord
+    global CapsLock, CapsLock2, CapsLockInitialStateForChord, g_CapsLockChordSessionActive
     SetTimer(CapsLock_DeferredSingleTapToggle, 0)
     SetTimer(CapsLock_DeferredNormalize_Tick, 0)
     CapsLock := false
     CapsLock2 := false
+    g_CapsLockChordSessionActive := false
     try CapsLock_ApplyLogicalState(CapsLockInitialStateForChord)
     catch {
         try SetCapsLockState("Off")
@@ -665,11 +674,12 @@ CapsLock_RestoreForUiTypingOpen() {
 
 ; 关闭命令面板/搜索中心等 Web 面后：取消延迟单击切换，物理键未按住时强制灭大写灯
 CapsLock_NormalizeAfterUiClose() {
-    global CapsLock, CapsLock2, CapsLockInitialStateForChord
+    global CapsLock, CapsLock2, CapsLockInitialStateForChord, g_CapsLockChordSessionActive
     SetTimer(CapsLock_DeferredSingleTapToggle, 0)
     SetTimer(CapsLock_DeferredNormalize_Tick, 0)
     CapsLock := false
     CapsLock2 := false
+    g_CapsLockChordSessionActive := false
     physDown := false
     try physDown := GetKeyState("CapsLock", "P")
     catch {
@@ -702,7 +712,7 @@ SearchCenter_ScheduleIMEStabilize() {
 
 ; 延迟清除 CapsLock 变量的函数
 ClearCapsLockTimer(*) {
-    global CapsLock := false
+    global CapsLock := false, g_CapsLockChordSessionActive := false
 }
 
 ; ===================== Wails 输入框激活（已迁移至 CommandPalette WebView2） =====================
@@ -1082,13 +1092,16 @@ ShowPanelTimer(*) {
 ; 2) 纯单击：未触发 CapsLock+ 功能（CapsLock2 仍为 true）时，在松手处用 InitialCapsLockState 手动翻转一次，等价于原生单击切换大写。
 ; 3) 组合键：任一 CapsLock+ 字母会先 Clear CapsLock2，并在 HandleDynamicHotkey / 各字母分支里 RestoreCapsLockAfterChord，
 ;    松手时若 CapsLock2 为 false 则 SetCapsLockState 回到按下前的逻辑状态，避免组合键误开大写。
-; 4) GetCapsLockState() 使用 变量 CapsLock OR 物理按下，是为「按住 CapsLock 再按第二键」仍能匹配 #HotIf；与逻辑大写灯不同步时以 Restore 为准。
+; 4) GetCapsLockState() 以物理按住 CapsLock 为准；仅在 CapsLock:: KeyWait 会话内用变量 CapsLock 兜底第二键 #HotIf。
 ; ============================================================================================
 CapsLock:: {
     global CapsLock, CapsLock2, IsCommandMode, PanelVisible, VoiceInputActive, VoiceSearchActive, VoiceInputMethod, VoiceInputPaused, CapsLockHoldTimeSeconds
     global CapsLockInitialStateForChord
     global VKHoldVisible, CapsLockHoldVkEnabled
-    global LastCapsLockTapTick
+    global LastCapsLockTapTick, g_CapsLockChordSessionActive
+
+    g_CapsLockChordSessionActive := true
+    try {
     
     ; 确保全局变量已初始化
     if (!IsSet(PanelVisible)) {
@@ -1298,6 +1311,10 @@ CapsLock:: {
     
     ; 长按期间弹出的 VK KeyBinder 已在松手时隐藏（VKHoldVisible 为真时）
     IsCommandMode := false
+
+    } finally {
+        g_CapsLockChordSessionActive := false
+    }
 }
 
 ; ===================== 多屏幕支持函数 =====================

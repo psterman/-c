@@ -2103,7 +2103,12 @@ CommandPalette_AgentBootstrapNiumaSessions(*) {
             . "return fn(arr).then(function(n){return JSON.stringify({ok:1,count:Number(n)||0});})"
             . ".catch(function(e){return JSON.stringify({ok:0,err:String(e&&e.message||e)});});"
             . "}catch(e){return JSON.stringify({ok:0,err:String(e&&e.message||e)});}})();"
-        raw := g_FTB_WV2.ExecuteScriptAsync(js).await(120000)
+        raw := ""
+        try raw := g_FTB_WV2.ExecuteScriptAsync(js).await2(30000)
+        catch as eAwait {
+            CommandPalette_AgentLog("niuma_bootstrap_err", eAwait.Message)
+            return
+        }
         data := FuncExists("CommandPalette_ParseScriptJson") ? CommandPalette_ParseScriptJson(raw) : Map()
         if (data is Map) && data.Get("ok", false) {
             bootDoneAt := A_TickCount

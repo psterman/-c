@@ -18,7 +18,7 @@ global g_SCWV_SearchTimer := 0
 global g_SCWV_FocusPending := false
 global g_SCWV_CliTerminalFocus := false
 global g_SCWV_SearchInputFocused := false
-global g_SCWV_UiMode := "local"
+global g_SCWV_LoadingTier := "shell"
 global g_SCWV_HomeRefreshScheduled := false
 global g_SCWV_HomeViewEpoch := 0
 global SearchCenterWebKeyword := ""
@@ -1010,6 +1010,51 @@ SCWV_ScCapsInputAllowed() {
     return false
 }
 
+; 运行时分流：本地筛选不抢跑 Go；全文状态仅 fulltext 筛选触发
+_SCWV_IsLocalOnlyFilter(filterType := "") {
+    ft := Trim(String(filterType))
+    return (ft = "" || ft = "clipboard")
+}
+
+_SCWV_ShouldPostFullTextStatus() {
+    global SearchCenterFilterType
+    return (Trim(String(SearchCenterFilterType)) = "fulltext")
+}
+
+_SCWV_ShouldScheduleRemoteSearchOnShow(triggerSource := "") {
+    global SearchCenterWebKeyword, SearchCenterFilterType
+    ts := Trim(String(triggerSource))
+    kw := Trim(SearchCenterWebKeyword)
+    ft := Trim(String(SearchCenterFilterType))
+    if (ts = "clipboard_hotkey")
+        return false
+    if (ts = "search_hotkey" && kw = "")
+        return false
+    if (kw = "" && ft = "")
+        return false
+    if (kw = "" && _SCWV_IsLocalOnlyFilter(ft))
+        return false
+    return true
+}
+
+_SCWV_SetLoadingTier(tier := "shell") {
+    global g_SCWV_LoadingTier
+    t := Trim(String(tier))
+    if (t = "")
+        t := "shell"
+    g_SCWV_LoadingTier := t
+}
+
+_SCWV_PushLoadingTierState(tier := "shell") {
+    global g_SCWV_LifecyclePhase
+    _SCWV_SetLoadingTier(tier)
+    if !SearchCenter_ShouldUseWebView()
+        return
+    try SCWV_PostJson(Map("type", "state", "loadingTier", tier, "hostLifecycle", g_SCWV_LifecyclePhase))
+    catch {
+    }
+}
+
 ; 本地空词视图唯一入口：历史首页 / 剪贴板时间线 / 按筛选走 Go，禁止沿用 init 预灌模板
 _SCWV_RefreshLocalHomeView() {
     global SearchCenterWebKeyword, SearchCenterFilterType, g_SCWV_ClipboardHomeLock, g_SCWV_UiMode
@@ -1029,24 +1074,24 @@ _SCWV_RefreshLocalHomeView() {
         nowTick := A_TickCount
         if (nowTick - Integer(g_SCWV_LastClipboardTimelineTick) >= 500) {
             g_SCWV_LastClipboardTimelineTick := nowTick
-            SetTimer((*) => _SCWV_RunClipboardTimelineSearch("", 0, SearchCenterCurrentLimit), -40)
+            _SCWV_SetLoadingTier("local")
+            SetTimer((*) => SCProvider_RouteSearch(SCProvider_BuildCtx("", 0, SearchCenterCurrentLimit, "clipboard")), -40)
         }
         return
     }
 
     if (Trim(String(SearchCenterFilterType)) = "") {
-        _SCWV_LoadSearchHistory()
+        _SCWV_SetLoadingTier("local")
+        SCProvider_RouteSearch(SCProvider_BuildCtx("", 0, SearchCenterCurrentLimit, SearchCenterFilterType))
         return
     }
 
+    _SCWV_SetLoadingTier("remote")
     SearchCenterSearchResults := []
     SearchCenterHasMoreData := false
-    if (SearchCenterEngineMode = "go") {
-        gt := _SCWV_MapFilterToGoSearchType(SearchCenterFilterType)
-        _SCWV_ExecuteGoSearchHttp(0, "", gt, SearchCenterCurrentLimit)
-        return
-    }
-    SCWV_PushState("init")
+    _SCWV_SetLoadingTier("remote")
+    SCProvider_RouteSearch(SCProvider_BuildCtx("", 0, SearchCenterCurrentLimit, SearchCenterFilterType, SearchCenterEngineMode))
+    return
 }
 
 SCWV_EnsureSearchHomeVisible() {
@@ -3241,7 +3286,8 @@ _SCWV_BootstrapWebReadyIfStalled(reason := "") {
         SCWV_PushState("init")
     }
     _SCWV_SendDockConfig()
-    _SCWV_PostFullTextStatus(true)
+    if _SCWV_ShouldPostFullTextStatus()
+        SCProvider_FullTextAdmin_MaybePost(true)
     try SCWV_FlushPendingJsonQueue()
     catch {
     }
@@ -3799,6 +3845,9 @@ _SCWV_ProcessGoSearchResponse(resp, kw, off, gt, lim) {
             && _SCWV_ApplyClipboardTimelineLocal(kw, off, lim > 0 ? lim : 0))
             return
         if (st = 0) {
+            if ((gtUse = "clipboard" || SearchCenterFilterType = "clipboard")
+                && _SCWV_ApplyClipboardTimelineLocal(kw, off, lim > 0 ? lim : 0))
+                return
             _SCWV_LogRuntime("SearchCore HTTP 0 fast-fail")
             _SCWV_EnsureSearchCoreRunning()
             _SCWV_ShowHttp0Notice()
@@ -4098,27 +4147,17 @@ _SCWV_AsyncPollSearchHttp(pollToken := 0, *) {
 }
 
 _SCWV_PostRequestSearchGo(*) {
-    global SearchCenterEngineMode, SearchCenterWebKeyword, g_SCWV_ModeSwitchGuard
+    global SearchCenterEngineMode, SearchCenterWebKeyword, g_SCWV_ModeSwitchGuard, SearchCenterFilterType
     if g_SCWV_ModeSwitchGuard {
         SetTimer(_SCWV_PostRequestSearchGo, -90)
         return
     }
-    if (SearchCenterEngineMode = "go") {
-        kw := Trim(SearchCenterWebKeyword)
-        if (kw = "") {
-            _SCWV_RefreshLocalHomeView()
-            return
-        }
-        _SCWV_ExecuteGoSearchHttp(0, SearchCenterWebKeyword, "", 0)
-    } else {
-        kw := Trim(SearchCenterWebKeyword)
-        if (kw != "") {
-            _SCWV_RunAhkSearch(0)
-            SCWV_PushState("state")
-        } else {
-            _SCWV_RefreshLocalHomeView()
-        }
+    kw := Trim(SearchCenterWebKeyword)
+    if (kw = "") {
+        _SCWV_RefreshLocalHomeView()
+        return
     }
+    SCProvider_RouteSearch(SCProvider_BuildCtx(kw, 0, 0, SearchCenterFilterType, SearchCenterEngineMode))
 }
 
 _SCWV_ResultItemHas(Item, Prop) {
@@ -4160,10 +4199,11 @@ SCWV_Show(reason := "", triggerSource := "") {
     reqId := SurfaceManager_Request("search_center", "open", "SCWV_Show", Map("reason", reason, "triggerSource", triggerSource))
     try SurfaceManager_BeforeOpen("search_center", "SCWV_Show", Map("requestId", reqId, "reason", reason, "triggerSource", triggerSource))
     try SurfaceManager_RegisterSurface("search_center")
-    global g_SCWV_Gui, g_SCWV_Visible, g_SCWV_Ready, g_SCWV_UI_Ready, g_SCWV_FirstFrameSeen, g_SCWV_WaitingUiFinishedReveal, g_SCWV_Ctrl, GuiID_SearchCenter, g_SCWV_LastShown, SearchCenterWebKeyword
+    global g_SCWV_Gui, g_SCWV_Visible, g_SCWV_Ready, g_SCWV_UI_Ready, g_SCWV_FirstFrameSeen, g_SCWV_WaitingUiFinishedReveal, g_SCWV_Ctrl, g_SCWV_WV2, GuiID_SearchCenter, g_SCWV_LastShown, SearchCenterWebKeyword
     global g_SCWV_ShowWaitStartTick, g_SCWV_ShowRecoveryAttempts
     global SearchCenterEngineMode, g_SCWV_LifecyclePhase, g_SCWV_TransitionCtx, g_SCWV_LimitedRecoverReloadAttempts, g_SCWV_CurrentToken
     global g_SCWV_PendingTriggerSource, SearchCenterFilterType, SearchCenterCurrentLimit
+    global g_SCWV_PaintReady, g_SCWV_AwaitingReshowPaint, g_SCWV_UserMinimized, g_SCWV_CloseInFlight
     ts := Trim(String(triggerSource))
     if (ts = "")
         ts := Trim(String(g_SCWV_PendingTriggerSource))
@@ -4184,12 +4224,26 @@ SCWV_Show(reason := "", triggerSource := "") {
     warmHost := SCWV_HostAlive() && g_SCWV_Gui && g_SCWV_WV2 && g_SCWV_Ready
     if warmHost && g_SCWV_UI_Ready && !g_SCWV_FirstFrameSeen
         g_SCWV_FirstFrameSeen := true
+    if warmHost && g_SCWV_Ready && !g_SCWV_UI_Ready
+        g_SCWV_UI_Ready := true
+    if warmHost && g_SCWV_Ready && !g_SCWV_PaintReady
+        g_SCWV_PaintReady := true
+    if SCWV_HostAlive() && g_SCWV_WV2 {
+        if g_SCWV_AwaitingReshowPaint {
+            g_SCWV_AwaitingReshowPaint := false
+            if g_SCWV_Ready && !g_SCWV_PaintReady
+                g_SCWV_PaintReady := true
+        }
+        if g_SCWV_FirstFrameSeen && !g_SCWV_Ready && !SCWV_IsCloseRequested()
+            _SCWV_BootstrapWebReadyIfStalled("show_begin_warm")
+    }
     g_SCWV_UserMinimized := false
-    global g_SCWV_CloseInFlight
     g_SCWV_CloseInFlight := false
     try SCWV_Log("show_begin", "reason=" . reason . " ready=" . (g_SCWV_Ready ? "1" : "0") . " ui_ready=" . (g_SCWV_UI_Ready ? "1" : "0") . " warm=" . (warmHost ? "1" : "0"))
     g_SCWV_LimitedRecoverReloadAttempts := 0
     SCWV_PushLifecycleState("opening", reason)
+    _SCWV_SetLoadingTier("shell")
+    _SCWV_PushLoadingTierState("shell")
     ; 打开阶段先屏蔽失焦自动关闭，避免 WebView/焦点切换瞬时抖动把窗口提前关掉（白屏/一闪）。
     _SCWV_BlockDeactivate(2800, "show_opening")
 
@@ -4309,6 +4363,11 @@ SCWV_Show(reason := "", triggerSource := "") {
                     WMActivateChain_Register(SCWV_WM_ACTIVATE)
             } catch {
             }
+            if g_SCWV_FirstFrameSeen && !g_SCWV_Ready && !SCWV_IsCloseRequested()
+                _SCWV_BootstrapWebReadyIfStalled("show_wait_shell")
+            try SCWV_PostJson(Map("type", "hostPaintNudge", "reason", "show_wait_shell"))
+            catch {
+            }
         }
         SCWV_ArmRevealWatchdog()
     }
@@ -4340,13 +4399,21 @@ SCWV_Show(reason := "", triggerSource := "") {
         SCWV_PushThemeToWeb()
         if (ts != "clipboard_hotkey")
             _SCWV_ScheduleLocalHomeRefresh(80)
+        if _SCWV_ShouldPostFullTextStatus() {
+            try SCProvider_FullTextAdmin_MaybePost(true)
+            catch {
+                try _SCWV_PostFullTextStatus(true)
+                catch {
+                }
+            }
+        }
         SetTimer(SCWV_PostHostShow, -120)
     }
     else
         SetTimer(SCWV_DeferredPush, -250)
 
-    ; 首屏：剪贴板热键走 ExecuteGoSearchHttp；综合搜索空词仅教程+历史+置顶，不抢跑 Go 空搜
-    if (ts != "clipboard_hotkey" && !(ts = "search_hotkey" && Trim(SearchCenterWebKeyword) = ""))
+    ; 首屏：剪贴板/空词搜索热键仅本地 provider；其余按需远程检索
+    if _SCWV_ShouldScheduleRemoteSearchOnShow(ts)
         SetTimer(_SCWV_PostRequestSearchGo, -20)
 
     if !deferHost && (ts != "clipboard_hotkey") {
@@ -4926,7 +4993,8 @@ SCWV_ProcessWebMessageJson(jsonStr) {
                 SCWV_PushState("init")
             }
             _SCWV_SendDockConfig()
-            _SCWV_PostFullTextStatus(true)
+            if _SCWV_ShouldPostFullTextStatus()
+                SCProvider_FullTextAdmin_MaybePost(true)
             try SCWV_FlushPendingJsonQueue()
             if !SCWV_IsWebSearchUIMode() {
                 global g_SCWV_UiMode
@@ -5131,6 +5199,8 @@ SCWV_ProcessWebMessageJson(jsonStr) {
                 SCWV_PushState("init")
                 return
             }
+            if (SearchCenterFilterType = "fulltext")
+                SCProvider_FullTextAdmin_MaybePost(true)
             _SCWV_RefreshLocalHomeView()
         case "setLimit":
             global SearchCenterCurrentLimit, SearchCenterEverythingLimit
@@ -5461,7 +5531,7 @@ SCWV_QueueSearch(keyword) {
 }
 
 _SCWV_FireSearch(*) {
-    global g_SCWV_SearchTimer, SearchCenterWebKeyword, SearchCenterEngineMode
+    global g_SCWV_SearchTimer, SearchCenterWebKeyword, SearchCenterEngineMode, SearchCenterFilterType
 
     g_SCWV_SearchTimer := 0
     kw := Trim(SearchCenterWebKeyword)
@@ -5469,12 +5539,7 @@ _SCWV_FireSearch(*) {
         _SCWV_RefreshLocalHomeView()
         return
     }
-    if (SearchCenterEngineMode = "go") {
-        _SCWV_ExecuteGoSearchHttp(0, kw, "", 0)
-    } else {
-        _SCWV_RunAhkSearch(0)
-        SCWV_PushState("state")
-    }
+    SCProvider_RouteSearch(SCProvider_BuildCtx(kw, 0, 0, SearchCenterFilterType, SearchCenterEngineMode))
 }
 
 _SCWV_TypeDataField(TypeData, Prop, Fallback) {
@@ -5890,7 +5955,7 @@ SCWV_PushState(msgType := "state") {
     global SearchCenterWebKeyword, SearchCenterCurrentLimit, SearchCenterSelectedEngines, SearchCenterFilterType
     global SearchCenterHasMoreData, SearchCenterEngineMode
     global g_SCWV_RecycleBin, g_SCWV_PinnedKeys, g_SCWV_LifecyclePhase, g_SCWV_UiMode
-    global g_SCWV_ActiveClientQueryID
+    global g_SCWV_ActiveClientQueryID, g_SCWV_LoadingTier
 
     if !SearchCenter_ShouldUseWebView()
         return
@@ -6010,6 +6075,7 @@ SCWV_PushState(msgType := "state") {
         "total", results.Length,
         "recycleBin", recycleBin,
         "recycleCount", recycleBin.Length,
+        "loadingTier", Trim(String(g_SCWV_LoadingTier)),
         "quickLook", Map(
             "installed", (qlExe != ""),
             "path", qlExe,
@@ -10478,6 +10544,7 @@ _SCWV_ApplyClipboardTimelineLocal(keyword := "", offset := 0, limit := 0) {
     catch {
     }
     SCWV_PushState("state")
+    _SCWV_SetLoadingTier("")
     return true
 }
 
@@ -10722,7 +10789,29 @@ _SCWV_LoadSearchHistory(retryCount := 0) {
         return
     }
     _SCWV_HistoryPushResultsToUI(g_SC_HistoryCache, hotRows)
+    _SCWV_SetLoadingTier("")
     try _SCWV_PushClipFloatToWeb()
     catch {
     }
 }
+
+SCWV_BroadcastHostLifecycle(phase := "", reason := "") {
+    global g_SCWV_LifecyclePhase
+    p := Trim(String(phase))
+    if (p != "")
+        g_SCWV_LifecyclePhase := p
+    r := Trim(String(reason))
+    try {
+        if SCWV_FuncExists("SCWV_Log")
+            SCWV_Log("host_lifecycle_broadcast", "phase=" . g_SCWV_LifecyclePhase . " reason=" . r)
+    } catch {
+    }
+    try SCWV_PostJson(Map("type", "hostLifecycle", "phase", g_SCWV_LifecyclePhase, "reason", r))
+    catch {
+    }
+    try SCWV_PushLifecycleState(g_SCWV_LifecyclePhase, r != "" ? r : "broadcast")
+    catch {
+    }
+}
+
+#Include SearchCenterProviders.ahk

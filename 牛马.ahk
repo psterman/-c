@@ -4707,7 +4707,9 @@ if FuncExists("Nmer_SqliteClearWalSidecars") {
 ; 初始化新的剪贴板管理器数据库（FTS5）
 InitClipboardFTS5DB()
 ; 剪贴板库就绪后再拉起 SearchCenterCore（避免 Go 进程抢先锁 Clipboard.db）
-if FuncExists("Nmer_AutoStartSearchCenterCore") {
+if FuncExists("NmerService_AutoStartSearchCore") {
+    SetTimer(NmerService_AutoStartSearchCore, -2000)
+} else if FuncExists("Nmer_AutoStartSearchCenterCore") {
     SetTimer(Nmer_AutoStartSearchCenterCore, -2000)
 }
 if FuncExists("SearchCore_StartWatchdog") {
@@ -4744,7 +4746,7 @@ InitFloatingBubble()
 ; 悬浮栏/球：待 WebView2 共享环境就绪后在 _WV2_BeginWarmupAfterEnv 中 ApplyAppearanceActivationMode
 ; 若环境回调异常未触发，延后重试一次以免无悬浮界面（已就绪则跳过，避免二次闪烁）
 SetTimer(FloatingToolbar_ApplyActivationFallback, -5000)
-; 启动主脚本后自动拉起 ttyd（内部自带端口占用检测，非 ttyd 占用时会安全退出）
+; ttyd 改为按需懒激活（AutoStartTtydForNiumaChat 为 no-op）；保留 timer 占位以兼容旧启动链
 SetTimer(AutoStartTtydForNiumaChat, -800)
 GravityPump_Register()
 SelectionSense_Init()
@@ -5302,10 +5304,11 @@ ShowConfigGUI_FallbackCheck(*) {
 }
 
 NormalizeCapsLockRuntimeForUiOpen() {
-    global CapsLock, CapsLock2, VKHoldVisible, CapsLockDownTime
+    global CapsLock, CapsLock2, VKHoldVisible, CapsLockDownTime, g_CapsLockChordSessionActive
     ; Ensure UI entry (tray/settings) does not leave CapsLock chord mode active.
     try CapsLock := false
     try CapsLock2 := false
+    try g_CapsLockChordSessionActive := false
     try VKHoldVisible := false
     try CapsLockDownTime := 0
     try Send("{CapsLock up}")
@@ -6011,8 +6014,6 @@ CapsLockCopy() {
     }
     
     CapsLock2 := false  ; 清除标记，表示使用了功能
-    ; 确保 CapsLock 变量在复制过程中保持为 true
-    CapsLock := true
     
     ; 确保 ClipboardHistory_CapsLockC 已初始化（使用全局变量引用）
     if (!IsSet(ClipboardHistory_CapsLockC) || !IsObject(ClipboardHistory_CapsLockC)) {
@@ -6493,12 +6494,6 @@ $c:: {
         }
     }
     
-    ; 确保 CapsLock 变量被设置（防止在释放时被清除）
-    global CapsLock
-    if (!CapsLock) {
-        CapsLock := true
-    }
-
     if (VirtualKeyboard_HandleKey("c"))
         return
     if (HandleDynamicHotkey("c", "C"))

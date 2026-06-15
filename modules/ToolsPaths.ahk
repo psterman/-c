@@ -68,6 +68,7 @@ Nmer_SearchCenterCoreHealthy(*) {
 }
 
 #Include SearchCoreLifecycle.ahk
+#Include NmerServiceRegistry.ahk
 
 Nmer_TtydExe(*) {
     root := A_ScriptDir
