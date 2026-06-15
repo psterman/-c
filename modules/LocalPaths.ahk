@@ -39,8 +39,7 @@ Nmer_ResolveConfigFile(*) {
     try {
         if IsSet(ConfigFile) && ConfigFile != ""
             return ConfigFile
-    } catch {
-    }
+    } catch as _e { NmerCatch(A_ThisFunc, _e) }
     return Nmer_MainConfigFile()
 }
 
@@ -48,8 +47,7 @@ Nmer_ResolvePromptTemplatesFile(*) {
     try {
         if IsSet(PromptTemplatesFile) && PromptTemplatesFile != ""
             return PromptTemplatesFile
-    } catch {
-    }
+    } catch as _e { NmerCatch(A_ThisFunc, _e) }
     return Nmer_PromptTemplatesFile()
 }
 
@@ -168,8 +166,7 @@ Nmer_UserCacheRoot(*) {
     ini := Nmer_MainConfigFile()
     custom := ""
     try custom := Trim(IniRead(ini, "Paths", "UserCacheRoot", ""))
-    catch {
-    }
+    catch as _e { NmerCatch(A_ThisFunc, _e) }
     if (custom != "") {
         if !DirExist(custom)
             try DirCreate(custom)
@@ -196,8 +193,7 @@ Nmer_SetUserCacheRoot(newRoot) {
             if (custom != "")
                 old := custom
         }
-    } catch {
-    }
+    } catch as _e { NmerCatch(A_ThisFunc, _e) }
     if (StrLower(old) != StrLower(newRoot))
         Nmer_MigrateTreeIfMissing(old, newRoot)
     Nmer_EnsureLocalDir()
@@ -383,8 +379,7 @@ Nmer_EnsureSqliteDbIni(*) {
         }
         FileDelete(ini)
         FileAppend(want, ini, "UTF-8")
-    } catch {
-    }
+    } catch as _e { NmerCatch(A_ThisFunc, _e) }
 }
 
 Nmer_MigrateDbSetIfMissing(oldDbPath, newDbPath) {
@@ -403,8 +398,7 @@ Nmer_MigrateFileIfMissing(oldPath, newPath) {
         if (dir != "" && !DirExist(dir))
             DirCreate(dir)
         FileMove(oldPath, newPath, 1)
-    } catch {
-    }
+    } catch as _e { NmerCatch(A_ThisFunc, _e) }
 }
 
 Nmer_MigrateTreeIfMissing(oldDir, newDir) {
@@ -424,8 +418,7 @@ Nmer_MigrateTreeIfMissing(oldDir, newDir) {
             if (parent != "" && !DirExist(parent))
                 DirCreate(parent)
             FileMove(A_LoopFileFullPath, dest, 0)
-        } catch {
-        }
+        } catch as _e { NmerCatch(A_ThisFunc, _e) }
     }
 }
 
@@ -574,8 +567,7 @@ Nmer_MigrateFullTextSettingsIndexDir(*) {
     try {
         FileDelete(path)
         FileAppend(newRaw, path, "UTF-8")
-    } catch {
-    }
+    } catch as _e { NmerCatch(A_ThisFunc, _e) }
 }
 
 Nmer_ResetFullTextSettingsIndexDir(*) {
@@ -589,8 +581,7 @@ Nmer_ResetFullTextSettingsIndexDir(*) {
             return
         FileDelete(path)
         FileAppend(newRaw, path, "UTF-8")
-    } catch {
-    }
+    } catch as _e { NmerCatch(A_ThisFunc, _e) }
 }
 
 Nmer_DirSizeBytes(dir) {
@@ -602,8 +593,7 @@ Nmer_DirSizeBytes(dir) {
         if (A_LoopFileAttrib ~= "D")
             continue
         try total += A_LoopFileSize
-        catch {
-        }
+        catch as _e { NmerCatch(A_ThisFunc, _e) }
     }
     return total
 }
@@ -688,8 +678,7 @@ Nmer_DeleteDirContents(dir) {
                 DirDelete(A_LoopFileFullPath, 1)
             else
                 FileDelete(A_LoopFileFullPath)
-        } catch {
-        }
+        } catch as _e { NmerCatch(A_ThisFunc, _e) }
     }
 }
 
@@ -791,8 +780,7 @@ Nmer_IsDirRemovableLegacy(dir) {
         att := FileExist(dir)
         if (att != "" && InStr(att, "D") && InStr(att, "L"))
             return true
-    } catch {
-    }
+    } catch as _e { NmerCatch(A_ThisFunc, _e) }
     empty := true
     Loop Files dir . "\*", "R" {
         if (A_LoopFileName = ".gitkeep")
