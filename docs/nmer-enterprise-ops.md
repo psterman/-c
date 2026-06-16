@@ -44,28 +44,46 @@ CLI 迁移通过 `%TEMP%` 启动 AHK 并设置环境变量 `NMRE_ROOT` 指向仓
 ### 企业注意
 
 - DPAPI 绑定**当前 Windows 用户**：换用户、换机、漫游配置**不能**直接拷贝 `secrets.vault.json` 解密。
-- 换机请重新填写 API Key，或走应用内「导出/导入定制包」（按现有 UserStudio 流程，勿把 vault 当可移植备份）。
+- 换机请使用 **迁移包**（设置 → 存储与缓存 → 数据迁移，或 `tools\Nmer-ExportAll.ps1` / `Nmer-ImportMigration.ps1`），导入后在智能定制**重新填写 API Key**。
+- **定制包**（仅 `user_studio.json`）用于分享 LLM 配置模板，不能替代完整迁移。
 - 支持排障时优先看 `user_studio.json` 是否已 `secretsEncrypted: true`，vault 是否存在（无需导出 vault 内容）。
 
-## 3. 导出全部本地数据（zip）
+## 3. 迁移包（换机 / 备份）
+
+### 应用内
+
+`CapsLock + Q` → 设置 → **存储与缓存** → **数据迁移** → 导出/导入。
+
+默认包含：local 配置、`user_studio.json`、OpenClaw 状态、Data 搜索/状态 JSON、剪贴板/Cursor SQLite、`Data/runtime/niuma-chat/`。可选：截图/缩略图缓存。**不含** `secrets.vault.json`。
+
+### CLI
 
 ```powershell
-# 默认：local 配置 + Data 下状态/搜索 JSON（不含 SQLite、不含 Cache）
+# 默认含 SQLite；输出 Cache/diagnostics/nmer_migration_{时间戳}.zip
 powershell -NoProfile -File tools\Nmer-ExportAll.ps1
 
-# 含剪贴板/Cursor 等数据库（体积大，导出前建议退出牛马）
-powershell -NoProfile -File tools\Nmer-ExportAll.ps1 -IncludeDataDb
+# 含截图/缩略图
+powershell -NoProfile -File tools\Nmer-ExportAll.ps1 -Preset full
 
-# 含部分 Cache（debug/images/thumbs）
+# 自定义分组（JSON）
+powershell -NoProfile -File tools\Nmer-ExportAll.ps1 -OptionsJson path\to\migration_opts.json
+
+# 运维：额外含 debug 日志
 powershell -NoProfile -File tools\Nmer-ExportAll.ps1 -IncludeCache
 
-# 仅预览，不生成 zip
+# 轻量：不含数据库
+powershell -NoProfile -File tools\Nmer-ExportAll.ps1 -IncludeDataDb:$false
+
+# 仅预览
 powershell -NoProfile -File tools\Nmer-ExportAll.ps1 -WhatIf
+
+# 导入（建议先退出牛马；应用内导入使用 -Force）
+powershell -NoProfile -File tools\Nmer-ImportMigration.ps1 -ZipPath "D:\backup\nmer_migration_xxx.zip"
 ```
 
-输出：`Cache/diagnostics/nmer_export_{时间戳}.zip`，内含 `manifest.json`（文件列表、是否含敏感字段名、**不包含** `secrets.vault.json` 内容）。
+zip 内 `manifest.json`：`version: 2`、`kind: migration`。导入前备份至 `local/backup-migration-{时间戳}/`；结果见 `Cache/diagnostics/import_result_*.json`。
 
-交给支持时请说明：**zip 内 `user_studio.json` 在迁移后通常无明文 Key**；勿将 zip 提交到公共工单。
+交给支持时请说明：**zip 不含 vault**；勿将 zip 提交到公共工单。
 
 ## 4. 清理（预览优先）
 
@@ -108,6 +126,7 @@ powershell -NoProfile -File tools\Nmer-CleanUninstall.ps1 -Confirm -RemoveAutoSt
 | 日志目录 | `Cache/debug/`（`nmer_trace.log`、`scwv_trace.log`、`searchcore_lifecycle.jsonl` 等） |
 | 密钥自检 | `powershell tools\Verify-SecretStore.ps1` |
 | 导出配置 zip | `tools\Nmer-ExportAll.ps1` |
+| 导入迁移包 | `tools\Nmer-ImportMigration.ps1` |
 
 AHK 报错弹窗时，请同时打开 `Cache/debug/nmer_trace.log` 末尾 50 行一并反馈。
 
@@ -125,5 +144,5 @@ AHK 报错弹窗时，请同时打开 `Cache/debug/nmer_trace.log` 末尾 50 行
 
 1. 启动 `牛马.ahk`，确认无报错。
 2. 设置 → 智能定制：保存一次 API Key，运行 `tools\Verify-SecretStore.ps1` → PASS；`user_studio.json` 中 `options.llmApiKeys.*` 与 `llm.apiKey` 应为空。
-3. 运行 `Nmer-ExportAll.ps1`，确认 zip 与 manifest 生成。
+3. 运行 `Nmer-ExportAll.ps1 -WhatIf`，确认无报错；可选实机导出迁移包并检查 manifest `kind=migration`。
 4. 重启牛马，确认 Key 仍可用（从 vault 回填内存）。

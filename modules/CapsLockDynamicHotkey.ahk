@@ -17,6 +17,8 @@ HandleDynamicHotkey(PressedKey, ActionType) {
     
     ; 将按键转换为小写进行比较（ESC特殊处理）
     KeyLower := StrLower(PressedKey)
+    if FuncExists("ChordPad_FlashKey")
+        ChordPad_FlashKey(KeyLower)
     ConfigKey := ""
 
     ; 截图助手优先：当截图助手打开时，Q/E/C/R/Z/F/X/Esc 统一切到截图工具栏动作

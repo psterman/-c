@@ -630,6 +630,8 @@ SearchCenter_FlashCapsHintKey(key) {
     k := StrLower(Trim(String(key)))
     if (k = "")
         return
+    if FuncExists("ChordPad_FlashKey")
+        ChordPad_FlashKey(k)
     try {
         if (SearchCenter_ShouldUseWebView() && IsSearchCenterActive()) {
             SCWV_PostCapsHintPressGuarded(k)
@@ -1090,10 +1092,9 @@ ActivateWailsInputBox() {
 ShowPanelTimer(*) {
     global CapsLock, CapsLock2, PanelVisible, VoiceInputActive, VoiceSearchActive, VoiceSearchSelecting
     global VKHoldVisible, CapsLockHoldVkEnabled
-    local wasVkVisible := false
     if (!CapsLockHoldVkEnabled)
         return
-    ; 如果正在语音输入、语音搜索或选择搜索引擎，不显示 VK KeyBinder
+    ; 如果正在语音输入、语音搜索或选择搜索引擎，不显示和弦面板
     if (VoiceInputActive || VoiceSearchActive || VoiceSearchSelecting) {
         return
     }
@@ -1105,21 +1106,13 @@ ShowPanelTimer(*) {
     if (!GetKeyState("CapsLock", "P")) {
         return
     }
-    ; 长按达到阈值：显示 VK KeyBinder（若托盘已打开则不再标记为「长按临时显示」）
     if (!CapsLock || VKHoldVisible)
         return
-    try {
-        VK_EnsureInit(true)
-        wasVkVisible := VK_IsHostVisible()
-    } catch as e {
-        wasVkVisible := false
-    }
-    if (wasVkVisible)
+    if !FuncExists("ChordPad_Show") {
         return
-    ; 仅长按 CapsLock 调起 VK 时，才允许进入「复制/绑定上一个动作」模式
-    try VK_MarkNextShowFromCapsLockHold(true)
-    try SurfaceIntent_Open("virtual_keyboard")
-    VKHoldVisible := true
+    }
+    if ChordPad_Show()
+        VKHoldVisible := true
 }
 
 ; ===================== CapsLock+ 与原生单击共存（当前脚本采用的做法，请勿混用其它方案）=====================
@@ -1243,11 +1236,11 @@ CapsLock:: {
     ; 2. CapsLock释放后，由释放逻辑清除
     ; SetTimer(ClearCapsLock2Timer, -300)  ; 已移除
 
-    ; 长按达到 CapsLockHoldTimeSeconds 后由 ShowPanelTimer 显示 VK KeyBinder（可设置中心关闭）
+    ; 长按达到 CapsLockHoldTimeSeconds 后由 ShowPanelTimer 显示 ChordPad（可设置中心关闭）
     if (CapsLockHoldVkEnabled) {
         HoldTimeMs := Round(CapsLockHoldTimeSeconds * 1000)
-        if (HoldTimeMs < 50)
-            HoldTimeMs := 50
+        if (HoldTimeMs < 400)
+            HoldTimeMs := 400
         SetTimer(ShowPanelTimer, -HoldTimeMs)
     }
 
@@ -1273,7 +1266,10 @@ CapsLock:: {
 
     local vkShownThisPress := VKHoldVisible
     if (VKHoldVisible) {
-        try SurfaceIntent_Close("virtual_keyboard")
+        if FuncExists("ChordPad_Hide")
+            ChordPad_Hide()
+        else
+            try SurfaceIntent_Close("virtual_keyboard")
         VKHoldVisible := false
     }
     
@@ -1308,7 +1304,7 @@ CapsLock:: {
         ; 延迟清除 CapsLock 变量，给快捷键处理函数足够的时间
         SetTimer(ClearCapsLockTimer, -100)
     } else if (vkShownThisPress) {
-        ; 长按唤起 VK KeyBinder：恢复按下前的大写状态，不做单击切换
+        ; 长按唤起 ChordPad：恢复按下前的大写状态，不做单击切换
         SetTimer(CapsLock_DeferredSingleTapToggle, 0)
         CapsLock_ApplyLogicalState(InitialCapsLockState)
         CapsLock_ScheduleNormalizeAfterChord()

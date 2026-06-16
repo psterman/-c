@@ -1110,6 +1110,8 @@ VK_NoteLastChFromCapsLockKey(keyLower) {
         bid := VK_LookupBindingCmdForPhys(keyLower)
         if bid != "" {
             VK_NoteLastExecutedId(bid)
+            if FuncExists("ChordUsage_Record")
+                ChordUsage_Record(bid)
             return
         }
     }
@@ -1121,8 +1123,12 @@ VK_NoteLastChFromCapsLockKey(keyLower) {
         "backspace", "ch_backspace"
     )
     kl := StrLower(keyLower)
-    if m.Has(kl)
-        VK_NoteLastExecutedId(m[kl])
+    if m.Has(kl) {
+        cmdId := m[kl]
+        VK_NoteLastExecutedId(cmdId)
+        if FuncExists("ChordUsage_Record")
+            ChordUsage_Record(cmdId)
+    }
 }
 
 SC_JoinAllRegExMatches(haystack, pattern) {

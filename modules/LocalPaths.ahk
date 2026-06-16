@@ -170,6 +170,184 @@ Nmer_GroundingCacheVecDbPath(*) {
     return Nmer_DataDbDir() . "\GroundingCache_vec.db"
 }
 
+Nmer_DataStateConfigPath(*) {
+    return Nmer_DataStateDir() . "\config.json"
+}
+
+Nmer_SecretsVaultPath(*) {
+    return Nmer_LocalDir() . "\secrets.vault.json"
+}
+
+Nmer_DiagnosticsDir(*) {
+    return Nmer_CacheDir() . "\diagnostics"
+}
+
+; 迁移包分组（与 tools/Nmer-MigrationManifest.ps1 保持同步）
+Nmer_MigrationPresets() {
+    return Map(
+        "recommended", ["local.config", "local.studio", "local.openclaw", "local.prompts", "data.search", "data.state", "data.db.clipboard", "data.db.cursor", "data.runtime.chat"],
+        "light", ["local.config", "local.studio", "local.openclaw", "local.prompts", "data.search", "data.state"],
+        "full", ["local.config", "local.studio", "local.openclaw", "local.prompts", "data.search", "data.state", "data.db.clipboard", "data.db.cursor", "data.runtime.chat", "cache.images", "cache.thumbs", "cache.temp"]
+    )
+}
+
+Nmer_MigrationGroupCatalog() {
+    cacheRoot := Nmer_UserCacheRoot()
+    return [
+        Map("id", "local.config", "category", "local", "label", "主程序配置", "hint", "CursorShortcut.ini：热键、主题、缓存路径", "default", true, "paths", [Nmer_MainConfigFile()]),
+        Map("id", "local.studio", "category", "local", "label", "智能定制", "hint", "user_studio、备份与 Niuma Chat LLM", "default", true, "paths", [Nmer_UserStudioPath(), Nmer_UserStudioBackupPath(), Nmer_NiumaChatLlmPath()]),
+        Map("id", "local.openclaw", "category", "local", "label", "OpenClaw 工作区", "hint", "openclaw-state 目录", "default", true, "paths", [Nmer_OpenClawStateDir()]),
+        Map("id", "local.prompts", "category", "local", "label", "提示词模板 (INI)", "hint", "PromptTemplates.ini", "default", true, "paths", [Nmer_PromptTemplatesFile()]),
+        Map("id", "data.search", "category", "data", "label", "搜索与全文配置", "hint", "SearchCenter 历史与全文过滤", "default", true, "paths", [Nmer_SearchCenterHistoryPath(), Nmer_FullTextSettingsPath(), Nmer_FullTextFilterConfigPath()]),
+        Map("id", "data.state", "category", "data", "label", "应用状态 JSON", "hint", "提示词、命令面板、虚拟键盘映射", "default", true, "paths", [Nmer_PromptsJsonPath(), Nmer_CommandPaletteExecPath(), Nmer_VkCursorKeymapCompiledPath(), Nmer_DataStateConfigPath()]),
+        Map("id", "data.db.clipboard", "category", "data", "label", "剪贴板历史库", "hint", "Clipboard.db；导出时建议关闭占用", "default", true, "paths", [Nmer_ClipboardFts5DbPath(), Nmer_DataDbDir() . "\Clipboard.db-wal", Nmer_DataDbDir() . "\Clipboard.db-shm"]),
+        Map("id", "data.db.cursor", "category", "data", "label", "Cursor 面板数据", "hint", "CursorData.db", "default", true, "paths", [Nmer_CursorDataDbPath()]),
+        Map("id", "data.runtime.chat", "category", "data", "label", "Niuma Chat 数据", "hint", "会话与附件", "default", true, "paths", [Nmer_NiumaChatDataDir()]),
+        Map("id", "cache.images", "category", "cache", "label", "截图/剪贴板图片", "hint", "剪贴板图片显示需要", "default", false, "paths", [Nmer_CacheImagesDir()], "zipRel", "Cache\images"),
+        Map("id", "cache.thumbs", "category", "cache", "label", "缩略图缓存", "hint", "可重建", "default", false, "paths", [Nmer_ThumbsDir()], "zipRel", "Cache\thumbs"),
+        Map("id", "cache.temp", "category", "cache", "label", "临时截图副本", "hint", "可安全跳过", "default", false, "paths", [Nmer_CacheTempDir()], "zipRel", "Cache\temp"),
+        Map("id", "cache.fulltext", "category", "cache", "label", "全文索引", "hint", "体积大；新机可重建", "default", false, "paths", [Nmer_FullTextIndexDir()], "zipRel", "Cache\fulltext-index"),
+        Map("id", "cache.debug", "category", "cache", "label", "调试日志", "hint", "换机通常不需要", "default", false, "paths", [Nmer_DebugDir()], "zipRel", "Cache\debug"),
+    ]
+}
+
+Nmer_MigrationPathSize(absPath) {
+    absPath := Trim(String(absPath))
+    if (absPath = "")
+        return 0
+    if DirExist(absPath)
+        return Nmer_DirSizeBytes(absPath)
+    if FileExist(absPath) {
+        try return FileGetSize(absPath)
+        catch {
+            return 0
+        }
+    }
+    return 0
+}
+
+Nmer_MigrationPathExists(absPath) {
+    absPath := Trim(String(absPath))
+    return (absPath != "") && (DirExist(absPath) || FileExist(absPath))
+}
+
+Nmer_GetMigrationOptionsInfo(*) {
+    groupsOut := []
+    total := 0
+    for g in Nmer_MigrationGroupCatalog() {
+        bytes := 0
+        exists := false
+        for p in g["paths"] {
+            if Nmer_MigrationPathExists(p) {
+                exists := true
+                bytes += Nmer_MigrationPathSize(p)
+            }
+        }
+        total += bytes
+        groupsOut.Push(Map(
+            "id", g["id"],
+            "category", g["category"],
+            "label", g["label"],
+            "hint", g["hint"],
+            "default", !!g["default"],
+            "bytes", bytes,
+            "sizeText", Nmer_FormatBytes(bytes),
+            "exists", exists
+        ))
+    }
+    presets := Nmer_MigrationPresets()
+    presetsOut := [
+        Map("id", "recommended", "label", "换机推荐", "description", "配置 + 状态 + 剪贴板/Cursor 库 + Chat（不含图片缓存）", "groups", presets["recommended"]),
+        Map("id", "light", "label", "轻量配置", "description", "仅 local 与 Data 状态/搜索 JSON，不含数据库", "groups", presets["light"]),
+        Map("id", "full", "label", "完整备份", "description", "换机推荐 + 图片/缩略图/临时截图", "groups", presets["full"]),
+        Map("id", "custom", "label", "自定义", "description", "手动勾选下方分组", "groups", []),
+    ]
+    return Map("groups", groupsOut, "presets", presetsOut, "totalBytes", total, "totalText", Nmer_FormatBytes(total))
+}
+
+Nmer_ResolveMigrationGroups(opts := "") {
+    presets := Nmer_MigrationPresets()
+    if !(opts is Map)
+        return presets["recommended"].Clone()
+    if opts.Has("groups") && (opts["groups"] is Array) && opts["groups"].Length {
+        out := []
+        for g in opts["groups"]
+            out.Push(Trim(String(g)))
+        if out.Length
+            return out
+    }
+    preset := Trim(String(opts.Get("preset", "recommended")))
+    if presets.Has(preset) && preset != "custom"
+        return presets[preset].Clone()
+    return presets["recommended"].Clone()
+}
+
+Nmer_MigrationGroupEntryPaths(groupId) {
+    groupId := Trim(String(groupId))
+    for g in Nmer_MigrationGroupCatalog() {
+        if (g["id"] != groupId)
+            continue
+        entries := []
+        switch groupId {
+            case "local.config":
+            entries.Push(Map("id", "local.config", "relPath", "local\CursorShortcut.ini", "sensitive", false))
+            case "local.studio":
+            entries.Push(Map("id", "local.user_studio", "relPath", "local\user_studio.json", "sensitive", true))
+            entries.Push(Map("id", "local.user_studio_backup", "relPath", "local\user_studio.backup.json", "sensitive", true))
+            entries.Push(Map("id", "local.niuma_chat_llm", "relPath", "local\niuma_chat_llm.json", "sensitive", true))
+            case "local.openclaw":
+            entries.Push(Map("id", "local.openclaw_state", "relPath", "local\openclaw-state", "sensitive", true))
+            case "local.prompts":
+            entries.Push(Map("id", "local.prompt_templates", "relPath", "local\PromptTemplates.ini", "sensitive", false))
+            case "data.search":
+            entries.Push(Map("id", "data.search.history", "relPath", "Data\search\SearchCenterHistory.json", "sensitive", false))
+            entries.Push(Map("id", "data.search.fulltext_settings", "relPath", "Data\search\fulltext_settings.json", "sensitive", false))
+            entries.Push(Map("id", "data.search.fulltext_config", "relPath", "Data\search\fulltext_config.json", "sensitive", false))
+            case "data.state":
+            entries.Push(Map("id", "data.state.prompts", "relPath", "Data\state\prompts.json", "sensitive", false))
+            entries.Push(Map("id", "data.state.cmdpal", "relPath", "Data\state\CommandPaletteExec.json", "sensitive", false))
+            entries.Push(Map("id", "data.state.vk_keymap", "relPath", "Data\state\vk_cursor_keymap_compiled.json", "sensitive", false))
+            entries.Push(Map("id", "data.state.config", "relPath", "Data\state\config.json", "sensitive", false))
+            case "data.db.clipboard":
+            entries.Push(Map("id", "data.db.clipboard", "relPath", "Data\db\Clipboard.db", "sensitive", false))
+            entries.Push(Map("id", "data.db.clipboard_wal", "relPath", "Data\db\Clipboard.db-wal", "sensitive", false))
+            entries.Push(Map("id", "data.db.clipboard_shm", "relPath", "Data\db\Clipboard.db-shm", "sensitive", false))
+            case "data.db.cursor":
+            entries.Push(Map("id", "data.db.cursor", "relPath", "Data\db\CursorData.db", "sensitive", false))
+            case "data.runtime.chat":
+            entries.Push(Map("id", "data.runtime.niuma_chat", "relPath", "Data\runtime\niuma-chat", "sensitive", true))
+            default:
+            if g.Has("zipRel") {
+                abs := g["paths"][1]
+                entries.Push(Map("id", groupId, "relPath", g["zipRel"], "srcPath", abs, "sensitive", false))
+            }
+        }
+        return entries
+    }
+    return []
+}
+
+Nmer_CollectMigrationEntries(groupIds*) {
+    if (groupIds.Length = 0)
+        groupIds := Nmer_ResolveMigrationGroups(Map("preset", "recommended"))
+    entries := []
+    seen := Map()
+    for gid in groupIds {
+        for e in Nmer_MigrationGroupEntryPaths(gid) {
+            eid := e["id"]
+            if seen.Has(eid)
+                continue
+            seen[eid] := true
+            entries.Push(e)
+        }
+    }
+    return entries
+}
+
+Nmer_MigrationSensitiveFieldNames() {
+    return ["apiKey", "apiKeys", "llmApiKeys", "options.llmApiKeys"]
+}
+
 ; ---------- 用户可管理缓存根目录（默认 项目/Cache，可在设置中修改或整夹删除）----------
 
 Nmer_UserCacheRoot(*) {

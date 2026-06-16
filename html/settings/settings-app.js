@@ -180,6 +180,9 @@ function __settingsStudioTestInline(payloadJson, testId, flat) {
       hkCmdSearch: "",
       appUpdate: null,
       cacheInfo: null,
+      migrationOptions: null,
+      migrationPreset: "recommended",
+      migrationSelectedGroups: null,
       fullText: {
         running: false,
         ready: false,
@@ -1502,8 +1505,8 @@ function __settingsStudioTestInline(payloadJson, testId, flat) {
   </div>
 </div>`;
       if (subId === "overview") {
-        return `<div class="hk-note" style="padding:0;margin-bottom:10px">长按 CapsLock 达到 <strong>${esc(capsHoldHint)}</strong> 秒可唤起 KeyBinder；下方可关闭「长按打开 VK」。CapsLock 组合键请在 <strong>全局导航</strong> / <strong>Cursor 组合键</strong> 中录制（显示为 Ctrl+Shift+… 等原文）。</div>
-<div class="row"><div class="label">长按 CapsLock 打开 VK</div><div><input id="capsLockHoldVkEnabled" type="checkbox" ${checked(d.capsLockHoldVkEnabled !== false && d.capsLockHoldVkEnabled !== 0)}></div></div>
+        return `<div class="hk-note" style="padding:0;margin-bottom:10px">长按 CapsLock 达到 <strong>${esc(capsHoldHint)}</strong> 秒可唤起和弦面板（键帽式快捷键提示）；下方可关闭「长按打开和弦面板」。CapsLock 组合键请在 <strong>全局导航</strong> / <strong>Cursor 组合键</strong> 中录制（显示为 Ctrl+Shift+… 等原文）。</div>
+<div class="row"><div class="label">长按 CapsLock 打开和弦面板</div><div><input id="capsLockHoldVkEnabled" type="checkbox" ${checked(d.capsLockHoldVkEnabled !== false && d.capsLockHoldVkEnabled !== 0)}></div></div>
 ${appShortcutRows}
 <div class="row" style="margin-top:12px"><div class="label">Prompt 快速采集</div><input id="promptQuickCaptureHotkey" type="text" value="${esc(d.promptQuickCaptureHotkey)}" placeholder="如 ^!p，留空不注册"></div>
 <div class="hk-open-vk-row"><button type="button" class="btn primary" id="btnOpenVkKeybinder"><i class="fa-solid fa-keyboard" aria-hidden="true"></i> 打开 VK KeyBinder</button><span id="hk-vk-status" class="hk-vk-status"></span></div>`;
@@ -5419,6 +5422,154 @@ ${bindListBlock("hk-vk-list-" + subId, renderVkCmdListHtml(preset.commands, stat
     function collectCacheClearTargets() {
       return Array.from(document.querySelectorAll(".cache-clear-chk:checked")).map(el => el.dataset.cacheId).filter(Boolean);
     }
+    const MIGRATION_CATEGORY_LABELS = { local: "本地配置", data: "持久数据", cache: "缓存（可选）" };
+    function requestMigrationOptions() {
+      post({ type: "invokeAction", op: "getMigrationOptions" });
+    }
+    function migrationPresetGroups(presetId) {
+      const presets = state.migrationOptions?.presets;
+      if (!Array.isArray(presets)) return null;
+      const p = presets.find(x => x.id === presetId);
+      return p && Array.isArray(p.groups) ? p.groups.slice() : null;
+    }
+    function migrationDefaultSelectedGroups() {
+      const fromPreset = migrationPresetGroups(state.migrationPreset || "recommended");
+      if (fromPreset && fromPreset.length) return fromPreset;
+      const groups = state.migrationOptions?.groups;
+      if (!Array.isArray(groups)) return [];
+      return groups.filter(g => g.default).map(g => g.id);
+    }
+    function migrationCurrentSelectedGroups() {
+      if (Array.isArray(state.migrationSelectedGroups) && state.migrationSelectedGroups.length)
+        return state.migrationSelectedGroups.slice();
+      return migrationDefaultSelectedGroups();
+    }
+    function migrationGroupMeta(id) {
+      const groups = state.migrationOptions?.groups;
+      if (!Array.isArray(groups)) return null;
+      return groups.find(g => g.id === id) || null;
+    }
+    function migrationSelectedSizeText(selectedIds) {
+      let bytes = 0;
+      for (const id of selectedIds) {
+        const g = migrationGroupMeta(id);
+        if (g) bytes += Number(g.bytes || 0);
+      }
+      return formatBytes(bytes);
+    }
+    function formatBytes(n) {
+      n = Number(n || 0);
+      if (n < 1024) return `${Math.round(n)} B`;
+      if (n < 1048576) return `${(n / 1024).toFixed(1)} KB`;
+      if (n < 1073741824) return `${(n / 1048576).toFixed(2)} MB`;
+      return `${(n / 1073741824).toFixed(2)} GB`;
+    }
+    function renderMigrationGroupRows(selectedIds) {
+      const groups = Array.isArray(state.migrationOptions?.groups) ? state.migrationOptions.groups : [];
+      const byCat = { local: [], data: [], cache: [] };
+      for (const g of groups) {
+        const cat = byCat[g.category] ? g.category : "data";
+        if (!byCat[cat]) byCat[cat] = [];
+        byCat[cat].push(g);
+      }
+      const order = ["local", "data", "cache"];
+      return order.map(cat => {
+        const items = byCat[cat];
+        if (!items.length) return "";
+        const rows = items.map(g => {
+          const checked = selectedIds.includes(g.id);
+          const disabled = state.migrationPreset !== "custom" ? "disabled" : "";
+          const existsHint = g.exists ? "" : " <span class=\"hint\">（本机暂无）</span>";
+          return `<label class="tag migration-group-row" style="display:flex;align-items:flex-start;gap:8px;margin:6px 0;">
+            <input type="checkbox" class="migration-group-chk" data-migration-group="${esc(g.id)}" data-nosave="1" ${checked ? "checked" : ""} ${disabled}>
+            <span><strong>${esc(g.label)}</strong>${existsHint}<div class="hint">${esc(g.hint || "")} · ${esc(g.sizeText || "0 B")}</div></span>
+          </label>`;
+        }).join("");
+        return `<div class="migration-cat" style="margin-top:10px;"><div class="hint" style="font-weight:600;margin-bottom:4px;">${esc(MIGRATION_CATEGORY_LABELS[cat] || cat)}</div>${rows}</div>`;
+      }).join("");
+    }
+    function updateMigrationSelectedSummary() {
+      const el = document.getElementById("migrationSelectedSummary");
+      if (!el) return;
+      const sel = migrationCurrentSelectedGroups();
+      el.textContent = sel.length ? `已选 ${sel.length} 项，约 ${migrationSelectedSizeText(sel)}` : "请至少选择一项";
+    }
+    function applyMigrationPresetToDom(presetId) {
+      state.migrationPreset = presetId;
+      if (presetId !== "custom") {
+        state.migrationSelectedGroups = migrationPresetGroups(presetId) || migrationDefaultSelectedGroups();
+      }
+      const sel = document.getElementById("migrationPreset");
+      if (sel) sel.value = presetId;
+      document.querySelectorAll(".migration-group-chk").forEach(chk => {
+        const gid = chk.dataset.migrationGroup;
+        const on = migrationCurrentSelectedGroups().includes(gid);
+        chk.checked = on;
+        chk.disabled = presetId !== "custom";
+      });
+      updateMigrationSelectedSummary();
+    }
+    function collectMigrationExportPayload() {
+      const preset = String(document.getElementById("migrationPreset")?.value || state.migrationPreset || "recommended");
+      if (preset === "custom") {
+        const groups = Array.from(document.querySelectorAll(".migration-group-chk:checked")).map(el => el.dataset.migrationGroup).filter(Boolean);
+        return { preset: "custom", groups };
+      }
+      return { preset };
+    }
+    function bindMigrationHandlers() {
+      document.getElementById("migrationPreset")?.addEventListener("change", (e) => {
+        applyMigrationPresetToDom(String(e.target.value || "recommended"));
+      });
+      document.querySelectorAll(".migration-group-chk").forEach(chk => {
+        chk.addEventListener("change", () => {
+          state.migrationPreset = "custom";
+          state.migrationSelectedGroups = Array.from(document.querySelectorAll(".migration-group-chk:checked")).map(el => el.dataset.migrationGroup).filter(Boolean);
+          const sel = document.getElementById("migrationPreset");
+          if (sel) sel.value = "custom";
+          document.querySelectorAll(".migration-group-chk").forEach(c => { c.disabled = false; });
+          updateMigrationSelectedSummary();
+        });
+      });
+      document.getElementById("btnMigrationRefresh")?.addEventListener("click", () => {
+        setStatus("正在刷新迁移项统计…", "");
+        requestMigrationOptions();
+      });
+      document.getElementById("btnMigrationExport")?.addEventListener("click", () => {
+        const payload = collectMigrationExportPayload();
+        const sel = payload.groups || migrationPresetGroups(payload.preset) || migrationDefaultSelectedGroups();
+        if (!sel.length) return setStatus("请至少选择一项迁移内容", "err");
+        setStatus("正在导出迁移包…", "");
+        post({ type: "invokeAction", op: "exportMigrationPack", payload });
+      });
+      document.getElementById("btnMigrationImport")?.addEventListener("click", () => {
+        setStatus("请选择迁移包 zip…", "");
+        post({ type: "invokeAction", op: "importMigrationPack", payload: { confirmed: false } });
+      });
+    }
+    async function confirmMigrationImport(preview) {
+      const zipPath = String(preview?.zipPath || "").trim();
+      if (!zipPath) return false;
+      const groups = Array.isArray(preview.groups) ? preview.groups : [];
+      const groupLines = groups.length
+        ? groups.map(g => {
+            const meta = migrationGroupMeta(g.id);
+            const label = meta?.label || g.label || g.id;
+            return `· ${label}${g.fileCount ? `（${g.fileCount} 项）` : ""}`;
+          }).join("\n")
+        : `· 共 ${Number(preview.fileCount || 0)} 个文件`;
+      const body = [
+        `将用迁移包覆盖本机对应数据（先备份到 local/backup-migration-*）。`,
+        ``,
+        `包内分组：`,
+        groupLines,
+        ``,
+        `导入后需重新填写 API Key，建议完成后重启牛马。`
+      ].join("\n");
+      return window.nmConfirm
+        ? window.nmConfirm("导入迁移包？", body, { okLabel: "确认导入", cancelLabel: "取消", danger: true })
+        : Promise.resolve(confirm(body));
+    }
     function bindStorageCacheHandlers() {
       document.getElementById("btnCacheRefresh")?.addEventListener("click", () => {
         setStatus("正在统计缓存…", "");
@@ -5726,8 +5877,11 @@ ${pathRow("autohotkey", "AutoHotkey", paths.autohotkey || "")}
 <div class="row"><div class="label">备注</div><input id="usPathNotes" type="text" data-nosave="1" value="${esc(paths.notes || "")}"></div>
 <div class="inline" style="margin-top:8px">
   <button class="btn" id="btnOpenNiumaChatTtyd">终端定制 (ttyd)</button>
+  <button class="btn" id="btnExportUserStudio">导出定制包</button>
+  <button class="btn" id="btnImportUserStudio">导入定制包</button>
   <button class="btn" id="btnRestoreUserStudio">还原默认定制</button>
 </div>
+<div class="hint" style="margin-top:8px;">定制包仅含 user_studio.json；换机请用「存储与缓存 → 数据迁移」。</div>
 </details>`;
         bindStudioPrimaryLlmUi();
         bindStudioLocalGatewayUi();
@@ -5754,6 +5908,8 @@ ${pathRow("autohotkey", "AutoHotkey", paths.autohotkey || "")}
           if (!ok) return;
           post({ type: "restoreUserStudio" });
         });
+        document.getElementById("btnExportUserStudio")?.addEventListener("click", () => post({ type: "invokeAction", op: "exportUserStudio" }));
+        document.getElementById("btnImportUserStudio")?.addEventListener("click", () => post({ type: "invokeAction", op: "importUserStudio" }));
         document.getElementById("btnOpenNiumaChatTtyd")?.addEventListener("click", () => {
           const pl = collectUserStudioPayload();
           const hasKey = !!(String(pl.llm?.apiKey || "").trim());
@@ -5773,7 +5929,9 @@ ${pathRow("autohotkey", "AutoHotkey", paths.autohotkey || "")}
     <div class="row"><div class="label">AI 等待时间 (秒)</div><input id="aiSleepTimeSeconds" type="number" min="0.05" max="10" step="0.05" value="${esc(aiSec)}"></div>
     <div class="row"><div class="label">启动延迟 (秒)</div><input id="launchDelaySeconds" type="number" min="0.5" max="10" step="0.1" value="${esc(d.launchDelaySeconds)}"></div>
   </div>
-  <div class="card"><div class="title">配置管理</div><div class="inline"><button class="btn" id="btnExportCfg">导出配置</button><button class="btn" id="btnImportCfg">导入配置</button><button class="btn" id="btnResetCfg">重置默认</button></div></div>
+  <div class="card"><div class="title">配置管理</div>
+    <div class="hint" style="margin-bottom:8px;">「导出配置」仅含 CursorShortcut.ini；完整换机请用「存储与缓存 → 数据迁移」。</div>
+    <div class="inline"><button class="btn" id="btnExportCfg">导出配置</button><button class="btn" id="btnImportCfg">导入配置</button><button class="btn" id="btnResetCfg">重置默认</button></div></div>
   <div class="card" id="healthSnapshotCard">
     <div class="title">系统健康 <span class="hint" id="healthSnapMeta">只读快照</span></div>
     <div id="healthSnapBody"><div class="hint">正在加载…</div></div>
@@ -5823,9 +5981,35 @@ ${pathRow("autohotkey", "AutoHotkey", paths.autohotkey || "")}
     <button type="button" class="btn primary" id="btnCacheClearSelected">清空所选</button>
     <button type="button" class="btn" id="btnCacheClearAll">清空全部缓存</button>
   </div>
+</div>
+<div class="card" style="margin-top:12px;">
+  <div class="title">数据迁移</div>
+  <div class="hint">导出/导入迁移包，用于换机或备份。<strong>不含 API Key</strong>（DPAPI vault 不导出）；导入后请在「智能定制」重新填写 Key。</div>
+  <div class="row" style="margin-top:8px;">
+    <div class="label">方案</div>
+    <select id="migrationPreset" data-nosave="1">${(() => {
+      const presets = Array.isArray(state.migrationOptions?.presets) ? state.migrationOptions.presets : [
+        { id: "recommended", label: "换机推荐" },
+        { id: "light", label: "轻量配置" },
+        { id: "full", label: "完整备份" },
+        { id: "custom", label: "自定义" }
+      ];
+      const cur = state.migrationPreset || "recommended";
+      return presets.map(p => `<option value="${esc(p.id)}" ${p.id === cur ? "selected" : ""}>${esc(p.label)}${p.description ? " — " + esc(p.description) : ""}</option>`).join("");
+    })()}</select>
+  </div>
+  <div id="migrationGroupsPanel" style="margin-top:4px;">${renderMigrationGroupRows(migrationCurrentSelectedGroups())}</div>
+  <div class="hint" id="migrationSelectedSummary" style="margin-top:8px;">${migrationCurrentSelectedGroups().length ? `已选 ${migrationCurrentSelectedGroups().length} 项，约 ${migrationSelectedSizeText(migrationCurrentSelectedGroups())}` : "正在加载…"}</div>
+  <div class="inline" style="margin-top:12px;flex-wrap:wrap;gap:8px;">
+    <button type="button" class="btn" id="btnMigrationRefresh">刷新统计</button>
+    <button type="button" class="btn primary" id="btnMigrationExport">导出迁移包</button>
+    <button type="button" class="btn" id="btnMigrationImport">导入迁移包</button>
+  </div>
 </div>`;
         bindStorageCacheHandlers();
+        bindMigrationHandlers();
         if (!items.length) requestCacheInfo();
+        if (!state.migrationOptions) requestMigrationOptions();
       } else if (state.activeTab === "screenshot") {
         const ss = { ...(d.screenshotConfig || {}) };
         const capTabs = `<div class="subtabs">
@@ -6583,10 +6767,55 @@ ${pathRow("autohotkey", "AutoHotkey", paths.autohotkey || "")}
         if (state.activeTab === "advanced") renderHealthSnapshotDom(state.healthSnapshot, false);
         return;
       }
+      if (msg.type === "migrationOptions") {
+        state.migrationOptions = (msg.payload && typeof msg.payload === "object") ? msg.payload : null;
+        if (state.activeTab === "storage") render();
+        return;
+      }
+      if (msg.type === "migrationPreview") {
+        const preview = (msg.payload && typeof msg.payload === "object") ? msg.payload : {};
+        if (!preview.ok) {
+          setStatus(String(preview.error || "无法预览迁移包"), "err");
+          return;
+        }
+        (async () => {
+          const ok = await confirmMigrationImport(preview);
+          if (!ok) {
+            setStatus("已取消导入", "");
+            return;
+          }
+          setStatus("正在导入迁移包…", "");
+          post({
+            type: "invokeAction",
+            op: "importMigrationPack",
+            payload: { zipPath: String(preview.zipPath || ""), confirmed: true }
+          });
+        })();
+        return;
+      }
+      if (msg.type === "migrationPackResult") {
+        const pl = (msg.payload && typeof msg.payload === "object") ? msg.payload : {};
+        const op = String(msg.op || "");
+        if (pl.ok) {
+          if (op === "export") {
+            const zp = String(pl.zipPath || "").trim();
+            setStatus(zp ? `迁移包已导出：${zp}` : "迁移包已导出", "ok");
+          } else if (op === "import") {
+            const note = String(pl.postImportNote || "导入完成。请重新填写 API Key 并建议重启牛马。").trim();
+            setStatus(note, "ok");
+          } else {
+            setStatus("操作成功", "ok");
+          }
+        } else {
+          setStatus(String(pl.error || "迁移包操作失败"), "err");
+        }
+        return;
+      }
       if (msg.type === "actionResult") {
         const op = String(msg.op || "");
         if (op === "syncNiumaChatLlmToStudio" || op === "loadNiumaProjectBrief") return;
         if (op === "getHealthSnapshot" || op === "exportDiagnosticsBundle" || op === "openDebugLogsFolder") return;
+        if (op === "getMigrationOptions" || op === "exportMigrationPack" || op === "importMigrationPack") return;
         if (msg.ok) {
           setStatus("操作成功", "ok");
           if (op === "showVk") {

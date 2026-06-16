@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ChordPad</title>
+<style>
+:root{
+  --panel-bg:rgba(10,16,26,.78);--panel-edge:rgba(255,141,42,.28);
+  --surface2:rgba(26,44,67,.86);--surface-bound:rgba(36,22,8,.92);
+  --border:rgba(45,67,97,.72);--orange:#ff8d2a;--orange-lt:#ffb347;
+  --cyan:#8ec7ff;--text:#e7ebef;--text-dim:rgba(160,176,196,.72);
+  --font:"Segoe UI","Microsoft YaHei UI",system-ui,sans-serif;
+  --kb-key-h:42px;--kb-rail-width:9.2vw;--kb-arrow-w:2.4vw;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden;background:transparent;color:var(--text);font-family:var(--font);user-select:none}
+#root{display:flex;flex-direction:column;justify-content:flex-end;width:100%;height:100%;padding:0 10px 8px}
+#panel-shell{
+  display:flex;flex-direction:column;gap:6px;padding:8px 10px 10px;
+  border:1px solid var(--panel-edge);border-radius:14px;
+  background:var(--panel-bg);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  box-shadow:0 12px 40px rgba(0,0,0,.38),inset 0 1px 0 rgba(255,255,255,.06);
+}
+#drag-handle{
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  height:18px;cursor:grab;touch-action:none;color:rgba(180,196,214,.55);
+}
+#drag-handle:active{cursor:grabbing}
+#drag-handle .grip{
+  width:34px;height:4px;border-radius:99px;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.35),transparent);
+}
+#drag-handle .drag-tip{font-size:10px;letter-spacing:.06em}
+#quick-bar{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;padding:2px 0 4px}
+.cmd-chip{
+  display:inline-flex;align-items:center;gap:6px;min-height:30px;padding:4px 10px 4px 8px;
+  border-radius:999px;border:1px solid rgba(255,141,42,.42);
+  background:linear-gradient(180deg,rgba(44,28,10,.92),rgba(28,18,8,.88));
+  color:var(--orange-lt);font-size:11px;font-weight:600;cursor:pointer;
+  transition:transform .16s cubic-bezier(.34,1.45,.64,1),box-shadow .16s,border-color .16s,background .16s;
+}
+.cmd-chip:hover{border-color:rgba(255,179,71,.72);box-shadow:0 0 14px rgba(255,141,42,.22)}
+.cmd-chip:active{transform:translateY(1px) scale(.96)}
+.cmd-chip .chip-ico{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0;vector-effect:non-scaling-stroke}
+.cmd-chip .chip-key{
+  font-size:9px;font-weight:700;padding:1px 5px;border-radius:4px;
+  background:rgba(0,0,0,.28);color:rgba(255,255,255,.82);letter-spacing:.04em;
+}
+.cmd-chip.tier-hot{border-color:rgba(255,141,42,.88);box-shadow:0 0 12px rgba(255,102,0,.18)}
+.cmd-chip.tier-warm{border-color:rgba(142,199,255,.55);color:#b8d4f0;background:linear-gradient(180deg,rgba(18,32,48,.92),rgba(12,22,34,.9))}
+#hint{text-align:center;font-size:11px;color:var(--text-dim);letter-spacing:.04em}
+#keyboard-zone{flex:0 0 auto;width:100%;overflow:visible}
+#keyboard{
+  display:grid;width:100%;
+  grid-template-columns:minmax(0,1fr) var(--kb-rail-width);
+  grid-template-rows:repeat(6,auto);column-gap:.45vw;row-gap:.18vw;
+}
+.kb-grid-left{grid-column:1;min-width:0}
+.kb-grid-r1{grid-row:1}.kb-grid-r2{grid-row:2}.kb-grid-r3{grid-row:3}
+.kb-grid-r4{grid-row:4}.kb-grid-r5{grid-row:5}.kb-grid-r6{grid-row:6}
+.kb-main-strip,.kb-main-left-col>.kr{display:flex;flex-wrap:nowrap;gap:.28vw;width:100%;align-items:stretch}
+.kb-main-left-col{display:flex;flex-direction:column;justify-content:center;min-width:0;width:100%}
+.kb-right-rail-stack{grid-column:2;grid-row:1/-1;display:flex;flex-direction:column;gap:.18vw;width:100%;min-width:0}
+.kb-rail-prt,.kb-nav-cluster .kr{display:flex;flex-wrap:nowrap;gap:.28vw;width:100%}
+.kb-rail-prt>.k,.kb-nav-cluster .kr-nav>.k{flex:1 1 0;min-width:0}
+.kb-nav-cluster{display:flex;flex-direction:column;gap:.18vw;width:100%}
+.kr-nav-up{display:flex;justify-content:center;width:100%}
+.kr-nav-up .k,.kr-nav.kr-arrows>.k{flex:0 0 var(--kb-arrow-w);width:var(--kb-arrow-w);min-width:var(--kb-arrow-w);max-width:var(--kb-arrow-w)}
+.kr-nav.kr-arrows{justify-content:center;gap:.28vw}
+.kb-main-strip>.k,.kb-main-left-col>.kr>.k{flex:1 1 0;min-width:0}
+.kr-gap{flex:0 0 .55vw!important;width:.55vw;min-width:.55vw;pointer-events:none;opacity:0}
+.k{
+  position:relative;display:block;height:var(--kb-key-h);min-height:var(--kb-key-h);
+  padding:2px 3px 3px;background:var(--surface2);
+  border:1px solid var(--border);border-radius:5px;border-bottom:2px solid rgba(27,45,69,.9);
+  color:var(--text-dim);line-height:1.1;
+  transition:transform .14s cubic-bezier(.34,1.45,.64,1),box-shadow .14s,border-color .14s,opacity .12s,background .14s;
+  backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);
+}
+.k .k-face{
+  position:absolute;right:3px;bottom:2px;left:3px;text-align:right;
+  font-size:clamp(7px,.62vw,10px);font-weight:600;line-height:1;color:rgba(255,255,255,.82);
+  pointer-events:none;white-space:nowrap;overflow:visible;
+}
+.k .k-face .sub{font-size:clamp(6px,.52vw,8px);font-weight:400;opacity:.72}
+.k .map-label{
+  position:absolute;inset:2px 2px 12px;display:none;
+  flex-direction:column;align-items:center;justify-content:center;gap:1px;pointer-events:none;text-align:center;
+}
+.k.bound .map-label{display:flex}
+.k.bound .k-face{opacity:.42;font-size:clamp(6px,.5vw,8px)}
+.k.bound{cursor:pointer}
+.k-dim{opacity:.2}
+.k.bound{
+  opacity:1;border-color:rgba(255,141,42,.82)!important;border-bottom-color:var(--orange-lt)!important;
+  background:var(--surface-bound)!important;color:var(--orange-lt)!important;
+  box-shadow:0 0 0 1px rgba(255,141,42,.22) inset,0 4px 16px rgba(255,102,0,.16);
+}
+.k.bound.tier-warm{border-color:rgba(100,160,220,.62)!important;border-bottom-color:#8ec7ff!important;background:linear-gradient(180deg,rgba(21,37,54,.92),rgba(16,28,42,.92))!important;color:#b8d4f0!important}
+.k.bound.tier-hot{box-shadow:0 0 0 1px rgba(255,141,42,.32) inset,0 0 18px rgba(255,102,0,.28),0 6px 20px rgba(0,0,0,.22)}
+.chord-ico{width:clamp(14px,1.12vw,18px);height:clamp(14px,1.12vw,18px);fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0;vector-effect:non-scaling-stroke}
+.chord-txt{font-size:clamp(9px,.72vw,12px);font-weight:700;line-height:1.15;white-space:nowrap;color:inherit}
+.k-caps.caps-on{border-color:var(--orange)!important;color:var(--orange-lt)!important;background:linear-gradient(180deg,rgba(42,26,8,.92),rgba(24,16,8,.92))!important;box-shadow:0 0 0 1px rgba(255,141,42,.24) inset,0 0 14px rgba(255,141,42,.35);animation:capsPulse 1.6s ease-in-out infinite}
+.k-caps::after{content:"";position:absolute;top:3px;right:3px;width:4px;height:4px;border-radius:50%;background:rgba(255,255,255,.25)}
+.k-caps.caps-on::after{background:var(--orange);box-shadow:0 0 8px rgba(255,141,42,.8)}
+@keyframes capsPulse{0%,100%{box-shadow:0 0 0 1px rgba(255,141,42,.24) inset,0 0 10px rgba(255,141,42,.25)}50%{box-shadow:0 0 0 1px rgba(255,141,42,.34) inset,0 0 18px rgba(255,141,42,.5)}}
+@keyframes keyStrike{
+  0%{transform:translateY(0) scale(1);box-shadow:0 0 0 0 rgba(255,141,42,.65)}
+  35%{transform:translateY(2px) scale(.93);box-shadow:0 0 22px 5px rgba(255,141,42,.55),inset 0 2px 8px rgba(0,0,0,.35)}
+  100%{transform:translateY(0) scale(1);box-shadow:0 0 0 0 rgba(255,141,42,0)}
+}
+.k.key-live{animation:keyStrike .32s cubic-bezier(.2,.9,.2,1);z-index:3;border-color:var(--orange)!important;color:#fff!important}
+.k-bks{flex:2.25 1 0!important}.k-tab{flex:1.55 1 0!important}.k-caps{flex:1.65 1 0!important}
+.k-enter{flex:2.15 1 0!important}.k-lsh,.k-rsh{flex:2.05 1 0!important}
+.k-ctrl{flex:1.25 1 0!important}.k-alt{flex:1.15 1 0!important}
+.k-spc{flex:6.25 1 0!important}.k-win{flex:1.05 1 0!important}
+.k-fn,.k-f{flex:1 1 0!important;font-size:clamp(7px,.58vw,9px)}
+#foot{text-align:center;font-size:10px;color:rgba(120,138,158,.65);letter-spacing:.03em;padding-top:2px}
+</style>
+</head>
+<body>
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
+  <!-- Lucide-style icons (viewBox 0 0 24 24, stroke 2) -->
+  <symbol id="ico-collect" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/>
+    <path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>
+  </symbol>
+  <symbol id="ico-clipboard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <rect width="8" height="4" x="8" y="2" rx="1" ry="1"/>
+    <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
+    <path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/>
+  </symbol>
+  <symbol id="ico-history" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+    <path d="M3 3v5h5"/><path d="M12 7v5l4 2"/>
+  </symbol>
+  <symbol id="ico-explain" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="10"/>
+    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+    <path d="M12 17h.01"/>
+  </symbol>
+  <symbol id="ico-settings" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
+    <circle cx="12" cy="12" r="3"/>
+  </symbol>
+  <symbol id="ico-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+  </symbol>
+  <symbol id="ico-refactor" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <line x1="6" x2="6" y1="3" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/>
+  </symbol>
+  <symbol id="ico-optimize" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/>
+    <path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/>
+  </symbol>
+</svg>
+<div id="root">
+  <div id="panel-shell">
+    <div id="drag-handle" title="拖动移动面板">
+      <span class="grip" aria-hidden="true"></span>
+      <span class="drag-tip">拖动定位</span>
+      <span class="grip" aria-hidden="true"></span>
+    </div>
+    <div id="quick-bar" aria-label="常用命令"></div>
+    <div id="hint">按住 CapsLock，再按字母键执行 · 也可点击命令</div>
+    <div id="keyboard-zone">
+      <div id="keyboard">
+        <div class="kb-main-strip kb-grid-left kb-grid-r1">
+          <div class="k k-fn k-dim" data-ahkkey="escape"><span class="k-face">Esc</span></div>
+          <div class="kr-gap" aria-hidden="true"></div>
+          <div class="k k-f k-dim" data-ahkkey="F1"><span class="k-face">F1</span></div>
+          <div class="k k-f k-dim" data-ahkkey="F2"><span class="k-face">F2</span></div>
+          <div class="k k-f k-dim" data-ahkkey="F3"><span class="k-face">F3</span></div>
+          <div class="k k-f k-dim" data-ahkkey="F4"><span class="k-face">F4</span></div>
+          <div class="kr-gap" style="width:.35vw;min-width:.35vw" aria-hidden="true"></div>
+          <div class="k k-f k-dim" data-ahkkey="F5"><span class="k-face">F5</span></div>
+          <div class="k k-f k-dim" data-ahkkey="F6"><span class="k-face">F6</span></div>
+          <div class="k k-f k-dim" data-ahkkey="F7"><span class="k-face">F7</span></div>
+          <div class="k k-f k-dim" data-ahkkey="F8"><span class="k-face">F8</span></div>
+          <div class="kr-gap" style="width:.35vw;min-width:.35vw" aria-hidden="true"></div>
+          <div class="k k-f k-dim" data-ahkkey="F9"><span class="k-face">F9</span></div>
+          <div class="k k-f k-dim" data-ahkkey="F10"><span class="k-face">F10</span></div>
+          <div class="k k-f k-dim" data-ahkkey="F11"><span class="k-face">F11</span></div>
+          <div class="k k-f k-dim" data-ahkkey="F12"><span class="k-face">F12</span></div>
+        </div>
+        <div class="kb-main-strip kb-grid-left kb-grid-r2">
+          <div class="k k-dim" data-ahkkey="``"><span class="k-face">`<span class="sub">~</span></span></div>
+          <div class="k k-dim" data-ahkkey="1"><span class="k-face">1<span class="sub">!</span></span></div>
+          <div class="k k-dim" data-ahkkey="2"><span class="k-face">2<span class="sub">@</span></span></div>
+          <div class="k k-dim" data-ahkkey="3"><span class="k-face">3<span class="sub">#</span></span></div>
+          <div class="k k-dim" data-ahkkey="4"><span class="k-face">4<span class="sub">$</span></span></div>
+          <div class="k k-dim" data-ahkkey="5"><span class="k-face">5<span class="sub">%</span></span></div>
+          <div class="k k-dim" data-ahkkey="6"><span class="k-face">6<span class="sub">^</span></span></div>
+          <div class="k k-dim" data-ahkkey="7"><span class="k-face">7<span class="sub">&amp;</span></span></div>
+          <div class="k k-dim" data-ahkkey="8"><span class="k-face">8<span class="sub">*</span></span></div>
+          <div class="k k-dim" data-ahkkey="9"><span class="k-face">9<span class="sub">(</span></span></div>
+          <div class="k k-dim" data-ahkkey="0"><span class="k-face">0<span class="sub">)</span></span></div>
+          <div class="k k-dim" data-ahkkey="-"><span class="k-face">-<span class="sub">_</span></span></div>
+          <div class="k k-dim" data-ahkkey="="><span class="k-face">=<span class="sub">+</span></span></div>
+          <div class="k k-bks k-dim" data-ahkkey="Backspace"><span class="k-face">Backspace</span></div>
+        </div>
+        <div class="kb-main-strip kb-grid-left kb-grid-r3">
+          <div class="k k-tab k-dim" data-ahkkey="Tab"><span class="k-face">Tab</span></div>
+          <div class="k k-dim" data-ahkkey="q"><span class="k-face">Q</span><div class="map-label"></div></div>
+          <div class="k k-dim" data-ahkkey="w"><span class="k-face">W</span><div class="map-label"></div></div>
+          <div class="k k-dim" data-ahkkey="e"><span class="k-face">E</span><div class="map-label"></div></div>
+          <div class="k k-dim" data-ahkkey="r"><span class="k-face">R</span><div class="map-label"></div></div>
+          <div class="k k-dim" data-ahkkey="t"><span class="k-face">T</span><div class="map-label"></div></div>
+          <div class="k k-dim" data-ahkkey="y"><span class="k-face">Y</span><div class="map-label"></div></div>
+          <div class="k k-dim" data-ahkkey="u"><span class="k-face">U</span><div class="map-label"></div></div>
+          <div class="k k-dim" data-ahkkey="i"><span class="k-face">I</span><div class="map-label"></div></div>
+          <div class="k k-dim" data-ahkkey="o"><span class="k-face">O</span><div class="map-label"></div></div>
+          <div class="k k-dim" data-ahkkey="p"><span class="k-face">P</span><div class="map-label"></div></div>
+          <div class="k k-dim" data-ahkkey="["><span class="k-face">[<span class="sub">{</span></span></div>
+          <div class="k k-dim" data-ahkkey="]"><span class="k-face">]<span class="sub">}</span></span></div>
+          <div class="k k-dim" data-ahkkey="\"><span class="k-face">\</span></div>
+        </div>
+        <div class="kb-main-strip kb-grid-left kb-grid-r4">
+          <div class="k k-caps caps-on" data-ahkkey="CapsLock"><span class="k-face">CapsLock</span></div>
+          <div class="k k-dim" data-ahkkey="a"><span class="k-face">A</span><div class="map-label"></div></div>
+          <div class="k k-dim" data-ahkkey="s"><span class="k-face">S</span><div class="map-label"></div></div>
+          <div class="k k-dim" data-ahkkey="d"><span class="k-face">D</span><div class="map-label"></div></div>
+          <div class="k k-dim" data-ahkkey="f"><span class="k-face">F</span><div class="map-label"></div></div>
+          <div class="k k-dim" data-ahkkey="g"><span class="k-face">G</span><div class="map-label"></div></div>
+          <div class="k k-dim" data-ahkkey="h"><span class="k-face">H</span><div class="map-label"></div></div>
+          <div class="k k-dim" data-ahkkey="j"><span class="k-face">J</span><div class="map-label"></div></div>
+          <div class="k k-dim" data-ahkkey="k"><span class="k-face">K</span><div class="map-label"></div></div>
+          <div class="k k-dim" data-ahkkey="l"><span class="k-face">L</span><div class="map-label"></div></div>
+          <div class="k k-dim" data-ahkkey=";"><span class="k-face">;<span class="sub">:</span></span></div>
+          <div class="k k-dim" data-ahkkey="'"><span class="k-face">'<span class="sub">"</span></span></div>
+          <div class="k k-enter k-dim" data-ahkkey="Enter"><span class="k-face">Enter</span></div>
+        </div>
+        <div class="kb-main-strip kb-grid-left kb-grid-r5">
+          <div class="k k-lsh k-dim" data-ahkkey="LShift"><span class="k-face">Shift</span></div>
+          <div class="k k-dim" data-ahkkey="z"><span class="k-face">Z</span><div class="map-label"></div></div>
+          <div class="k k-dim" data-ahkkey="x"><span class="k-face">X</span><div class="map-label"></div></div>
+          <div class="k k-dim" data-ahkkey="c"><span class="k-face">C</span><div class="map-label"></div></div>
+          <div class="k k-dim" data-ahkkey="v"><span class="k-face">V</span><div class="map-label"></div></div>
+          <div class="k k-dim" data-ahkkey="b"><span class="k-face">B</span><div class="map-label"></div></div>
+          <div class="k k-dim" data-ahkkey="n"><span class="k-face">N</span><div class="map-label"></div></div>
+          <div class="k k-dim" data-ahkkey="m"><span class="k-face">M</span><div class="map-label"></div></div>
+          <div class="k k-dim" data-ahkkey=","><span class="k-face">,<span class="sub">&lt;</span></span></div>
+          <div class="k k-dim" data-ahkkey="."><span class="k-face">.<span class="sub">&gt;</span></span></div>
+          <div class="k k-dim" data-ahkkey="/"><span class="k-face">/<span class="sub">?</span></span></div>
+          <div class="k k-rsh k-dim" data-ahkkey="RShift"><span class="k-face">Shift</span></div>
+        </div>
+        <div class="kb-main-left-col kb-grid-left kb-grid-r6">
+          <div class="kr">
+            <div class="k k-ctrl k-dim" data-ahkkey="LCtrl"><span class="k-face">Ctrl</span></div>
+            <div class="k k-win k-dim" data-ahkkey="LWin"><span class="k-face">Win</span></div>
+            <div class="k k-alt k-dim" data-ahkkey="LAlt"><span class="k-face">Alt</span></div>
+            <div class="k k-spc k-dim" data-ahkkey="Space"><span class="k-face">Space</span></div>
+            <div class="k k-alt k-dim" data-ahkkey="RAlt"><span class="k-face">Alt</span></div>
+            <div class="k k-win k-dim" data-ahkkey="RWin"><span class="k-face">Win</span></div>
+            <div class="k k-win k-dim" data-ahkkey="AppsKey"><span class="k-face">Menu</span></div>
+            <div class="k k-ctrl k-dim" data-ahkkey="RCtrl"><span class="k-face">Ctrl</span></div>
+          </div>
+        </div>
+        <div class="kb-right-rail-stack" aria-hidden="true">
+          <div class="kr kb-rail-prt">
+            <div class="k k-fn k-dim" data-ahkkey="PrintScreen"><span class="k-face">PrtSc</span></div>
+            <div class="k k-fn k-dim" data-ahkkey="ScrollLock"><span class="k-face">ScrLk</span></div>
+            <div class="k k-fn k-dim" data-ahkkey="Pause"><span class="k-face">Pause</span></div>
+          </div>
+          <div class="kb-nav-cluster">
+            <div class="kr kr-nav">
+              <div class="k k-fn k-dim" data-ahkkey="Insert"><span class="k-face">Ins</span></div>
+              <div class="k k-fn k-dim" data-ahkkey="Home"><span class="k-face">Home</span></div>
+              <div class="k k-fn k-dim" data-ahkkey="PgUp"><span class="k-face">PgUp</span></div>
+            </div>
+            <div class="kr kr-nav">
+              <div class="k k-fn k-dim" data-ahkkey="Delete"><span class="k-face">Del</span></div>
+              <div class="k k-fn k-dim" data-ahkkey="End"><span class="k-face">End</span></div>
+              <div class="k k-fn k-dim" data-ahkkey="PgDn"><span class="k-face">PgDn</span></div>
+            </div>
+            <div class="kr kr-nav kr-nav-up">
+              <div class="k k-fn k-dim" data-ahkkey="Up"><span class="k-face">▲</span></div>
+            </div>
+            <div class="kr kr-nav kr-arrows">
+              <div class="k k-fn k-dim" data-ahkkey="Left"><span class="k-face">◀</span></div>
+              <div class="k k-fn k-dim" data-ahkkey="Down"><span class="k-face">▼</span></div>
+              <div class="k k-fn k-dim" data-ahkkey="Right"><span class="k-face">▶</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div id="foot">Esc 关闭 · 松开 CapsLock 退出</div>
+  </div>
+</div>
+<script>
+(function () {
+  const ICON_BY_ACTION = { C:"ico-collect", V:"ico-clipboard", X:"ico-history", E:"ico-explain", Q:"ico-settings", F:"ico-search", R:"ico-refactor", O:"ico-optimize" };
+  const ICON_BY_CMD = { ch_c:"ico-collect", ch_v:"ico-clipboard", ch_x:"ico-history", ch_e:"ico-explain", ch_q:"ico-settings", ch_f:"ico-search", ch_r:"ico-refactor", ch_o:"ico-optimize" };
+  const state = { slots: [], slotByKey: new Map() };
+  const hintEl = document.getElementById("hint");
+  const quickEl = document.getElementById("quick-bar");
+  const kbEl = document.getElementById("keyboard");
+  const zoneEl = document.getElementById("keyboard-zone");
+  const dragHandle = document.getElementById("drag-handle");
+  const keyEls = document.querySelectorAll(".k[data-ahkkey]");
+  let liveTimer = 0;
+
+  function post(msg) {
+    try { window.chrome.webview.postMessage(msg); } catch (_) {}
+  }
+
+  function normKey(k) {
+    const s = String(k || "").toLowerCase();
+    return s === "esc" ? "escape" : s;
+  }
+
+  function iconId(slot) {
+    const act = String(slot.action || "").toUpperCase();
+    if (ICON_BY_ACTION[act]) return ICON_BY_ACTION[act];
+    const cmd = String(slot.cmdId || "");
+    return ICON_BY_CMD[cmd] || "ico-search";
+  }
+
+  function makeIcon(svgClass, id) {
+    const ico = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    ico.setAttribute("class", svgClass);
+    ico.setAttribute("viewBox", "0 0 24 24");
+    const use = document.createElementNS("http://www.w3.org/2000/svg", "use");
+    use.setAttribute("href", "#" + id);
+    ico.appendChild(use);
+    return ico;
+  }
+
+  function setMapLabel(el, slot) {
+    const box = el.querySelector(".map-label");
+    if (!box) return;
+    box.replaceChildren();
+    box.appendChild(makeIcon("chord-ico", iconId(slot)));
+    const txt = document.createElement("span");
+    txt.className = "chord-txt";
+    txt.textContent = String(slot.label || "");
+    box.appendChild(txt);
+  }
+
+  function runSlot(slot) {
+    if (!slot) return;
+    post({ type: "chordPadRun", action: String(slot.action || ""), cmdId: String(slot.cmdId || ""), key: String(slot.key || "") });
+    flashKey(slot.key);
+  }
+
+  function renderQuickBar() {
+    quickEl.replaceChildren();
+    const slots = Array.isArray(state.slots) ? state.slots.slice() : [];
+    slots.sort((a, b) => Number(a.rank || 99) - Number(b.rank || 99));
+    for (const s of slots) {
+      const chip = document.createElement("button");
+      chip.type = "button";
+      chip.className = "cmd-chip tier-" + String(s.tier || "normal");
+      chip.appendChild(makeIcon("chip-ico", iconId(s)));
+      const label = document.createElement("span");
+      label.textContent = String(s.label || "");
+      chip.appendChild(label);
+      const key = document.createElement("span");
+      key.className = "chip-key";
+      key.textContent = String(s.key || "").toUpperCase();
+      chip.appendChild(key);
+      chip.addEventListener("click", (e) => { e.stopPropagation(); runSlot(s); });
+      quickEl.appendChild(chip);
+    }
+  }
+
+  function fitKeyboard() {
+    if (!kbEl || !zoneEl) return;
+    const h = zoneEl.clientHeight || 260;
+    const keyH = Math.max(34, Math.min(52, Math.round(h / 6.8)));
+    kbEl.style.setProperty("--kb-key-h", keyH + "px");
+  }
+
+  function renderSlots() {
+    state.slotByKey = new Map();
+    for (const s of state.slots) {
+      const k = normKey(s.key);
+      if (k) state.slotByKey.set(k, s);
+    }
+    for (const el of keyEls) {
+      const base = normKey(el.dataset.ahkkey);
+      el.classList.remove("bound", "tier-hot", "tier-warm", "key-live", "k-dim");
+      el.onclick = null;
+      const slot = state.slotByKey.get(base);
+      if (slot) {
+        el.classList.add("bound");
+        const tier = String(slot.tier || "normal");
+        if (tier === "hot") el.classList.add("tier-hot");
+        else if (tier === "warm") el.classList.add("tier-warm");
+        setMapLabel(el, slot);
+        el.onclick = (e) => { e.stopPropagation(); runSlot(slot); };
+      } else if (base !== "capslock") {
+        el.classList.add("k-dim");
+      }
+    }
+    document.querySelector('.k[data-ahkkey="CapsLock"]')?.classList.add("caps-on");
+    renderQuickBar();
+    fitKeyboard();
+  }
+
+  function flashKey(key) {
+    const k = normKey(key);
+    if (liveTimer) clearTimeout(liveTimer);
+    for (const el of keyEls) el.classList.remove("key-live");
+    const el = document.querySelector('.k[data-ahkkey="' + CSS.escape(k) + '"]');
+    if (!el) return;
+    void el.offsetWidth;
+    el.classList.add("key-live");
+    liveTimer = setTimeout(() => el.classList.remove("key-live"), 320);
+  }
+
+  function clearFlash() {
+    if (liveTimer) clearTimeout(liveTimer);
+    for (const el of keyEls) el.classList.remove("key-live");
+  }
+
+  function onHostMessage(msg) {
+    if (!msg || typeof msg !== "object") return;
+    if (msg.type === "chordPadInit") {
+      state.slots = Array.isArray(msg.slots) ? msg.slots : [];
+      if (msg.hint) hintEl.textContent = String(msg.hint);
+      renderSlots();
+      return;
+    }
+    if (msg.type === "keyPreview") { flashKey(msg.key); return; }
+    if (msg.type === "chordPadHide") clearFlash();
+  }
+
+  dragHandle.addEventListener("pointerdown", (e) => {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    try { dragHandle.setPointerCapture(e.pointerId); } catch (_) {}
+    post({ type: "chordPadBeginDrag" });
+  });
+  dragHandle.addEventListener("pointerup", (e) => {
+    try { dragHandle.releasePointerCapture(e.pointerId); } catch (_) {}
+  });
+
+  window.addEventListener("resize", fitKeyboard);
+  window.chrome?.webview?.addEventListener("message", (e) => onHostMessage(e.data));
+  window.addEventListener("message", (e) => onHostMessage(e.data));
+  fitKeyboard();
+  try { post({ type: "chordPadReady" }); } catch (_) {}
+})();
+</script>
+</body>
+</html>

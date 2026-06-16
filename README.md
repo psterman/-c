@@ -17,8 +17,16 @@
 |------|-------------------|
 | 明文密钥迁入 vault | `powershell -NoProfile -File tools\Migrate-PlaintextSecrets.ps1` |
 | 验证 JSON 无明文 Key | `powershell -NoProfile -File tools\Verify-SecretStore.ps1` |
-| 打包本地配置与数据 | `powershell -NoProfile -File tools\Nmer-ExportAll.ps1` |
+| 导出迁移包（CLI） | `powershell -NoProfile -File tools\Nmer-ExportAll.ps1` |
+| 导入迁移包（CLI） | `powershell -NoProfile -File tools\Nmer-ImportMigration.ps1 -ZipPath "路径\nmer_migration_*.zip"` |
 | 路径清单 | [docs/nmer-paths-inventory.md](docs/nmer-paths-inventory.md) |
+
+## 换机（简要）
+
+1. 旧机：设置 → **存储与缓存** → **导出迁移包**（可选勾选截图/缩略图缓存）。
+2. 新机：安装牛马后 → **导入迁移包**。
+3. 设置 → **智能定制** → 重新填写 API Key（vault 不随包迁移）。
+4. 建议重启牛马。
 
 ## 目录速览
 

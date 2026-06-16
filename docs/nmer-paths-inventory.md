@@ -62,6 +62,28 @@
 
 ## 运维脚本引用
 
-- 导出：`tools/Nmer-ExportAll.ps1`（默认跳过 `secrets.vault.json` 内容；可选 `-IncludeDataDb`、`-IncludeCache`）
+- 导出迁移包：`tools/Nmer-ExportAll.ps1`（默认含 SQLite；`-IncludeMediaCache` 含图片/缩略图；`-IncludeCache` 含 debug 供运维）
+- 导入迁移包：`tools/Nmer-ImportMigration.ps1`（manifest `version>=2`、`kind=migration`）
+- 清单实现：`modules/LocalPaths.ahk` `Nmer_CollectMigrationEntries` 与 `tools/Nmer-MigrationManifest.ps1` 保持同步
 - 企业操作说明：[nmer-enterprise-ops.md](nmer-enterprise-ops.md)
 - 清理：`tools/Nmer-CleanUninstall.ps1`（`Cache/` 全清；local 部分可删项见脚本内列表）
+
+### 迁移包默认 / 可选 tier
+
+迁移分组 ID 与设置页「存储与缓存 → 数据迁移」勾选一致。
+
+| 分组 ID | 说明 | 预设 |
+|---------|------|------|
+| `local.config` | CursorShortcut.ini | 推荐/轻量/完整 |
+| `local.studio` | user_studio、备份、niuma_chat_llm | 推荐/轻量/完整 |
+| `local.openclaw` | openclaw-state | 推荐/轻量/完整 |
+| `local.prompts` | PromptTemplates.ini | 推荐/轻量/完整 |
+| `data.search` | SearchCenter / 全文 JSON | 推荐/轻量/完整 |
+| `data.state` | 提示词、命令面板等状态 | 推荐/轻量/完整 |
+| `data.db.clipboard` | Clipboard.db | 推荐/完整 |
+| `data.db.cursor` | CursorData.db | 推荐/完整 |
+| `data.runtime.chat` | niuma-chat | 推荐/完整 |
+| `cache.images` / `cache.thumbs` / `cache.temp` | 图片缓存 | 完整 |
+| `cache.fulltext` / `cache.debug` | 全文索引 / 调试日志 | 自定义 |
+
+预设：`recommended`（换机）、`light`（无库）、`full`（含图片缓存）、`custom`（手动勾选）。

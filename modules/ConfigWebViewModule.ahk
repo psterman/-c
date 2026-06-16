@@ -4004,6 +4004,48 @@ ConfigWebView_OnMessage(sender, args) {
                         if FuncExists("Nmer_ExportDiagnosticsBundle")
                             Nmer_ExportDiagnosticsBundle()
                         return
+                    case "getMigrationOptions":
+                        migInfo := FuncExists("Nmer_MigrationOptionsForWeb") ? Nmer_MigrationOptionsForWeb() : Map("groups", [], "presets", [])
+                        ConfigWebView_Send(Map("type", "migrationOptions", "payload", migInfo))
+                        return
+                    case "exportMigrationPack":
+                        migOpts := payload is Map ? payload : Map()
+                        migR := Map("ok", false, "error", "迁移模块未加载")
+                        if FuncExists("Nmer_ExportMigrationPack")
+                            migR := Nmer_ExportMigrationPack(migOpts)
+                        webMig := FuncExists("Nmer_MigrationPackForWeb") ? Nmer_MigrationPackForWeb(migR) : migR
+                        ConfigWebView_Send(Map("type", "migrationPackResult", "op", "export", "payload", webMig))
+                        return
+                    case "importMigrationPack":
+                        migZip := ""
+                        confirmed := false
+                        if (payload is Map) {
+                            migZip := Trim(String(payload.Get("zipPath", "")))
+                            confirmed := !!payload.Get("confirmed", false)
+                        }
+                        if (migZip = "")
+                            migZip := FileSelect(1, Nmer_RepoRoot(), "导入迁移包", "ZIP 压缩包 (*.zip)")
+                        if (migZip = "") {
+                            ConfigWebView_Send(Map("type", "migrationPackResult", "op", "import", "payload", Map("ok", false, "error", "已取消")))
+                            return
+                        }
+                        if !confirmed {
+                            preview := Map("ok", false, "error", "迁移模块未加载", "zipPath", migZip)
+                            if FuncExists("Nmer_PreviewMigrationPack")
+                                preview := Nmer_PreviewMigrationPack(migZip)
+                            if !(preview is Map)
+                                preview := Map("ok", false, "error", "预览失败", "zipPath", migZip)
+                            else
+                                preview["zipPath"] := migZip
+                            ConfigWebView_Send(Map("type", "migrationPreview", "payload", preview))
+                            return
+                        }
+                        migR2 := Map("ok", false, "error", "迁移模块未加载")
+                        if FuncExists("Nmer_ImportMigrationPack")
+                            migR2 := Nmer_ImportMigrationPack(migZip, true)
+                        webMig2 := FuncExists("Nmer_MigrationPackForWeb") ? Nmer_MigrationPackForWeb(migR2) : migR2
+                        ConfigWebView_Send(Map("type", "migrationPackResult", "op", "import", "payload", webMig2))
+                        return
                     case "openDebugLogsFolder":
                         if FuncExists("Nmer_OpenLogsFolder")
                             Nmer_OpenLogsFolder()

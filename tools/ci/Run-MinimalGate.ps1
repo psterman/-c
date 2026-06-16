@@ -55,6 +55,7 @@ $results += Invoke-GateStep "SearchCore Phase1" "Run-SearchCoreLifecyclePhase1Su
 $results += Invoke-GateStep "Catch Policy" "Validate-CatchPolicy.ps1"
 $results += Invoke-GateStep "Sql Policy" "Validate-SqlPolicy.ps1"
 $results += Invoke-GateStep "Legacy Bypass" "Validate-LegacyBypass.ps1" -StepStrict:$Strict
+$results += Invoke-GateStep "Migration Pack" "Validate-MigrationPack.ps1"
 $results += Invoke-GateStep "WS Policy" "Validate-WsPolicy.ps1"
 $results += Invoke-GateStep "AHK Launch Matrix" "TryAhkLaunchMatrix.ps1"
 if ($IncludeMemoryProbe) {

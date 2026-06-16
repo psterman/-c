@@ -216,6 +216,7 @@ global NativeDropDiagLogPath := Nmer_DebugPath("drop_diagnostics_runtime.log")
 #Include lib\ahk\ImagePut.ahk
 
 #Include modules\NmerDiagnostics.ahk
+#Include modules\NmerMigration.ahk
 #Include modules\NmerHealthSummary.ahk
 #Include modules\TrayMenuManager.ahk
 TrayMenu_Init()
@@ -384,7 +385,7 @@ global CapsLock2 := false  ; 是否使用过 CapsLock+ 功能标记，使用过�
 global CapsLockInitialStateForChord := false  ; 记录按下 CapsLock 前状态，供组合键快速恢复
 global LastCapsLockTapTick := 0  ; CapsLock 双击判定（CursorPanelController CapsLock:: 松手逻辑）
 global CapsLockPressTime := 0
-global VKHoldVisible := false  ; 是否由长按 CapsLock 暂时显示 VK
+global VKHoldVisible := false  ; 是否由长按 CapsLock 暂时显示 ChordPad
 ; 动态快捷键映射（默认值）
 global SplitHotkey := "s"
 global BatchHotkey := "b"
@@ -442,8 +443,8 @@ global ClipboardMenuHotkeysRegistered := false  ; 热键是否已注册
 ; 配置变量
 global CursorPath := ""
 global AISleepTime := 15000
-global CapsLockHoldTimeSeconds := 0.5  ; 长按达到该秒数后显示 VK KeyBinder，松手隐藏（若本窗口原已打开则松手不隐藏）
-global CapsLockHoldVkEnabled := true  ; 是否启用长按 CapsLock 弹出 VK KeyBinder（设置中心 / ini：CapsLockHoldVkEnabled）
+global CapsLockHoldTimeSeconds := 0.5  ; 长按达到该秒数后显示 ChordPad，松手隐藏（最短 0.4 秒防误触）
+global CapsLockHoldVkEnabled := true  ; 是否启用长按 CapsLock 弹出 ChordPad（设置中心 / ini：CapsLockHoldVkEnabled）
 global Prompt_Explain := ""
 global Prompt_Refactor := ""
 global Prompt_Optimize := ""
@@ -1004,7 +1005,7 @@ GetText(Key) {
             "cursor_path", "Cursor 路径:",
             "browse", "浏览...",
             "capslock_hold_time", "CapsLock 长按时间 (秒):",
-            "capslock_hold_time_hint", "长按 CapsLock 达到该时长后显示 VK KeyBinder 快捷键设置界面，松开 CapsLock 后自动隐藏。范围：0.1–5.0 秒，默认 0.5。若已通过托盘打开键盘，松手不会关闭该窗口。",
+            "capslock_hold_time_hint", "长按 CapsLock 达到该时长后显示和弦面板（键帽式快捷键提示），松开 CapsLock 后自动隐藏。范围：0.1–5.0 秒，默认 0.5，最短 0.4 秒防误触。",
             "capslock_hold_time_error", "CapsLock 长按时间必须在 0.1 到 5.0 秒之间",
             "ai_wait_time", "AI 响应等待时间 (毫秒):",
             "countdown_delay", "倒计时延迟时间 (秒):",
@@ -5331,6 +5332,8 @@ global g_VK_TextInputActive := false
 global g_CapsLockChordSessionActive := false
 
 ; 快捷操作面板与提示词执行（模块化）
+#Include modules\ChordUsage.ahk
+#Include modules\ChordPad.ahk
 #Include modules\CursorPanelController.ahk
 #Include modules\PromptExecution.ahk
 
@@ -6610,6 +6613,12 @@ RestoreActivationRuntimeAfterConfigClose(*) {
 Esc:: {
     if FuncExists("CapsLockChordInputBlocked") && CapsLockChordInputBlocked()
         return
+    if FuncExists("ChordPad_IsVisible") && ChordPad_IsVisible() {
+        ChordPad_Hide()
+        global VKHoldVisible
+        VKHoldVisible := false
+        return
+    }
     ; 搜索中心优先：避免 WebView 激活态瞬时判定失败时，Esc 误落到全局动态热键（如关闭工具栏）
     global GDHO_VISIBLE, NativeDropSessionActive, g_SCWV_WaitingUiFinishedReveal
     if FuncExists("GDHO_DismissLauncherOnEsc") {
