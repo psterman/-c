@@ -603,6 +603,11 @@ _LoadCommands() {
         _VK_SyncEmbeddedCapslockHotkeys()
     LoadCommandsConfig()
     OutputDebug("[VK] Loaded " . g_Bindings.Count . " binding(s)")
+    if FuncExists("_SCWV_ClearScVkBindingOverrides")
+        try _SCWV_ClearScVkBindingOverrides()
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e)
+        }
 }
 
 ; Detect and migrate old Bindings format:

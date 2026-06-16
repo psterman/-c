@@ -1192,6 +1192,10 @@ SCWV_ReleaseHostHotkeyScope() {
     global g_SCWV_SearchInputFocused, g_SCWV_WaitingUiFinishedReveal
     g_SCWV_SearchInputFocused := false
     g_SCWV_WaitingUiFinishedReveal := false
+    try _SCWV_ClearScVkBindingOverrides()
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e)
+    }
     try HotIf()
     catch as _e {
         NmerCatch(A_ThisFunc, _e)
@@ -1199,33 +1203,11 @@ SCWV_ReleaseHostHotkeyScope() {
 }
 
 SCWV_PostCapsHintPressGuarded(key) {
-    global g_SCWV_ModeSwitchGuard, g_SCWV_ModeSwitchDeferredCaps
-    if !SCWV_ScCapsInputAllowed()
-        return
-    if SCWV_IsSearchInputFocused()
-        return
-    k := StrLower(Trim(String(key)))
-    if (k = "")
-        return
-    if g_SCWV_ModeSwitchGuard {
-        g_SCWV_ModeSwitchDeferredCaps[k] := Map("key", k, "ts", A_TickCount)
-        return
-    }
-    SCWV_PostJson('{"type":"capsHintPress","key":"' . k . '"}')
+    ; 页面单键激活 chip 已停用，不再向 WebView 推送 capsHintPress
 }
 
 SCWV_FlushDeferredCapsHintPress(reason := "") {
     global g_SCWV_ModeSwitchDeferredCaps
-    if !(g_SCWV_ModeSwitchDeferredCaps is Map)
-        return
-    for _, ent in g_SCWV_ModeSwitchDeferredCaps {
-        if !(ent is Map) || !ent.Has("key")
-            continue
-        k := StrLower(Trim(String(ent["key"])))
-        if (k = "")
-            continue
-        SCWV_PostJson('{"type":"capsHintPress","key":"' . k . '"}')
-    }
     g_SCWV_ModeSwitchDeferredCaps := Map()
 }
 
@@ -3190,65 +3172,35 @@ _SCWV_MapEquals(a, b) {
     return true
 }
 
-_SCWV_SyncScHotkeyBindings(payloadMap) {
-    global g_Commands, g_VK_Ready
-    if !(payloadMap is Map)
-        return
-    if !payloadMap.Has("entries") || !(payloadMap["entries"] is Array)
-        return
+_SCWV_ClearScVkBindingOverrides() {
+    global g_Commands
     if !(g_Commands is Map)
         return
     if !g_Commands.Has("Bindings") || !(g_Commands["Bindings"] is Map)
-        g_Commands["Bindings"] := Map()
+        return
     if !IsSet(_VK_ApplyOverrides)
         return
-
-    oldOverrides := _SCWV_CopyMap(g_Commands["Bindings"])
-    newOverrides := _SCWV_CopyMap(oldOverrides)
-    resetAll := payloadMap.Has("resetAll") ? (payloadMap["resetAll"] ? true : false) : false
-    if resetAll {
-        for _, cid in _SCWV_ListAllScVkCommands()
-            newOverrides[cid] := "NONE"
-    }
-
-    for _, row in payloadMap["entries"] {
-        if !(row is Map)
-            continue
-        group := row.Has("group") ? String(row["group"]) : ""
-        value := row.Has("value") ? String(row["value"]) : ""
-        key := row.Has("key") ? String(row["key"]) : ""
-        key := StrLower(Trim(key))
-        if !RegExMatch(key, "^[a-z0-9]?$")
-            key := ""
-        cmdId := _SCWV_MapScBindingToVkCommand(group, value)
-        if (cmdId = "")
-            continue
-        if (key = "") {
-            newOverrides[cmdId] := "NONE"
+    oldOverrides := g_Commands["Bindings"]
+    newOverrides := Map()
+    changed := false
+    for k, v in oldOverrides {
+        if _SCWV_IsScVkCommandId(k) {
+            changed := true
             continue
         }
-        ; 与 KeyBinder 一致：新绑定抢占已占用同键
-        for otherCmd, ov in newOverrides {
-            if (otherCmd != cmdId && String(ov) = key)
-                newOverrides.Delete(otherCmd)
-        }
-        newOverrides[cmdId] := key
+        newOverrides[k] := v
     }
-
-    if _SCWV_MapEquals(oldOverrides, newOverrides)
+    if !changed
         return
-
     try _VK_ApplyOverrides(newOverrides)
-    catch {
-        return
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e)
     }
+}
 
-    ; 若 KeyBinder 已打开，主动推送一次 init，确保界面即时反映新绑定。
-    try {
-        if (IsSet(_PushInit) && IsSet(g_VK_Ready) && g_VK_Ready)
-            _PushInit()
-    } catch {
-    }
+_SCWV_SyncScHotkeyBindings(payloadMap) {
+    ; 已停用：搜索中心单键不再写入 VK 全局 g_Bindings，并清理历史 sc_* 覆盖项
+    _SCWV_ClearScVkBindingOverrides()
 }
 
 ; 将 Go 返回的扁平 items 按 originalDataType 分组为 SearchAllDataSources 形状
@@ -3802,6 +3754,10 @@ SCWV_Show(reason := "", triggerSource := "") {
     }
     try SCWV_PreemptPrimaryConflictsBeforeOpen(reason != "" ? reason : "show")
     catch {
+    }
+    try _SCWV_ClearScVkBindingOverrides()
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e)
     }
     if (ts = "search_hotkey")
         SCWV_PrepareForegroundSteal()

@@ -6884,15 +6884,20 @@ g:: {
 ; B 键：面板显示且批量键为 B 时走 BatchOperation；面板显示且非批量键则透传 b；面板未显示时打开 Prompt 采集窗
 b:: {
     global CapsLock2
-    ; 搜索中心前台：禁止 CapsLock+B 采集，将 b 交给 WebView 输入
+    ; 搜索中心前台或仍可见：禁止 CapsLock+B 采集
     try {
-        if SearchCenter_ShouldUseWebView() && FuncExists("SCWV_IsHostForegroundActive") && SCWV_IsHostForegroundActive()
-            && FuncExists("SCWV_IsRevealedToUser") && SCWV_IsRevealedToUser() {
+        scRevealed := false
+        try scRevealed := FuncExists("SCWV_IsRevealedToUser") && SCWV_IsRevealedToUser()
+        catch {
+            scRevealed := false
+        }
+        if (FuncExists("IsSearchCenterActive") && IsSearchCenterActive()) || scRevealed {
             CapsLock2 := false
             if FuncExists("CapsLock_RestoreForUiTypingOpen")
                 CapsLock_RestoreForUiTypingOpen()
             else
                 RestoreCapsLockAfterChord()
+            try CapsLock_ScheduleNormalizeAfterChord()
             Send("{Raw}b")
             return
         }
@@ -7057,13 +7062,13 @@ $b:: {
     global CapsLock2
     if (SearchCenter_HandleCapsChordKey("b"))
         return
-    if (VirtualKeyboard_HandleKey("b"))
-        return
+    ; 搜索中心内 b 仅作输入，不走 VK ch_b（否则会触发选区采集并干扰 CapsLock 状态）
     CapsLock2 := false
     if FuncExists("CapsLock_RestoreForUiTypingOpen")
         CapsLock_RestoreForUiTypingOpen()
     else
         RestoreCapsLockAfterChord()
+    try CapsLock_ScheduleNormalizeAfterChord()
     Send("{Raw}b")
 }
 $v:: {

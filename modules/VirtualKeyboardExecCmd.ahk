@@ -540,6 +540,14 @@ VK_ExecCursorHelperCmd(cmdId) {
                     VK_PromptQuickPadAction("toggle_pin")
                 } else if (VK_IsHubCapsuleActive()) {
                     VK_HubCapsuleAction("toggle_pin")
+                } else if (_VK_H("IsSearchCenterActive")) {
+                    try ShowAIListPanel(false, false)
+                    catch as e {
+                        try SurfaceIntent_Open("prompt_quick_pad")
+                        catch as _e {
+                            OutputDebug("[VK-Exec] ch_b open PQP failed: " . e.Message)
+                        }
+                    }
                 } else {
                     PromptQuickPad_HandleCapsLockB()
                 }

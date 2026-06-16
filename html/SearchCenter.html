@@ -3851,6 +3851,8 @@ const SUBTAG_TAXONOMY = Object.freeze({
     ])
   })
 });
+// 停用：CapsLock+单键点击分类/筛选 chip，且不再同步到 VK 全局绑定（避免搜索中心退后台仍劫持按键）
+const SC_CAPS_PAGE_HOTKEYS_ENABLED = false;
 const HOTKEY_HINT_DEFAULT_MAP = Object.freeze({
   category: Object.freeze({
     ai: "q",
@@ -4043,6 +4045,7 @@ function syncScHotkeyBindingToHost(group, value, key) {
 }
 
 function syncAllScHotkeyBindingsToHost() {
+  if (!SC_CAPS_PAGE_HOTKEYS_ENABLED) return;
   const entries = [];
   const seen = new Set();
   const pushEntry = (group, value) => {
@@ -4096,6 +4099,7 @@ function ensureFulltextBackgroundTasks() {
 }
 
 function scheduleScHotkeyBindingsSync(delayMs = 160) {
+  if (!SC_CAPS_PAGE_HOTKEYS_ENABLED) return;
   const allowSync = !!state.hostForeground
     || !!(state.hotkeyBindDialog && state.hotkeyBindDialog.open)
     || !!state.capsHintActive;
@@ -4116,6 +4120,7 @@ function scheduleScHotkeyBindingsSyncFromState(delayMs = 500) {
 }
 
 function syncCustomOnlyScHotkeyBindingsToHost() {
+  if (!SC_CAPS_PAGE_HOTKEYS_ENABLED) return;
   const src = state.hotkeyBindings;
   if (!src || typeof src !== "object") return;
   const entries = [];
@@ -6334,6 +6339,7 @@ function enqueueHotkeyDispatch(eventObj) {
 }
 
 function queueCapsHotkeyTrigger(rawKey, modeScope = "search", targetChannel = "caps") {
+  if (!SC_CAPS_PAGE_HOTKEYS_ENABLED) return false;
   if (!scHostInputActive()) return false;
   const key = normalizeHintKey(rawKey);
   if (!key) return false;
@@ -6573,6 +6579,7 @@ function isSameHotkeyActivationState(a, b) {
 }
 
 function scheduleHostCapsHotkeyFallback(rawKey) {
+  if (!SC_CAPS_PAGE_HOTKEYS_ENABLED) return;
   const key = normalizeHintKey(rawKey);
   if (!key) return;
   const before = captureHotkeyActivationState();

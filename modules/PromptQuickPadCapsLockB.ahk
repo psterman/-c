@@ -84,7 +84,7 @@ PromptQuickPad_CapsB_CopySelection(&outText) {
     if PromptQuickPad_CapsB_IsOurGuiWindow(fg) {
         tgt := PromptQuickPad_PasteTargetHwnd
         if !tgt || !DllCall("IsWindow", "ptr", tgt) || PromptQuickPad_CapsB_IsOurGuiWindow(tgt) {
-            TrayTip("璇峰厛鍒囧埌瑕佹憳褰曠殑搴旂敤閲岄€変腑鏂囧瓧锛堢劍鐐瑰湪鏈潰鏉挎椂鏃犳硶浠庡叾瀹冪獥鍙ｅ鍒讹級", "Prompt Quick-Pad", "Icon! 1")
+            TrayTip("请先切到要摘录的应用里选中文字（焦点在本面板时无法从其它窗口复制）", "Prompt Quick-Pad", "Icon! 1")
             return false
         }
         try {
@@ -267,7 +267,7 @@ PromptQuickPad_AppendCapsLockBToTemplateLibrary(content) {
     global AIListPanelIsVisible
     title := Trim(PromptQuickPad_CapsLockBDefaultTitle)
     if title = ""
-        title := "鎽樺綍"
+        title := "摘录"
     cat := Trim(PromptQuickPad_CapsLockBDefaultCategory)
     if cat = ""
         cat := "自定义"
@@ -282,7 +282,7 @@ PromptQuickPad_AppendCapsLockBToTemplateLibrary(content) {
     try {
         _PQPCB_CallExternal("SavePromptTemplates")
     } catch as err {
-        TrayTip("淇濆瓨妯℃澘搴撳け璐ワ細" . err.Message, "Prompt Quick-Pad", "Iconx 1")
+        TrayTip("保存模板库失败：" . err.Message, "Prompt Quick-Pad", "Iconx 1")
         return false
     }
     if AIListPanelIsVisible
@@ -325,7 +325,7 @@ PromptQuickPad_HandleCapsLockB() {
         _PQPCB_CallExternal("PromptQuickPad_LoadFromDisk")
         title := Trim(PromptQuickPad_CapsLockBDefaultTitle)
         if title = ""
-            title := "鎽樺綍"
+            title := "摘录"
         cat := Trim(PromptQuickPad_CapsLockBDefaultCategory)
         tags := Trim(PromptQuickPad_CapsLockBDefaultTags)
         normalized := _PQPCB_CallExternal("PromptQuickPad_NormalizeEntry", Map("title", title, "tags", tags, "content", t, "category", cat, "hotkey", ""))
@@ -349,7 +349,7 @@ PromptQuickPad_HandleCapsLockB_CopyDone(ok, t, reason, fg) {
     global PromptQuickPadData, AIListPanelIsVisible
     if !ok {
         if !PromptQuickPad_CapsB_IsOurGuiWindow(fg)
-            TrayTip("鏈幏鍙栧埌閫変腑鏂囨湰锛岃纭宸查€変腑鏂囧瓧", "Prompt Quick-Pad", "Iconi 1")
+            TrayTip("未获取到选中文本，请确认已选中文字", "Prompt Quick-Pad", "Iconi 1")
         return
     }
     if PromptQuickPad_CapsLockBSilent {
@@ -360,7 +360,7 @@ PromptQuickPad_HandleCapsLockB_CopyDone(ok, t, reason, fg) {
         _PQPCB_CallExternal("PromptQuickPad_LoadFromDisk")
         title := Trim(PromptQuickPad_CapsLockBDefaultTitle)
         if title = ""
-            title := "鎽樺綍"
+            title := "摘录"
         cat := Trim(PromptQuickPad_CapsLockBDefaultCategory)
         tags := Trim(PromptQuickPad_CapsLockBDefaultTags)
         normalized := _PQPCB_CallExternal("PromptQuickPad_NormalizeEntry", Map("title", title, "tags", tags, "content", t, "category", cat, "hotkey", ""))

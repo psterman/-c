@@ -308,6 +308,13 @@ CapsLockChordInputBlocked(*) {
         } catch as _e {
             NmerCatch(A_ThisFunc, _e) 
         }
+        ; 搜索中心仍可见（含失焦未关闭）：避免 CapsLock+B 等全局命令与页面单键残留绑定冲突
+        try {
+            if FuncExists("SCWV_IsRevealedToUser") && SCWV_IsRevealedToUser()
+                return true
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
+        }
     } catch as _e {
         NmerCatch(A_ThisFunc, _e) 
     }
@@ -639,13 +646,6 @@ SearchCenter_FlashCapsHintKey(key) {
         return
     if FuncExists("ChordPad_FlashKey")
         ChordPad_FlashKey(k)
-    try {
-        if (SearchCenter_ShouldUseWebView() && IsSearchCenterActive()) {
-            SCWV_PostCapsHintPressGuarded(k)
-        }
-    } catch as _e {
-        NmerCatch(A_ThisFunc, _e) 
-    }
 }
 
 SearchCenter_CapsHintOnTimer(*) {
