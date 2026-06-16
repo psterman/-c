@@ -171,6 +171,7 @@ PromptQuickPad_PushDataToWeb(msgType := "init") {
             "title", entry.Has("title") ? entry["title"] : "",
             "category", entry.Has("category") ? entry["category"] : "",
             "hotkey", entry.Has("hotkey") ? entry["hotkey"] : "",
+            "tags", entry.Has("tags") ? entry["tags"] : "",
             "preview", PromptQuickPad_MakePreview(entry.Has("content") ? entry["content"] : ""),
             "content", entry.Has("content") ? entry["content"] : "",
             "source", entry.Has("source") ? entry["source"] : ""
@@ -680,10 +681,36 @@ PromptQuickPad_LoadFromDisk() {
     } catch {
         PromptQuickPadData := []
     }
-    added := PromptQuickPad_MigrateLegacySourcesIntoData()
+    removedMirror := PromptQuickPad_PruneMirroredSourceEntries()
+    added := 0
     removed := PromptQuickPad_DeduplicateJsonData()
-    if (removed > 0 || added > 0 || changed)
+    if (removed > 0 || added > 0 || changed || removedMirror > 0)
         PromptQuickPad_SaveToDisk()
+}
+
+PromptQuickPad_PruneMirroredSourceEntries() {
+    global PromptQuickPadData
+    keep := []
+    removed := 0
+    for item in PromptQuickPadData {
+        if !(item is Map) {
+            keep.Push(item)
+            continue
+        }
+        src := item.Has("source") ? StrLower(String(item["source"])) : "json"
+        if (src = "template" && item.Has("templateId") && String(item["templateId"]) != "") {
+            removed++
+            continue
+        }
+        hk := item.Has("hotkey") ? String(item["hotkey"]) : ""
+        if (src = "builtin" && (hk = "CapsLock+E" || hk = "CapsLock+R" || hk = "CapsLock+O")) {
+            removed++
+            continue
+        }
+        keep.Push(item)
+    }
+    PromptQuickPadData := keep
+    return removed
 }
 
 PromptQuickPad_BuildCleanArrayForFile() {
@@ -722,8 +749,8 @@ PromptQuickPad_TemplateExtraTags(T) {
     parts := ""
     fc := ""
     ser := ""
-    try fc := T.FunctionCategory
-    try ser := T.Series
+    fc := PromptQuickPad_ReadTemplateField(T, "FunctionCategory")
+    ser := PromptQuickPad_ReadTemplateField(T, "Series")
     if fc != ""
         parts .= fc
     if ser != "" {
@@ -734,12 +761,37 @@ PromptQuickPad_TemplateExtraTags(T) {
     return parts
 }
 
+PromptQuickPad_ReadTemplateField(tpl, key, fallback := "") {
+    if (tpl is Map)
+        return String(tpl.Get(key, tpl.Get(StrLower(key), fallback)))
+    if IsObject(tpl) {
+        try {
+            if tpl.HasProp(key)
+                return String(tpl.%key%)
+        } catch {
+        }
+        lowerKey := StrLower(key)
+        try {
+            if tpl.HasProp(lowerKey)
+                return String(tpl.%lowerKey%)
+        } catch {
+        }
+    }
+    return String(fallback)
+}
+
+PromptQuickPad_WriteTemplateField(&tpl, key, value) {
+    if (tpl is Map) {
+        tpl[key] := value
+        return
+    }
+    try tpl.%key% := value
+}
+
 ; 鍚堝苟锛氳缃〉涓夐」蹇嵎璇?+ PromptTemplates.ini 鍔犺浇鐨勫叏灞€妯℃澘 + prompts.json 鐢ㄦ埛椤?
 PromptQuickPad_BuildMergedList() {
-    global PromptQuickPadData
-    addedNow := PromptQuickPad_MigrateLegacySourcesIntoData()
-    if (addedNow > 0)
-        PromptQuickPad_SaveToDisk()
+    global PromptQuickPadData, PromptTemplates
+    global Prompt_Explain, Prompt_Refactor, Prompt_Optimize
     merged := []
     idx := 0
     for item in PromptQuickPadData {
@@ -749,6 +801,12 @@ PromptQuickPad_BuildMergedList() {
             continue
         if !e.Has("source") || e["source"] = ""
             e["source"] := "json"
+        src := e.Has("source") ? String(e["source"]) : "json"
+        if (src = "template" && e.Has("templateId") && String(e["templateId"]) != "")
+            continue
+        hk0 := e.Has("hotkey") ? String(e["hotkey"]) : ""
+        if (src = "builtin" && (hk0 = "CapsLock+E" || hk0 = "CapsLock+R" || hk0 = "CapsLock+O"))
+            continue
         e["userIndex"] := idx
         if !e.Has("category")
             e["category"] := ""
@@ -756,6 +814,13 @@ PromptQuickPad_BuildMergedList() {
             e["hotkey"] := ""
         merged.Push(e)
     }
+    capCat := "快捷操作"
+    if Trim(Prompt_Explain) != ""
+        merged.Push(PromptQuickPad_NormalizeEntry(Map("id","builtin_explain","title","解释代码","category",capCat,"tags","","hotkey","CapsLock+E","content",Prompt_Explain,"source","builtin","enabled",true)))
+    if Trim(Prompt_Refactor) != ""
+        merged.Push(PromptQuickPad_NormalizeEntry(Map("id","builtin_refactor","title","重构代码","category",capCat,"tags","","hotkey","CapsLock+R","content",Prompt_Refactor,"source","builtin","enabled",true)))
+    if Trim(Prompt_Optimize) != ""
+        merged.Push(PromptQuickPad_NormalizeEntry(Map("id","builtin_optimize","title","优化代码","category",capCat,"tags","","hotkey","CapsLock+O","content",Prompt_Optimize,"source","builtin","enabled",true)))
     ; Normalize and guard against mojibake coming from ini/config sources.
     for i, it in merged {
         if !(it is Map)
@@ -771,6 +836,24 @@ PromptQuickPad_BuildMergedList() {
         if it.Has("hotkey")
             it["hotkey"] := PromptQuickPad_CleanText(it["hotkey"])
         merged[i] := it
+    }
+    if IsSet(PromptTemplates) && PromptTemplates is Array {
+        for T in PromptTemplates {
+            if !IsObject(T)
+                continue
+            title := PromptQuickPad_ReadTemplateField(T, "Title")
+            content := PromptQuickPad_ReadTemplateField(T, "Content")
+            cat := PromptQuickPad_ReadTemplateField(T, "Category")
+            tid := PromptQuickPad_ReadTemplateField(T, "ID")
+            if title = "" && content = ""
+                continue
+            ent := Map("title", title, "category", cat, "tags", PromptQuickPad_TemplateExtraTags(T), "hotkey", "", "content", content, "source", "template", "enabled", true)
+            if tid != "" {
+                ent["templateId"] := tid
+                ent["id"] := "tpl_" . tid
+            }
+            merged.Push(PromptQuickPad_NormalizeEntry(ent))
+        }
     }
     return PromptQuickPad_DeduplicateList(merged)
 }
@@ -858,11 +941,10 @@ PromptQuickPad_MigrateLegacySourcesIntoData() {
         for T in PromptTemplates {
             if !IsObject(T)
                 continue
-            title := "", content := "", cat := "", tid := ""
-            try title := T.Title
-            try content := T.Content
-            try cat := T.Category
-            try tid := T.ID
+            title := PromptQuickPad_ReadTemplateField(T, "Title")
+            content := PromptQuickPad_ReadTemplateField(T, "Content")
+            cat := PromptQuickPad_ReadTemplateField(T, "Category")
+            tid := PromptQuickPad_ReadTemplateField(T, "ID")
             if title = "" && content = ""
                 continue
             ent := Map("title", title, "category", cat, "tags", PromptQuickPad_TemplateExtraTags(T), "hotkey", "", "content", content, "source", "template")
@@ -2139,23 +2221,12 @@ PromptQuickPad_SaveBuiltinPrompt(KeyName, NewContent) {
 PromptQuickPad_SaveTemplateContent(TemplateID, NewTitle, NewCategory, NewContent) {
     global PromptTemplates
     for idx, T in PromptTemplates {
-        try tid := T.ID
-        catch
-            tid := ""
+        tid := PromptQuickPad_ReadTemplateField(T, "ID")
         if tid != TemplateID
             continue
-        try T.Title := NewTitle
-        catch as _e {
-            NmerCatch(A_ThisFunc, _e) 
-        }
-        try T.Category := NewCategory
-        catch as _e {
-            NmerCatch(A_ThisFunc, _e) 
-        }
-        try T.Content := NewContent
-        catch as _e {
-            NmerCatch(A_ThisFunc, _e) 
-        }
+        PromptQuickPad_WriteTemplateField(&T, "Title", NewTitle)
+        PromptQuickPad_WriteTemplateField(&T, "Category", NewCategory)
+        PromptQuickPad_WriteTemplateField(&T, "Content", NewContent)
         PromptTemplates[idx] := T
         try SavePromptTemplates()
         catch as _e {
@@ -2208,8 +2279,42 @@ PromptQuickPad_SaveItemEditFromWeb(msg) {
     category := msg.Has("category") ? Trim(String(msg["category"])) : ""
     tags := msg.Has("tags") ? Trim(String(msg["tags"])) : ""
     content := msg.Has("content") ? String(msg["content"]) : ""
-    global PromptQuickPadData
+    srcShell := shell.Has("source") ? String(shell["source"]) : ""
     uix := shell.Has("userIndex") ? Integer(shell["userIndex"]) : 0
+    if srcShell = "template" {
+        templateId := shell.Has("templateId") ? String(shell["templateId"]) : ""
+        if templateId = ""
+            return
+        if title = ""
+            title := "未命名"
+        if category = ""
+            category := "未分类"
+        if PromptQuickPad_SaveTemplateContent(templateId, title, category, content) {
+            PromptQuickPad_RefreshListView()
+            return
+        }
+        return
+    }
+    if srcShell = "builtin" {
+        hk := shell.Has("hotkey") ? String(shell["hotkey"]) : ""
+        builtinKey := ""
+        if hk = "CapsLock+E"
+            builtinKey := "Explain"
+        else if hk = "CapsLock+R"
+            builtinKey := "Refactor"
+        else if hk = "CapsLock+O"
+            builtinKey := "Optimize"
+        if builtinKey = "" {
+            PromptQuickPad_OpenReadOnlyViewer(shell.Has("title") ? shell["title"] : "提示词", content)
+            return
+        }
+        if title = ""
+            title := shell.Has("title") ? String(shell["title"]) : "未命名"
+        PromptQuickPad_SaveBuiltinPrompt(builtinKey, content)
+        PromptQuickPad_RefreshListView()
+        return
+    }
+    global PromptQuickPadData
     if uix < 1 || uix > PromptQuickPadData.Length
         return
     if title = ""
@@ -2217,7 +2322,8 @@ PromptQuickPad_SaveItemEditFromWeb(msg) {
     old := PromptQuickPadData[uix]
     src := old.Has("source") ? old["source"] : "json"
     idv := old.Has("id") ? old["id"] : ""
-    PromptQuickPadData[uix] := PromptQuickPad_NormalizeEntry(Map(
+    tplId := old.Has("templateId") ? old["templateId"] : ""
+    entryMap := Map(
         "id", idv,
         "source", src,
         "title", title,
@@ -2227,9 +2333,39 @@ PromptQuickPad_SaveItemEditFromWeb(msg) {
         "hotkey", shell.Has("hotkey") ? shell["hotkey"] : "",
         "enabled", true,
         "updatedAt", A_NowUTC
-    ))
+    )
+    if tplId != ""
+        entryMap["templateId"] := tplId
+    PromptQuickPadData[uix] := PromptQuickPad_NormalizeEntry(entryMap)
     PromptQuickPad_SaveToDisk()
     PromptQuickPad_RefreshListView()
+}
+
+PromptQuickPad_SyncDataEntryFromShell(shell, title, category, tags, content) {
+    global PromptQuickPadData
+    uix := shell.Has("userIndex") ? Integer(shell["userIndex"]) : 0
+    if uix < 1 || uix > PromptQuickPadData.Length
+        return
+    old := PromptQuickPadData[uix]
+    src := old.Has("source") ? old["source"] : (shell.Has("source") ? shell["source"] : "json")
+    idv := old.Has("id") ? old["id"] : (shell.Has("id") ? shell["id"] : "")
+    entryMap := Map(
+        "id", idv,
+        "source", src,
+        "title", title,
+        "tags", tags,
+        "content", content,
+        "category", category,
+        "hotkey", shell.Has("hotkey") ? shell["hotkey"] : "",
+        "enabled", true,
+        "updatedAt", A_NowUTC
+    )
+    if shell.Has("templateId") && String(shell["templateId"]) != ""
+        entryMap["templateId"] := shell["templateId"]
+    else if old.Has("templateId")
+        entryMap["templateId"] := old["templateId"]
+    PromptQuickPadData[uix] := PromptQuickPad_NormalizeEntry(entryMap)
+    PromptQuickPad_SaveToDisk()
 }
 
 PromptQuickPad_EditEntry(shell) {

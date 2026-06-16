@@ -214,15 +214,68 @@ html, body {
   background: #101c2d;
 }
 #preview-meta { padding: 8px; font-size: 11px; color: var(--text-dim); border-bottom: 1px solid var(--border); }
+#preview-form {
+  display: grid;
+  gap: 8px;
+  padding: 8px 10px 0;
+  height: 100%;
+}
+.preview-row {
+  display: grid;
+  gap: 4px;
+}
+.preview-row label {
+  font-size: 11px;
+  color: var(--text-dim);
+}
+.preview-row input[readonly] {
+  opacity: .9;
+}
+.preview-row input,
+.preview-row select,
+.preview-row textarea {
+  width: 100%;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 6px 8px;
+  font-size: 12px;
+  font-family: var(--font-ui);
+}
+.preview-row textarea {
+  min-height: 320px;
+  height: calc(100vh - 320px);
+  resize: vertical;
+  font-family: var(--font-mono);
+}
 #preview-content {
   flex: 1;
   overflow: auto;
-  padding: 10px;
-  font-family: var(--font-mono);
-  font-size: 12px;
-  white-space: pre-wrap;
-  word-break: break-word;
-  user-select: text;
+}
+.preview-actions {
+  display: flex;
+  gap: 8px;
+  padding: 8px 10px 10px;
+}
+.preview-actions button {
+  min-height: 32px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text);
+  cursor: pointer;
+  padding: 0 10px;
+}
+.preview-actions button.primary {
+  background: linear-gradient(180deg, #ffb347, #ff8d2a);
+  border-color: #ffb347;
+  color: #111;
+  font-weight: 700;
+}
+.preview-actions .spacer { flex: 1; }
+.preview-actions .mini {
+  font-size: 11px;
+  opacity: .9;
 }
 #status-bar {
   flex-shrink: 0;
@@ -700,9 +753,10 @@ html[data-theme="light"] mark {
 }
 #root {
   display: grid;
-  grid-template-rows: auto auto auto 1fr auto auto;
+  grid-template-rows: minmax(0, 1fr);
   gap: 12px;
   padding: 14px 18px 18px;
+  min-height: 100%;
 }
 #toolbar,
 #cat-strip,
@@ -830,10 +884,14 @@ html[data-theme="light"] mark {
 }
 #main {
   display: grid;
-  grid-template-columns: minmax(220px, 280px) minmax(360px, 1.1fr) minmax(280px, .9fr);
+  grid-template-columns: minmax(320px, 420px) minmax(420px, 1fr);
+  grid-template-rows: minmax(0, 1fr);
   gap: 14px;
+  min-height: 0;
 }
 #drawer-panel {
+  grid-column: 1;
+  grid-row: 1;
   display: flex;
   flex-direction: column;
   min-width: 0;
@@ -853,6 +911,21 @@ html[data-theme="light"] mark {
   border-bottom: 1px solid var(--border);
   color: var(--orange-lt);
 }
+.drawer-actions { display: flex; gap: 6px; align-items: center; }
+.drawer-btn {
+  min-height: 28px;
+  width: 34px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text-dim);
+  cursor: pointer;
+}
+.drawer-btn:hover {
+  border-color: rgba(255,179,71,.5);
+  background: linear-gradient(180deg, rgba(255,179,71,.12), rgba(255,141,42,.08));
+  color: #fff;
+}
 #drawer-toggle {
   min-height: 28px;
   border-radius: 8px;
@@ -863,8 +936,53 @@ html[data-theme="light"] mark {
   cursor: pointer;
 }
 #drawer-body {
+  flex: 1;
+  min-height: 0;
   overflow: auto;
   padding: 8px;
+}
+.drawer-doc-title {
+  margin: 10px 6px 6px;
+  font-size: 11px;
+  color: var(--text-xs);
+}
+.drawer-doc-item {
+  display: grid;
+  grid-template-columns: 16px 1fr;
+  gap: 6px;
+  align-items: start;
+  padding: 6px 8px;
+  margin-bottom: 4px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  cursor: pointer;
+}
+.drawer-doc-item:hover {
+  background: rgba(255,255,255,.03);
+  border-color: rgba(255,255,255,.08);
+}
+.drawer-doc-item.active {
+  background: linear-gradient(180deg, rgba(255,141,42,.16), rgba(255,141,42,.06));
+  border-color: rgba(255,179,71,.45);
+}
+.drawer-doc-dot {
+  color: var(--text-xs);
+  text-align: center;
+}
+.drawer-doc-meta { min-width: 0; }
+.drawer-doc-name {
+  font-size: 12px;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.drawer-doc-sub {
+  font-size: 10px;
+  color: var(--text-xs);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .drawer-section-title {
   font-size: 11px;
@@ -920,8 +1038,12 @@ html[data-theme="light"] mark {
   transition: opacity .2s ease;
 }
 #list-panel {
+  grid-column: 1;
+  grid-row: 1;
   border-right: none;
   padding: 8px;
+  min-height: 0;
+  display: none;
 }
 .pqp-item {
   border: 1px solid transparent;
@@ -944,7 +1066,12 @@ html[data-theme="light"] mark {
   padding: 4px 7px;
   background: var(--surface2);
 }
-#preview-panel { background: transparent; }
+#preview-panel {
+  grid-column: 2;
+  grid-row: 1;
+  background: transparent;
+  min-height: 0;
+}
 #preview-meta {
   padding: 10px 12px;
   border-bottom: 1px solid var(--border);
@@ -957,14 +1084,15 @@ html[data-theme="light"] mark {
   border-top: none;
   background: linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,0)), var(--surface);
 }
-#status-bar { padding: 9px 12px; }
-#link-bar { padding: 10px 12px; gap: 10px; }
+#status-bar { padding: 8px 12px; font-size: 10px; opacity: .78; }
+#link-bar { padding: 8px 12px; gap: 8px; }
 #link-bar a {
   text-decoration: none;
   color: var(--orange-lt);
   border: 1px solid var(--border);
   border-radius: 999px;
-  padding: 6px 10px;
+  padding: 4px 8px;
+  font-size: 11px;
   background: var(--surface2);
 }
 #link-bar a:hover {
@@ -987,8 +1115,36 @@ html[data-theme="light"] mark {
   color: #111;
   font-weight: 700;
 }
+#toolbar,
+#cat-strip,
+#source-strip,
+#capture-panel,
+#preview-meta,
+#preview-row-category,
+#preview-row-tags {
+  display: none !important;
+}
+#root {
+  /* 只做轻量内边距调整，不要改网格行，否则 #main 会被挤掉 */
+  padding: 10px 12px 12px;
+}
+#preview-form {
+  padding-top: 0;
+}
+#preview-content {
+  height: 100%;
+}
+#preview-form .preview-row:last-child textarea {
+  min-height: 520px;
+  height: calc(100vh - 220px);
+}
 @media (max-width: 980px) {
-  #main { grid-template-columns: 1fr; }
+  #main {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(220px, 1fr) minmax(320px, 1fr);
+  }
+  #drawer-panel { grid-column: 1; grid-row: 1; }
+  #preview-panel { grid-column: 1; grid-row: 2; }
 }
 </style>
 <script src="https://app.local/assets/js/BasePanel.js"></script>
@@ -1022,15 +1178,54 @@ html[data-theme="light"] mark {
   <div id="main">
     <aside id="drawer-panel">
       <div id="drawer-head">
-        <span id="drawer-title">分类抽屉</span>
-        <button type="button" id="drawer-toggle">折叠</button>
+        <span id="drawer-title">Vault</span>
+        <div class="drawer-actions">
+          <button type="button" class="drawer-btn" id="btn-drawer-search" title="搜索">🔎</button>
+          <button type="button" class="drawer-btn" id="btn-drawer-new" title="新建">＋</button>
+          <button type="button" class="drawer-btn" id="drawer-toggle" title="折叠">⟷</button>
+        </div>
       </div>
       <div id="drawer-body"></div>
     </aside>
     <div id="list-panel"></div>
     <div id="preview-panel">
       <div id="preview-meta"></div>
-      <div id="preview-content">选择一项查看正文</div>
+      <div id="preview-content">
+        <div id="preview-form">
+          <div class="preview-row" id="preview-row-title">
+            <label for="preview-title">标题</label>
+            <input id="preview-title" type="text">
+          </div>
+          <div class="preview-row" id="preview-row-created">
+            <label for="preview-created">新建日期</label>
+            <input id="preview-created" type="text" readonly>
+          </div>
+          <div class="preview-row" id="preview-row-updated">
+            <label for="preview-updated">最后编辑日期</label>
+            <input id="preview-updated" type="text" readonly>
+          </div>
+          <div class="preview-row" id="preview-row-category">
+            <label for="preview-category">分类</label>
+            <select id="preview-category"></select>
+          </div>
+          <div class="preview-row" id="preview-row-tags">
+            <label for="preview-tags">标签</label>
+            <input id="preview-tags" type="text" placeholder="用逗号分隔">
+          </div>
+          <div class="preview-row">
+            <label for="preview-body">正文</label>
+            <textarea id="preview-body"></textarea>
+          </div>
+        </div>
+      </div>
+      <div class="preview-actions">
+        <button type="button" id="btn-preview-save" class="primary">保存</button>
+        <button type="button" id="btn-preview-paste">执行</button>
+        <button type="button" id="btn-preview-copy">复制</button>
+        <span class="spacer"></span>
+        <button type="button" id="btn-preview-to-draft" class="mini">草稿本</button>
+        <button type="button" id="btn-preview-to-openclaw" class="mini">OpenClaw</button>
+      </div>
     </div>
   </div>
   <div id="status-bar"></div>
@@ -1126,6 +1321,7 @@ const state = {
 let __nmDock = null;
 const PQP_USAGE_KEY = 'pqp_usage_stats_v2';
 const PQP_RECENT_KEY = 'pqp_recent_categories_v2';
+let previewAutoSaveTimer = 0;
 
 function loadDrawerPrefs() {
   try {
@@ -1412,7 +1608,7 @@ function normalizeIncomingItem(it) {
   }
   if (out.hotkey != null) out.hotkey = cleanDisplayText(out.hotkey);
   if (out.preview != null) out.preview = cleanDisplayText(out.preview);
-  if (out.content != null) out.content = cleanDisplayText(out.content);
+  if (out.content != null) out.content = preserveEditorText(out.content);
   if (out.source != null) out.source = cleanDisplayText(out.source);
   if (out.tags != null) out.tags = cleanDisplayText(out.tags);
   return out;
@@ -1420,10 +1616,17 @@ function normalizeIncomingItem(it) {
 
 function normalizeIncomingModalMsg(msg) {
   const out = Object.assign({}, msg || {});
-  ['source', 'hotkey', 'category', 'title', 'tags', 'content'].forEach((k) => {
+  ['source', 'hotkey', 'category', 'title', 'tags'].forEach((k) => {
     if (out[k] != null) out[k] = cleanDisplayText(out[k]);
   });
+  if (out.content != null) out.content = preserveEditorText(out.content);
   return out;
+}
+
+/** 正文原样保留：仅统一换行，不做乱码修复/HTML 剥离/空白压缩 */
+function preserveEditorText(v) {
+  if (v == null) return '';
+  return String(v).replace(/\r\n?/g, '\n');
 }
 
 function cleanDisplayText(v) {
@@ -1452,13 +1655,6 @@ function decodeHtmlEntities(s) {
 }
 
 function tryFixMojibake(s) {
-  const badHint = /[ÃÂâ€˜’“”•–—…‰™š›œžŸ鈥锛锟]/;
-  if (!badHint.test(s)) return s;
-  try {
-    const bytes = new Uint8Array(Array.from(s, ch => ch.charCodeAt(0) & 0xFF));
-    const fixed = new TextDecoder('utf-8', { fatal: false }).decode(bytes);
-    if (fixed && fixed !== s && fixed.indexOf('\uFFFD') < 0) return fixed;
-  } catch (_) {}
   return s;
 }
 
@@ -1508,6 +1704,8 @@ function renderTreeNodes(container, tree, depth, chain) {
       renderList();
     };
     container.appendChild(row);
+    if (open)
+      renderDocsUnderPath(container, path, depth + 1);
     if (hasChild && open)
       renderTreeNodes(container, children, depth + 1, nextChain);
   });
@@ -1529,6 +1727,35 @@ function renderDynamicSection(container, title, paths) {
       state.selectedIndex = 0;
       renderCategories(state._lastCats || [], state.categoryPath);
       renderList();
+    };
+    container.appendChild(row);
+  });
+}
+
+function renderDocsUnderPath(container, path, depth) {
+  const docs = (state.items || [])
+    .filter((it) => {
+      if (path === '全部') return true;
+      const cp = getItemCategoryPath(it);
+      // 仅显示当前目录“直接子文档”，避免展开多目录时渲染爆炸
+      return cp === path;
+    })
+    .sort((a, b) => String(a.title || '').localeCompare(String(b.title || ''), 'zh-Hans-CN'));
+  docs.forEach((it) => {
+    const row = document.createElement('div');
+    const active = state.selectedMergedIndex === it.mergedIndex;
+    row.className = 'drawer-doc-item' + (active ? ' active' : '');
+    row.style.marginLeft = `${Math.min(depth, 3) * 12}px`;
+    row.innerHTML = '<span class="drawer-doc-dot">•</span><div class="drawer-doc-meta"><div class="drawer-doc-name">' + escapeHtml(it.title || '(未命名)') + '</div><div class="drawer-doc-sub">' + escapeHtml((it.tags || '') || (it.preview || '') || (it.source || '')) + '</div></div>';
+    row.onclick = () => {
+      state.categoryPath = path;
+      state.category = splitCategoryPath(path).slice(-1)[0] || path;
+      const list = getDisplayItems();
+      const idx = list.findIndex((x) => x.mergedIndex === it.mergedIndex);
+      state.selectedIndex = idx >= 0 ? idx : 0;
+      state.selectedMergedIndex = it.mergedIndex || 0;
+      updatePreview();
+      renderCategories(state._lastCats || [], state.categoryPath);
     };
     container.appendChild(row);
   });
@@ -1679,6 +1906,8 @@ function renderCategories(cats, selPath) {
   };
   drawer.appendChild(allRow);
   renderTreeNodes(drawer, buildCategoryTree(uniqueCatPaths), 0, []);
+  if (!uniqueCatPaths.length && (state.items || []).length)
+    renderDocsUnderPath(drawer, '全部', 0);
   renderCategoryTopTags();
 }
 
@@ -1717,19 +1946,150 @@ function selectItem(i) {
     el.classList.toggle('active', j === i);
   });
   updatePreview();
+  renderCategories(state._lastCats || [], state.categoryPath);
 }
 
 function updatePreview() {
   const it = getSelectedDisplayItem();
   const meta = document.getElementById('preview-meta');
-  const content = document.getElementById('preview-content');
+  const titleEl = document.getElementById('preview-title');
+  const createdEl = document.getElementById('preview-created');
+  const updatedEl = document.getElementById('preview-updated');
+  const catEl = document.getElementById('preview-category');
+  const tagsEl = document.getElementById('preview-tags');
+  const bodyEl = document.getElementById('preview-body');
   if (!it) {
     meta.textContent = '';
-    content.textContent = '选择一项查看正文';
+    titleEl.value = '';
+    createdEl.value = '';
+    updatedEl.value = '';
+    fillItemCategorySelect(state._lastCats || ['全部'], '未分类');
+    tagsEl.value = '';
+    bodyEl.value = '';
     return;
   }
-  meta.textContent = (it.title || '') + ' · ' + (it.category || '') + ' · merged #' + it.mergedIndex;
-  content.textContent = (it.content !== undefined && it.content !== '') ? it.content : '(空正文)';
+  meta.textContent = (it.source || '') + ' · merged #' + it.mergedIndex;
+  const parsed = parseDateMeta(it.content || '');
+  titleEl.value = it.title || '';
+  createdEl.value = parsed.createdAt || formatNowDate();
+  updatedEl.value = parsed.updatedAt || formatNowDate();
+  fillItemCategorySelect(state._lastCats || ['全部'], it.category || '未分类');
+  tagsEl.value = it.tags || '';
+  const rawBody = parsed.body || '';
+  bodyEl.value = rawBody || ('\n');
+}
+
+function savePreviewEdit() {
+  const it = getSelectedDisplayItem();
+  if (!it) return;
+  const created = document.getElementById('preview-created').value || formatNowDate();
+  const updated = formatNowDate();
+  document.getElementById('preview-created').value = created;
+  document.getElementById('preview-updated').value = updated;
+  const content = buildDateMetaContent(created, updated, document.getElementById('preview-body').value || '');
+  sendAction('itemEditSave', {
+    mergedIndex: it.mergedIndex,
+    title: document.getElementById('preview-title').value,
+    category: document.getElementById('preview-category').value,
+    tags: document.getElementById('preview-tags').value,
+    content
+  });
+}
+
+function currentMergedIndex() {
+  const it = getSelectedDisplayItem();
+  return it ? (it.mergedIndex || 0) : 0;
+}
+
+function showEditorCtxMenu(x, y) {
+  const mi = currentMergedIndex();
+  const m = document.getElementById('ctx-menu');
+  if (!m) return;
+  const rows = [
+    { name: '保存', act: 'editor_save' },
+    { name: '执行', act: 'editor_run' },
+    { name: '复制', act: 'editor_copy' },
+    { name: '粘贴', act: 'editor_paste' },
+    { name: '插入日期', act: 'editor_insert_date' },
+    { name: '发送到草稿本', act: 'sc_to_draft' },
+    { name: '发送到 OpenClaw', act: 'sc_to_openclaw' },
+    { name: '发送到提示词中心', act: 'sc_to_prompt' }
+  ];
+  m.innerHTML = '';
+  rows.forEach((row) => {
+    const item = document.createElement('div');
+    item.className = 'mi';
+    item.textContent = row.name;
+    item.onclick = (ev) => {
+      ev.preventDefault();
+      ev.stopPropagation();
+      m.style.display = 'none';
+      const act = row.act;
+      if (act === 'editor_save') return savePreviewEdit();
+      if (act === 'editor_run') return doPaste();
+      if (act === 'editor_copy') return document.getElementById('btn-preview-copy')?.click();
+      if (act === 'editor_paste') return document.execCommand('paste');
+      if (act === 'editor_insert_date') {
+        const ta = document.getElementById('preview-body');
+        if (!ta) return;
+        const ins = formatNowDate();
+        const start = ta.selectionStart || 0;
+        const end = ta.selectionEnd || 0;
+        const cur = ta.value || '';
+        ta.value = cur.slice(0, start) + ins + cur.slice(end);
+        ta.focus();
+        const p = start + ins.length;
+        try { ta.setSelectionRange(p, p); } catch (_) {}
+        schedulePreviewAutoSave();
+        return;
+      }
+      if (/^sc_/.test(act) && mi > 0) {
+        postToAhk({ type: 'pqpScCtxCmd', cmdId: act, mergedIndex: mi });
+        return;
+      }
+    };
+    m.appendChild(item);
+  });
+  m.style.left = x + 'px';
+  m.style.top = y + 'px';
+  m.style.display = 'grid';
+  m.style.gridTemplateColumns = '1fr';
+  m.style.gap = '4px';
+}
+
+function formatNowDate() {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function parseDateMeta(text) {
+  const lines = String(text || '').split(/\r?\n/);
+  let createdAt = '';
+  let updatedAt = '';
+  const bodyLines = [];
+  lines.forEach((line) => {
+    const c = line.match(/^新建日期[:：]\s*(\d{4}-\d{2}-\d{2})/);
+    if (c) { createdAt = c[1]; return; }
+    const u = line.match(/^最后编辑[:：]\s*(\d{4}-\d{2}-\d{2})/);
+    if (u) { updatedAt = u[1]; return; }
+    bodyLines.push(line);
+  });
+  return { createdAt, updatedAt, body: bodyLines.join('\n').replace(/^\n+/, '') };
+}
+
+function buildDateMetaContent(createdAt, updatedAt, body) {
+  const b = String(body || '').replace(/^\n+/, '');
+  return `新建日期：${createdAt}\n最后编辑：${updatedAt}\n\n${b}`.trimEnd();
+}
+
+function schedulePreviewAutoSave() {
+  if (previewAutoSaveTimer) clearTimeout(previewAutoSaveTimer);
+  previewAutoSaveTimer = setTimeout(() => {
+    savePreviewEdit();
+  }, 700);
 }
 
 function handleAhkMessage(msg) {
@@ -1758,8 +2118,7 @@ function handleAhkMessage(msg) {
       document.getElementById('search-input').value = state.keyword;
       state.category = cleanDisplayText(msg.selectedCategory || '全部');
       state.categoryPath = state.category === '全部' ? '全部' : joinCategoryPath(splitCategoryPath(state.category));
-      if (msg.categories)
-        renderCategories(msg.categories, state.categoryPath);
+      renderCategories(msg.categories || state._lastCats || [], state.categoryPath);
       document.getElementById('status-bar').textContent = cleanDisplayText(msg.statusLine || '');
       if (msg.pinTop !== undefined) {
         state.pinTop = !!msg.pinTop;
@@ -1780,8 +2139,16 @@ function handleAhkMessage(msg) {
         syncCaptureUi();
       }
       applyStaticHotkeyHints();
-      state.selectedIndex = 0;
+      const keepMerged = state.selectedMergedIndex || 0;
       renderList();
+      if (keepMerged > 0) {
+        const items = getDisplayItems();
+        const idx = items.findIndex((x) => x.mergedIndex === keepMerged);
+        if (idx >= 0) {
+          state.selectedIndex = idx;
+          updatePreview();
+        }
+      }
       renderCategoryTopTags();
       break;
     case 'captureOpen':
@@ -2214,6 +2581,47 @@ document.getElementById('btn-clear-cap').onclick = (e) => {
   clearCaptureDraft();
 };
 
+document.getElementById('btn-preview-save').onclick = () => {
+  savePreviewEdit();
+};
+document.getElementById('btn-preview-copy').onclick = async () => {
+  const txt = document.getElementById('preview-body').value || '';
+  if (!txt) return;
+  try {
+    await navigator.clipboard.writeText(txt);
+  } catch (_) {}
+};
+document.getElementById('btn-preview-paste').onclick = () => {
+  doPaste();
+};
+document.getElementById('btn-preview-to-draft')?.addEventListener('click', () => {
+  const mi = currentMergedIndex();
+  if (mi > 0) postToAhk({ type: 'pqpScCtxCmd', cmdId: 'sc_to_draft', mergedIndex: mi });
+});
+document.getElementById('btn-preview-to-openclaw')?.addEventListener('click', () => {
+  const mi = currentMergedIndex();
+  if (mi > 0) postToAhk({ type: 'pqpScCtxCmd', cmdId: 'sc_to_openclaw', mergedIndex: mi });
+});
+document.getElementById('preview-body')?.addEventListener('input', schedulePreviewAutoSave);
+document.getElementById('preview-category')?.addEventListener('change', schedulePreviewAutoSave);
+document.getElementById('preview-body')?.addEventListener('contextmenu', (e) => {
+  e.preventDefault();
+  showEditorCtxMenu(e.clientX, e.clientY);
+});
+
+document.getElementById('btn-drawer-search')?.addEventListener('click', () => {
+  const input = document.getElementById('search-input');
+  if (input) input.focus();
+});
+document.getElementById('btn-drawer-new')?.addEventListener('click', () => {
+  // 用“采集草稿”作为新建入口：自动填标题为日期
+  const t = formatNowDate();
+  document.getElementById('cap-title').value = t;
+  document.getElementById('cap-body').value = '';
+  state.captureExpanded = true;
+  syncCaptureUi();
+});
+
 document.addEventListener('keydown', (e) => {
   if (e.key === 'CapsLock') {
     beginCapsHoldHint();
@@ -2284,6 +2692,7 @@ if (drawerToggle && drawerPanel) {
 }
 
 loadDrawerPrefs();
+renderCategories([], '全部');
 renderCategoryTopTags();
 applyStaticHotkeyHints();
 syncCaptureUi();

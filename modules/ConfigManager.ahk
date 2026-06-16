@@ -454,6 +454,18 @@ ReadPersistedThemeMode() {
     return "dark"
 }
 
+Cfg_LooksCorruptedPromptText(txt) {
+    t := String(txt)
+    if (t = "")
+        return false
+    if InStr(t, "�") || InStr(t, Chr(0xFFFD))
+        return true
+    if InStr(t, "㼿") || InStr(t, "锟") || InStr(t, "倀") || InStr(t, "爀") || InStr(t, "漀") || InStr(t, "甀") {
+        return RegExMatch(t, "[㼿锟倀爀漀甀]{6,}") ? true : false
+    }
+    return (StrLen(t) > 1200 && RegExMatch(t, "[^一-龥A-Za-z0-9`n`r`t,.;:：，。！？()（）\\-+/*_ ]")) ? true : false
+}
+
 InitConfig() {
     _Cfg_DeduplicateSections(ConfigFile)
     _Cfg_NormalizeIniEncoding(ConfigFile)
@@ -705,14 +717,17 @@ InitConfig() {
             enRef := GetText("default_prompt_refactor")
             enOpt := GetText("default_prompt_optimize")
             Language := OldLang
+
+            ; prompt 可能在历史版本/旧编码下被写坏，表现为大量 mojibake（例如 㼿、锟、倀爀漀...、�）
+            ; 若命中这些特征，则直接回退到当前语言的默认文本，避免再次把乱码写入 prompts.json/内置快捷提示词。
             
-            if (Prompt_Explain == "" || Prompt_Explain == zhExp || Prompt_Explain == enExp) {
+            if (Prompt_Explain == "" || Prompt_Explain == zhExp || Prompt_Explain == enExp || Cfg_LooksCorruptedPromptText(Prompt_Explain)) {
                 Prompt_Explain := (Language == "zh") ? zhExp : enExp
             }
-            if (Prompt_Refactor == "" || Prompt_Refactor == zhRef || Prompt_Refactor == enRef) {
+            if (Prompt_Refactor == "" || Prompt_Refactor == zhRef || Prompt_Refactor == enRef || Cfg_LooksCorruptedPromptText(Prompt_Refactor)) {
                 Prompt_Refactor := (Language == "zh") ? zhRef : enRef
             }
-            if (Prompt_Optimize == "" || Prompt_Optimize == zhOpt || Prompt_Optimize == enOpt) {
+            if (Prompt_Optimize == "" || Prompt_Optimize == zhOpt || Prompt_Optimize == enOpt || Cfg_LooksCorruptedPromptText(Prompt_Optimize)) {
                 Prompt_Optimize := (Language == "zh") ? zhOpt : enOpt
             }
             

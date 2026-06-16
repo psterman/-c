@@ -207,8 +207,11 @@ function __settingsStudioTestInline(payloadJson, testId, flat) {
       activeTab: "general",
       selectedPromptTemplateId: "",
       promptsMainTab: "templateManager",
-      promptsCategoryTab: "基础",
+      promptsUiVariant: "vaultLite",
+      promptsCategoryTab: "全部",
       promptsSearchKeyword: "",
+      promptsFilterMode: "all",
+      promptsTagFilter: "",
       customPromptCategories: [],
       promptsSearchComposing: false,
       creatingPromptTemplate: false,
@@ -5963,39 +5966,68 @@ ${bindListBlock("hk-vk-list-" + subId, renderVkCmdListHtml(preset.commands, stat
         bindHoleSettingsUi();
       } else if (state.activeTab === "prompts") {
         const fixedCategories = ["基础","专业","改错","优化","解释","重构"];
-        const tplAll = d.promptTemplateSummary || [];
-        const dynamicCats = Array.from(new Set(tplAll.map(t => (t.category || "").trim()).filter(Boolean)));
+        const normalizeTags = (raw) => {
+          if (Array.isArray(raw)) return raw.map(v => String(v || "").trim()).filter(Boolean);
+          return String(raw || "").split(/[,\n，]/).map(v => v.trim()).filter(Boolean);
+        };
+        const toTagText = (raw) => normalizeTags(raw).join(", ");
+        const formatTime = (value) => {
+          const n = Number(value || 0);
+          if (!n) return "-";
+          const dt = new Date(n);
+          if (Number.isNaN(dt.getTime())) return "-";
+          return dt.toLocaleString("zh-CN", { hour12: false });
+        };
+        const tplAll = (d.promptTemplateSummary || []).map(t => ({
+          ...t,
+          category: (t.category || "基础").trim() || "基础",
+          tags: normalizeTags(t.tags),
+          scenario: String(t.scenario || "").trim(),
+          isFavorite: !!t.isFavorite,
+          useCount: Number(t.useCount || 0),
+          lastUsedAt: Number(t.lastUsedAt || 0)
+        }));
+        const dynamicCats = Array.from(new Set(tplAll.map(t => t.category).filter(Boolean)));
         const allCats = [...new Set([...fixedCategories, ...dynamicCats, ...(state.customPromptCategories || [])])];
-        if (!allCats.includes(state.promptsCategoryTab))
-          state.promptsCategoryTab = "基础";
+        if (state.promptsCategoryTab !== "全部" && !allCats.includes(state.promptsCategoryTab)) state.promptsCategoryTab = "全部";
+        const allTags = Array.from(new Set(tplAll.flatMap(t => t.tags))).sort((a, b) => a.localeCompare(b, "zh-CN"));
+        if (state.promptsTagFilter && !allTags.includes(state.promptsTagFilter)) state.promptsTagFilter = "";
         const keyword = (state.promptsSearchKeyword || "").trim().toLowerCase();
-        const filteredByCategory = tplAll.filter(t => {
-          const cat = (t.category || "基础").trim();
-          const byCat = cat === state.promptsCategoryTab;
-          if (!byCat) return false;
-          return true;
-        });
-        const filteredByKeyword = tplAll.filter(t => {
+        const filteredRaw = tplAll.filter(t => {
           if (!keyword) return true;
-          return [t.id, t.title, t.content, t.category].some(v => String(v || "").toLowerCase().includes(keyword));
+          return [t.id, t.title, t.content, t.category, t.scenario, (t.tags || []).join(" ")].some(v => String(v || "").toLowerCase().includes(keyword));
+        }).filter(t => {
+          if (state.promptsFilterMode === "favorites" && !t.isFavorite) return false;
+          if (state.promptsFilterMode === "recent" && !t.lastUsedAt) return false;
+          if (state.promptsFilterMode === "inbox" && t.category !== "收集箱") return false;
+          if (state.promptsCategoryTab !== "全部" && t.category !== state.promptsCategoryTab) return false;
+          if (state.promptsTagFilter && !(t.tags || []).includes(state.promptsTagFilter)) return false;
+          return true;
+        }).sort((a, b) => {
+          if (!!b.isFavorite !== !!a.isFavorite) return b.isFavorite ? 1 : -1;
+          if ((b.lastUsedAt || 0) !== (a.lastUsedAt || 0)) return (b.lastUsedAt || 0) - (a.lastUsedAt || 0);
+          return String(a.title || a.id || "").localeCompare(String(b.title || b.id || ""), "zh-CN");
         });
-        const filteredRaw = keyword ? filteredByKeyword : filteredByCategory;
         const dedupeMap = new Map();
         for (const t of filteredRaw) {
           const key = String(t?.id || "").trim() || `${String(t?.title || "").trim()}::${String(t?.category || "").trim()}`;
-          if (!dedupeMap.has(key))
-            dedupeMap.set(key, t);
+          if (!dedupeMap.has(key)) dedupeMap.set(key, t);
         }
         const filtered = Array.from(dedupeMap.values());
         if (state.selectedPromptTemplateId && !filtered.some(t => t.id === state.selectedPromptTemplateId))
           state.selectedPromptTemplateId = "";
-        const selected = state.creatingPromptTemplate
-          ? null
-          : (filtered.find(t => t.id === state.selectedPromptTemplateId) || filtered[0] || null);
-        const catTabs = allCats.map(c => `<button class="subtab-btn ${state.promptsCategoryTab === c ? "active" : ""}" data-prompt-cat="${esc(c)}">${esc(c)}</button>`).join("");
-        const listRows = filtered.map(t => `<div class="list-row ${selected?.id === t.id ? "active" : ""}" data-prompt-id="${esc(t.id)}"><div>${esc(t.title || t.id)}</div><div>${esc((t.content || "").replace(/\s+/g, " ").slice(0, 96))}</div></div>`).join("");
-        const presetOpts = (d.promptTemplates || []).map(p => `<option value="${esc(p.id)}">${esc(p.title || p.id)} (${esc(p.category || "基础")})</option>`).join("");
-        panel.innerHTML = `<div class="card"><div class="subtabs"><button class="subtab-btn ${state.promptsMainTab === "templateManager" ? "active" : ""}" data-prompt-main="templateManager">模板管理</button><button class="subtab-btn ${state.promptsMainTab === "cursorRules" ? "active" : ""}" data-prompt-main="cursorRules">cursor规则</button></div>${state.promptsMainTab === "templateManager" ? `<div class="search-row"><div class="inline"><input id="promptSearchKeyword" data-nosave="1" type="text" placeholder="搜索模板关键词（自动匹配全部模板）" value="${esc(state.promptsSearchKeyword)}"><button class="btn" id="btnPromptSearchClear">清空</button></div></div><div class="subtabs">${catTabs}</div><div class="prompt-grid"><div class="list-panel"><div class="list-head"><div>名称</div><div>内容</div></div><div class="list-body">${listRows || `<div class="list-row"><div>-</div><div>未匹配到模板</div></div>`}</div></div><div><div class="compact-row"><div class="label">预设模板</div><select id="promptTemplatePreset" data-nosave="1"><option value="">选择预设填充…</option>${presetOpts}</select></div><div class="compact-row"><div class="label">模板标题</div><input id="promptTplTitle" type="text" value="${esc(selected?.title || "")}"></div><div class="compact-row"><div class="label">模板分类</div><div class="inline"><select id="promptTplCategory">${options(allCats, (selected?.category || state.promptsCategoryTab))}</select><button class="btn" id="btnAddCategory">新建分类</button><button class="btn" id="btnDeleteCategory">删除分类</button></div></div><div class="label">模板内容</div><div class="editor-toolbar"><button class="btn" data-editor-action="bold">加粗</button><button class="btn" data-editor-action="code">代码</button><button class="btn" data-editor-action="quote">引用</button><button class="btn" data-editor-action="ul">列表</button><button class="btn" data-editor-action="undo">撤销</button><button class="btn" data-editor-action="redo">重做</button><button class="btn" data-editor-action="clear">清空</button></div><textarea id="promptTplContent" style="min-height:260px;">${esc(selected?.content || "")}</textarea><div class="inline" style="margin-top:8px;"><button class="btn" id="btnTplNew">新建模板</button><button class="btn" id="btnTplSave">保存模板</button><button class="btn" id="btnTplDelete">删除模板</button></div><div class="inline" style="margin-top:8px;"><button class="btn" id="btnImportTpl">导入模板</button><button class="btn" id="btnExportTpl">导出模板</button><button class="btn" id="btnReloadTpl">重载模板</button></div></div></div>` : (() => { const ruleTabs = [{k:"general",n:"通用规则"},{k:"web",n:"网页开发"},{k:"miniprogram",n:"小程序"},{k:"android",n:"安卓App"},{k:"ios",n:"iOS App"},{k:"python",n:"Python"}]; const tabHtml = ruleTabs.map(t => `<button class="subtab-btn ${state.cursorRulesTab===t.k?"active":""}" data-rule-tab="${t.k}">${t.n}</button>`).join(""); const content = d.cursorRules?.[state.cursorRulesTab] || ""; return `<div class="title">Cursor规则配置</div><div class="hint">根据开发类型配置规则，让 AI 更精准理解项目上下文，减少无效对话与返工。</div><div class="title" style="margin-top:10px;">📋 复制位置</div><div class="hint">在 Cursor 中按 Ctrl+Shift+P 打开命令面板，输入 <code>rules</code> 或 <code>cursor rules</code>，选择 Open Cursor Rules，粘贴到 <code>.cursorrules</code> 文件。</div><div class="title" style="margin-top:10px;">💡 使用方法</div><div class="hint">1. 选择下方开发类型标签 2. 编辑或粘贴规则 3. 点击复制规则 4. 粘贴保存到 Cursor 规则文件 5. 重启 Cursor 生效。</div><div class="subtabs" style="margin-top:10px;">${tabHtml}</div><div class="label">规则内容</div><textarea id="cursorRuleContent" style="min-height:320px;">${esc(content)}</textarea><div class="inline" style="margin-top:8px;"><button class="btn" id="btnCursorRulesCopy">复制规则</button></div>`; })()}</div>`;
+        const selected = state.creatingPromptTemplate ? null : (filtered.find(t => t.id === state.selectedPromptTemplateId) || filtered[0] || null);
+        const categoryRows = [`<button class="subtab-btn ${state.promptsCategoryTab === "全部" ? "active" : ""}" data-prompt-cat="全部">全部</button>`]
+          .concat(allCats.map(c => `<button class="subtab-btn ${state.promptsCategoryTab === c ? "active" : ""}" data-prompt-cat="${esc(c)}">${esc(c)}</button>`))
+          .join("");
+        const tagOptions = [`<option value="">全部标签</option>`]
+          .concat(allTags.map(tag => `<option value="${esc(tag)}" ${state.promptsTagFilter === tag ? "selected" : ""}>${esc(tag)}</option>`))
+          .join("");
+        const listRows = filtered.map(t => `<div class="list-row ${selected?.id === t.id ? "active" : ""}" data-prompt-id="${esc(t.id)}"><div><div class="prompt-row-title">${esc(t.title || t.id)}</div><div class="hint">${t.isFavorite ? "收藏" : "普通"} · #${esc(t.category || "基础")}</div></div><div><div>${esc((t.content || "").replace(/\s+/g, " ").slice(0, 92))}</div><div class="hint">${esc((t.tags || []).slice(0, 3).join(" / ") || "无标签")}</div></div></div>`).join("");
+        const classicOps = state.promptsUiVariant === "classic"
+          ? `<div class="inline" style="margin:8px 0"><button class="btn" id="btnImportTplClassic">导入</button><button class="btn" id="btnExportTplClassic">导出</button><button class="btn" id="btnReloadTplClassic">重载</button><div class="hint">共 ${esc(String(filtered.length))} 条</div></div>`
+          : "";
+        panel.innerHTML = `<div class="card prompt-vault ${state.promptsUiVariant === "classic" ? "prompt-vault-classic" : "prompt-vault-lite"}"><div class="subtabs"><button class="subtab-btn ${state.promptsMainTab === "templateManager" ? "active" : ""}" data-prompt-main="templateManager">Prompt Vault</button><button class="subtab-btn ${state.promptsMainTab === "cursorRules" ? "active" : ""}" data-prompt-main="cursorRules">cursor规则</button></div>${state.promptsMainTab === "templateManager" ? `<div class="prompt-vault-top"><input id="promptSearchKeyword" data-nosave="1" type="text" placeholder="搜索提示词..." value="${esc(state.promptsSearchKeyword)}"><button class="btn" id="btnTplNew">+ 新建</button><div class="prompt-vault-menu"><button class="btn" id="btnPromptMenu">⋯</button><div id="promptMenuPanel" class="prompt-menu-panel"><button class="btn prompt-menu-item" id="btnImportTpl">导入</button><button class="btn prompt-menu-item" id="btnExportTpl">导出</button><button class="btn prompt-menu-item" id="btnPromptOpenJson">打开 JSON</button><button class="btn prompt-menu-item" id="btnPromptTrash">回收站</button><button class="btn prompt-menu-item" id="btnPromptSwitchClassic">${state.promptsUiVariant === "classic" ? "切换轻量视图" : "切换经典视图"}</button></div></div></div>${classicOps}<div class="prompt-library-layout"><div class="list-panel prompt-library-side"><div class="list-head"><div>库</div><div>组织</div></div><div class="list-body"><div class="prompt-filter-group"><div class="subtabs"><button class="subtab-btn ${state.promptsFilterMode === "inbox" ? "active" : ""}" data-prompt-filter="inbox">收集箱</button><button class="subtab-btn ${state.promptsFilterMode === "favorites" ? "active" : ""}" data-prompt-filter="favorites">收藏</button><button class="subtab-btn ${state.promptsFilterMode === "recent" ? "active" : ""}" data-prompt-filter="recent">最近使用</button><button class="subtab-btn ${state.promptsFilterMode === "all" ? "active" : ""}" data-prompt-filter="all">全部</button></div></div><div class="prompt-filter-group"><div class="label">分类</div><div class="subtabs prompt-category-wrap">${categoryRows}</div></div><div class="prompt-filter-group"><div class="label">标签</div><select id="promptTagFilter">${tagOptions}</select></div></div></div><div class="list-panel"><div class="list-head"><div>提示词列表</div><div>摘要</div></div><div class="list-body">${listRows || `<div class="list-row"><div>-</div><div>没有匹配结果</div></div>`}</div></div><div><div class="compact-row"><div class="label">标题</div><input id="promptTplTitle" type="text" value="${esc(selected?.title || "")}"></div><div class="compact-row"><div class="label">分类</div><div class="inline"><select id="promptTplCategory">${options(["收集箱", ...allCats], (selected?.category || state.promptsCategoryTab || "收集箱"))}</select><button class="btn" id="btnAddCategory">新建分类</button><button class="btn" id="btnDeleteCategory">删除分类</button></div></div><div class="compact-row"><div class="label">标签</div><input id="promptTplTags" type="text" value="${esc(toTagText(selected?.tags || []))}" placeholder="#标签, 用逗号分隔"></div><div class="compact-row"><div class="label">收藏</div><label class="inline"><input id="promptTplFavorite" type="checkbox" ${selected?.isFavorite ? "checked" : ""}> 收藏</label></div><div class="compact-row"><div class="label">最近使用</div><div>${esc(formatTime(selected?.lastUsedAt))}（${esc(String(selected?.useCount || 0))} 次）</div></div><div class="compact-row"><div class="label">关联提示词</div><input id="promptTplScenario" type="text" value="${esc(selected?.scenario || "")}" placeholder="可写 [[提示词名]]"></div><div class="label">正文</div><textarea id="promptTplContent" style="min-height:260px;">${esc(selected?.content || "")}</textarea><div class="inline" style="margin-top:8px;"><button class="btn" id="btnTplSave">保存</button><button class="btn" id="btnTplDelete">删除</button></div><div class="inline" style="margin-top:8px;"><button class="btn" id="btnPromptCopy">复制</button><button class="btn" id="btnPromptInsertDraft">插入草稿本</button><button class="btn primary" id="btnPromptOpenDraft">打开草稿本执行</button><button class="btn" id="btnPromptPinShortcut">固定快捷入口</button></div></div></div>` : (() => { const ruleTabs = [{k:"general",n:"通用规则"},{k:"web",n:"网页开发"},{k:"miniprogram",n:"小程序"},{k:"android",n:"安卓App"},{k:"ios",n:"iOS App"},{k:"python",n:"Python"}]; const tabHtml = ruleTabs.map(t => `<button class="subtab-btn ${state.cursorRulesTab===t.k?"active":""}" data-rule-tab="${t.k}">${t.n}</button>`).join(""); const content = d.cursorRules?.[state.cursorRulesTab] || ""; return `<div class="title">Cursor规则配置</div><div class="hint">根据开发类型配置规则，让 AI 更精准理解项目上下文，减少无效对话与返工。</div><div class="title" style="margin-top:10px;">📋 复制位置</div><div class="hint">在 Cursor 中按 Ctrl+Shift+P 打开命令面板，输入 <code>rules</code> 或 <code>cursor rules</code>，选择 Open Cursor Rules，粘贴到 <code>.cursorrules</code> 文件。</div><div class="title" style="margin-top:10px;">💡 使用方法</div><div class="hint">1. 选择下方开发类型标签 2. 编辑或粘贴规则 3. 点击复制规则 4. 粘贴保存到 Cursor 规则文件 5. 重启 Cursor 生效。</div><div class="subtabs" style="margin-top:10px;">${tabHtml}</div><div class="label">规则内容</div><textarea id="cursorRuleContent" style="min-height:320px;">${esc(content)}</textarea><div class="inline" style="margin-top:8px;"><button class="btn" id="btnCursorRulesCopy">复制规则</button></div>`; })()}</div>`;
         document.querySelectorAll("[data-prompt-main]").forEach(el => el.addEventListener("click", () => { state.promptsMainTab = el.getAttribute("data-prompt-main"); render(); }));
         if (state.promptsMainTab === "templateManager") {
           const searchEl = document.getElementById("promptSearchKeyword");
@@ -6023,49 +6055,17 @@ ${bindListBlock("hk-vk-list-" + subId, renderVkCmdListHtml(preset.commands, stat
               renderWithSearchFocus(e.target.value || "", e.target.selectionStart ?? (e.target.value || "").length);
             }
           });
-          document.getElementById("btnPromptSearchClear").addEventListener("click", () => {
-            renderWithSearchFocus("", 0);
-          });
           document.querySelectorAll("[data-prompt-cat]").forEach(el => el.addEventListener("click", () => { state.promptsCategoryTab = el.getAttribute("data-prompt-cat"); render(); }));
+          document.querySelectorAll("[data-prompt-filter]").forEach(el => el.addEventListener("click", () => { state.promptsFilterMode = el.getAttribute("data-prompt-filter") || "all"; render(); }));
+          document.getElementById("promptTagFilter")?.addEventListener("change", (e) => { state.promptsTagFilter = e.target.value || ""; render(); });
           document.querySelectorAll("[data-prompt-id]").forEach(el => el.addEventListener("click", () => { state.selectedPromptTemplateId = el.getAttribute("data-prompt-id"); state.creatingPromptTemplate = false; render(); }));
-          const presetEl = document.getElementById("promptTemplatePreset");
-          if (presetEl) presetEl.addEventListener("change", () => {
-            const id = presetEl.value;
-            if (!id) return;
-            const preset = (d.promptTemplates || []).find(p => p.id === id);
-            if (!preset) return;
-            const titleEl = document.getElementById("promptTplTitle");
-            const catEl = document.getElementById("promptTplCategory");
-            const bodyEl = document.getElementById("promptTplContent");
-            if (titleEl) titleEl.value = preset.title || preset.id || "";
-            if (catEl && preset.category) catEl.value = preset.category;
-            if (bodyEl) bodyEl.value = preset.body || preset.content || "";
-            state.creatingPromptTemplate = true;
-            state.selectedPromptTemplateId = "";
-            presetEl.value = "";
-            setStatus("已填充预设模板，可编辑后保存", "ok");
+          const menuBtn = document.getElementById("btnPromptMenu");
+          const menuPanel = document.getElementById("promptMenuPanel");
+          menuBtn?.addEventListener("click", (e) => {
+            e.stopPropagation();
+            menuPanel?.classList.toggle("open");
           });
-          const contentEl = document.getElementById("promptTplContent");
-          document.querySelectorAll("[data-editor-action]").forEach(btn => btn.addEventListener("click", () => {
-            const action = btn.getAttribute("data-editor-action");
-            const insertWrap = (left, right = "") => {
-              const start = contentEl.selectionStart || 0;
-              const end = contentEl.selectionEnd || 0;
-              const cur = contentEl.value || "";
-              const selectedText = cur.slice(start, end);
-              contentEl.value = cur.slice(0, start) + left + selectedText + right + cur.slice(end);
-              contentEl.focus();
-              const pos = start + left.length + selectedText.length + right.length;
-              contentEl.setSelectionRange(pos, pos);
-            };
-            if (action === "bold") insertWrap("**", "**");
-            else if (action === "code") insertWrap("```text\n", "\n```");
-            else if (action === "quote") insertWrap("> ");
-            else if (action === "ul") insertWrap("- ");
-            else if (action === "undo") document.execCommand("undo");
-            else if (action === "redo") document.execCommand("redo");
-            else if (action === "clear") contentEl.value = "";
-          }));
+          document.addEventListener("click", () => menuPanel?.classList.remove("open"), { once: true });
           document.getElementById("btnAddCategory").addEventListener("click", async () => {
             const v = await (window.nmPrompt ? window.nmPrompt("请输入新分类名称", "") : Promise.resolve(prompt("请输入新分类名称")));
             if (!v) return;
@@ -6088,7 +6088,17 @@ ${bindListBlock("hk-vk-list-" + subId, renderVkCmdListHtml(preset.commands, stat
               return render();
             }
             for (const item of inCat) {
-              post({ type: "invokeAction", op: "promptTemplateUpsert", payload: { id: item.id, title: item.title || item.id, category: "基础", content: item.content || "" } });
+              post({ type: "invokeAction", op: "promptTemplateUpsert", payload: {
+                id: item.id,
+                title: item.title || item.id,
+                category: "基础",
+                content: item.content || "",
+                tags: (item.tags || []).join(","),
+                scenario: item.scenario || "",
+                isFavorite: !!item.isFavorite,
+                lastUsedAt: Number(item.lastUsedAt || 0),
+                useCount: Number(item.useCount || 0)
+              } });
             }
             state.customPromptCategories = (state.customPromptCategories || []).filter(c => c !== category);
             saveCustomCategories();
@@ -6099,19 +6109,66 @@ ${bindListBlock("hk-vk-list-" + subId, renderVkCmdListHtml(preset.commands, stat
           document.getElementById("btnTplNew").addEventListener("click", () => {
             state.selectedPromptTemplateId = "";
             state.creatingPromptTemplate = true;
+            state.promptsCategoryTab = "收集箱";
             render();
           });
           document.getElementById("btnTplSave").addEventListener("click", () => {
-            post({ type: "invokeAction", op: "promptTemplateUpsert", payload: { id: state.selectedPromptTemplateId || "", title: document.getElementById("promptTplTitle").value.trim(), category: document.getElementById("promptTplCategory").value.trim(), content: document.getElementById("promptTplContent").value } });
+            post({ type: "invokeAction", op: "promptTemplateUpsert", payload: {
+              id: state.selectedPromptTemplateId || "",
+              title: document.getElementById("promptTplTitle").value.trim(),
+              category: document.getElementById("promptTplCategory").value.trim(),
+              content: document.getElementById("promptTplContent").value,
+              tags: document.getElementById("promptTplTags").value,
+              scenario: document.getElementById("promptTplScenario").value.trim(),
+              isFavorite: !!document.getElementById("promptTplFavorite").checked,
+              lastUsedAt: Number(selected?.lastUsedAt || 0),
+              useCount: Number(selected?.useCount || 0)
+            } });
             state.creatingPromptTemplate = false;
           });
           document.getElementById("btnTplDelete").addEventListener("click", () => {
             if (!state.selectedPromptTemplateId) return setStatus("请先选择模板", "err");
             post({ type: "invokeAction", op: "promptTemplateDelete", payload: { id: state.selectedPromptTemplateId } });
           });
+          const sendPromptUsage = (action) => {
+            if (!selected?.id) return;
+            post({ type: "invokeAction", op: "promptTemplateMarkUsed", payload: { id: selected.id, action: action || "" } });
+          };
+          document.getElementById("btnPromptCopy")?.addEventListener("click", () => {
+            if (!selected?.content) return setStatus("当前提示词为空", "err");
+            post({ type: "invokeAction", op: "copyPrompt", payload: { id: selected.id, content: selected.content } });
+            sendPromptUsage("copy");
+            setStatus("已复制提示词正文", "ok");
+          });
+          document.getElementById("btnPromptOpenDraft")?.addEventListener("click", () => {
+            if (!selected?.content) return setStatus("当前提示词为空", "err");
+            post({ type: "invokeAction", op: "openDraftWithPrompt", payload: { id: selected.id, content: selected.content, title: selected.title || selected.id } });
+            sendPromptUsage("draft");
+            setStatus("已打开草稿本并带入提示词", "ok");
+          });
+          document.getElementById("btnPromptInsertDraft")?.addEventListener("click", () => {
+            if (!selected?.content) return setStatus("当前提示词为空", "err");
+            post({ type: "invokeAction", op: "insertToDraft", payload: { id: selected.id, content: selected.content, title: selected.title || selected.id } });
+            sendPromptUsage("insert");
+            setStatus("已插入草稿本", "ok");
+          });
+          document.getElementById("btnPromptPinShortcut")?.addEventListener("click", () => {
+            if (!selected?.id) return setStatus("请先选择提示词", "err");
+            post({ type: "invokeAction", op: "pinPromptShortcut", payload: { id: selected.id, title: selected.title || selected.id } });
+            setStatus("已固定到快捷入口（占位）", "ok");
+          });
           document.getElementById("btnImportTpl").addEventListener("click", () => post({ type: "invokeAction", op: "importPromptTemplates" }));
           document.getElementById("btnExportTpl").addEventListener("click", () => post({ type: "invokeAction", op: "exportPromptTemplates" }));
-          document.getElementById("btnReloadTpl").addEventListener("click", () => post({ type: "invokeAction", op: "reloadPromptTemplates" }));
+          document.getElementById("btnImportTplClassic")?.addEventListener("click", () => post({ type: "invokeAction", op: "importPromptTemplates" }));
+          document.getElementById("btnExportTplClassic")?.addEventListener("click", () => post({ type: "invokeAction", op: "exportPromptTemplates" }));
+          document.getElementById("btnReloadTplClassic")?.addEventListener("click", () => post({ type: "invokeAction", op: "reloadPromptTemplates" }));
+          document.getElementById("btnPromptOpenJson")?.addEventListener("click", () => post({ type: "invokeAction", op: "openPromptTemplatesJson" }));
+          document.getElementById("btnPromptTrash")?.addEventListener("click", () => post({ type: "invokeAction", op: "openPromptRecycleBin" }));
+          document.getElementById("btnPromptSwitchClassic")?.addEventListener("click", () => {
+            state.promptsUiVariant = state.promptsUiVariant === "vaultLite" ? "classic" : "vaultLite";
+            setStatus(state.promptsUiVariant === "classic" ? "已切换经典视图" : "已切换 Prompt Vault 轻量视图", "ok");
+            render();
+          });
         } else if (state.promptsMainTab === "cursorRules") {
           document.querySelectorAll("[data-rule-tab]").forEach(el => el.addEventListener("click", () => {
             state.data = readFromUI();

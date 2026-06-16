@@ -1047,11 +1047,44 @@ ConfigWebView_BuildInitData() {
                     tcat := t.FunctionCategory
             }
             tcontent := ""
+            ttags := ""
+            tscenario := ""
+            tisFavorite := false
+            tlastUsedAt := 0
+            tuseCount := 0
             if (t is Map)
                 tcontent := t.Get("Content", "")
             else if (IsObject(t) && t.HasProp("Content"))
                 tcontent := t.Content
-            promptTemplateSummary.Push(Map("id", tid, "title", ttitle, "category", tcat, "content", tcontent))
+            if (t is Map) {
+                ttags := t.Get("Tags", t.Get("tags", ""))
+                tscenario := t.Get("Scenario", t.Get("scenario", ""))
+                tisFavorite := !!t.Get("IsFavorite", t.Get("isFavorite", false))
+                tlastUsedAt := Integer(t.Get("LastUsedAt", t.Get("lastUsedAt", 0)))
+                tuseCount := Integer(t.Get("UseCount", t.Get("useCount", 0)))
+            } else if (IsObject(t)) {
+                if t.HasProp("Tags")
+                    ttags := t.Tags
+                else if t.HasProp("tags")
+                    ttags := t.tags
+                if t.HasProp("Scenario")
+                    tscenario := t.Scenario
+                else if t.HasProp("scenario")
+                    tscenario := t.scenario
+                if t.HasProp("IsFavorite")
+                    tisFavorite := !!t.IsFavorite
+                else if t.HasProp("isFavorite")
+                    tisFavorite := !!t.isFavorite
+                if t.HasProp("LastUsedAt")
+                    tlastUsedAt := Integer(t.LastUsedAt)
+                else if t.HasProp("lastUsedAt")
+                    tlastUsedAt := Integer(t.lastUsedAt)
+                if t.HasProp("UseCount")
+                    tuseCount := Integer(t.UseCount)
+                else if t.HasProp("useCount")
+                    tuseCount := Integer(t.useCount)
+            }
+            promptTemplateSummary.Push(Map("id", tid, "title", ttitle, "category", tcat, "content", tcontent, "tags", ttags, "scenario", tscenario, "isFavorite", tisFavorite, "lastUsedAt", tlastUsedAt, "useCount", tuseCount))
         }
     }
     cursorRules := Map(
@@ -4106,6 +4139,20 @@ ConfigWebView_OnMessage(sender, args) {
                         WebViewPromptTemplateUpsert(payload)
                     case "promptTemplateDelete":
                         WebViewPromptTemplateDelete(payload)
+                    case "copyPrompt":
+                        WebViewCopyPrompt(payload)
+                    case "openDraftWithPrompt":
+                        WebViewOpenDraftWithPrompt(payload)
+                    case "insertToDraft":
+                        WebViewInsertToDraft(payload)
+                    case "pinPromptShortcut":
+                        WebViewPinPromptShortcut(payload)
+                    case "openPromptTemplatesJson":
+                        WebViewOpenPromptTemplatesJson()
+                    case "openPromptRecycleBin":
+                        WebViewOpenPromptRecycleBin()
+                    case "promptTemplateMarkUsed":
+                        WebViewPromptTemplateMarkUsed(payload)
                     case "promptTemplateSetDefault":
                         WebViewPromptTemplateSetDefault(payload)
                     case "showVk":
@@ -4230,6 +4277,11 @@ WebViewPromptTemplateUpsert(payload) {
     tTitle := Trim(payload.Get("title", ""))
     tCategory := Trim(payload.Get("category", ""))
     tContent := payload.Get("content", "")
+    tTags := payload.Get("tags", "")
+    tScenario := Trim(payload.Get("scenario", ""))
+    tIsFavorite := !!payload.Get("isFavorite", false)
+    tLastUsedAt := Integer(payload.Get("lastUsedAt", 0))
+    tUseCount := Integer(payload.Get("useCount", 0))
     if (tTitle = "" || tContent = "")
         throw Error("template title/content cannot be empty")
     if (tCategory = "")
@@ -4237,14 +4289,30 @@ WebViewPromptTemplateUpsert(payload) {
     if (tId != "" && TemplateIndexByArrayIndex.Has(tId)) {
         idx := TemplateIndexByArrayIndex[tId]
         old := PromptTemplates[idx]
-        old.Title := tTitle
-        old.Category := tCategory
-        old.Content := tContent
+        if (old is Map) {
+            old["Title"] := tTitle
+            old["Category"] := tCategory
+            old["Content"] := tContent
+            old["Tags"] := tTags
+            old["Scenario"] := tScenario
+            old["IsFavorite"] := tIsFavorite
+            old["LastUsedAt"] := tLastUsedAt
+            old["UseCount"] := tUseCount
+        } else {
+            old.Title := tTitle
+            old.Category := tCategory
+            old.Content := tContent
+            old.Tags := tTags
+            old.Scenario := tScenario
+            old.IsFavorite := tIsFavorite
+            old.LastUsedAt := tLastUsedAt
+            old.UseCount := tUseCount
+        }
         PromptTemplates[idx] := old
     } else {
         if (tId = "")
             tId := "template_" . A_TickCount
-        newTpl := { ID: tId, Title: tTitle, Content: tContent, Icon: "", Category: tCategory }
+        newTpl := { ID: tId, Title: tTitle, Content: tContent, Icon: "", Category: tCategory, Tags: tTags, Scenario: tScenario, IsFavorite: tIsFavorite, LastUsedAt: tLastUsedAt, UseCount: tUseCount }
         PromptTemplates.Push(newTpl)
     }
     InvalidateTemplateCache()
@@ -4266,6 +4334,81 @@ WebViewPromptTemplateDelete(payload) {
         throw Error("template does not exist")
     idx := TemplateIndexByArrayIndex[tId]
     PromptTemplates.RemoveAt(idx)
+    InvalidateTemplateCache()
+    SavePromptTemplates()
+}
+
+WebViewCopyPrompt(payload) {
+    if !(payload is Map)
+        return
+    txt := String(payload.Get("content", ""))
+    if (txt = "")
+        return
+    A_Clipboard := txt
+}
+
+WebViewOpenDraftWithPrompt(payload) {
+    if !(payload is Map)
+        return
+    txt := String(payload.Get("content", ""))
+    if (txt = "")
+        return
+    try PromptQuickPad_OpenCaptureDraft(txt, true)
+}
+
+WebViewInsertToDraft(payload) {
+    if !(payload is Map)
+        return
+    txt := String(payload.Get("content", ""))
+    if (txt = "")
+        return
+    try PromptQuickPad_OpenCaptureDraft(txt, true)
+}
+
+WebViewPinPromptShortcut(payload) {
+    if !(payload is Map)
+        return
+    ; MVP 占位：后续接入和弦面板/悬浮栏绑定
+    title := Trim(String(payload.Get("title", "")))
+    if (title != "")
+        TrayTip("提示词", "已固定到快捷入口（占位）: " . title, "Iconi 1")
+}
+
+WebViewOpenPromptTemplatesJson() {
+    p := ""
+    if FuncExists("PromptQuickPad_JsonPath") {
+        try p := PromptQuickPad_JsonPath()
+    }
+    if (p = "")
+        p := Nmer_LocalDir() . "\prompts.json"
+    try Run(p)
+}
+
+WebViewOpenPromptRecycleBin() {
+    p := Nmer_LocalDir()
+    try Run(p)
+}
+
+WebViewPromptTemplateMarkUsed(payload) {
+    global PromptTemplates, TemplateIndexByArrayIndex
+    if !(payload is Map)
+        return
+    tId := Trim(payload.Get("id", ""))
+    if (tId = "" || !TemplateIndexByArrayIndex.Has(tId))
+        return
+    idx := TemplateIndexByArrayIndex[tId]
+    old := PromptTemplates[idx]
+    stamp := DateDiff("19700101000000", A_NowUTC, "Seconds") * 1000
+    if (old is Map) {
+        prevCount := Integer(old.Get("UseCount", old.Get("useCount", 0)))
+        old["LastUsedAt"] := stamp
+        old["UseCount"] := prevCount + 1
+    } else {
+        prevCount := (old.HasProp("UseCount") ? Integer(old.UseCount) : (old.HasProp("useCount") ? Integer(old.useCount) : 0))
+        old.LastUsedAt := stamp
+        old.UseCount := prevCount + 1
+    }
+    PromptTemplates[idx] := old
     InvalidateTemplateCache()
     SavePromptTemplates()
 }
