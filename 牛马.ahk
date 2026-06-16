@@ -26,7 +26,14 @@ NMER_StartupOnError(err, mode) {
     catch {
         try FileAppend(Format("{} {}\n", A_Now, msg), Nmer_DebugPath("startup_error.log"))
     }
-    try MsgBox(msg, "CursorHelper", 0x10)
+    try {
+        if FuncExists("Nmer_ShowUserErrorDialog")
+            Nmer_ShowUserErrorDialog(err, mode)
+        else
+            MsgBox(msg, "CursorHelper", 0x10)
+    } catch {
+        try MsgBox(msg, "CursorHelper", 0x10)
+    }
     return false
 }
 
@@ -445,6 +452,9 @@ global CursorPath := ""
 global AISleepTime := 15000
 global CapsLockHoldTimeSeconds := 0.5  ; 长按达到该秒数后显示 ChordPad，松手隐藏（最短 0.4 秒防误触）
 global CapsLockHoldVkEnabled := true  ; 是否启用长按 CapsLock 弹出 ChordPad（设置中心 / ini：CapsLockHoldVkEnabled）
+global SummonHotkeyPreset := "capslock"  ; 固定 CapsLock；CapsLockMode=off 可关闭和弦层
+global SummonHotkeyCustom := ""
+global CapsLockMode := "chord"  ; chord|off — preset=capslock 时：off 禁用字母和弦
 global Prompt_Explain := ""
 global Prompt_Refactor := ""
 global Prompt_Optimize := ""
@@ -4783,6 +4793,7 @@ StartWebViewWarmup(*) {
 }
 
 #Include modules\ConfigManager.ahk
+#Include modules\SummonHotkeyProbe.ahk
 #Include modules\AppUpdateCheck.ahk
 InitConfig() ; 启动初始化
 try {
@@ -5332,6 +5343,7 @@ global g_VK_TextInputActive := false
 global g_CapsLockChordSessionActive := false
 
 ; 快捷操作面板与提示词执行（模块化）
+#Include modules\OnboardingHotkeys.ahk
 #Include modules\ChordUsage.ahk
 #Include modules\ChordPad.ahk
 #Include modules\CursorPanelController.ahk
@@ -5445,6 +5457,12 @@ ShowConfigGUI_FallbackCheck(*) {
 NormalizeCapsLockRuntimeForUiOpen() {
     global CapsLock, CapsLock2, VKHoldVisible, CapsLockDownTime, g_CapsLockChordSessionActive
     ; Ensure UI entry (tray/settings) does not leave CapsLock chord mode active.
+    try {
+        if FuncExists("ChordPad_DismissIfVisible")
+            ChordPad_DismissIfVisible()
+    } catch as _e {
+        try NMER_Log(A_ThisFunc, "catch", _e.Message) 
+    }
     try CapsLock := false
     try CapsLock2 := false
     try g_CapsLockChordSessionActive := false
@@ -5472,9 +5490,24 @@ ShowConfigGUI_Safe() {
     } catch as _e {
         try NMER_Log(A_ThisFunc, "catch", _e.Message) 
     }
-    if (g_ConfigOpenInFlight && (nowTick - g_ConfigOpenInFlightSince) < 2500) {
-        NMER_Log("ui", "open_config_safe_skip_inflight", "elapsed_ms=" . (nowTick - g_ConfigOpenInFlightSince))
-        return
+    if (g_ConfigOpenInFlight && (nowTick - g_ConfigOpenInFlightSince) < 1200) {
+        hostVisible := false
+        try {
+            if (GuiID_ConfigGUI && WinExist("ahk_id " . GuiID_ConfigGUI.Hwnd))
+                hostVisible := (WinGetStyle("ahk_id " . GuiID_ConfigGUI.Hwnd) & 0x10000000) ? true : false
+        } catch as _e {
+            try NMER_Log(A_ThisFunc, "catch", _e.Message)
+        }
+        ; 仅当窗口已可见时才拦截重复点击；否则放行首击，避免“必须点两次”。
+        if hostVisible {
+            NMER_Log("ui", "open_config_safe_skip_inflight", "elapsed_ms=" . (nowTick - g_ConfigOpenInFlightSince))
+            return
+        }
+        try {
+            g_ConfigOpenInFlight := false
+            g_ConfigOpenInFlightSince := 0
+            g_ConfigWebViewOpenStartTick := 0
+        }
     }
     g_ConfigOpenInFlight := true
     g_ConfigOpenInFlightSince := nowTick

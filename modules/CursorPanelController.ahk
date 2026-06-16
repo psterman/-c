@@ -6,6 +6,8 @@ global CursorPanelWV2 := 0
 global CursorPanelWV2Ready := false
 global CapsLockPressTime := 0
 global LastCapsLockTapTick := 0
+global CapsLock := false
+global CapsLockHoldVkEnabled := true
 
 ; ===================== 切换工具栏和面板显示 =====================
 ToggleToolbarAndPanel(*) {
@@ -321,11 +323,16 @@ CapsLockChordPhysDown(*) {
 GetCapsLockState() {
     global CapsLock
     global g_CapsLockChordSessionActive := false
+    global CapsLockMode
+    if IsSet(CapsLockMode) && StrLower(Trim(String(CapsLockMode))) = "off"
+        return false
     physDown := false
     try physDown := GetKeyState("CapsLock", "P")
     catch {
         physDown := false
     }
+    if !IsSet(CapsLock)
+        CapsLock := false
     if CapsLockChordInputBlocked()
         return false
     try {
@@ -1092,8 +1099,16 @@ ActivateWailsInputBox() {
 ShowPanelTimer(*) {
     global CapsLock, CapsLock2, PanelVisible, VoiceInputActive, VoiceSearchActive, VoiceSearchSelecting
     global VKHoldVisible, CapsLockHoldVkEnabled
+    if !IsSet(CapsLockHoldVkEnabled)
+        CapsLockHoldVkEnabled := true
     if (!CapsLockHoldVkEnabled)
         return
+    if (!IsSet(VoiceInputActive))
+        VoiceInputActive := false
+    if (!IsSet(VoiceSearchActive))
+        VoiceSearchActive := false
+    if (!IsSet(VoiceSearchSelecting))
+        VoiceSearchSelecting := false
     ; 如果正在语音输入、语音搜索或选择搜索引擎，不显示和弦面板
     if (VoiceInputActive || VoiceSearchActive || VoiceSearchSelecting) {
         return
@@ -1128,6 +1143,9 @@ CapsLock:: {
     global VKHoldVisible, CapsLockHoldVkEnabled
     global LastCapsLockTapTick
     global g_CapsLockChordSessionActive := false
+
+    if !IsSet(CapsLockHoldVkEnabled)
+        CapsLockHoldVkEnabled := true
 
     g_CapsLockChordSessionActive := true
     try {
@@ -1265,7 +1283,10 @@ CapsLock:: {
     }
 
     local vkShownThisPress := VKHoldVisible
-    if (VKHoldVisible) {
+    if FuncExists("ChordPad_DismissIfVisible") {
+        if ChordPad_DismissIfVisible()
+            vkShownThisPress := true
+    } else if (VKHoldVisible) {
         if FuncExists("ChordPad_Hide")
             ChordPad_Hide()
         else
@@ -1273,7 +1294,7 @@ CapsLock:: {
         VKHoldVisible := false
     }
     
-    ; 双击 CapsLock：拉起命令面板（WebView2）
+    ; 双击 CapsLock：命令面板（与和弦层开关无关，始终可用）
     if (IsCapsDoubleClick) {
         SetTimer(CapsLock_DeferredSingleTapToggle, 0)
         ok := false

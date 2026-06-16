@@ -6,25 +6,45 @@
 <title>ChordPad</title>
 <style>
 :root{
-  --panel-bg:rgba(10,16,26,.78);--panel-edge:rgba(255,141,42,.28);
+  --ui-scale:1;
+  --panel-bg:rgba(10,16,26,.88);--panel-edge:rgba(255,141,42,.28);
   --surface2:rgba(26,44,67,.86);--surface-bound:rgba(36,22,8,.92);
   --border:rgba(45,67,97,.72);--orange:#ff8d2a;--orange-lt:#ffb347;
   --cyan:#8ec7ff;--text:#e7ebef;--text-dim:rgba(160,176,196,.72);
   --font:"Segoe UI","Microsoft YaHei UI",system-ui,sans-serif;
-  --kb-key-h:42px;--kb-rail-width:9.2vw;--kb-arrow-w:2.4vw;
+  --kb-key-h:calc(46px * var(--ui-scale));
+  --kb-key-bound-h:calc(58px * var(--ui-scale));
+  --ico-key-bound:clamp(12px,calc(10px + 0.42vw),16px);
+  --kb-rail-width:max(calc(72px * var(--ui-scale)), 8.5vw);
+  --kb-arrow-w:max(calc(20px * var(--ui-scale)), 2.2vw);
+  --kb-gap:calc(3px * var(--ui-scale));
+  --kb-row-gap:calc(2px * var(--ui-scale));
+  --panel-pad:calc(10px * var(--ui-scale));
+  --panel-gap:calc(6px * var(--ui-scale));
+  --ico-key:max(10px,calc(16px * var(--ui-scale)));
+  --txt-chrome:11px;
+  --txt-hint:11px;
+  --txt-foot:10px;
 }
 *{box-sizing:border-box;margin:0;padding:0}
-html,body{width:100%;height:100%;overflow:hidden;background:transparent;color:var(--text);font-family:var(--font);user-select:none}
-#root{display:flex;flex-direction:column;justify-content:flex-end;width:100%;height:100%;padding:0 10px 8px}
+html,body{width:100%;height:100%;overflow:hidden;background:transparent!important;color:var(--text);font-family:var(--font);user-select:none}
+#root{
+  display:flex;flex-direction:column;justify-content:stretch;align-items:stretch;
+  width:100%;height:100%;padding:0;overflow:hidden;
+  background:var(--panel-bg)!important;
+}
 #panel-shell{
-  display:flex;flex-direction:column;gap:6px;padding:8px 10px 10px;
-  border:1px solid var(--panel-edge);border-radius:14px;
+  display:flex;flex-direction:column;justify-content:flex-end;gap:var(--panel-gap);
+  width:100%;min-height:100%;flex:1 1 auto;padding:var(--panel-pad);
+  border:1px solid var(--panel-edge);border-radius:calc(14px * var(--ui-scale)) calc(14px * var(--ui-scale)) 0 0;
+  border-bottom:none;
   background:var(--panel-bg);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
-  box-shadow:0 12px 40px rgba(0,0,0,.38),inset 0 1px 0 rgba(255,255,255,.06);
+  box-shadow:0 -4px 24px rgba(0,0,0,.22),inset 0 1px 0 rgba(255,255,255,.06);
+  overflow:visible;
 }
 #drag-handle{
   display:flex;align-items:center;justify-content:center;gap:8px;
-  height:18px;cursor:grab;touch-action:none;color:rgba(180,196,214,.55);
+  height:18px;cursor:grab;touch-action:none;color:rgba(180,196,214,.55);flex-shrink:0;
 }
 #drag-handle:active{cursor:grabbing}
 #drag-handle .grip{
@@ -32,75 +52,137 @@ html,body{width:100%;height:100%;overflow:hidden;background:transparent;color:va
   background:linear-gradient(90deg,transparent,rgba(255,255,255,.35),transparent);
 }
 #drag-handle .drag-tip{font-size:10px;letter-spacing:.06em}
-#quick-bar{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;padding:2px 0 4px}
-.cmd-chip{
-  display:inline-flex;align-items:center;gap:6px;min-height:30px;padding:4px 10px 4px 8px;
-  border-radius:999px;border:1px solid rgba(255,141,42,.42);
+#quick-bar{display:none}
+#toolbar{
+  display:flex;align-items:center;justify-content:space-between;gap:8px;
+  padding:2px 0;flex-shrink:0;
+}
+.chord-toolbar-left{display:flex;gap:6px;align-items:center}
+.chord-tool-btn{
+  min-height:28px;padding:4px 12px;border-radius:999px;border:1px solid rgba(45,67,97,.72);
+  background:rgba(20,30,44,.82);color:var(--text-dim);font-size:var(--txt-chrome);font-weight:600;cursor:pointer;
+  transition:border-color .14s,background .14s,color .14s,transform .12s,box-shadow .14s;
+}
+.chord-tool-btn:hover{border-color:rgba(142,199,255,.55);color:var(--text)}
+.chord-tool-btn:active{transform:scale(.97)}
+.chord-tool-btn.is-on{
+  border-color:rgba(255,141,42,.72);color:var(--orange-lt);
   background:linear-gradient(180deg,rgba(44,28,10,.92),rgba(28,18,8,.88));
-  color:var(--orange-lt);font-size:11px;font-weight:600;cursor:pointer;
-  transition:transform .16s cubic-bezier(.34,1.45,.64,1),box-shadow .16s,border-color .16s,background .16s;
+  box-shadow:0 0 12px rgba(255,141,42,.16);
 }
-.cmd-chip:hover{border-color:rgba(255,179,71,.72);box-shadow:0 0 14px rgba(255,141,42,.22)}
-.cmd-chip:active{transform:translateY(1px) scale(.96)}
-.cmd-chip .chip-ico{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0;vector-effect:non-scaling-stroke}
-.cmd-chip .chip-key{
-  font-size:9px;font-weight:700;padding:1px 5px;border-radius:4px;
-  background:rgba(0,0,0,.28);color:rgba(255,255,255,.82);letter-spacing:.04em;
+.chord-tool-btn.is-close{
+  margin-left:auto;border-color:rgba(255,120,90,.45);color:#ffb8a8;
 }
-.cmd-chip.tier-hot{border-color:rgba(255,141,42,.88);box-shadow:0 0 12px rgba(255,102,0,.18)}
-.cmd-chip.tier-warm{border-color:rgba(142,199,255,.55);color:#b8d4f0;background:linear-gradient(180deg,rgba(18,32,48,.92),rgba(12,22,34,.9))}
-#hint{text-align:center;font-size:11px;color:var(--text-dim);letter-spacing:.04em}
+.chord-tool-btn.is-close:hover{border-color:rgba(255,150,120,.75);background:rgba(48,18,14,.72);color:#ffd4c8}
+#cmd-grid{
+  display:none;grid-template-columns:repeat(auto-fill,minmax(72px,1fr));gap:6px;
+  width:100%;padding:4px 0;flex-shrink:0;
+}
+#panel-shell.is-compact #cmd-grid{display:grid}
+#panel-shell.is-compact #keyboard-zone{display:none}
+#panel-shell.is-pinned .chord-tool-btn[data-act="pin"]{border-color:rgba(255,179,71,.88)}
+.grid-cell{
+  position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
+  min-height:calc(64px * var(--ui-scale));padding:6px 4px;border-radius:10px;cursor:pointer;
+  border:1px solid rgba(255,141,42,.42);
+  background:radial-gradient(120% 120% at 18% 14%,rgba(255,183,77,.12),rgba(0,0,0,0) 42%),
+              linear-gradient(180deg,rgba(44,28,10,.92),rgba(28,18,8,.88));
+  color:var(--orange-lt);text-align:center;
+  transition:transform .14s cubic-bezier(.34,1.45,.64,1),box-shadow .14s,border-color .14s;
+}
+.grid-cell:hover{border-color:rgba(255,179,71,.72);box-shadow:0 0 14px rgba(255,141,42,.2);transform:translateY(-1px)}
+.grid-cell:active{transform:translateY(1px) scale(.96)}
+.grid-cell.tier-warm{border-color:rgba(142,199,255,.55);color:#b8d4f0;background:linear-gradient(180deg,rgba(18,32,48,.92),rgba(12,22,34,.9))}
+.grid-cell.chip-dir{border-color:rgba(142,199,255,.62);color:#b8d4f0;background:linear-gradient(180deg,rgba(16,28,44,.92),rgba(10,18,30,.9))}
+.grid-cell.key-live{animation:keyStrike .32s cubic-bezier(.2,.9,.2,1);z-index:3;border-color:var(--orange)!important;color:#fff!important}
+.grid-cell-key{
+  position:absolute;top:4px;right:5px;font-size:9px;font-weight:700;padding:1px 5px;border-radius:4px;
+  background:rgba(0,0,0,.32);color:rgba(255,255,255,.82);letter-spacing:.04em;
+}
+.grid-cell-ico{width:18px;height:18px;display:block;flex-shrink:0}
+.grid-cell-ico svg{width:100%;height:100%;display:block}
+.grid-cell-label{
+  font-size:clamp(10px,calc(9px + 0.34vw),12px);font-weight:700;line-height:1.2;
+  max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.chord-ico{width:var(--ico-key);height:var(--ico-key)}
+.drag-grip-ico{width:14px;height:14px;opacity:.55}
+.chord-ico svg,.drag-grip-ico svg{width:100%;height:100%;display:block}
+#more-overlay{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.45);z-index:20;padding:16px}
+#more-overlay.open{display:flex}
+#more-panel{min-width:min(92vw,360px);max-height:70vh;overflow:auto;padding:12px;border-radius:12px;border:1px solid var(--panel-edge);background:var(--panel-bg);box-shadow:0 12px 40px rgba(0,0,0,.35)}
+#more-panel .more-title{font-size:13px;font-weight:700;margin-bottom:8px;color:var(--orange-lt)}
+.more-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;border:1px solid rgba(45,67,97,.5);margin-bottom:6px;background:rgba(20,30,44,.75)}
+.more-item.locked{opacity:.5}
+.more-item .more-label{flex:1;font-size:12px}
+.more-item .more-key{font-size:10px;padding:2px 6px;border-radius:4px;background:rgba(0,0,0,.28)}
+.more-item .more-lock{font-size:10px;color:var(--text-dim)}
+#hint{text-align:center;font-size:var(--txt-hint);color:var(--text-dim);letter-spacing:.04em;flex-shrink:0;line-height:1.35}
 #keyboard-zone{flex:0 0 auto;width:100%;overflow:visible}
 #keyboard{
-  display:grid;width:100%;
+  display:grid;width:100%;height:auto;
   grid-template-columns:minmax(0,1fr) var(--kb-rail-width);
-  grid-template-rows:repeat(6,auto);column-gap:.45vw;row-gap:.18vw;
+  grid-template-rows:repeat(6,auto);column-gap:var(--kb-gap);row-gap:var(--kb-row-gap);
 }
 .kb-grid-left{grid-column:1;min-width:0}
 .kb-grid-r1{grid-row:1}.kb-grid-r2{grid-row:2}.kb-grid-r3{grid-row:3}
 .kb-grid-r4{grid-row:4}.kb-grid-r5{grid-row:5}.kb-grid-r6{grid-row:6}
-.kb-main-strip,.kb-main-left-col>.kr{display:flex;flex-wrap:nowrap;gap:.28vw;width:100%;align-items:stretch}
+.kb-main-strip,.kb-main-left-col>.kr{display:flex;flex-wrap:nowrap;gap:var(--kb-gap);width:100%;align-items:stretch}
 .kb-main-left-col{display:flex;flex-direction:column;justify-content:center;min-width:0;width:100%}
-.kb-right-rail-stack{grid-column:2;grid-row:1/-1;display:flex;flex-direction:column;gap:.18vw;width:100%;min-width:0}
-.kb-rail-prt,.kb-nav-cluster .kr{display:flex;flex-wrap:nowrap;gap:.28vw;width:100%}
+.kb-right-rail-stack{grid-column:2;grid-row:1/-1;display:flex;flex-direction:column;gap:var(--kb-row-gap);width:100%;min-width:0}
+.kb-rail-prt,.kb-nav-cluster .kr{display:flex;flex-wrap:nowrap;gap:var(--kb-gap);width:100%}
 .kb-rail-prt>.k,.kb-nav-cluster .kr-nav>.k{flex:1 1 0;min-width:0}
-.kb-nav-cluster{display:flex;flex-direction:column;gap:.18vw;width:100%}
+.kb-nav-cluster{display:flex;flex-direction:column;gap:var(--kb-row-gap);width:100%}
 .kr-nav-up{display:flex;justify-content:center;width:100%}
 .kr-nav-up .k,.kr-nav.kr-arrows>.k{flex:0 0 var(--kb-arrow-w);width:var(--kb-arrow-w);min-width:var(--kb-arrow-w);max-width:var(--kb-arrow-w)}
-.kr-nav.kr-arrows{justify-content:center;gap:.28vw}
+.kr-nav.kr-arrows{justify-content:center;gap:var(--kb-gap)}
 .kb-main-strip>.k,.kb-main-left-col>.kr>.k{flex:1 1 0;min-width:0}
-.kr-gap{flex:0 0 .55vw!important;width:.55vw;min-width:.55vw;pointer-events:none;opacity:0}
+.kr-gap{flex:0 0 calc(6px * var(--ui-scale))!important;width:calc(6px * var(--ui-scale));min-width:calc(6px * var(--ui-scale));pointer-events:none;opacity:0}
 .k{
   position:relative;display:block;height:var(--kb-key-h);min-height:var(--kb-key-h);
-  padding:2px 3px 3px;background:var(--surface2);
-  border:1px solid var(--border);border-radius:5px;border-bottom:2px solid rgba(27,45,69,.9);
+  padding:calc(2px * var(--ui-scale)) calc(3px * var(--ui-scale)) calc(3px * var(--ui-scale));
+  background:var(--surface2);
+  border:1px solid var(--border);border-radius:calc(5px * var(--ui-scale));border-bottom:2px solid rgba(27,45,69,.9);
   color:var(--text-dim);line-height:1.1;
   transition:transform .14s cubic-bezier(.34,1.45,.64,1),box-shadow .14s,border-color .14s,opacity .12s,background .14s;
   backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);
 }
 .k .k-face{
-  position:absolute;right:3px;bottom:2px;left:3px;text-align:right;
-  font-size:clamp(7px,.62vw,10px);font-weight:600;line-height:1;color:rgba(255,255,255,.82);
-  pointer-events:none;white-space:nowrap;overflow:visible;
+  position:absolute;right:calc(3px * var(--ui-scale));bottom:calc(2px * var(--ui-scale));left:calc(3px * var(--ui-scale));text-align:right;
+  font-size:calc(10px * var(--ui-scale));font-weight:600;line-height:1;color:rgba(255,255,255,.82);
+  pointer-events:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
 }
-.k .k-face .sub{font-size:clamp(6px,.52vw,8px);font-weight:400;opacity:.72}
+.k .k-face .sub{font-size:calc(8px * var(--ui-scale));font-weight:400;opacity:.72}
 .k .map-label{
-  position:absolute;inset:2px 2px 12px;display:none;
-  flex-direction:column;align-items:center;justify-content:center;gap:1px;pointer-events:none;text-align:center;
+  position:absolute;left:calc(2px * var(--ui-scale));right:calc(2px * var(--ui-scale));
+  top:calc(1px * var(--ui-scale));bottom:calc(10px * var(--ui-scale));
+  display:none;flex-direction:column;align-items:center;justify-content:center;
+  gap:calc(1px * var(--ui-scale));pointer-events:none;text-align:center;overflow:visible;
 }
 .k.bound .map-label{display:flex}
-.k.bound .k-face{opacity:.42;font-size:clamp(6px,.5vw,8px)}
-.k.bound{cursor:pointer}
-.k-dim{opacity:.2}
+.k .map-label .chord-ico{width:var(--ico-key-bound);height:var(--ico-key-bound);flex-shrink:0}
 .k.bound{
+  cursor:pointer;
+  min-height:var(--kb-key-bound-h);height:var(--kb-key-bound-h);
+  padding-bottom:calc(11px * var(--ui-scale));
   opacity:1;border-color:rgba(255,141,42,.82)!important;border-bottom-color:var(--orange-lt)!important;
   background:var(--surface-bound)!important;color:var(--orange-lt)!important;
   box-shadow:0 0 0 1px rgba(255,141,42,.22) inset,0 4px 16px rgba(255,102,0,.16);
 }
+.k-dim{opacity:.18}
 .k.bound.tier-warm{border-color:rgba(100,160,220,.62)!important;border-bottom-color:#8ec7ff!important;background:linear-gradient(180deg,rgba(21,37,54,.92),rgba(16,28,42,.92))!important;color:#b8d4f0!important}
 .k.bound.tier-hot{box-shadow:0 0 0 1px rgba(255,141,42,.32) inset,0 0 18px rgba(255,102,0,.28),0 6px 20px rgba(0,0,0,.22)}
-.chord-ico{width:clamp(14px,1.12vw,18px);height:clamp(14px,1.12vw,18px);fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0;vector-effect:non-scaling-stroke}
-.chord-txt{font-size:clamp(9px,.72vw,12px);font-weight:700;line-height:1.15;white-space:nowrap;color:inherit}
+.k.bound .k-face{
+  opacity:.45;font-size:calc(6px * var(--ui-scale));
+  right:calc(2px * var(--ui-scale));bottom:calc(1px * var(--ui-scale));
+  left:auto;width:auto;text-align:right;
+}
+.chord-txt{
+  font-size:clamp(10px,calc(9px + 0.38vw),13px);font-weight:700;line-height:1.15;
+  max-width:100%;width:100%;color:inherit;
+  white-space:pre-line;word-break:break-word;overflow:hidden;
+  max-height:2.2em;
+}
 .k-caps.caps-on{border-color:var(--orange)!important;color:var(--orange-lt)!important;background:linear-gradient(180deg,rgba(42,26,8,.92),rgba(24,16,8,.92))!important;box-shadow:0 0 0 1px rgba(255,141,42,.24) inset,0 0 14px rgba(255,141,42,.35);animation:capsPulse 1.6s ease-in-out infinite}
 .k-caps::after{content:"";position:absolute;top:3px;right:3px;width:4px;height:4px;border-radius:50%;background:rgba(255,255,255,.25)}
 .k-caps.caps-on::after{background:var(--orange);box-shadow:0 0 8px rgba(255,141,42,.8)}
@@ -115,55 +197,49 @@ html,body{width:100%;height:100%;overflow:hidden;background:transparent;color:va
 .k-enter{flex:2.15 1 0!important}.k-lsh,.k-rsh{flex:2.05 1 0!important}
 .k-ctrl{flex:1.25 1 0!important}.k-alt{flex:1.15 1 0!important}
 .k-spc{flex:6.25 1 0!important}.k-win{flex:1.05 1 0!important}
-.k-fn,.k-f{flex:1 1 0!important;font-size:clamp(7px,.58vw,9px)}
-#foot{text-align:center;font-size:10px;color:rgba(120,138,158,.65);letter-spacing:.03em;padding-top:2px}
+.k-fn,.k-f{flex:1 1 0!important;font-size:calc(9px * var(--ui-scale))}
+#foot{text-align:center;font-size:var(--txt-foot);color:rgba(120,138,158,.65);letter-spacing:.03em;padding-top:calc(2px * var(--ui-scale));flex-shrink:0}
+#panel-shell.scale-compact #foot{display:none}
+#panel-shell.scale-compact .k .map-label{
+  flex-direction:row;align-items:center;justify-content:flex-start;
+  gap:3px;text-align:left;
+  top:calc(1px * var(--ui-scale));bottom:calc(9px * var(--ui-scale));
+}
+#panel-shell.scale-compact .k .map-label .chord-ico{flex:0 0 auto}
+#panel-shell.scale-compact .k .map-label .chord-txt{
+  flex:1 1 auto;min-width:0;width:auto;
+  font-size:clamp(10px,calc(8px + 0.36vw),12px);line-height:1.15;
+  white-space:nowrap;max-height:none;
+  overflow:hidden;text-overflow:ellipsis;
+}
+#panel-shell.scale-compact .k.bound{
+  min-height:max(calc(48px * var(--ui-scale)),46px);height:max(calc(48px * var(--ui-scale)),46px);
+}
 </style>
 </head>
 <body>
-<svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
-  <!-- Lucide-style icons (viewBox 0 0 24 24, stroke 2) -->
-  <symbol id="ico-collect" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-    <polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/>
-    <path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>
-  </symbol>
-  <symbol id="ico-clipboard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-    <rect width="8" height="4" x="8" y="2" rx="1" ry="1"/>
-    <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
-    <path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/>
-  </symbol>
-  <symbol id="ico-history" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
-    <path d="M3 3v5h5"/><path d="M12 7v5l4 2"/>
-  </symbol>
-  <symbol id="ico-explain" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-    <circle cx="12" cy="12" r="10"/>
-    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
-    <path d="M12 17h.01"/>
-  </symbol>
-  <symbol id="ico-settings" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
-    <circle cx="12" cy="12" r="3"/>
-  </symbol>
-  <symbol id="ico-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-    <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
-  </symbol>
-  <symbol id="ico-refactor" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-    <line x1="6" x2="6" y1="3" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/>
-  </symbol>
-  <symbol id="ico-optimize" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/>
-    <path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/>
-  </symbol>
-</svg>
 <div id="root">
   <div id="panel-shell">
     <div id="drag-handle" title="拖动移动面板">
+      <span class="drag-grip-ico" id="drag-grip-left" aria-hidden="true"></span>
       <span class="grip" aria-hidden="true"></span>
       <span class="drag-tip">拖动定位</span>
       <span class="grip" aria-hidden="true"></span>
+      <span class="drag-grip-ico" id="drag-grip-right" aria-hidden="true"></span>
     </div>
-    <div id="quick-bar" aria-label="常用命令"></div>
-    <div id="hint">按住 CapsLock，再按字母键执行 · 也可点击命令</div>
+    <div id="toolbar" class="chord-toolbar" role="toolbar" aria-label="面板控制">
+      <div class="chord-toolbar-left">
+        <button type="button" id="btn-pin" class="chord-tool-btn" data-act="pin" title="松手 CapsLock 不关闭面板">置顶</button>
+        <button type="button" id="btn-compact" class="chord-tool-btn" data-act="compact" title="仅显示有效命令宫格">缩小</button>
+      </div>
+      <button type="button" id="btn-close" class="chord-tool-btn is-close" title="关闭面板">关闭</button>
+    </div>
+    <div id="cmd-grid" aria-label="有效命令宫格"></div>
+    <div id="more-overlay" hidden><div id="more-panel" role="dialog" aria-label="更多快捷键">
+      <div class="more-title">更多快捷键</div>
+      <div id="more-list"></div>
+    </div></div>
+    <div id="hint">CapsLock+键执行 · 置顶后松手不关闭 · 缩小为宫格</div>
     <div id="keyboard-zone">
       <div id="keyboard">
         <div class="kb-main-strip kb-grid-left kb-grid-r1">
@@ -286,91 +362,276 @@ html,body{width:100%;height:100%;overflow:hidden;background:transparent;color:va
         </div>
       </div>
     </div>
-    <div id="foot">Esc 关闭 · 松开 CapsLock 退出</div>
+    <div id="foot">Esc 关闭 · 置顶后松手不退出 · 滚轮缩放</div>
   </div>
 </div>
+<script src="https://app.local/assets/js/lucide-registry.js"></script>
 <script>
 (function () {
-  const ICON_BY_ACTION = { C:"ico-collect", V:"ico-clipboard", X:"ico-history", E:"ico-explain", Q:"ico-settings", F:"ico-search", R:"ico-refactor", O:"ico-optimize" };
-  const ICON_BY_CMD = { ch_c:"ico-collect", ch_v:"ico-clipboard", ch_x:"ico-history", ch_e:"ico-explain", ch_q:"ico-settings", ch_f:"ico-search", ch_r:"ico-refactor", ch_o:"ico-optimize" };
-  const state = { slots: [], slotByKey: new Map() };
+  const LR = window.LucideRegistry;
+  const state = { slots: [], slotByKey: new Map(), iconsReady: false, scale: 1, scaleMin: 0.82, scaleMax: 1.28, scenarioId: "", scenarioLabel: "", fullWidth: true, viewportWidth: 0, onboardingTier: 1, launchCount: 0, unlockHint: "", forceRevealAll: false, pinned: false, compact: false };
   const hintEl = document.getElementById("hint");
-  const quickEl = document.getElementById("quick-bar");
+  const toolbarEl = document.getElementById("toolbar");
+  const cmdGridEl = document.getElementById("cmd-grid");
+  const btnPin = document.getElementById("btn-pin");
+  const btnCompact = document.getElementById("btn-compact");
+  const btnClose = document.getElementById("btn-close");
+  const moreOverlay = document.getElementById("more-overlay");
+  const moreList = document.getElementById("more-list");
   const kbEl = document.getElementById("keyboard");
   const zoneEl = document.getElementById("keyboard-zone");
+  const panelShell = document.getElementById("panel-shell");
+  const rootEl = document.getElementById("root");
   const dragHandle = document.getElementById("drag-handle");
   const keyEls = document.querySelectorAll(".k[data-ahkkey]");
   let liveTimer = 0;
+  let scalePostRaf = 0;
+  let initMeasureTimer = 0;
+  let lastMeasureH = 0;
+
+  const QUICK_PIN_ORDER = ["w", "a", "s", "d", "f", "q", "g", "c", "v", "x", "e", "r", "o", "z", "b", "t", "p"];
+  const DIR_KEYS = new Set(["w", "a", "s", "d"]);
+
+  function computeContentHeight() {
+    if (!panelShell) return 0;
+    const kids = panelShell.querySelectorAll("#drag-handle,#toolbar,#hint,#cmd-grid,#keyboard-zone,#foot");
+    let contentH = 0;
+    for (const el of kids) contentH += el.offsetHeight;
+    const styles = getComputedStyle(panelShell);
+    const padY = parseFloat(styles.paddingTop) + parseFloat(styles.paddingBottom);
+    const gap = parseFloat(styles.gap) || 0;
+    const gaps = Math.max(0, kids.length - 1) * gap;
+    return Math.ceil(contentH + padY + gaps);
+  }
+
+  function postResizeOnce(height) {
+    const h = Math.ceil(Number(height) || 0);
+    if (h < 180) return;
+    if (Math.abs(h - lastMeasureH) <= 2) return;
+    lastMeasureH = h;
+    post({ type: "chordPadResize", height: h });
+  }
+
+  function persistScaleToHost() {
+    if (scalePostRaf) return;
+    scalePostRaf = requestAnimationFrame(() => {
+      scalePostRaf = 0;
+      post({ type: "chordPadSetScale", scale: state.scale });
+    });
+  }
+
+  function scheduleInitialMeasure() {
+    if (initMeasureTimer) clearTimeout(initMeasureTimer);
+    initMeasureTimer = setTimeout(() => {
+      initMeasureTimer = 0;
+      requestAnimationFrame(() => postResizeOnce(computeContentHeight()));
+    }, 80);
+  }
 
   function post(msg) {
     try { window.chrome.webview.postMessage(msg); } catch (_) {}
   }
 
   function normKey(k) {
-    const s = String(k || "").toLowerCase();
-    return s === "esc" ? "escape" : s;
+    const s = String(k || "").trim();
+    if (!s) return "";
+    if (/^[a-zA-Z]$/.test(s)) return s.toLowerCase();
+    const low = s.toLowerCase();
+    if (low === "esc") return "escape";
+    return s;
   }
 
-  function iconId(slot) {
-    const act = String(slot.action || "").toUpperCase();
-    if (ICON_BY_ACTION[act]) return ICON_BY_ACTION[act];
-    const cmd = String(slot.cmdId || "");
-    return ICON_BY_CMD[cmd] || "ico-search";
+  function resolveIcon(slot) {
+    return LR ? LR.resolveIcon(slot) : "search";
   }
 
-  function makeIcon(svgClass, id) {
-    const ico = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-    ico.setAttribute("class", svgClass);
-    ico.setAttribute("viewBox", "0 0 24 24");
-    const use = document.createElementNS("http://www.w3.org/2000/svg", "use");
-    use.setAttribute("href", "#" + id);
-    ico.appendChild(use);
-    return ico;
+  function mountIcon(el, slotOrName, svgClass) {
+    if (!el || !LR) return;
+    const name = typeof slotOrName === "string" ? slotOrName : resolveIcon(slotOrName);
+    LR.mountInto(el, name, svgClass || "");
+  }
+
+  function formatKeyLabel(raw, singleLine) {
+    let s = String(raw || "").trim();
+    s = s.replace(/^(?:[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE00}-\u{FE0F}]|[\uD800-\uDBFF][\uDC00-\uDFFF])+\s*/gu, "");
+    s = s.replace(/^[\s🔍📋⚙️⌨️💡📝📸🧭☁️🤖]+/u, "").trim();
+    s = s.replace(/\s*[/／|｜]\s*/g, singleLine ? " " : "\n");
+    return s;
   }
 
   function setMapLabel(el, slot) {
     const box = el.querySelector(".map-label");
     if (!box) return;
     box.replaceChildren();
-    box.appendChild(makeIcon("chord-ico", iconId(slot)));
+    const icoWrap = document.createElement("span");
+    icoWrap.className = "chord-ico";
+    mountIcon(icoWrap, slot, "chord-ico");
+    box.appendChild(icoWrap);
     const txt = document.createElement("span");
     txt.className = "chord-txt";
-    txt.textContent = String(slot.label || "");
+    txt.textContent = formatKeyLabel(slot.label);
     box.appendChild(txt);
+  }
+
+  function paintChromeIcons() {
+    if (!LR || !state.iconsReady) return;
+    mountIcon(document.getElementById("drag-grip-left"), LR.UI_ICONS.grip, "drag-grip-ico");
+    mountIcon(document.getElementById("drag-grip-right"), LR.UI_ICONS.grip, "drag-grip-ico");
+  }
+
+  function closePanel() {
+    post({ type: "chordPadClose" });
+  }
+
+  function syncToolbarUi() {
+    if (panelShell) {
+      panelShell.classList.toggle("is-pinned", !!state.pinned);
+      panelShell.classList.toggle("is-compact", !!state.compact);
+    }
+    btnPin?.classList.toggle("is-on", !!state.pinned);
+    btnCompact?.classList.toggle("is-on", !!state.compact);
+    btnCompact && (btnCompact.textContent = state.compact ? "展开" : "缩小");
+    updateHintText();
+  }
+
+  function updateHintText() {
+    if (!hintEl) return;
+    if (state.compact) {
+      hintEl.textContent = state.pinned
+        ? "宫格模式 · 已置顶：松手 CapsLock 不关闭"
+        : "宫格模式 · 仅显示有效命令 · 松开 CapsLock 退出";
+      return;
+    }
+    hintEl.textContent = state.pinned
+      ? "已置顶：松手 CapsLock 不关闭 · 点关闭退出"
+      : "CapsLock+键执行 · 置顶后松手不关闭 · 缩小为宫格";
+  }
+
+  function togglePin() {
+    state.pinned = !state.pinned;
+    syncToolbarUi();
+    post({ type: "chordPadSetPin", pinned: state.pinned });
+  }
+
+  function toggleCompact() {
+    state.compact = !state.compact;
+    syncToolbarUi();
+    renderCmdGrid();
+    scheduleInitialMeasure();
+    post({ type: "chordPadSetCompact", compact: state.compact });
   }
 
   function runSlot(slot) {
     if (!slot) return;
     post({ type: "chordPadRun", action: String(slot.action || ""), cmdId: String(slot.cmdId || ""), key: String(slot.key || "") });
     flashKey(slot.key);
+    if (hintEl) hintEl.textContent = "已执行：" + formatKeyLabel(slot.label, true);
   }
 
-  function renderQuickBar() {
-    quickEl.replaceChildren();
+  function isSlotRevealed(slot) {
+    if (!slot) return false;
+    return true;
+  }
+
+  function quickBarSortRank(s) {
+    const k = normKey(s.key);
+    const pin = QUICK_PIN_ORDER.indexOf(k);
+    if (pin >= 0) return pin;
+    return 50 + Number(s.rank || 99);
+  }
+
+  function closeMoreOverlay() {
+    if (!moreOverlay) return;
+    moreOverlay.classList.remove("open");
+    moreOverlay.hidden = true;
+  }
+
+  function openMoreOverlay() {
+    if (!moreOverlay || !moreList) return;
+    moreList.replaceChildren();
     const slots = Array.isArray(state.slots) ? state.slots.slice() : [];
     slots.sort((a, b) => Number(a.rank || 99) - Number(b.rank || 99));
     for (const s of slots) {
-      const chip = document.createElement("button");
-      chip.type = "button";
-      chip.className = "cmd-chip tier-" + String(s.tier || "normal");
-      chip.appendChild(makeIcon("chip-ico", iconId(s)));
+      const item = document.createElement("div");
+      const locked = !isSlotRevealed(s);
+      item.className = "more-item" + (locked ? " locked" : "");
       const label = document.createElement("span");
-      label.textContent = String(s.label || "");
-      chip.appendChild(label);
+      label.className = "more-label";
+      label.textContent = formatKeyLabel(s.label, true);
+      item.appendChild(label);
       const key = document.createElement("span");
-      key.className = "chip-key";
+      key.className = "more-key";
       key.textContent = String(s.key || "").toUpperCase();
-      chip.appendChild(key);
-      chip.addEventListener("click", (e) => { e.stopPropagation(); runSlot(s); });
-      quickEl.appendChild(chip);
+      item.appendChild(key);
+      if (locked) {
+        const lock = document.createElement("span");
+        lock.className = "more-lock";
+        lock.textContent = state.unlockHint || "使用 3 次后解锁";
+        item.appendChild(lock);
+      } else {
+        item.style.cursor = "pointer";
+        item.addEventListener("click", () => { closeMoreOverlay(); runSlot(s); });
+      }
+      moreList.appendChild(item);
+    }
+    moreOverlay.hidden = false;
+    moreOverlay.classList.add("open");
+  }
+
+  function renderCmdGrid() {
+    if (!cmdGridEl) return;
+    cmdGridEl.replaceChildren();
+    if (!state.compact) return;
+    const slots = Array.isArray(state.slots) ? state.slots.slice() : [];
+    slots.sort((a, b) => quickBarSortRank(a) - quickBarSortRank(b));
+    for (const s of slots) {
+      const cell = document.createElement("button");
+      cell.type = "button";
+      const k = normKey(s.key);
+      cell.className = "grid-cell tier-" + String(s.tier || "normal") + (DIR_KEYS.has(k) ? " chip-dir" : "");
+      cell.dataset.key = k;
+      cell.title = String(s.label || "");
+      const keyBadge = document.createElement("span");
+      keyBadge.className = "grid-cell-key";
+      keyBadge.textContent = String(s.key || "").toUpperCase();
+      cell.appendChild(keyBadge);
+      const icoWrap = document.createElement("span");
+      icoWrap.className = "grid-cell-ico";
+      mountIcon(icoWrap, s, "grid-cell-ico");
+      cell.appendChild(icoWrap);
+      const label = document.createElement("span");
+      label.className = "grid-cell-label";
+      label.textContent = formatKeyLabel(s.label, true);
+      cell.appendChild(label);
+      cell.addEventListener("click", (e) => { e.stopPropagation(); runSlot(s); });
+      cmdGridEl.appendChild(cell);
     }
   }
 
-  function fitKeyboard() {
-    if (!kbEl || !zoneEl) return;
-    const h = zoneEl.clientHeight || 260;
-    const keyH = Math.max(34, Math.min(52, Math.round(h / 6.8)));
-    kbEl.style.setProperty("--kb-key-h", keyH + "px");
+  function clampScale(v) {
+    const n = Number(v);
+    if (!Number.isFinite(n)) return 1;
+    return Math.max(state.scaleMin, Math.min(state.scaleMax, Math.round(n * 100) / 100));
+  }
+
+  function syncScaleClasses() {
+    if (!panelShell) return;
+    panelShell.classList.toggle("scale-compact", state.scale < 0.96);
+  }
+
+  function applyScale(scale, persist) {
+    state.scale = clampScale(scale);
+    document.documentElement.style.setProperty("--ui-scale", String(state.scale));
+    syncScaleClasses();
+    if (!persist) return;
+    persistScaleToHost();
+  }
+
+  function onWheelZoom(e) {
+    if (!e) return;
+    e.preventDefault();
+    const delta = e.deltaY < 0 ? 0.04 : -0.04;
+    applyScale(state.scale + delta, true);
   }
 
   function renderSlots() {
@@ -390,21 +651,27 @@ html,body{width:100%;height:100%;overflow:hidden;background:transparent;color:va
         if (tier === "hot") el.classList.add("tier-hot");
         else if (tier === "warm") el.classList.add("tier-warm");
         setMapLabel(el, slot);
+        el.title = String(slot.label || "");
         el.onclick = (e) => { e.stopPropagation(); runSlot(slot); };
       } else if (base !== "capslock") {
         el.classList.add("k-dim");
+        el.title = "";
       }
     }
     document.querySelector('.k[data-ahkkey="CapsLock"]')?.classList.add("caps-on");
-    renderQuickBar();
-    fitKeyboard();
+    renderCmdGrid();
+    syncToolbarUi();
+    scheduleInitialMeasure();
   }
 
   function flashKey(key) {
     const k = normKey(key);
     if (liveTimer) clearTimeout(liveTimer);
     for (const el of keyEls) el.classList.remove("key-live");
-    const el = document.querySelector('.k[data-ahkkey="' + CSS.escape(k) + '"]');
+    document.querySelectorAll(".grid-cell.key-live").forEach((el) => el.classList.remove("key-live"));
+    const kbElHit = document.querySelector('.k[data-ahkkey="' + CSS.escape(k) + '"]');
+    const gridElHit = cmdGridEl?.querySelector('.grid-cell[data-key="' + CSS.escape(k) + '"]');
+    const el = gridElHit || kbElHit;
     if (!el) return;
     void el.offsetWidth;
     el.classList.add("key-live");
@@ -414,14 +681,33 @@ html,body{width:100%;height:100%;overflow:hidden;background:transparent;color:va
   function clearFlash() {
     if (liveTimer) clearTimeout(liveTimer);
     for (const el of keyEls) el.classList.remove("key-live");
+    document.querySelectorAll(".grid-cell.key-live").forEach((el) => el.classList.remove("key-live"));
   }
 
   function onHostMessage(msg) {
     if (!msg || typeof msg !== "object") return;
     if (msg.type === "chordPadInit") {
       state.slots = Array.isArray(msg.slots) ? msg.slots : [];
+      state.scenarioId = String(msg.scenarioId || "");
+      state.scenarioLabel = String(msg.scenarioLabel || "");
+      if (msg.scaleMin != null) state.scaleMin = Number(msg.scaleMin) || 0.82;
+      if (msg.scaleMax != null) state.scaleMax = Number(msg.scaleMax) || 1.28;
+      if (msg.viewportWidth != null) state.viewportWidth = Number(msg.viewportWidth) || 0;
+      if (msg.fullWidth != null) state.fullWidth = !!msg.fullWidth;
+      if (msg.onboardingTier != null) state.onboardingTier = Number(msg.onboardingTier) || 1;
+      if (msg.launchCount != null) state.launchCount = Number(msg.launchCount) || 0;
+      if (msg.unlockHint != null) state.unlockHint = String(msg.unlockHint || "");
+      if (msg.forceRevealAll != null) state.forceRevealAll = !!msg.forceRevealAll;
+      if (msg.pinned != null) state.pinned = !!msg.pinned;
+      if (msg.compact != null) state.compact = !!msg.compact;
       if (msg.hint) hintEl.textContent = String(msg.hint);
+      applyScale(msg.scale != null ? msg.scale : 1, false);
       renderSlots();
+      syncToolbarUi();
+      return;
+    }
+    if (msg.type === "chordPadScale") {
+      applyScale(msg.scale != null ? msg.scale : state.scale, false);
       return;
     }
     if (msg.type === "keyPreview") { flashKey(msg.key); return; }
@@ -438,10 +724,27 @@ html,body{width:100%;height:100%;overflow:hidden;background:transparent;color:va
     try { dragHandle.releasePointerCapture(e.pointerId); } catch (_) {}
   });
 
-  window.addEventListener("resize", fitKeyboard);
+  btnPin?.addEventListener("click", (e) => { e.stopPropagation(); togglePin(); });
+  btnCompact?.addEventListener("click", (e) => { e.stopPropagation(); toggleCompact(); });
+  btnClose?.addEventListener("click", (e) => { e.stopPropagation(); closePanel(); });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") { e.preventDefault(); closePanel(); }
+  });
+  if (panelShell) panelShell.addEventListener("wheel", onWheelZoom, { passive: false });
+  moreOverlay?.addEventListener("click", (e) => { if (e.target === moreOverlay) closeMoreOverlay(); });
   window.chrome?.webview?.addEventListener("message", (e) => onHostMessage(e.data));
   window.addEventListener("message", (e) => onHostMessage(e.data));
-  fitKeyboard();
+  applyScale(1, false);
+  if (LR) {
+    LR.init().then((ok) => {
+      state.iconsReady = !!ok;
+      paintChromeIcons();
+      if (state.slots.length) renderSlots();
+      else scheduleInitialMeasure();
+    });
+  } else {
+    scheduleInitialMeasure();
+  }
   try { post({ type: "chordPadReady" }); } catch (_) {}
 })();
 </script>

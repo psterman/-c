@@ -15,6 +15,27 @@ global LegacySyncFallback := 1
 global g_WV2_CreateQueue := []
 global g_WV2_CreateBusy := false
 
+WebView2_IsUsableHwnd(hwnd) {
+    h := Integer(hwnd)
+    if (h <= 0)
+        return false
+    try {
+        if !DllCall("IsWindow", "Ptr", h, "Int")
+            return false
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e)
+        return false
+    }
+    try {
+        if !WinExist("ahk_id " . h)
+            return false
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e)
+        return false
+    }
+    return true
+}
+
 WebView2_GetSharedUserDataPath() {
     return A_AppData "\CursorHelper\Wv2Data"
 }
@@ -277,6 +298,17 @@ WebView2_PrepareForScriptReload() {
 }
 
 _WV2_CreateWithSharedEnvReady(hwnd, callback, reason, env, err := 0) {
+    if !WebView2_IsUsableHwnd(hwnd) {
+        try OutputDebug("[WV2] create skipped invalid hwnd reason=" . reason . " hwnd=" . hwnd)
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e)
+        }
+        try callback.Call(0)
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e)
+        }
+        return
+    }
     if err || !env {
         try OutputDebug("[WV2] shared env failed reason=" . reason)
         catch as _e {
@@ -290,6 +322,18 @@ _WV2_CreateWithSharedEnvReady(hwnd, callback, reason, env, err := 0) {
     }
     try WebView2.create(hwnd, callback, env)
     catch as e {
+        ; 句柄在异步创建窗口控制器期间失效时，降级为忽略，避免脚本级崩溃。
+        if !WebView2_IsUsableHwnd(hwnd) {
+            try OutputDebug("[WV2] create failed after hwnd invalidated reason=" . reason . " hwnd=" . hwnd)
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e)
+            }
+            try callback.Call(0)
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e)
+            }
+            return
+        }
         try callback.Call(e)
         catch as _e {
             NmerCatch(A_ThisFunc, _e) 

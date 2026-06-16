@@ -51,3 +51,33 @@ Nmer_DataStatePath(fileName) {
 
 ShowPanelTimer(*) {
 }
+
+ChordPad_IconLucideFor(action := "", cmdId := "") {
+}
+
+_LoadCommands() {
+}
+
+LoadCommandsConfig() {
+}
+
+IsSearchCenterActive() {
+}
+
+VK_IsClipboardPanelActive() {
+}
+
+IsScreenshotEditorActive() {
+}
+
+VK_SearchCenterResolveCapsChordCmd(physKey) {
+}
+
+VK_LookupBindingCmdForPhys(physKey) {
+}
+
+ChordPad_SetScale(scale, height := 0) {
+}
+
+ChordPad_ResizeToContent(w, h, anchorBottom := true) {
+}

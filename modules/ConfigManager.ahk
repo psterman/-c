@@ -537,6 +537,9 @@ InitConfig() {
         IniWrite("deepseek", ConfigFile, "Settings", "VoiceSearchSelectedEngines")  ; 保存默认选中的搜索引擎
         IniWrite("0", ConfigFile, "Settings", "AutoStart")  ; 默认不自启动
         IniWrite("1", ConfigFile, "Settings", "CapsLockHoldVkEnabled")  ; 默认启用长按 CapsLock → VK KeyBinder
+        IniWrite("capslock", ConfigFile, "Settings", "SummonHotkeyPreset")
+        IniWrite("", ConfigFile, "Settings", "SummonHotkeyCustom")
+        IniWrite("chord", ConfigFile, "Settings", "CapsLockMode")
         ; 保存默认启用的搜索标签（默认全部启用）
         DefaultEnabledCategories := "ai,cli,academic,baidu,image,audio,video,book,price,medical,cloud"
         IniWrite(DefaultEnabledCategories, ConfigFile, "Settings", "VoiceSearchEnabledCategories")
@@ -749,6 +752,22 @@ InitConfig() {
             global CapsLockHoldVkEnabled
             CapsLockHoldVkEnabled := (IniRead(ConfigFile, "Settings", "CapsLockHoldVkEnabled", "1") = "1")
             IniWrite(CapsLockHoldVkEnabled ? "1" : "0", ConfigFile, "Settings", "CapsLockHoldVkEnabled")
+            global SummonHotkeyPreset, SummonHotkeyCustom, CapsLockMode
+            SummonHotkeyPreset := IniRead(ConfigFile, "Settings", "SummonHotkeyPreset", "capslock")
+            if FuncExists("Nmer_NormalizeSummonPreset")
+                SummonHotkeyPreset := Nmer_NormalizeSummonPreset(SummonHotkeyPreset)
+            else {
+                sp := StrLower(Trim(String(SummonHotkeyPreset)))
+                if (sp != "alt_space" && sp != "ctrl_space" && sp != "win_space" && sp != "custom")
+                    SummonHotkeyPreset := "capslock"
+            }
+            SummonHotkeyCustom := IniRead(ConfigFile, "Settings", "SummonHotkeyCustom", "")
+            CapsLockMode := StrLower(Trim(String(IniRead(ConfigFile, "Settings", "CapsLockMode", "chord"))))
+            if (CapsLockMode != "off")
+                CapsLockMode := "chord"
+            IniWrite(SummonHotkeyPreset, ConfigFile, "Settings", "SummonHotkeyPreset")
+            IniWrite(SummonHotkeyCustom, ConfigFile, "Settings", "SummonHotkeyCustom")
+            IniWrite(CapsLockMode, ConfigFile, "Settings", "CapsLockMode")
             global DefaultStartTab
             DefaultStartTab := NormalizeDefaultStartTab(IniRead(ConfigFile, "Settings", "DefaultStartTab", "general"))
             global FloatingToolbarButtonItems
@@ -971,6 +990,8 @@ InitConfig() {
         VoiceInputScreenIndex := DefaultVoiceInputScreenIndex
         CursorPanelScreenIndex := DefaultCursorPanelScreenIndex
         ClipboardPanelScreenIndex := DefaultClipboardPanelScreenIndex
+        global CapsLockHoldVkEnabled
+        CapsLockHoldVkEnabled := true
         global FloatingToolbarButtonItems, FloatingToolbarMenuItems
         FloatingToolbarButtonItems := FTB_SanitizeToolbarButtonItems(FloatingToolbarButtonItems)
         FloatingToolbarMenuItems := FTB_SanitizeToolbarMenuItems(FloatingToolbarMenuItems)

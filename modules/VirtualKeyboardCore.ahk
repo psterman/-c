@@ -5151,6 +5151,14 @@ _VkFinalizeRecordedHotkey(ahkKey) {
     bindPolicy := g_RecordCtx.Has("bindPolicy") ? String(g_RecordCtx["bindPolicy"]) : "scene_compatible"
     displayKey := _ToDisplayKey(ahkKey)
 
+    if (cmdId = "__summon_hotkey__") {
+        _EndRecord()
+        escAhk := StrReplace(StrReplace(ahkKey, "\", "\\"), '"', '\"')
+        escDisp := StrReplace(StrReplace(displayKey, "\", "\\"), '"', '\"')
+        VK_SendToWeb('{"type":"summonKeyRecorded","ahkKey":"' . escAhk . '","displayKey":"' . escDisp . '"}')
+        return
+    }
+
     if g_Bindings.Has(ahkKey) {
         conflictId := g_Bindings[ahkKey]
         if conflictId != cmdId {
@@ -5733,6 +5741,15 @@ VK_HandleBindingsReloaded(*) {
 
     ; 绑定重载场景不再强制重建悬浮条/整页 init，避免 VK 编辑过程焦点跳转与宫格刷新抖动
     ; 悬浮条布局变更在 saveToolbarLayout/saveSceneToolbarLayout/saveSceneMenu(floating_bar) 内单独刷新
+    if FuncExists("ChordPad_IsVisible") && FuncExists("ChordPad_PushInit") {
+        try {
+            if ChordPad_IsVisible()
+                ChordPad_PushInit()
+        } catch as _e {
+            if FuncExists("NmerCatch")
+                NmerCatch(A_ThisFunc, _e)
+        }
+    }
     } finally {
         g_VK_RebindInProgress := false
     }

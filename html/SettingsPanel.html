@@ -6,21 +6,27 @@
   <title>Settings Panel</title>
   <link rel="stylesheet" href="settings/settings-shared.css">
   <style>
-    html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; }
-    #app.settings-shell { display: flex; width: 100%; height: 100%; }
+    html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #0d1016; color: #f0f0f0; }
+    #app.settings-shell { display: flex; width: 100%; height: 100%; background: #0d1016; }
     #frame-wrap {
       flex: 1; position: relative; min-width: 0; min-height: 0;
-      contain: strict;
+      /* strict contain 在部分 WebView2 环境会推迟 iframe 首绘，导致“点一下才显示” */
+      contain: layout paint; background: #0d1016;
+    }
+    #frame-loading {
+      position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+      color: #9a9a9a; font: 13px "Segoe UI", "Microsoft YaHei UI", sans-serif;
+      pointer-events: none; z-index: 1;
     }
     .settings-frame-pane {
       position: absolute; inset: 0; border: 0; width: 100%; height: 100%;
-      visibility: hidden; pointer-events: none;
+      visibility: hidden; pointer-events: none; background: #0d1016;
     }
     .settings-frame-pane.is-active {
       visibility: visible; pointer-events: auto;
     }
   </style>
-  <script src="settings/settings-bridge.js?v=llm-bridge-v11"></script>
+  <script src="settings/settings-bridge.js?v=llm-bridge-v13"></script>
 </head>
 <body>
   <div id="app" class="settings-shell">
@@ -35,7 +41,7 @@
       <button type="button" class="tab-btn" data-tab="search">搜索设置</button>
       <button type="button" class="tab-btn" data-tab="customize">智能定制</button>
     </aside>
-    <div id="frame-wrap"></div>
+    <div id="frame-wrap"><div id="frame-loading">加载设置页…</div></div>
   </div>
   <script>document.addEventListener("DOMContentLoaded", () => window.NmerSettingsBridge.init());</script>
 </body>

@@ -104,15 +104,56 @@ function __settingsStudioTestInline(payloadJson, testId, flat) {
       { id:"qwen", icon:"https://app.local/assets/icons/app/qwen.png", label:"Qwen" }
     ];
     const DEFAULT_CURSOR_SHORTCUTS = [
-      { label: "命令面板", shortcut: "^+p", desc: "Cursor 命令面板（悬浮栏可触发）" },
-      { label: "终端", shortcut: "^+``", desc: "打开集成终端" },
-      { label: "全局搜索", shortcut: "^+f", desc: "Cursor 工作区全局搜索" },
-      { label: "资源管理器", shortcut: "^+e", desc: "显示文件资源管理器侧栏" },
-      { label: "源代码管理", shortcut: "^+g", desc: "Git / 源代码管理视图" },
-      { label: "扩展", shortcut: "^+x", desc: "扩展市场侧栏" },
-      { label: "简单浏览器", shortcut: "^+b", desc: "内置 Simple Browser" },
-      { label: "编辑器设置", shortcut: "^+j", desc: "VS Code 设置" },
-      { label: "Cursor 设置", shortcut: "^,", desc: "Cursor 专属设置" }
+      { label: "命令面板", shortcut: "^+p", vkCommandId: "qa_command_palette", catalogId: "showCommands", desc: "Cursor 命令面板（悬浮栏可触发）" },
+      { label: "终端", shortcut: "^+``", vkCommandId: "qa_terminal", catalogId: "toggleTerminal", desc: "打开集成终端" },
+      { label: "全局搜索", shortcut: "^+f", vkCommandId: "qa_global_search", catalogId: "globalSearch", desc: "Cursor 工作区全局搜索" },
+      { label: "资源管理器", shortcut: "^+e", vkCommandId: "qa_explorer", catalogId: "explorer", desc: "显示文件资源管理器侧栏" },
+      { label: "源代码管理", shortcut: "^+g", vkCommandId: "qa_source_control", catalogId: "sourceControl", desc: "Git / 源代码管理视图" },
+      { label: "扩展", shortcut: "^+x", vkCommandId: "qa_extensions", catalogId: "extensions", desc: "扩展市场侧栏" },
+      { label: "简单浏览器", shortcut: "^+b", vkCommandId: "qa_browser", catalogId: "simpleBrowser", desc: "内置 Simple Browser" },
+      { label: "编辑器设置", shortcut: "^+j", vkCommandId: "qa_settings", catalogId: "vscodeSettings", desc: "VS Code 设置" },
+      { label: "Cursor 设置", shortcut: "^,", vkCommandId: "qa_cursor_settings", catalogId: "cursorSettings", desc: "Cursor 专属设置" }
+    ];
+    const FALLBACK_KEYBINDER_COMMANDS = [
+      { id: "ch_f", name: "搜索中心", desc: "CapsLock+F：打开搜索中心", fn: "CH_RUN" },
+      { id: "ch_x", name: "剪贴板管理", desc: "CapsLock+X：打开剪贴板面板", fn: "CH_RUN" },
+      { id: "ch_q", name: "打开配置", desc: "CapsLock+Q：打开设置面板", fn: "CH_RUN" },
+      { id: "ch_t", name: "智能截图", desc: "CapsLock+T：截图智能菜单", fn: "CH_RUN" },
+      { id: "ch_p", name: "提示词采集", desc: "CapsLock+P：Prompt 快捷采集", fn: "CH_RUN" },
+      { id: "ch_r", name: "牛马 Chat", desc: "CapsLock+R：打开悬浮条牛马对话抽屉", fn: "CH_RUN" },
+      { id: "ch_b", name: "提示词", desc: "CapsLock+B：打开提示词快捷入口", fn: "CH_RUN" },
+      { id: "ch_g", name: "显示虚拟键盘", desc: "CapsLock+G：打开 KeyBinder 窗口", fn: "CH_RUN" },
+      { id: "sys_show_vk", name: "快捷键设置", desc: "打开 KeyBinder 快捷键面板", fn: "SHOW_VK" },
+      { id: "ch_w", name: "方向上", desc: "CapsLock+W", fn: "CH_RUN" },
+      { id: "ch_s", name: "方向下", desc: "CapsLock+S", fn: "CH_RUN" },
+      { id: "ch_a", name: "方向左", desc: "CapsLock+A", fn: "CH_RUN" },
+      { id: "ch_d", name: "方向右", desc: "CapsLock+D", fn: "CH_RUN" },
+      { id: "ftm_reset_scale", name: "重置大小", desc: "悬浮工具栏右键：重置缩放", fn: "CH_RUN" },
+      { id: "ftm_search_center", name: "搜索", desc: "悬浮工具栏右键：打开搜索中心", fn: "CH_RUN" },
+      { id: "ftm_clipboard", name: "剪贴板", desc: "悬浮工具栏右键：打开剪贴板", fn: "CH_RUN" },
+      { id: "ftm_minimize_to_edge", name: "最小化到边缘", desc: "悬浮工具栏右键：吸附到边缘", fn: "CH_RUN" },
+      { id: "ftm_exit_app", name: "退出程序", desc: "悬浮工具栏右键：退出程序", fn: "CH_RUN" },
+      { id: "ftm_hide_toolbar", name: "关闭工具栏", desc: "悬浮工具栏右键：隐藏工具栏", fn: "CH_RUN" },
+      { id: "ftm_open_config", name: "打开设置", desc: "悬浮工具栏右键：打开设置", fn: "CH_RUN" },
+      { id: "ftm_toggle_toolbar", name: "显示/隐藏工具栏", desc: "悬浮工具栏右键：切换可见性", fn: "CH_RUN" },
+      { id: "ftm_reload_script", name: "重启脚本", desc: "悬浮工具栏右键：重载脚本", fn: "CH_RUN" },
+      { id: "tray_show_search", name: "托盘/打开搜索中心", desc: "系统托盘右键菜单项", fn: "CH_RUN" },
+      { id: "tray_show_clipboard", name: "托盘/打开剪贴板", desc: "系统托盘右键菜单项", fn: "CH_RUN" },
+      { id: "tray_show_screenshot", name: "托盘/截图", desc: "系统托盘右键菜单项", fn: "CH_RUN" },
+      { id: "tray_show_config", name: "托盘/打开设置", desc: "系统托盘右键菜单项", fn: "CH_RUN" },
+      { id: "tray_toggle_toolbar", name: "托盘/显示隐藏工具栏", desc: "系统托盘右键菜单项", fn: "CH_RUN" },
+      { id: "tray_hide_toolbar", name: "托盘/关闭工具栏", desc: "系统托盘右键菜单项", fn: "CH_RUN" },
+      { id: "tray_reload_script", name: "托盘/重启脚本", desc: "系统托盘右键菜单项", fn: "CH_RUN" },
+      { id: "tray_exit_app", name: "托盘/退出程序", desc: "系统托盘右键菜单项", fn: "CH_RUN" },
+      { id: "qa_command_palette", name: "命令面板", desc: "Cursor: Ctrl+Shift+P", fn: "CH_RUN" },
+      { id: "qa_terminal", name: "终端", desc: "Cursor: Ctrl+Shift+`", fn: "CH_RUN" },
+      { id: "qa_global_search", name: "全局搜索", desc: "Cursor: Ctrl+Shift+F", fn: "CH_RUN" },
+      { id: "qa_explorer", name: "资源管理器", desc: "Cursor: Ctrl+Shift+E", fn: "CH_RUN" },
+      { id: "qa_source_control", name: "源代码管理", desc: "Cursor: Ctrl+Shift+G", fn: "CH_RUN" },
+      { id: "qa_extensions", name: "扩展", desc: "Cursor: Ctrl+Shift+X", fn: "CH_RUN" },
+      { id: "qa_browser", name: "简单浏览器", desc: "Cursor: Ctrl+Shift+B", fn: "CH_RUN" },
+      { id: "qa_settings", name: "VS Code 设置", desc: "Cursor: Ctrl+Shift+J", fn: "CH_RUN" },
+      { id: "qa_cursor_settings", name: "Cursor 设置", desc: "Cursor: Ctrl+,", fn: "CH_RUN" }
     ];
     const HK_SUB_TABS = [
       { id: "overview", label: "说明与手势" },
@@ -176,6 +217,11 @@ function __settingsStudioTestInline(payloadJson, testId, flat) {
       appearanceActivationMode: "toolbar",
       hotkeysSubTab: "overview",
       hkRecording: null,
+      summonProbeReport: null,
+      summonProbePending: false,
+      summonProbeTimer: 0,
+      summonAdvancedOpen: false,
+      summonProbeExpanded: false,
       hkRecordHudText: "",
       hkCmdSearch: "",
       appUpdate: null,
@@ -219,6 +265,11 @@ function __settingsStudioTestInline(payloadJson, testId, flat) {
         keybinderBindings: {},
         keybinderSuggestedBindings: {},
         promptQuickCaptureHotkey: "",
+        summonHotkeyPreset: "capslock",
+        summonHotkeyCustom: "",
+        capsLockMode: "chord",
+        hotkeyForceRevealAll: false,
+        summonProbeReport: null,
         language: "zh", aiSleepTime: 200, launchDelaySeconds: 3.0,
         searchEngine: "deepseek", autoLoadSelectedText: false, autoUpdateVoiceInput: true,
         voiceSearchEnabledCategories: ["ai","cli","academic","baidu","image","audio","video","book","price","medical","cloud"],
@@ -312,7 +363,33 @@ function __settingsStudioTestInline(payloadJson, testId, flat) {
     function buildKeybinderCommandMap() {
       const m = {};
       (state.data.keybinderCommands || []).forEach((c) => { if (c && c.id) m[c.id] = c; });
+      FALLBACK_KEYBINDER_COMMANDS.forEach((c) => {
+        if (c && c.id && !m[c.id]) m[c.id] = { ...c };
+      });
       return m;
+    }
+    function mergeKeybinderCatalogFromHost(msg) {
+      if (!msg || typeof msg !== "object") return false;
+      let changed = false;
+      if (Array.isArray(msg.commands) && msg.commands.length) {
+        state.data.keybinderCommands = msg.commands;
+        changed = true;
+      }
+      if (Array.isArray(msg.toolbarLayout)) {
+        state.data.keybinderToolbarLayout = normalizeToolbarLayoutRows(msg.toolbarLayout);
+        changed = true;
+      }
+      if (Array.isArray(msg.contextMenuLayout)) {
+        state.data.keybinderContextMenuLayout = msg.contextMenuLayout;
+        changed = true;
+      }
+      mergeKeybinderBindingsFromHost(msg.bindings, msg.suggestedBindings);
+      return changed;
+    }
+    function requestKeybinderCatalogIfNeeded() {
+      const needsCommands = !(Array.isArray(state.data.keybinderCommands) && state.data.keybinderCommands.length);
+      const needsLayout = !(Array.isArray(state.data.keybinderToolbarLayout) && state.data.keybinderToolbarLayout.length);
+      if (needsCommands || needsLayout) post({ type: "requestKeybinderCatalog" });
     }
     function cfgInferIconClass(cmd) {
       const t = `${cmd.id} ${cmd.name || ""}`.toLowerCase();
@@ -590,6 +667,17 @@ function __settingsStudioTestInline(payloadJson, testId, flat) {
       ftbSortPool = new Sortable(pool, opt);
     }
     const post = (msg) => BasePanel.postToAhk(msg);
+    const trace = (event, detail, extra) => {
+      const p = {
+        type: "settingsTrace",
+        source: __SETTINGS_CHILD__ ? "app_child" : "app_top",
+        event: String(event || ""),
+        detail: String(detail || ""),
+        tab: String(state.activeTab || "")
+      };
+      if (extra && typeof extra === "object") Object.assign(p, extra);
+      try { post(p); } catch (_) {}
+    };
     let statusPinUntil = 0;
     const setStatus = (text, cls = "", opts) => {
       opts = opts || {};
@@ -609,6 +697,55 @@ function __settingsStudioTestInline(payloadJson, testId, flat) {
     const checked = (v) => v ? "checked" : "";
     let suppressAutoSave = true;
     let initDataReceived = false;
+    const lazyInitDone = {
+      probeVk: false,
+      keybinderCatalog: false,
+      fullTextStatus: false,
+      studioStatus: false,
+      healthSnapshot: false,
+      cacheInfo: false,
+      migrationOptions: false
+    };
+    function scopeHasTab(tab) {
+      if (!__SETTINGS_SCOPE__ || !Array.isArray(__SETTINGS_SCOPE__.tabs)) return true;
+      return __SETTINGS_SCOPE__.tabs.includes(String(tab || ""));
+    }
+    function runLazyOnce(key, fn, delay = 80) {
+      if (lazyInitDone[key]) return;
+      lazyInitDone[key] = true;
+      setTimeout(() => {
+        try { fn(); } catch (_) {}
+      }, Math.max(0, Number(delay) || 0));
+    }
+    function runLazyInitForTab(tab, reason = "") {
+      const t = String(tab || "");
+      if (t === "hotkeys" && scopeHasTab("hotkeys")) {
+        runLazyOnce("probeVk", () => post({ type: "probeVk", reason: reason || "lazy_hotkeys" }), 40);
+        runLazyOnce("keybinderCatalog", () => requestKeybinderCatalogIfNeeded(), 70);
+        return;
+      }
+      if (t === "search" && scopeHasTab("search")) {
+        runLazyOnce("fullTextStatus", () => requestFullTextStatus(true), 90);
+        return;
+      }
+      if (t === "customize" && scopeHasTab("customize")) {
+        runLazyOnce("studioStatus", async () => {
+          await Promise.all([
+            refreshStudioHermesStatusAsync().catch(() => {}),
+            refreshStudioOpenClawStatusAsync().catch(() => {})
+          ]);
+        }, 140);
+        return;
+      }
+      if (t === "advanced" && scopeHasTab("advanced")) {
+        runLazyOnce("healthSnapshot", () => requestHealthSnapshot("open_panel"), 120);
+        return;
+      }
+      if (t === "storage" && scopeHasTab("storage")) {
+        runLazyOnce("cacheInfo", () => requestCacheInfo(), 100);
+        runLazyOnce("migrationOptions", () => requestMigrationOptions(), 130);
+      }
+    }
     /** 用户是否在「通用设置」改过默认启动页；未置位时自动保存不得带上 defaultStartTab */
     let defaultStartTabDirty = false;
     const HOLE_SAVE_KEYS = [
@@ -663,8 +800,13 @@ function __settingsStudioTestInline(payloadJson, testId, flat) {
       if (document.getElementById("toolbarButtonsList")) p.floatingToolbarButtons = d.floatingToolbarButtons;
       if (document.getElementById("toolbarMenusList")) p.floatingToolbarMenuItems = d.floatingToolbarMenuItems;
       if (document.getElementById("promptQuickCaptureHotkey")) p.promptQuickCaptureHotkey = d.promptQuickCaptureHotkey;
-      const elVkHold = document.getElementById("capsLockHoldVkEnabled");
-      if (elVkHold) p.capsLockHoldVkEnabled = d.capsLockHoldVkEnabled;
+      if (document.getElementById("btnCapsLockLayerToggle")) {
+        p.summonHotkeyPreset = "capslock";
+        p.summonHotkeyCustom = "";
+        p.capsLockMode = d.capsLockMode;
+        p.capsLockHoldVkEnabled = d.capsLockHoldVkEnabled;
+        p.hotkeyForceRevealAll = !!d.hotkeyForceRevealAll;
+      }
       if (document.getElementById("ssCaptureMode") && d.screenshotConfig) p.screenshotConfig = d.screenshotConfig;
       if (document.getElementById("ddDefaultEngine") || document.getElementById("autoLoadSelectedText")) {
         p.searchEngine = d.searchEngine;
@@ -1384,6 +1526,20 @@ function __settingsStudioTestInline(payloadJson, testId, flat) {
       if (suggested && typeof suggested === "object" && !Array.isArray(suggested))
         state.data.keybinderSuggestedBindings = { ...suggested };
     }
+    function mergeCursorShortcutsAsSuggested(list) {
+      const rows = Array.isArray(list) ? list : [];
+      if (!rows.length) return;
+      const sug = { ...(state.data.keybinderSuggestedBindings || {}) };
+      let changed = false;
+      rows.forEach((row) => {
+        const id = String(row?.vkCommandId || "").trim();
+        const sk = String(row?.shortcut || "").trim();
+        if (!id || !sk || sug[id]) return;
+        sug[id] = sk;
+        changed = true;
+      });
+      if (changed) state.data.keybinderSuggestedBindings = sug;
+    }
     function getVkBindingEntry(cmdId) {
       const b = state.data.keybinderBindings || {};
       return b[cmdId] || null;
@@ -1458,14 +1614,13 @@ function __settingsStudioTestInline(payloadJson, testId, flat) {
       const kw = String(searchKw || "").trim().toLowerCase();
       const cmdMap = buildKeybinderCommandMap();
       const ids = (Array.isArray(cmdIds) ? cmdIds : []).filter((id) => {
-        const c = cmdMap[id];
-        if (!c) return false;
+        const c = cmdMap[id] || { id, name: id, desc: "" };
         if (!kw) return true;
         const blob = `${id} ${c.name || ""} ${c.desc || ""}`.toLowerCase();
         return blob.includes(kw);
       });
       if (!ids.length) return `<div class="hk-no-command">[NO COMMAND FOUND]</div>`;
-      return ids.map((id) => renderVkCmdRowHtml(id, cmdMap[id])).join("");
+      return ids.map((id) => renderVkCmdRowHtml(id, cmdMap[id] || { id, name: id, desc: "" })).join("");
     }
     function renderCursorVkCmdListHtml(list, searchKw) {
       const rows = Array.isArray(list) ? list : [];
@@ -1489,6 +1644,72 @@ function __settingsStudioTestInline(payloadJson, testId, flat) {
         return renderVkCmdRowHtml(cmdId, cmd);
       }).join("");
     }
+    function isCapsLockLayerEnabled(d) {
+      return String(d?.capsLockMode || "chord") !== "off";
+    }
+    function capsLockHoldHintSeconds(d) {
+      const capsHold = Number(d?.capslockHoldTimeSeconds);
+      return Number.isFinite(capsHold) ? capsHold.toFixed(1) : "0.5";
+    }
+    function capsLockLayerHintHtml(enabled, holdHint) {
+      if (!enabled) {
+        return `和弦层已关闭。<strong>双击 CapsLock</strong> 仍可打开命令面板；按住+字母、长按键帽提示已停用。`;
+      }
+      return `<strong>按住</strong> + 字母 → 牛马命令 · <strong>长按 ${esc(holdHint)} 秒</strong> → 键帽提示 · <strong>双击</strong> → 命令面板`;
+    }
+    function syncCapsLockLayerToggleDom(enabled, holdHint) {
+      const btn = document.getElementById("btnCapsLockLayerToggle");
+      const hint = document.getElementById("capsLockLayerHint");
+      if (btn) {
+        btn.classList.toggle("is-on", !!enabled);
+        btn.setAttribute("aria-pressed", enabled ? "true" : "false");
+        const st = btn.querySelector(".hk-capslit-state");
+        if (st) st.textContent = enabled ? "已点亮" : "已熄灭";
+      }
+      if (hint) hint.innerHTML = capsLockLayerHintHtml(!!enabled, holdHint);
+    }
+    function readCapsLockLayerEnabledFromDom() {
+      const btn = document.getElementById("btnCapsLockLayerToggle");
+      if (!btn) return isCapsLockLayerEnabled(state.data);
+      return btn.classList.contains("is-on");
+    }
+    function renderSummonConflictCard(d) {
+      const holdHint = capsLockHoldHintSeconds(d);
+      const layerOn = isCapsLockLayerEnabled(d);
+      return `<div class="card hk-summon-card" style="margin-bottom:12px">
+  <div class="title">CapsLock 和弦层</div>
+  <div class="hk-capslit-row">
+    <button type="button" id="btnCapsLockLayerToggle" class="hk-capslit-btn${layerOn ? " is-on" : ""}" aria-pressed="${layerOn ? "true" : "false"}" title="点击点亮/熄灭 CapsLock 和弦层">
+      <span class="hk-capslit-led" aria-hidden="true"></span>
+      <span class="hk-capslit-key">CapsLock</span>
+      <span class="hk-capslit-state">${layerOn ? "已点亮" : "已熄灭"}</span>
+    </button>
+    <div id="capsLockLayerHint" class="hk-capslit-hint">${capsLockLayerHintHtml(layerOn, holdHint)}</div>
+  </div>
+  <label class="hk-summon-check-row subtle"><input id="hotkeyForceRevealAll" type="checkbox" ${checked(!!d.hotkeyForceRevealAll)}> 跳过引导，一次显示全部快捷键</label>
+</div>`;
+    }
+    async function showHotkeyConflictConfirm(title, detail, opts) {
+      const o = opts || {};
+      if (window.nmConfirm) {
+        return window.nmConfirm(title, detail, {
+          okLabel: o.okLabel || "确定",
+          cancelLabel: o.cancelLabel || "取消",
+          danger: !!o.danger
+        });
+      }
+      return Promise.resolve(confirm(`${title}\n${detail || ""}`));
+    }
+    function readSummonFieldsFromDom(d) {
+      d.summonHotkeyPreset = "capslock";
+      d.summonHotkeyCustom = "";
+      const layerOn = readCapsLockLayerEnabledFromDom();
+      d.capsLockMode = layerOn ? "chord" : "off";
+      d.capsLockHoldVkEnabled = layerOn;
+      const forceEl = document.getElementById("hotkeyForceRevealAll");
+      if (forceEl) d.hotkeyForceRevealAll = !!forceEl.checked;
+      return d;
+    }
     function renderHotkeysSubTabHtml(d, subId) {
       const capsHold = Number(d.capslockHoldTimeSeconds);
       const capsHoldHint = Number.isFinite(capsHold) ? capsHold.toFixed(1) : "0.5";
@@ -1505,8 +1726,7 @@ function __settingsStudioTestInline(payloadJson, testId, flat) {
   </div>
 </div>`;
       if (subId === "overview") {
-        return `<div class="hk-note" style="padding:0;margin-bottom:10px">长按 CapsLock 达到 <strong>${esc(capsHoldHint)}</strong> 秒可唤起和弦面板（键帽式快捷键提示）；下方可关闭「长按打开和弦面板」。CapsLock 组合键请在 <strong>全局导航</strong> / <strong>Cursor 组合键</strong> 中录制（显示为 Ctrl+Shift+… 等原文）。</div>
-<div class="row"><div class="label">长按 CapsLock 打开和弦面板</div><div><input id="capsLockHoldVkEnabled" type="checkbox" ${checked(d.capsLockHoldVkEnabled !== false && d.capsLockHoldVkEnabled !== 0)}></div></div>
+        return `${renderSummonConflictCard(d)}
 ${appShortcutRows}
 <div class="row" style="margin-top:12px"><div class="label">Prompt 快速采集</div><input id="promptQuickCaptureHotkey" type="text" value="${esc(d.promptQuickCaptureHotkey)}" placeholder="如 ^!p，留空不注册"></div>
 <div class="hk-open-vk-row"><button type="button" class="btn primary" id="btnOpenVkKeybinder"><i class="fa-solid fa-keyboard" aria-hidden="true"></i> 打开 VK KeyBinder</button><span id="hk-vk-status" class="hk-vk-status"></span></div>`;
@@ -1620,6 +1840,10 @@ ${bindListBlock("hk-vk-list-" + subId, renderVkCmdListHtml(preset.commands, stat
       }
     }
     function bindHotkeysTabHandlers() {
+      mergeCursorShortcutsAsSuggested(
+        (Array.isArray(state.data.cursorShortcuts) && state.data.cursorShortcuts.length)
+          ? state.data.cursorShortcuts : DEFAULT_CURSOR_SHORTCUTS
+      );
       document.querySelectorAll("[data-hk-sub]").forEach((btn) => {
         btn.addEventListener("click", () => {
           stopHotkeyRecording();
@@ -1647,17 +1871,24 @@ ${bindListBlock("hk-vk-list-" + subId, renderVkCmdListHtml(preset.commands, stat
         });
       });
       bindHotkeysVkRowHandlers();
-      const elVkHold = document.getElementById("capsLockHoldVkEnabled");
-      if (elVkHold) {
-        elVkHold.addEventListener("change", () => scheduleSettingsPersist(false));
-      }
       const elPqc = document.getElementById("promptQuickCaptureHotkey");
       if (elPqc) {
         elPqc.addEventListener("input", () => scheduleSettingsPersist(false));
         elPqc.addEventListener("change", () => scheduleSettingsPersist(false));
       }
       document.getElementById("btnOpenVkKeybinder")?.addEventListener("click", () => post({ type: "invokeAction", op: "showVk" }));
+      document.getElementById("btnCapsLockLayerToggle")?.addEventListener("click", () => {
+        const enabled = readCapsLockLayerEnabledFromDom();
+        const next = !enabled;
+        syncCapsLockLayerToggleDom(next, capsLockHoldHintSeconds(state.data));
+        state.data.capsLockMode = next ? "chord" : "off";
+        state.data.capsLockHoldVkEnabled = next;
+        scheduleSettingsPersist(false);
+        setStatus(next ? "CapsLock 和弦层已点亮" : "CapsLock 和弦层已熄灭（双击仍可开命令面板）", next ? "ok" : "");
+      });
+      document.getElementById("hotkeyForceRevealAll")?.addEventListener("change", () => scheduleSettingsPersist(false));
       post({ type: "probeVk" });
+      requestKeybinderCatalogIfNeeded();
       if (state.hotkeysSubTab === "toolbar") {
         mountFtbWorkbench();
         mountMenuWorkbench();
@@ -1744,13 +1975,11 @@ ${bindListBlock("hk-vk-list-" + subId, renderVkCmdListHtml(preset.commands, stat
       if (evt.type === "confirmConflict") {
         const dk = evt.displayKey || evt.ahkKey || "";
         const other = evt.conflictCmdName || evt.conflictCmdId || "其他命令";
-        const ask = window.nmConfirm
-          ? window.nmConfirm(
-              "快捷键冲突",
-              `「${dk}」已被「${other}」占用（可在「全局导航」等子页查看）。是否改绑到当前命令？`,
-              { okLabel: "改绑", cancelLabel: "取消", danger: true }
-            )
-          : Promise.resolve(confirm(`「${dk}」已被「${other}」占用。是否改绑？`));
+        const ask = showHotkeyConflictConfirm(
+          "快捷键冲突",
+          `「${dk}」已被「${other}」占用（可在「全局导航」等子页查看）。是否改绑到当前命令？`,
+          { okLabel: "改绑", cancelLabel: "取消", danger: true }
+        );
         ask.then((ok) => {
           post({
             type: "vkResolveConflict",
@@ -1772,11 +2001,9 @@ ${bindListBlock("hk-vk-list-" + subId, renderVkCmdListHtml(preset.commands, stat
         }
       }
     }
-    function readHotkeys(d){
-      const elVkHold = document.getElementById("capsLockHoldVkEnabled");
-      if (elVkHold) d.capsLockHoldVkEnabled = !!elVkHold.checked;
+    function readHotkeys(d) {
       d.promptQuickCaptureHotkey = document.getElementById("promptQuickCaptureHotkey")?.value.trim() ?? d.promptQuickCaptureHotkey;
-      return d;
+      return readSummonFieldsFromDom(d);
     }
     function readAdvanced(d){
       const lang = document.getElementById("language");
@@ -5414,6 +5641,56 @@ ${bindListBlock("hk-vk-list-" + subId, renderVkCmdListHtml(preset.commands, stat
         <table class="health-table"><thead><tr><th>ID</th><th>状态</th><th>角色</th></tr></thead><tbody>${surfRows}</tbody></table>
         ${dbgDir ? `<div class="hint health-log-dir">日志目录：${dbgDir}</div>` : ""}`;
     }
+    function renderTroubleshootCardHtml() {
+      return `<div class="card" style="margin-top:12px;">
+  <div class="title">故障排查</div>
+  <div class="hint" style="margin-bottom:10px;">出问题时<strong>不必手改 ini</strong>。日志在 <code>Cache\\debug\\nmer_trace.log</code>；也可用下面按钮一键收集信息。</div>
+  <ul class="hint" style="margin:0 0 10px 18px;line-height:1.55;">
+    <li>牛马无反应 → 托盘右键「系统健康」或下方「健康快照」</li>
+    <li>快捷键冲突 → 「快捷键冲突」跳到快捷键页</li>
+    <li>要发给开发者 → 「复制最近日志」或「导出诊断包」</li>
+    <li>恢复默认（不含 API Key）→ 「恢复默认设置」</li>
+  </ul>
+  <div class="inline" style="flex-wrap:wrap;gap:8px;">
+    <button type="button" class="btn" id="btnTroubleOpenLogs">打开日志目录</button>
+    <button type="button" class="btn" id="btnTroubleCopyTrace">复制最近日志</button>
+    <button type="button" class="btn" id="btnTroubleExportDiag">导出诊断包</button>
+    <button type="button" class="btn" id="btnTroubleHealth">健康快照</button>
+    <button type="button" class="btn" id="btnTroubleHotkeys">快捷键冲突</button>
+    <button type="button" class="btn" id="btnTroubleResetCfg">恢复默认设置</button>
+  </div>
+</div>`;
+    }
+    function bindTroubleshootHandlers() {
+      document.getElementById("btnTroubleOpenLogs")?.addEventListener("click", () => post({ type: "invokeAction", op: "openDebugLogsFolder" }));
+      document.getElementById("btnTroubleCopyTrace")?.addEventListener("click", () => {
+        setStatus("正在复制最近日志…", "");
+        post({ type: "invokeAction", op: "copyRecentTraceLog" });
+      });
+      document.getElementById("btnTroubleExportDiag")?.addEventListener("click", () => post({ type: "invokeAction", op: "exportDiagnosticsBundle" }));
+      document.getElementById("btnTroubleHealth")?.addEventListener("click", () => {
+        state.activeTab = "advanced";
+        try { sessionStorage.setItem("settings.activeTab", "advanced"); } catch (_) {}
+        document.querySelectorAll(".tab-btn").forEach(b => b.classList.toggle("active", b.dataset.tab === "advanced"));
+        render();
+        requestHealthSnapshot("troubleshoot_guide");
+        setStatus("已打开「高级 → 系统健康」", "ok");
+      });
+      document.getElementById("btnTroubleHotkeys")?.addEventListener("click", () => {
+        state.activeTab = "hotkeys";
+        state.hotkeysSubTab = "overview";
+        try { sessionStorage.setItem("settings.activeTab", "hotkeys"); } catch (_) {}
+        document.querySelectorAll(".tab-btn").forEach(b => b.classList.toggle("active", b.dataset.tab === "hotkeys"));
+        render();
+        setStatus("已跳到「快捷键」页，可检查 CapsLock 和弦层", "ok");
+      });
+      document.getElementById("btnTroubleResetCfg")?.addEventListener("click", async () => {
+        const ask = window.nmConfirm
+          ? await window.nmConfirm("恢复默认设置", "将重置 CursorShortcut.ini 为默认值（API Key 在 vault 中，不受影响）。是否继续？", { okLabel: "恢复", cancelLabel: "取消", danger: true })
+          : confirm("恢复默认设置？API Key 不受影响。");
+        if (ask) post({ type: "invokeAction", op: "resetToDefaults" });
+      });
+    }
     function bindHealthSnapshotHandlers() {
       document.getElementById("btnHealthRefresh")?.addEventListener("click", () => requestHealthSnapshot("user_refresh"));
       document.getElementById("btnHealthExportDiag")?.addEventListener("click", () => post({ type: "invokeAction", op: "exportDiagnosticsBundle" }));
@@ -5602,6 +5879,7 @@ ${bindListBlock("hk-vk-list-" + subId, renderVkCmdListHtml(preset.commands, stat
       });
     }
     function render() {
+      trace("render_begin", "", { tab: state.activeTab });
       destroyFtbWorkbenchSortable();
       destroyMenuWorkbenchSortable();
       const d = state.data; const panel = document.getElementById("panel");
@@ -5633,8 +5911,9 @@ ${bindListBlock("hk-vk-list-" + subId, renderVkCmdListHtml(preset.commands, stat
       const catRows = ALL_CATEGORIES.map(c => `<label class="tag"><input id="cat_${c}" type="checkbox" ${checked((d.voiceSearchEnabledCategories||[]).includes(c))}> ${esc(c)}</label>`).join("");
       if (state.activeTab === "general") {
         const upd = normalizeAppUpdate(state.appUpdate);
-        panel.innerHTML = `<div class="card"><div class="title">通用设置</div>${renderAppUpdateGeneralBlock(upd)}<div class="row"><div class="label">Cursor 路径</div><div class="inline"><input id="cursorPath" type="text" value="${esc(d.cursorPath)}"><button class="btn" id="browsePath">浏览</button></div></div><div class="row"><div class="label">CapsLock 长按时间 (0.1 - 5.0)</div><input id="holdTime" type="number" min="0.1" max="5.0" step="0.1" value="${esc(d.capslockHoldTimeSeconds)}"></div><div class="row"><div class="label">开机自启动</div><div><input id="autoStart" type="checkbox" ${checked(d.autoStart)}></div></div><div class="row"><div class="label">默认启动页</div><select id="defaultStartTab">${optionsKV(defaultTabOpts, normalizeDefaultStartTab(d.defaultStartTab))}</select></div></div>`;
+        panel.innerHTML = `<div class="card"><div class="title">通用设置</div>${renderAppUpdateGeneralBlock(upd)}<div class="row"><div class="label">Cursor 路径</div><div class="inline"><input id="cursorPath" type="text" value="${esc(d.cursorPath)}"><button class="btn" id="browsePath">浏览</button></div></div><div class="row"><div class="label">CapsLock 长按时间 (0.1 - 5.0)</div><input id="holdTime" type="number" min="0.1" max="5.0" step="0.1" value="${esc(d.capslockHoldTimeSeconds)}"></div><div class="row"><div class="label">开机自启动</div><div><input id="autoStart" type="checkbox" ${checked(d.autoStart)}></div></div><div class="row"><div class="label">默认启动页</div><select id="defaultStartTab">${optionsKV(defaultTabOpts, normalizeDefaultStartTab(d.defaultStartTab))}</select></div></div>${renderTroubleshootCardHtml()}`;
         bindAppUpdateGeneralHandlers();
+        bindTroubleshootHandlers();
         document.getElementById("browsePath").addEventListener("click", () => post({ type: "browseCursorPath" }));
       } else if (state.activeTab === "appearance") {
         const activationMode = normalizeActivationMode(state.appearanceActivationMode);
@@ -5890,12 +6169,6 @@ ${pathRow("autohotkey", "AutoHotkey", paths.autohotkey || "")}
           const det = document.getElementById("studioLocalGatewayDetails");
           if (det) det.open = true;
         }
-        (async function () {
-          await Promise.all([
-            refreshStudioHermesStatusAsync().catch(() => {}),
-            refreshStudioOpenClawStatusAsync().catch(() => {})
-          ]);
-        })();
         document.querySelectorAll(".us-browse").forEach(btn => btn.addEventListener("click", () => {
           post({ type: "browseUserStudioPath", field: btn.getAttribute("data-us-field") });
         }));
@@ -5946,7 +6219,6 @@ ${pathRow("autohotkey", "AutoHotkey", paths.autohotkey || "")}
         document.getElementById("btnImportCfg").addEventListener("click", () => post({ type: "invokeAction", op: "importConfig" }));
         document.getElementById("btnResetCfg").addEventListener("click", () => post({ type: "invokeAction", op: "resetToDefaults" }));
         bindHealthSnapshotHandlers();
-        requestHealthSnapshot("open_panel");
       } else if (state.activeTab === "storage") {
         const ci = state.cacheInfo || {};
         const root = esc(ci.root || d.userCacheRoot || "");
@@ -6008,8 +6280,6 @@ ${pathRow("autohotkey", "AutoHotkey", paths.autohotkey || "")}
 </div>`;
         bindStorageCacheHandlers();
         bindMigrationHandlers();
-        if (!items.length) requestCacheInfo();
-        if (!state.migrationOptions) requestMigrationOptions();
       } else if (state.activeTab === "screenshot") {
         const ss = { ...(d.screenshotConfig || {}) };
         const capTabs = `<div class="subtabs">
@@ -6138,6 +6408,8 @@ ${pathRow("autohotkey", "AutoHotkey", paths.autohotkey || "")}
         refreshFullTextConsoleDom();
       }
       bindAutoSaveControls();
+      runLazyInitForTab(state.activeTab, "render");
+      trace("render_end", "", { tab: state.activeTab });
     }
     function validate(d) {
       if (!d.cursorPath) return "Cursor 路径不能为空";
@@ -6171,8 +6443,7 @@ ${pathRow("autohotkey", "AutoHotkey", paths.autohotkey || "")}
       document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
       btn.classList.add("active");
       render();
-      if (state.activeTab === "search")
-        requestFullTextStatus(true);
+      runLazyInitForTab(state.activeTab, "tab_click");
     }));
     }
     __settingsBindTabButtons();
@@ -6266,6 +6537,7 @@ ${pathRow("autohotkey", "AutoHotkey", paths.autohotkey || "")}
     function handleHostMessage(msg) {
       if (!msg || !msg.type) return;
       if (msg.type === "initData") {
+        trace("initdata_begin", "", { navigateToStartTab: !!msg.navigateToStartTab });
         suppressAutoSave = true;
         const p = msg.payload || {};
         const shouldNavigate = !!msg.navigateToStartTab;
@@ -6283,8 +6555,13 @@ ${pathRow("autohotkey", "AutoHotkey", paths.autohotkey || "")}
           ...pForMerge,
           cursorShortcuts: (Array.isArray(p.cursorShortcuts) && p.cursorShortcuts.length)
             ? p.cursorShortcuts
-            : (state.data.cursorShortcuts || [])
+            : DEFAULT_CURSOR_SHORTCUTS
         };
+        mergeCursorShortcutsAsSuggested(state.data.cursorShortcuts);
+        state.data.summonHotkeyPreset = "capslock";
+        state.data.summonHotkeyCustom = "";
+        if (String(state.data.capsLockMode || "chord") === "off")
+          state.data.capsLockHoldVkEnabled = false;
         state.data.themeMode = incomingTheme || cachedTheme || state.data.themeMode || "dark";
         // 持久化到 localStorage，下次打开时立即应用，无需等 AHK 推送
         try { localStorage.setItem("settings_themeMode", state.data.themeMode); } catch (_) {}
@@ -6327,7 +6604,6 @@ ${pathRow("autohotkey", "AutoHotkey", paths.autohotkey || "")}
         }
         if (typeof msg.payload?.vkAvailable === "boolean")
           state.data.vkAvailable = msg.payload.vkAvailable;
-        post({ type: "probeVk" });
         updateHkVkStatusDom(state.data.vkAvailable);
         const ids = (state.data.promptTemplateSummary || []).map(t => t.id);
         if (state.selectedPromptTemplateId && !ids.includes(state.selectedPromptTemplateId))
@@ -6338,10 +6614,15 @@ ${pathRow("autohotkey", "AutoHotkey", paths.autohotkey || "")}
         lastSentHash = lastSavedHash;
         pendingSaveHash = "";
         saveInFlight = false;
-        if (state.activeTab === "search")
-          requestFullTextStatus(true);
         initDataReceived = true;
+        trace("initdata_end", "", { activeTab: state.activeTab });
+        if (__SETTINGS_CHILD__) {
+          try {
+            window.parent.postMessage({ channel: "nmer-settings-child-lifecycle", stage: "init_applied" }, "*");
+          } catch (_) {}
+        }
         setTimeout(() => { suppressAutoSave = false; }, 0);
+        runLazyInitForTab(state.activeTab, "initData");
         return;
       }
       if (msg.type === "vkStatus") {
@@ -6356,6 +6637,10 @@ ${pathRow("autohotkey", "AutoHotkey", paths.autohotkey || "")}
       if (msg.type === "keybinderBindingsSnapshot") {
         mergeKeybinderBindingsFromHost(msg.bindings, msg.suggestedBindings);
         if (state.activeTab === "hotkeys") render();
+        return;
+      }
+      if (msg.type === "keybinderCatalogSnapshot") {
+        if (mergeKeybinderCatalogFromHost(msg) && state.activeTab === "hotkeys") render();
         return;
       }
       if (msg.type === "browseCursorPathResult" && msg.path) { state.data.cursorPath = msg.path; render(); return; }
@@ -6814,7 +7099,7 @@ ${pathRow("autohotkey", "AutoHotkey", paths.autohotkey || "")}
       if (msg.type === "actionResult") {
         const op = String(msg.op || "");
         if (op === "syncNiumaChatLlmToStudio" || op === "loadNiumaProjectBrief") return;
-        if (op === "getHealthSnapshot" || op === "exportDiagnosticsBundle" || op === "openDebugLogsFolder") return;
+        if (op === "getHealthSnapshot" || op === "exportDiagnosticsBundle" || op === "openDebugLogsFolder" || op === "copyRecentTraceLog") return;
         if (op === "getMigrationOptions" || op === "exportMigrationPack" || op === "importMigrationPack") return;
         if (msg.ok) {
           setStatus("操作成功", "ok");
@@ -6852,6 +7137,7 @@ ${pathRow("autohotkey", "AutoHotkey", paths.autohotkey || "")}
         const d = e.data;
         if (!d) return;
         if (d.channel === "nmer-settings-host") {
+          trace("child_host_msg", String(d.type || ""));
           if (d.type === "initSlice") handleHostMessage({ type: "initData", payload: d.payload || {}, navigateToStartTab: !!d.navigateToStartTab });
           else if (d.type === "hostForward") handleHostMessage(d.message || d);
           else if (d.type === "setActiveTab" && d.tab) {
@@ -6865,7 +7151,7 @@ ${pathRow("autohotkey", "AutoHotkey", paths.autohotkey || "")}
             try { sessionStorage.setItem("settings.activeTab", nextTab); } catch (_) {}
             if (nextTab === "storage") state.cacheInfo = null;
             render();
-            if (nextTab === "search") requestFullTextStatus(true);
+            runLazyInitForTab(nextTab, "host_set_active");
           }
           return;
         }
@@ -6876,6 +7162,24 @@ ${pathRow("autohotkey", "AutoHotkey", paths.autohotkey || "")}
         window.chrome.webview.addEventListener("message", onChildHostMessage);
       if (__SETTINGS_SCOPE__?.defaultTab) state.activeTab = __SETTINGS_SCOPE__.defaultTab;
       setStatus("等待连接...");
+      render();
+      setTimeout(() => {
+        try {
+          trace("post_app_ready");
+          window.parent.postMessage({ channel: "nmer-settings-child-lifecycle", stage: "app_ready" }, "*");
+          window.parent.postMessage({ channel: "nmer-settings-child-lifecycle", stage: "request_init" }, "*");
+        } catch (_) {}
+      }, 0);
+      const initRetryTimer = setInterval(() => {
+        if (initDataReceived) {
+          clearInterval(initRetryTimer);
+          return;
+        }
+        try {
+          window.parent.postMessage({ channel: "nmer-settings-child-lifecycle", stage: "request_init" }, "*");
+          trace("post_request_init");
+        } catch (_) {}
+      }, 260);
     } else if (window.chrome && window.chrome.webview) {
 
       window.chrome.webview.addEventListener("message", e => {

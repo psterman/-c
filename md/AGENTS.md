@@ -6,7 +6,7 @@
 |------|------|
 | `local/user_studio.json` | 大模型 API、本机软件路径、扩展选项 |
 | `config/user_studio.defaults.json` | 还原默认时的模板（勿删） |
-| `local/CursorShortcut.ini` | 主程序设置（热键、主题等） |
+| `local/CursorShortcut.ini` | 主程序设置（热键、主题等）；`SummonHotkeyPreset` / `CapsLockMode` 见 `[Settings]` |
 | `local/openclaw-state/` | OpenClaw CLI 工作区状态 |
 
 ## 设置页入口
@@ -46,6 +46,7 @@
 - **例外**：治理 plan 档 **§1–§3**（路径清单、运维脚本、约定文档）范围内的新增/修改，或用户显式列出的必做项，可改 `modules/` 与 `tools/`。
 - 保存 `user_studio.json` 前会自动备份到 `local/user_studio.backup.json`。
 - 「还原默认定制」仅重置 `user_studio.json`，不重置整个 `local/CursorShortcut.ini`。
+- 主唤起键：`CursorShortcut.ini` `[Settings]` 中 `SummonHotkeyPreset`（`alt_space`/`ctrl_space`/`win_space`/`capslock`/`custom`）、`SummonHotkeyCustom`、`CapsLockMode`（`chord`/`off`）；渐进解锁状态在 `Data/state/onboarding_hotkeys.json`。
 
 ## Niuma Chat 项目背景
 

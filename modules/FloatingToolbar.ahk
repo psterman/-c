@@ -6159,9 +6159,22 @@ FloatingToolbarExecuteButtonAction(action, buttonHwnd) {
             ; 含长时间 Sleep/剪贴板轮询会阻塞消息泵，导致工具栏卡死且截图窗口无法显示
             SetTimer(FloatingToolbar_DeferredScreenshot, -10)
         case "Settings":
-            FloatingToolbarOpenSettings()
+            ; 同截图：设置窗口打开链路较长，放到下一帧执行，避免首击被 WebView 回调重入吞掉
+            SetTimer(FloatingToolbar_DeferredOpenSettings, -10)
         case "VirtualKeyboard":
             FloatingToolbarActivateVirtualKeyboard()
+    }
+}
+
+FloatingToolbar_DeferredOpenSettings(*) {
+    try ShowConfigGUI_Safe()
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e)
+        ; 安全路径异常时回退，避免按钮无响应
+        try FloatingToolbarOpenSettings()
+        catch as _e2 {
+            NmerCatch(A_ThisFunc, _e2)
+        }
     }
 }
 
@@ -6452,8 +6465,8 @@ FloatingToolbarActivateVirtualKeyboard() {
 
 FloatingToolbarOpenSettings() {
     try {
-        if IsSet(ShowConfigWebViewGUI) {
-            SurfaceIntent_Open("config_webview")
+        if IsSet(ShowConfigGUI_Safe) {
+            ShowConfigGUI_Safe()
             return
         }
     } catch as _e {

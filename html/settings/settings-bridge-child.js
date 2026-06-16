@@ -6,12 +6,27 @@
   if (window.parent === window) return;
 
   const hostListeners = [];
+  const pendingHostEvents = [];
 
   function notifyHostListeners(data) {
     if (!data) return;
     const evt = { data };
+    if (!hostListeners.length) {
+      pendingHostEvents.push(evt);
+      return;
+    }
     hostListeners.forEach((fn) => {
       try { fn(evt); } catch (_) {}
+    });
+  }
+
+  function flushPendingHostEvents() {
+    if (!pendingHostEvents.length || !hostListeners.length) return;
+    const q = pendingHostEvents.splice(0, pendingHostEvents.length);
+    q.forEach((evt) => {
+      hostListeners.forEach((fn) => {
+        try { fn(evt); } catch (_) {}
+      });
     });
   }
 
@@ -70,6 +85,7 @@
     addEventListener(type, fn) {
       if (type === "message" && typeof fn === "function") {
         hostListeners.push(fn);
+        flushPendingHostEvents();
         return;
       }
       if (nativeAdd) nativeAdd(type, fn);
@@ -83,4 +99,13 @@
       if (nativeRemove) nativeRemove(type, fn);
     }
   };
+
+  function notifyLifecycle(stage) {
+    try {
+      window.parent.postMessage({ channel: "nmer-settings-child-lifecycle", stage: String(stage || "") }, "*");
+    } catch (_) {}
+  }
+
+  notifyLifecycle("bridge_ready");
+  document.addEventListener("DOMContentLoaded", () => notifyLifecycle("dom_ready"), { once: true });
 })();

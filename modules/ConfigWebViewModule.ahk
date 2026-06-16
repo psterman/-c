@@ -185,6 +185,10 @@ ShowConfigWebViewGUI() {
     PosY := ScreenInfo.Top + Round((ScreenInfo.Height - WinH) / 2)
 
     GuiID_ConfigGUI.Show("w" . WinW . " h" . WinH . " x" . PosX . " y" . PosY)
+    try WinActivate("ahk_id " . GuiID_ConfigGUI.Hwnd)
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e)
+    }
     try WinSetAlwaysOnTop(true, "ahk_id " . GuiID_ConfigGUI.Hwnd)
     catch as _e {
         NmerCatch(A_ThisFunc, _e) 
@@ -202,7 +206,9 @@ ShowConfigWebViewGUI() {
     SetTimer(ConfigWebView_RefreshWebViewComposition, -380)
     SetTimer(ConfigWebView_RefreshRasterizationScale, -50)
     SetTimer(ConfigWebView_RefreshRasterizationScale, -150)
-    SetTimer(ConfigWebView_FocusDeferred, -80)
+    SetTimer(ConfigWebView_FocusDeferred, -40)
+    SetTimer(ConfigWebView_ForceActivate, -100)
+    SetTimer(ConfigWebView_ForceActivate, -260)
     SetTimer(ConfigWebView_EnsureVisibleOrRecover, -420)
     global ConfigWV2, ConfigWV2Ready
     try WebView2_NotifyShown(ConfigWV2)
@@ -384,6 +390,20 @@ ConfigWebView_FocusDeferred(*) {
     }
 }
 
+ConfigWebView_ForceActivate(*) {
+    global GuiID_ConfigGUI
+    if !GuiID_ConfigGUI
+        return
+    try WinActivate("ahk_id " . GuiID_ConfigGUI.Hwnd)
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e)
+    }
+    try ConfigWebView_FocusDeferred()
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e)
+    }
+}
+
 ConfigWebView_RefocusAfterThemeChange(*) {
     global GuiID_ConfigGUI, ConfigWV2Ctrl
     if !ConfigWebView_HostAlive()
@@ -427,7 +447,7 @@ ConfigWebView_WM_ACTIVATE(wParam, lParam, msg, hwnd) {
             NmerCatch(A_ThisFunc, _e) 
         }
         ; 鍒?Show 鍚庣煭鏃堕棿鍐呭彲鑳芥敹鍒板け鐒︼紙涓庣疆椤舵偓娴潯鎶㈢劍鐐癸級锛屽嬁绔嬪嵆鍏抽棴
-        if (g_ConfigWebView_LastShown && (A_TickCount - g_ConfigWebView_LastShown < 500))
+        if (g_ConfigWebView_LastShown && (A_TickCount - g_ConfigWebView_LastShown < 1500))
             return
         SetTimer(CloseConfigGUI, -50)
     }
@@ -929,7 +949,7 @@ ConfigWebView_RelayVkWebJson(jsonStr) {
     if (t = "")
         return
     switch t {
-        case "bindingUpdated", "recordHint", "recordPending", "confirmConflict", "bind_blocked":
+        case "bindingUpdated", "recordHint", "recordPending", "confirmConflict", "bind_blocked", "summonKeyRecorded":
             ConfigWebView_Send(Map("type", "vkWebEvent", "event", evt))
         default:
     }
@@ -983,6 +1003,7 @@ ConfigWebView_BuildInitData() {
     global CursorPath, CapsLockHoldTimeSeconds, CapsLockHoldVkEnabled, AutoStart, DefaultStartTab, g_ConfigWebView_OneShotDefaultTab
     global ThemeMode, FunctionPanelPos, ConfigPanelScreenIndex, ConfigPanelPos, ClipboardPanelPos, PanelScreenIndex
     global PromptQuickCaptureHotkey
+    global SummonHotkeyPreset, SummonHotkeyCustom, CapsLockMode
     global CursorShortcut_CommandPalette, CursorShortcut_Terminal, CursorShortcut_GlobalSearch
     global CursorShortcut_Explorer, CursorShortcut_SourceControl, CursorShortcut_Extensions
     global CursorShortcut_Browser, CursorShortcut_Settings, CursorShortcut_CursorSettings
@@ -1074,6 +1095,10 @@ ConfigWebView_BuildInitData() {
         "cursorPath", CursorPath,
         "capslockHoldTimeSeconds", CapsLockHoldTimeSeconds,
         "capsLockHoldVkEnabled", CapsLockHoldVkEnabled,
+        "summonHotkeyPreset", IsSet(SummonHotkeyPreset) ? SummonHotkeyPreset : "capslock",
+        "summonHotkeyCustom", IsSet(SummonHotkeyCustom) ? SummonHotkeyCustom : "",
+        "capsLockMode", IsSet(CapsLockMode) ? CapsLockMode : "chord",
+        "hotkeyForceRevealAll", FuncExists("OnboardingHotkeys_GetForceRevealAll") ? OnboardingHotkeys_GetForceRevealAll() : false,
         "autoStart", autoStartForWeb,
         "defaultStartTab", startTabForOpen,
         "vkAvailable", ConfigWebView_IsVkAvailable(),
@@ -1166,6 +1191,10 @@ ConfigWebView_BuildInitDataSafe() {
             "cursorPath", "",
             "capslockHoldTimeSeconds", 0.5,
             "capsLockHoldVkEnabled", true,
+            "summonHotkeyPreset", "capslock",
+            "summonHotkeyCustom", "",
+            "capsLockMode", "chord",
+            "hotkeyForceRevealAll", false,
             "autoStart", false,
             "defaultStartTab", "general",
             "themeMode", _tm,
@@ -1307,6 +1336,7 @@ ConfigWebView_ValidateAndApply(payload, &errorMsg := "") {
     global CursorPath, CapsLockHoldTimeSeconds, CapsLockHoldVkEnabled, AutoStart, DefaultStartTab
     global ThemeMode, FunctionPanelPos, ConfigPanelScreenIndex, ConfigPanelPos, ClipboardPanelPos, PanelScreenIndex
     global PromptQuickCaptureHotkey
+    global SummonHotkeyPreset, SummonHotkeyCustom, CapsLockMode
     global Language, AISleepTime, LaunchDelaySeconds, MsgBoxScreenIndex, VoiceInputScreenIndex, CursorPanelScreenIndex, ClipboardPanelScreenIndex
     global SearchEngine, AutoLoadSelectedText, AutoUpdateVoiceInput, VoiceSearchEnabledCategories, VoiceSearchSelectedEngines
     global FloatingToolbarButtonItems
@@ -1423,6 +1453,21 @@ ConfigWebView_ValidateAndApply(payload, &errorMsg := "") {
         NewAutoLoad := payload.Get("autoLoadSelectedText", false) ? true : false
         NewAutoUpdate := payload.Get("autoUpdateVoiceInput", true) ? true : false
         NewCaptureHotkey := Trim(payload.Get("promptQuickCaptureHotkey", ""))
+        NewSummonPreset := SummonHotkeyPreset
+        if (payload.Has("summonHotkeyPreset")) {
+            NewSummonPreset := Trim(String(payload.Get("summonHotkeyPreset", "capslock")))
+            if FuncExists("Nmer_NormalizeSummonPreset")
+                NewSummonPreset := Nmer_NormalizeSummonPreset(NewSummonPreset)
+        }
+        NewSummonCustom := SummonHotkeyCustom
+        if (payload.Has("summonHotkeyCustom"))
+            NewSummonCustom := Trim(String(payload.Get("summonHotkeyCustom", "")))
+        NewCapsLockMode := CapsLockMode
+        if (payload.Has("capsLockMode")) {
+            NewCapsLockMode := StrLower(Trim(String(payload.Get("capsLockMode", "chord"))))
+            if (NewCapsLockMode != "off")
+                NewCapsLockMode := "chord"
+        }
         NewVoiceEngineCsv := Trim(payload.Get("voiceSearchSelectedEnginesCsv", ""))
         NewScreenshotCfg := Map(
             "captureMode", "selection",
@@ -1611,6 +1656,9 @@ ConfigWebView_ValidateAndApply(payload, &errorMsg := "") {
         if (hasPopupScreen)
             ConfigWebView_ApplyPopupScreenIndex(NewPopupScreen)
         PromptQuickCaptureHotkey := NewCaptureHotkey
+        SummonHotkeyPreset := NewSummonPreset
+        SummonHotkeyCustom := NewSummonCustom
+        CapsLockMode := NewCapsLockMode
         Language := NewLanguage
         AISleepTime := NewAiSleepTime
         LaunchDelaySeconds := NewLaunchDelay
@@ -1650,6 +1698,11 @@ ConfigWebView_ValidateAndApply(payload, &errorMsg := "") {
         if (payload.Has("defaultStartTab"))
             IniWrite(DefaultStartTab, ConfigFile, "Settings", "DefaultStartTab")
         IniWrite(PromptQuickCaptureHotkey, ConfigFile, "Settings", "PromptQuickCaptureHotkey")
+        IniWrite(SummonHotkeyPreset, ConfigFile, "Settings", "SummonHotkeyPreset")
+        IniWrite(SummonHotkeyCustom, ConfigFile, "Settings", "SummonHotkeyCustom")
+        IniWrite(CapsLockMode, ConfigFile, "Settings", "CapsLockMode")
+        if (payload.Has("hotkeyForceRevealAll") && FuncExists("OnboardingHotkeys_SetForceRevealAll"))
+            OnboardingHotkeys_SetForceRevealAll(!!payload["hotkeyForceRevealAll"])
         IniWrite(SearchEngine, ConfigFile, "Settings", "SearchEngine")
         IniWrite(AutoLoadSelectedText ? "1" : "0", ConfigFile, "Settings", "AutoLoadSelectedText")
         IniWrite(AutoUpdateVoiceInput ? "1" : "0", ConfigFile, "Settings", "AutoUpdateVoiceInput")
@@ -2339,6 +2392,23 @@ ConfigWebView_RunSaveSettings(payload) {
     global g_ConfigSaveInFlight, g_ConfigSaveQueuedPayload, g_ConfigSaveLastTick
     if !(payload is Map)
         payload := Map()
+    probeReport := 0
+    if (payload.Has("summonHotkeyPreset") || payload.Has("summonHotkeyCustom") || payload.Has("capsLockMode")) {
+        if FuncExists("Nmer_ProbeSummonHotkey") {
+            preset := payload.Has("summonHotkeyPreset") ? payload["summonHotkeyPreset"] : (IsSet(SummonHotkeyPreset) ? SummonHotkeyPreset : "capslock")
+            custom := payload.Has("summonHotkeyCustom") ? payload["summonHotkeyCustom"] : (IsSet(SummonHotkeyCustom) ? SummonHotkeyCustom : "")
+            try probeReport := Nmer_ProbeSummonHotkey(preset, custom, false)
+            catch as _e {
+                if FuncExists("NmerCatch")
+                    NmerCatch(A_ThisFunc, _e)
+            }
+            if (probeReport is Map) && probeReport.Get("blocking", false) {
+                ConfigWebView_Send(Map("type", "saveResult", "ok", false, "error", "主唤起键冲突未解决", "summonProbeReport", probeReport))
+                g_ConfigSaveLastTick := A_TickCount
+                return
+            }
+        }
+    }
     g_ConfigSaveInFlight := true
     err := ""
     ok := false
@@ -2347,7 +2417,10 @@ ConfigWebView_RunSaveSettings(payload) {
         ok := false
         err := e.Message
     }
-    ConfigWebView_Send(Map("type", "saveResult", "ok", ok, "error", err))
+    out := Map("type", "saveResult", "ok", ok, "error", err)
+    if (probeReport is Map)
+        out["summonProbeReport"] := probeReport
+    ConfigWebView_Send(out)
     g_ConfigSaveLastTick := A_TickCount
     g_ConfigSaveInFlight := false
     if (IsSet(g_ConfigSaveQueuedPayload) && (g_ConfigSaveQueuedPayload is Map))
@@ -3448,6 +3521,8 @@ ConfigWebView_OnMessage(sender, args) {
             ConfigWebView_PostFullTextStatus(true)
             ConfigWebView_SendDockConfig()
             ConfigWebView_FlushPendingLlmTestResult()
+        case "settingsTrace":
+            ConfigWebView_LogSettingsTrace(msg)
         case "nmDockReady":
             ConfigWebView_SendDockConfig()
         case "nmDockLeave":
@@ -3864,6 +3939,52 @@ ConfigWebView_OnMessage(sender, args) {
             ConfigWebView_Send(Map("type", "vkWebEvent", "event", Map("type", "recordHint", "active", false)))
         case "probeVk":
             ConfigWebView_Send(Map("type", "vkStatus", "available", ConfigWebView_IsVkAvailable()))
+        case "requestKeybinderCatalog":
+            snap := ConfigWebView_GetKeybinderToolbarSnapshot()
+            catalogMsg := Map(
+                "type", "keybinderCatalogSnapshot",
+                "commands", snap.Has("commands") ? snap["commands"] : [],
+                "toolbarLayout", snap.Has("toolbarLayout") ? snap["toolbarLayout"] : [],
+                "contextMenuLayout", snap.Has("contextMenuLayout") ? snap["contextMenuLayout"] : [],
+                "bindings", snap.Has("bindings") ? snap["bindings"] : Map(),
+                "suggestedBindings", snap.Has("suggestedBindings") ? snap["suggestedBindings"] : Map()
+            )
+            try ConfigWebView_SendImmediate(catalogMsg)
+            catch as _e {
+                ConfigWebView_Send(catalogMsg)
+            }
+        case "probeSummonHotkey":
+            preset := Trim(String(msg.Get("preset", "")))
+            custom := Trim(String(msg.Get("customKey", "")))
+            report := Map()
+            if FuncExists("Nmer_ProbeSummonHotkey") {
+                try report := Nmer_ProbeSummonHotkey(preset, custom, false)
+                catch as e {
+                    report := Map("blocking", false, "items", [], "error", e.Message)
+                }
+            }
+            webReport := FuncExists("Nmer_ProbeSummonHotkeyReportForWeb")
+                ? Nmer_ProbeSummonHotkeyReportForWeb(report) : report
+            try ConfigWebView_SendImmediate(Map("type", "summonProbeReport", "report", webReport))
+            catch as _e {
+                ConfigWebView_Send(Map("type", "summonProbeReport", "report", webReport))
+            }
+        case "probeSummonHotkeyInteractive":
+            preset := Trim(String(msg.Get("preset", "")))
+            custom := Trim(String(msg.Get("customKey", "")))
+            result := Map()
+            if FuncExists("Nmer_ProbeSummonHotkey_Interactive") {
+                try result := Nmer_ProbeSummonHotkey_Interactive(preset, custom)
+                catch as e {
+                    result := Map("interactive", false, "error", e.Message)
+                }
+            }
+            ConfigWebView_Send(Map("type", "summonProbeInteractiveStarted", "result", result))
+        case "applySummonSafeMode":
+            ok := false
+            if FuncExists("Nmer_ApplySummonSafeMode")
+                ok := Nmer_ApplySummonSafeMode()
+            ConfigWebView_Send(Map("type", "applySummonSafeModeResult", "ok", ok))
         case "invokeAction":
             op := msg.Get("op", msg.Get("action", ""))
             payload := msg.Get("payload", Map())
@@ -4049,6 +4170,22 @@ ConfigWebView_OnMessage(sender, args) {
                     case "openDebugLogsFolder":
                         if FuncExists("Nmer_OpenLogsFolder")
                             Nmer_OpenLogsFolder()
+                        return
+                    case "copyRecentTraceLog":
+                        ok := false
+                        err := "无日志可复制"
+                        if FuncExists("Nmer_CopyRecentTraceToClipboard") {
+                            clip := Nmer_CopyRecentTraceToClipboard(80)
+                            ok := (clip != "")
+                            if ok
+                                err := ""
+                        }
+                        if ok {
+                            try TrayTip("牛马", "最近运行日志已复制到剪贴板", "Iconi 2")
+                            catch {
+                            }
+                        }
+                        ConfigWebView_Send(Map("type", "actionResult", "ok", ok, "error", err, "op", op))
                         return
                     default:
                         ok := false
@@ -4483,6 +4620,24 @@ ConfigWebView_LogStudioLlmTest(line) {
         try OutputDebug("[ConfigWebView] studio_llm_test log: " . _e.Message)
         catch {
         }
+    }
+}
+
+ConfigWebView_LogSettingsTrace(msg) {
+    try {
+        path := FuncExists("Nmer_DebugPath") ? Nmer_DebugPath("settings_trace.log") : (A_ScriptDir . "\Cache\debug\settings_trace.log")
+        dir := ""
+        if InStr(path, "\")
+            dir := SubStr(path, 1, InStr(path, "\", , -1) - 1)
+        if (dir != "" && !DirExist(dir))
+            DirCreate(dir)
+        src := Trim(String(msg.Get("source", "")))
+        ev := Trim(String(msg.Get("event", "")))
+        detail := Trim(String(msg.Get("detail", "")))
+        tab := Trim(String(msg.Get("tab", msg.Get("activeTab", ""))))
+        line := Format("[{}][{}] {} tab={} detail={}`n", A_Now, src, ev, tab, detail)
+        FileAppend(line, path, "UTF-8")
+    } catch {
     }
 }
 
