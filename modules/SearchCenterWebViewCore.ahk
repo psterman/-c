@@ -187,7 +187,7 @@ SCWV_Log(event, detail := "") {
         if SCWV_FuncExists("NMER_AsyncLog") {
             Func("NMER_AsyncLog").Call(logPath, line)
             if SCWV_FuncExists("NMER_AsyncLogFlush")
-                SetTimer(NMER_AsyncLogFlush, -1)
+                SetTimer(Func("NMER_AsyncLogFlush"), -1)
         } else
             FileAppend(line, logPath, "UTF-8")
     } catch {
@@ -1895,6 +1895,8 @@ SCWV_ApplyBounds(clientW := 0, clientH := 0) {
     catch {
     }
     SCWV_NotifyHostLayout(cw, ch)
+    if FuncExists("SearchCenterWebLlm_ApplyBounds") && g_SCWV_Gui
+        try SearchCenterWebLlm_ApplyBounds(g_SCWV_Gui.Hwnd)
     return true
 }
 
@@ -2665,6 +2667,11 @@ SCWV_ForceCloseHost(reason := "") {
     }
     try WebView2_NotifyHidden(g_SCWV_WV2)
     catch {
+    }
+    if FuncExists("SearchCenterWebLlm_Dispose")
+        try SearchCenterWebLlm_Dispose()
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e)
     }
     try FocusBroker_Release("SearchCenter", reason)
     catch {
@@ -4873,12 +4880,13 @@ SCWV_ProcessWebMessageJson(jsonStr) {
                 g_SCWV_UiMode := "cli"
             else if (um != "local" && ck != "")
                 g_SCWV_UiMode := "web"
-    if (Trim(SearchCenterWebKeyword) != "")
-        SetTimer(_SCWV_PostRequestSearchGo, -1)
-    else if (StrLower(Trim(String(g_SCWV_UiMode))) = "local")
+            if (Trim(SearchCenterWebKeyword) != "")
+                SetTimer(_SCWV_PostRequestSearchGo, -1)
+            else if (StrLower(Trim(String(g_SCWV_UiMode))) = "local")
                 _SCWV_RefreshLocalHomeView()
             else
                 SCWV_PushState("init")
+            _SCWV_SyncWebEmbedForMode()
         case "setFilter":
             global SearchCenterFilterType, SearchCenterWebKeyword, g_SCWV_ClipboardHomeLock, g_SCWV_UiMode
             _SCWV_AdoptClientQueryID(msg)
@@ -4963,6 +4971,23 @@ SCWV_ProcessWebMessageJson(jsonStr) {
             if msg.Has("selectedEngines")
                 _SCWV_ApplySelectedEnginesFromWeb(msg["selectedEngines"])
             _SCWV_BatchSearch()
+        case "webLlmContentRect":
+            if FuncExists("SearchCenterWebLlm_SetContentRect")
+                SearchCenterWebLlm_SetContentRect(msg)
+        case "webLlmSelectSite":
+            if FuncExists("SearchCenterWebLlm_SelectSite") && msg.Has("siteId") {
+                sid := Trim(String(msg["siteId"]))
+                if (sid != "") {
+                    global SearchCenterSelectedEngines
+                    SearchCenterSelectedEngines := [sid]
+                    if FuncExists("_SCWV_SaveSelectedEngines")
+                        _SCWV_SaveSelectedEngines(GetSearchCenterCurrentCategoryKey(), SearchCenterSelectedEngines)
+                }
+                SearchCenterWebLlm_SelectSite(msg["siteId"])
+            }
+        case "webLlmNav":
+            if FuncExists("SearchCenterWebLlm_HandleNav") && msg.Has("action")
+                SearchCenterWebLlm_HandleNav(msg["action"])
         case "setUiMode":
             global g_SCWV_UiMode, SearchCenterWebKeyword, g_SCWV_CliTerminalFocus, SearchCenterFilterType, g_SCWV_ClipboardHomeLock
             global g_SCWV_ClipboardTimelineGen
@@ -5022,6 +5047,7 @@ SCWV_ProcessWebMessageJson(jsonStr) {
                     SCWV_PushState("init")
                 }
             }
+            _SCWV_SyncWebEmbedForMode()
         case "requestUiRefresh":
             global g_SCWV_UiMode, SearchCenterWebKeyword
             m := StrLower(Trim(String(g_SCWV_UiMode)))
@@ -6816,25 +6842,46 @@ SCWV_IsWebSearchUIMode() {
     return (StrLower(Trim(String(g_SCWV_UiMode))) = "web")
 }
 
+_SCWV_SyncWebEmbedForMode() {
+    global g_SCWV_Gui, g_SCWV_UiMode
+    um := StrLower(Trim(String(g_SCWV_UiMode)))
+    if (um != "web") {
+        if FuncExists("SearchCenterWebLlm_Hide")
+            try SearchCenterWebLlm_Hide()
+        return
+    }
+    cat := StrLower(Trim(String(GetSearchCenterCurrentCategoryKey())))
+    if (cat != "ai") {
+        if FuncExists("SearchCenterWebLlm_Hide")
+            try SearchCenterWebLlm_Hide()
+        return
+    }
+    if FuncExists("SearchCenterWebLlm_Show") && g_SCWV_Gui
+        try SearchCenterWebLlm_Show(g_SCWV_Gui.Hwnd)
+}
+
 _SCWV_OpenSearchTarget(keyword, engine) {
     eng := Trim(String(engine))
     kw := Trim(String(keyword))
     if (eng = "" || kw = "")
         return false
+    if FuncExists("ScWebLlm_IsEmbedEngine") && ScWebLlm_IsEmbedEngine(eng) {
+        global g_SCWV_Gui
+        if g_SCWV_Gui && FuncExists("SearchCenterWebLlm_NavigateEngine") {
+            try {
+                _SCWV_SyncWebEmbedForMode()
+                if SearchCenterWebLlm_NavigateEngine(eng, kw)
+                    return true
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e)
+            }
+        }
+    }
     url := ""
     if SCWV_FuncExists("VoiceInputEffect_BuildSearchUrl")
         url := VoiceInputEffect_BuildSearchUrl(kw, eng)
     if (url = "")
         return false
-    if SCWV_FuncExists("ScWebEmbedProbeShow") && SCWV_FuncExists("ScWebEmbedProbeNavigateEngine") {
-        try {
-            if ScWebEmbedProbeShow() {
-                ScWebEmbedProbeNavigateEngine(eng, kw, 12000)
-                return true
-            }
-        } catch {
-        }
-    }
     SendVoiceSearchToBrowser(kw, eng)
     return true
 }

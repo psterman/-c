@@ -2446,6 +2446,9 @@ body.sc-cli-layout #app {
 .sc-mode-bar.sc-mode-bar-quint {
   grid-template-columns: repeat(5, minmax(0, 1fr));
 }
+.sc-mode-bar.sc-mode-bar-hex {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
 .sc-mode-bar.sc-mode-bar-duo {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
@@ -2486,6 +2489,197 @@ body.sc-cli-layout #app {
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 100%;
+}
+.webllm-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0 0 8px;
+  flex-shrink: 0;
+}
+.webllm-site-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.webllm-site-chip {
+  border: 1px solid var(--border-subtle);
+  background: rgba(255,255,255,.04);
+  color: var(--text);
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.webllm-site-chip.active {
+  border-color: rgba(99, 179, 237, .65);
+  background: rgba(99, 179, 237, .14);
+}
+.webllm-site-chip:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.webllm-nav-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+.webllm-status {
+  font-size: 11px;
+  opacity: 0.75;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.web-embed-workspace {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+  width: 100%;
+}
+.web-embed-frame {
+  flex: 1 1 auto;
+  min-height: 240px;
+  border-radius: 12px;
+  border: 1px solid var(--border-subtle);
+  background: #f8fafc;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.04);
+}
+html[data-theme="light"] .web-embed-frame {
+  background: #fff;
+}
+.web-embed-setup {
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  background: rgba(255,255,255,.02);
+  overflow: hidden;
+}
+.web-embed-setup-summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 6px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  user-select: none;
+}
+.web-embed-setup-summary::-webkit-details-marker {
+  display: none;
+}
+.web-embed-setup-summary::before {
+  content: "▸ ";
+  display: inline-block;
+  transition: transform .15s ease;
+}
+.web-embed-setup[open] > .web-embed-setup-summary::before {
+  transform: rotate(90deg);
+}
+.web-embed-setup-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0 10px 10px;
+}
+body.sc-web-embed-layout .search-wrapper.sc-compose-stack {
+  gap: 6px;
+  padding: 8px 12px 6px;
+}
+body.sc-web-embed-layout #search-box-anchor:empty {
+  display: none;
+}
+body.sc-web-embed-layout .compose-hint-strip {
+  display: none !important;
+}
+.web-embed-search-slot {
+  width: 100%;
+  min-width: 0;
+}
+.web-embed-search-compact.search-box-inner {
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px;
+  border-radius: 10px;
+}
+.web-embed-search-compact .search-icon-left,
+.web-embed-search-compact .search-more-menu,
+.web-embed-search-compact .engine-switch-capsule,
+.web-embed-search-compact .sc-compose-hints {
+  display: none !important;
+}
+.web-embed-search-compact .search-input-wrap {
+  min-width: 0;
+}
+.web-embed-search-compact #search {
+  height: 32px;
+  min-height: 32px;
+  max-height: 32px;
+  line-height: 32px;
+  padding: 0;
+  resize: none;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.web-embed-search-compact #btn-run {
+  height: 30px;
+  min-width: 56px;
+  padding: 0 12px;
+  font-size: 12px;
+}
+.web-embed-toolbar.web-embed-toolbar-with-search {
+  gap: 8px;
+}
+body.sc-web-embed-layout .web-embed-setup:not([open]) {
+  border-color: transparent;
+  background: transparent;
+}
+body.sc-web-embed-layout .web-embed-setup:not([open]) .web-embed-setup-summary {
+  padding: 2px 4px;
+  opacity: .85;
+}
+body.sc-web-embed-layout .web-embed-setup .sc-section + .sc-section {
+  padding-top: 8px;
+  margin-top: 0;
+}
+body.sc-web-embed-layout #compose-context-web #engines {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  max-height: 44px;
+}
+#layout.sc-web-embed-active {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  max-width: none;
+  gap: 0;
+}
+#layout.sc-web-embed-active .web-embed-workspace {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+body.sc-web-embed-layout #app.sc-container,
+body.sc-web-embed-layout #app {
+  gap: 10px;
+  padding-top: 8px;
+}
+body.sc-web-mode-layout #layout.sc-list-layout {
+  grid-template-columns: 1fr;
+}
+body.sc-web-mode-layout .sc-main-content {
+  min-height: 0;
+}
+.web-mode-hint {
+  padding: 28px 20px;
+  text-align: center;
+  color: var(--muted);
+  line-height: 1.6;
+  font-size: 13px;
 }
 .sc-section {
   display: flex;
@@ -3221,21 +3415,27 @@ html[data-theme="light"] .search-wrapper.has-content .search-box-inner {
           </div>
         </div>
         <div class="compose-context-slot hidden" data-mode="web" id="compose-context-web">
-          <section class="sc-section sc-section-web-cats" id="section-web-cats">
-            <h4 class="sc-section-label">联网分类</h4>
-            <div id="tag-card" class="sc-tag-card">
-              <div id="categories"></div>
+          <details id="web-embed-setup" class="web-embed-setup" open>
+            <summary class="web-embed-setup-summary">分类与搜索引擎</summary>
+            <div class="web-embed-setup-body">
+              <section class="sc-section sc-section-web-cats" id="section-web-cats">
+                <h4 class="sc-section-label">联网分类</h4>
+                <div id="tag-card" class="sc-tag-card">
+                  <div id="categories"></div>
+                </div>
+              </section>
+              <section class="sc-section sc-section-engines" id="section-engines">
+                <h4 class="sc-section-label">搜索引擎</h4>
+                <div id="engines"></div>
+              </section>
             </div>
-          </section>
-          <section class="sc-section sc-section-engines" id="section-engines">
-            <h4 class="sc-section-label">搜索引擎</h4>
-            <div id="engines"></div>
-          </section>
+          </details>
         </div>
         <div class="compose-context-slot hidden" data-mode="cli" id="compose-context-cli">
           <div id="cli-engine-tabs" class="cli-engine-tabs" role="tablist" aria-label="CLI 引擎标签"></div>
         </div>
       </div>
+      <div id="search-box-anchor" class="search-box-anchor">
       <div class="search-box-inner" id="searchBoxInner">
         <span class="search-icon-left" id="search-icon-inline">&#128269;</span>
         <div class="search-input-wrap">
@@ -3274,6 +3474,7 @@ html[data-theme="light"] .search-wrapper.has-content .search-box-inner {
             </div>
           </details>
         </div>
+      </div>
       </div>
       <div id="compose-hint-strip" class="compose-hint-strip" aria-live="polite"></div>
     </div>
@@ -3337,6 +3538,23 @@ html[data-theme="light"] .search-wrapper.has-content .search-box-inner {
           </div>
         </div>
       </section>
+    </div>
+    <div id="web-embed-workspace" class="web-embed-workspace hidden" aria-label="内嵌浏览器">
+      <div id="web-embed-toolbar" class="webllm-toolbar hidden" aria-label="内嵌浏览器控制">
+        <div id="web-embed-search-slot" class="web-embed-search-slot hidden" aria-label="内嵌搜索"></div>
+        <div class="web-embed-toolbar-main">
+          <div id="webllm-site-chips" class="webllm-site-chips" role="tablist" aria-label="AI 站点"></div>
+          <div class="webllm-nav-row">
+          <button type="button" class="btn ghost" id="webllm-btn-back" title="后退">后退</button>
+          <button type="button" class="btn ghost" id="webllm-btn-forward" title="前进">前进</button>
+          <button type="button" class="btn ghost" id="webllm-btn-reload" title="刷新">刷新</button>
+          <button type="button" class="btn ghost" id="webllm-btn-home" title="站点首页">首页</button>
+          <button type="button" class="btn ghost" id="webllm-btn-copyurl" title="复制当前链接">复制链接</button>
+          <span id="webllm-status" class="webllm-status" aria-live="polite"></span>
+          </div>
+        </div>
+      </div>
+      <div id="web-embed-frame" class="web-embed-frame" aria-hidden="true"></div>
     </div>
   </div>
   <div id="preview-dock-stash" aria-hidden="true"></div>
@@ -3652,6 +3870,7 @@ const state = {
   currentCategoryKey: "ai",
   engines: [],
   selectedEngines: [],
+  webEmbedSiteId: "",
   filters: [],
   filterType: "",
   resultsRaw: [],
@@ -4553,8 +4772,9 @@ function syncComposeHintsUi() {
   const bar = document.getElementById("sc-compose-hints");
   if (!bar) return;
   const mode = getUIMode();
+  const embed = isWebEmbedActive();
   const b = getComposeBindings();
-  bar.classList.toggle("visible", mode === "cli" || mode === "local" || mode === "web" || mode === "clipboard" || mode === "fulltext");
+  bar.classList.toggle("visible", !embed && (mode === "cli" || mode === "local" || mode === "web" || mode === "clipboard" || mode === "fulltext"));
   const map = {
     cli_send: document.getElementById("sc-hint-cli-send"),
     compose_newline: document.getElementById("sc-hint-compose-newline"),
@@ -4634,7 +4854,8 @@ function handleSearchComposeKeydown(event) {
   if (searchCompositionActive) return false;
   const b = getComposeBindings();
   const mode = getUIMode();
-  if (chordMatchesEvent(event, b.compose_newline)) {
+  const embed = isWebEmbedActive();
+  if (!embed && chordMatchesEvent(event, b.compose_newline)) {
     event.preventDefault();
     insertNewlineInCompose(el);
     return true;
@@ -4689,9 +4910,222 @@ const COMPOSE_MODE_CHROME = Object.freeze({
   local: { icon: "&#128269;", btnRun: "搜索", hint: "搜索本机文件、配置与提示词库" },
   clipboard: { icon: "&#128203;", btnRun: "筛选", hint: "查看复制历史，输入关键词筛选时间线" },
   fulltext: { icon: "&#128196;", btnRun: "搜索", hint: "输入关键词搜索全文索引" },
-  web: { icon: "&#127760;", btnRun: "搜索", hint: "先选引擎，再输入关键词搜索" },
+  web: { icon: "&#127760;", btnRun: "搜索", hint: "选 AI 引擎后在下方内嵌页搜索" },
   cli: { icon: "&#9000;", btnRun: "发送", hint: "输入内容发送到下方终端" }
 });
+
+const SC_WEB_EMBED_SITES = Object.freeze([
+  { id: "deepseek", label: "DeepSeek", enabled: true },
+  { id: "doubao", label: "豆包", enabled: true },
+  { id: "gemini", label: "Gemini", enabled: true },
+  { id: "grok", label: "Grok", enabled: true },
+  { id: "perplexity", label: "Perplexity", enabled: true }
+]);
+
+function isWebEmbedCategory() {
+  return String(state.currentCategoryKey || "").toLowerCase() === "ai";
+}
+
+function isWebEmbedActive() {
+  return getUIMode() === "web" && isWebEmbedCategory();
+}
+
+function getWebEmbedActiveEngine() {
+  const chip = document.querySelector(".webllm-site-chip.active");
+  const fromChip = chip ? String(chip.getAttribute("data-site") || "").trim() : "";
+  if (fromChip) return fromChip;
+  const sid = String(state.webEmbedSiteId || "").trim();
+  if (sid) return sid;
+  const list = Array.isArray(state.selectedEngines) ? state.selectedEngines : [];
+  for (const eng of list) {
+    const v = String(eng || "").trim();
+    if (v && SC_WEB_EMBED_SITES.some((s) => s.id === v)) return v;
+  }
+  return "deepseek";
+}
+
+function syncWebEmbedSelectedEngine(engineId, postHost = true) {
+  const eng = String(engineId || "").trim();
+  if (!eng) return;
+  state.webEmbedSiteId = eng;
+  state.selectedEngines = [eng];
+  document.querySelectorAll(".webllm-site-chip").forEach((btn) => {
+    btn.classList.toggle("active", String(btn.getAttribute("data-site") || "") === eng);
+  });
+  document.querySelectorAll(".engine-chip").forEach((btn) => {
+    const v = String(btn.dataset.hotkeyValue || "");
+    btn.classList.toggle("active", v === eng);
+  });
+  if (postHost) {
+    postToAhk({ type: "syncSelectedEngines", selectedEngines: [eng] });
+  }
+}
+
+function syncWebEmbedSearchDock(embed) {
+  const box = document.getElementById("searchBoxInner");
+  const anchor = document.getElementById("search-box-anchor");
+  const slot = document.getElementById("web-embed-search-slot");
+  const toolbar = document.getElementById("web-embed-toolbar");
+  const workspace = document.getElementById("web-embed-workspace");
+  if (!box || !anchor || !slot) return;
+  if (workspace && embed) workspace.classList.remove("hidden");
+  const target = embed ? slot : anchor;
+  if (box.parentElement !== target) target.appendChild(box);
+  slot.classList.toggle("hidden", !embed);
+  box.classList.toggle("web-embed-search-compact", embed);
+  if (toolbar) toolbar.classList.toggle("web-embed-toolbar-with-search", embed);
+  const input = document.getElementById("search");
+  if (input) {
+    if (embed) {
+      input.setAttribute("rows", "1");
+      input.setAttribute("aria-label", "内嵌页搜索关键词");
+    } else {
+      input.removeAttribute("aria-label");
+    }
+  }
+  if (embed) {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => postWebEmbedContentRect());
+    });
+  }
+}
+
+function scheduleWebEmbedContentRect() {
+  if (!isWebEmbedActive()) return;
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => postWebEmbedContentRect());
+  });
+}
+
+function syncWebEmbedToolbarVisibility() {
+  const bar = document.getElementById("web-embed-toolbar");
+  if (!bar) return;
+  bar.classList.toggle("hidden", !isWebEmbedActive());
+}
+
+function syncWebEmbedLayout() {
+  const embed = isWebEmbedActive();
+  const mode = getUIMode();
+  document.body.classList.toggle("sc-web-embed-layout", embed);
+  document.body.classList.toggle("sc-web-mode-layout", mode === "web");
+  const layout = document.getElementById("layout");
+  if (layout) layout.classList.toggle("sc-web-embed-active", embed);
+  const ws = document.getElementById("web-embed-workspace");
+  if (ws) ws.classList.toggle("hidden", !embed);
+  const setup = document.getElementById("web-embed-setup");
+  if (setup) {
+    if (embed) {
+      if (!setup.hasAttribute("data-user-toggled")) setup.open = false;
+    } else if (!setup.hasAttribute("data-user-toggled")) {
+      setup.open = true;
+    }
+  }
+  syncWebEmbedSearchDock(embed);
+  syncWebEmbedToolbarVisibility();
+  if (embed && !String(state.webEmbedSiteId || "").trim()) {
+    syncWebEmbedSelectedEngine(getWebEmbedActiveEngine(), true);
+  }
+  if (mode === "web" && !embed) renderWebExternalHint();
+}
+
+function buildWebExternalEmptyStateHtml() {
+  const engines = Array.isArray(state.selectedEngines) ? state.selectedEngines.filter(Boolean) : [];
+  const names = engines.map((v) => {
+    const row = (state.engines || []).find((e) => String(e && e.value || "") === String(v));
+    return row && row.name ? String(row.name) : String(v);
+  });
+  const engLine = names.length
+    ? ("当前引擎：" + names.join("、"))
+    : "请先在上方展开「分类与搜索引擎」并选择引擎";
+  return "<div class=\"empty web-mode-hint\">" + escapeHtml(engLine)
+    + "<br>输入关键词后按 Enter 或点「搜索」，将在系统浏览器打开。</div>";
+}
+
+function renderWebExternalHint() {
+  if (getUIMode() !== "web" || isWebEmbedActive()) return;
+  const list = document.getElementById("result-list");
+  if (!list) return;
+  list.innerHTML = buildWebExternalEmptyStateHtml();
+  const count = document.getElementById("result-count");
+  if (count) count.textContent = "外开搜索";
+}
+
+function postWebEmbedContentRect() {
+  if (!isWebEmbedActive()) return;
+  const el = document.getElementById("web-embed-frame") || document.querySelector(".sc-main-content");
+  if (!el) return;
+  const r = el.getBoundingClientRect();
+  postToAhk({
+    type: "webLlmContentRect",
+    left: Math.round(r.left),
+    top: Math.round(r.top),
+    width: Math.max(200, Math.round(r.width)),
+    height: Math.max(160, Math.round(r.height))
+  });
+}
+
+function applyWebLlmChromeState(payload) {
+  if (!payload || typeof payload !== "object") return;
+  const back = document.getElementById("webllm-btn-back");
+  const fwd = document.getElementById("webllm-btn-forward");
+  const status = document.getElementById("webllm-status");
+  if (back) back.disabled = !payload.canGoBack;
+  if (fwd) fwd.disabled = !payload.canGoForward;
+  if (status) {
+    const title = String(payload.title || "").trim();
+    const url = String(payload.url || "").trim();
+    const loading = !!payload.loading;
+    status.textContent = loading ? "加载中…" : (title || url || "");
+  }
+  const sid = String(payload.siteId || "");
+  if (sid) syncWebEmbedSelectedEngine(sid, false);
+}
+
+function renderWebLlmToolbar() {
+  const host = document.getElementById("webllm-site-chips");
+  if (!host) return;
+  host.innerHTML = "";
+  SC_WEB_EMBED_SITES.forEach((site) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "webllm-site-chip";
+    btn.setAttribute("data-site", site.id);
+    btn.setAttribute("role", "tab");
+    btn.textContent = site.label;
+    btn.disabled = !site.enabled;
+    btn.addEventListener("click", () => {
+      if (!site.enabled) return;
+      syncWebEmbedSelectedEngine(site.id, true);
+      postToAhk({ type: "webLlmSelectSite", siteId: site.id });
+    });
+    host.appendChild(btn);
+  });
+}
+
+function initWebLlmToolbar() {
+  syncWebEmbedSearchDock(isWebEmbedActive());
+  renderWebLlmToolbar();
+  const map = {
+    "webllm-btn-back": "back",
+    "webllm-btn-forward": "forward",
+    "webllm-btn-reload": "reload",
+    "webllm-btn-home": "home",
+    "webllm-btn-copyurl": "copyurl"
+  };
+  Object.keys(map).forEach((id) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener("click", () => postToAhk({ type: "webLlmNav", action: map[id] }));
+  });
+  const setup = document.getElementById("web-embed-setup");
+  if (setup) {
+    setup.addEventListener("toggle", () => {
+      setup.setAttribute("data-user-toggled", "1");
+      if (isWebEmbedActive()) requestAnimationFrame(() => postWebEmbedContentRect());
+    });
+  }
+  syncWebEmbedLayout();
+}
 
 function normalizeUiMode(mode) {
   const m = String(mode || "").toLowerCase();
@@ -4959,6 +5393,10 @@ function syncComposeHintStrip() {
     }
   }
   if (mode === "web") {
+    if (isWebEmbedActive()) {
+      hintStrip.textContent = "";
+      return;
+    }
     hintStrip.textContent = "先选引擎，再输入关键词搜索";
     return;
   }
@@ -5116,7 +5554,9 @@ function syncComposeChrome() {
     if (mode === "cli") {
       searchInput.placeholder = "输入提示词，" + formatComposeChordLabel(b.cli_send) + " 发送到下方终端";
     } else if (mode === "web") {
-      searchInput.placeholder = "输入关键词，选引擎后搜索";
+      searchInput.placeholder = isWebEmbedActive()
+        ? "输入关键词，Enter 在内嵌页搜索"
+        : "输入关键词，在下方内嵌页或外开搜索";
     } else if (mode === "clipboard") {
       searchInput.placeholder = "筛选剪贴板历史…";
     } else if (mode === "fulltext") {
@@ -5228,20 +5668,24 @@ function bridgeUiModeFilterType(m, skipHostPost) {
 
 function syncModeSections() {
   const mode = getUIMode();
+  const embed = isWebEmbedActive();
   const resultsCard = document.getElementById("results-card");
   const previewColumn = document.getElementById("local-preview-column");
   const cliWorkspace = document.getElementById("cli-workspace");
   const layout = document.getElementById("layout");
   const isSearchResults = mode === "local" || mode === "clipboard" || mode === "fulltext";
-  if (resultsCard) resultsCard.classList.toggle("hidden", mode === "cli" || mode === "web");
+  if (resultsCard) resultsCard.classList.toggle("hidden", mode === "cli" || embed);
   if (previewColumn) previewColumn.classList.toggle("hidden", mode === "cli" || mode === "web");
   if (cliWorkspace) cliWorkspace.classList.toggle("hidden", mode !== "cli");
   if (layout) layout.classList.toggle("sc-cli-active", mode === "cli");
   document.body.classList.toggle("sc-cli-layout", mode === "cli");
+  syncWebEmbedLayout();
   if (mode === "cli") scheduleSyncCliWorkspace(true);
   if (mode === "cli") unmountInlinePreview();
   else if (isSearchResults) mountInlinePreview();
   else unmountInlinePreview();
+  if (mode === "web" && !embed) renderWebExternalHint();
+  if (embed) scheduleWebEmbedContentRect();
 }
 
 function getModeBarItems() {
@@ -5403,6 +5847,14 @@ function setUIMode(mode, persist, skipHostPost, skipCategoryReset) {
   renderCliEngineTabs();
   renderCategories();
   renderEngines();
+  syncWebEmbedLayout();
+  if (m === "web" && isWebEmbedCategory()) {
+    renderWebLlmToolbar();
+    scheduleWebEmbedContentRect();
+  }
+  if (m === "web" && !isWebEmbedCategory()) {
+    renderWebExternalHint();
+  }
   if (m === "local" || m === "clipboard" || m === "fulltext") {
     renderResults();
     if (m === "fulltext") requestFulltextStatus(false);
@@ -5418,6 +5870,7 @@ function setUIMode(mode, persist, skipHostPost, skipCategoryReset) {
       setTimeout(() => {
         const guardMs = Math.max(200, Number(state.modeSwitchGuardMs || 120));
         postToAhk({ type: "modeSwitchGuard", active: false, ms: guardMs, heavy: "web" });
+        if (isWebEmbedCategory()) postWebEmbedContentRect();
       }, 280);
     }
   } else if (m === "cli") {
@@ -7829,6 +8282,14 @@ function selectCategoryLocal(categoryKey, postHost = true) {
   }
   renderCategories();
   renderEngines();
+  syncWebEmbedLayout();
+  if (getUIMode() === "web" && isWebEmbedCategory()) {
+    renderWebLlmToolbar();
+    scheduleWebEmbedContentRect();
+  }
+  if (getUIMode() === "web" && !isWebEmbedCategory()) {
+    renderWebExternalHint();
+  }
   syncFilterDrawerSummary();
   if (postHost) postToAhk({ type: "setCategory", category: key });
 }
@@ -7889,6 +8350,12 @@ function toggleEngineLocal(engineValue) {
     list.push(v);
   }
   state.selectedEngines = list;
+  if (isWebEmbedActive()) {
+    const embedEng = list.find((e) => SC_WEB_EMBED_SITES.some((s) => s.id === String(e || "")));
+    if (embedEng) syncWebEmbedSelectedEngine(embedEng, true);
+  } else if (getUIMode() === "web") {
+    renderWebExternalHint();
+  }
   renderEngines();
   syncFilterDrawerSummary();
 }
@@ -8131,6 +8598,12 @@ function renderResults() {
     }
     if (mode === "clipboard") {
       list.innerHTML = buildClipboardEmptyStateHtml();
+      return;
+    }
+    if (mode === "web") {
+      list.innerHTML = buildWebExternalEmptyStateHtml();
+      const count = document.getElementById("result-count");
+      if (count) count.textContent = "外开搜索";
       return;
     }
     list.innerHTML = buildLocalEmptyStateHtml();
@@ -10081,6 +10554,9 @@ function applyStateNow(payload) {
   syncModeSections();
   renderCategories();
   renderEngines();
+  if (isWebEmbedActive()) {
+    syncWebEmbedSelectedEngine(getWebEmbedActiveEngine(), false);
+  }
   renderCliEngineTabs();
   renderFilters();
   syncComposeChrome();
@@ -10159,6 +10635,12 @@ function runSearchNow() {
     if (!kw) {
       const statusEl = document.getElementById("status");
       if (statusEl) statusEl.textContent = "请输入搜索关键词";
+      return;
+    }
+    if (isWebEmbedActive()) {
+      const eng = getWebEmbedActiveEngine();
+      syncWebEmbedSelectedEngine(eng, true);
+      postToAhk({ type: "webSearch", keyword: kw, selectedEngines: [eng] });
       return;
     }
     ensureWebEnginesSelected();
@@ -10526,6 +11008,7 @@ document.addEventListener("keyup", (event) => {
 
 window.addEventListener("resize", () => {
   scheduleRunPreview();
+  scheduleWebEmbedContentRect();
 });
 
 window.addEventListener("blur", () => {
@@ -10567,6 +11050,10 @@ if (window.chrome && window.chrome.webview) {
     }
     if (payload.type === "toggleEngine") {
       postToAhk({ type: "toggleEngine", engine: payload.engine || "" });
+      return;
+    }
+    if (payload.type === "webLlmChromeState") {
+      applyWebLlmChromeState(payload);
       return;
     }
     if (payload.type === "setUiMode") {
@@ -10652,6 +11139,7 @@ if (window.chrome && window.chrome.webview) {
       _scHostLayoutRaf = requestAnimationFrame(function () {
         _scHostLayoutRaf = 0;
         try { window.dispatchEvent(new Event("resize")); } catch (_) {}
+        postWebEmbedContentRect();
       });
       return;
     }
@@ -10902,6 +11390,7 @@ if (window.chrome && window.chrome.webview) {
     }
   });
   installGlobalWheelScrollRouting();
+  initWebLlmToolbar();
   scSendReadyOnce();
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible") return;

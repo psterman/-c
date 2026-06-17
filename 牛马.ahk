@@ -306,6 +306,7 @@ global g_CmdPal_AgentPullDebugDispatch := CommandPaletteSearchDebug_PullAgentDeb
 #Include modules\GravityPump.ahk
 #Include modules\AIListPanel.ahk
 #Include modules\PromptQuickPadCore.ahk
+#Include modules\SearchCenterWebLlm.ahk
 #Include modules\SearchCenterWebViewCore.ahk
 #Include modules\DomainCSurfaceRouter.ahk
 #Include modules\DomainCWailsHost.ahk

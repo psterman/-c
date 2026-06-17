@@ -15,6 +15,33 @@ global LegacySyncFallback := 1
 global g_WV2_CreateQueue := []
 global g_WV2_CreateBusy := false
 
+_WV2_TraceOptional(scope, action, ok := true, meta := 0) {
+    fn := "Nmer_Telemetry_Record"
+    if FuncExists(fn) {
+        try {
+            (%fn%)(scope, action, !!ok, meta is Map ? meta : Map())
+            return
+        } catch as e {
+            try {
+                if FuncExists("NmerCatch")
+                    NmerCatch(A_ThisFunc, e)
+            } catch {
+            }
+        }
+    }
+    try {
+        if FuncExists("Nmer_DebugPath") {
+            path := Nmer_DebugPath("nmer_trace.log")
+            errText := ""
+            if (meta is Map) && meta.Has("error")
+                errText := " error=" . meta["error"]
+            FileAppend("[" . FormatTime(A_Now, "yyyy-MM-dd HH:mm:ss") . "][" . scope . "][" . action . "] ok="
+                . (ok ? "1" : "0") . errText . "`n", path, "UTF-8")
+        }
+    } catch {
+    }
+}
+
 WebView2_IsUsableHwnd(hwnd) {
     h := Integer(hwnd)
     if (h <= 0)
@@ -38,6 +65,164 @@ WebView2_IsUsableHwnd(hwnd) {
 
 WebView2_GetSharedUserDataPath() {
     return A_AppData "\CursorHelper\Wv2Data"
+}
+
+WebView2_GetScWebLlmRoot() {
+    return WebView2_GetSharedUserDataPath() . "\ScWebLlm"
+}
+
+WebView2_NormalizeScWebLlmSiteId(siteId) {
+    fn := "ScWebLlm_NormalizeSiteId"
+    if FuncExists(fn)
+        return (%fn%)(siteId)
+    id := StrLower(Trim(String(siteId)))
+    if (id = "")
+        return ""
+    if !RegExMatch(id, "^(deepseek|doubao|gemini|grok|perplexity)$")
+        return ""
+    return id
+}
+
+WebView2_EnsureDirPath(path, label := "") {
+    p := Trim(String(path))
+    if (p = "")
+        return ""
+    try {
+        if !DirExist(p)
+            DirCreate(p)
+        if DirExist(p)
+            return p
+    } catch as e {
+        try {
+            if FuncExists("NmerCatch")
+                NmerCatch("WebView2_EnsureDirPath", e)
+        } catch {
+        }
+        try {
+            _WV2_TraceOptional("webview2", "dir_create_fail", false, Map("path", p, "label", label, "error", e.Message))
+        } catch {
+        }
+    }
+    return ""
+}
+
+WebView2_EnsureScWebLlmSiteDataDir(siteId, outMeta := 0) {
+    id := WebView2_NormalizeScWebLlmSiteId(siteId)
+    if (id = "")
+        return ""
+    primary := WebView2_GetScWebLlmRoot() . "\" . id
+    path := WebView2_EnsureDirPath(primary, "sc_web_llm_primary")
+    if (path != "") {
+        if (outMeta is Map)
+            outMeta["tier"] := "primary"
+        return path
+    }
+    fallback := EnvGet("TEMP") . "\NmerScWebLlm\" . id
+    path := WebView2_EnsureDirPath(fallback, "sc_web_llm_temp")
+    if (path != "") {
+        if (outMeta is Map)
+            outMeta["tier"] := "temp"
+        try TrayTip("网页大模型", "配置目录不可用，已使用临时目录；登录态可能无法跨会话保留。", "Icon! 3")
+        catch {
+        }
+        return path
+    }
+    return ""
+}
+
+WebView2_GetScWebLlmSiteDataPath(siteId) {
+    id := WebView2_NormalizeScWebLlmSiteId(siteId)
+    if (id = "")
+        return ""
+    return WebView2_GetScWebLlmRoot() . "\" . id
+}
+
+WebView2_CreateWithSiteDataDirAsync(hostHwnd, siteId, callback, reason := "") {
+    id := WebView2_NormalizeScWebLlmSiteId(siteId)
+    if (id = "") {
+        try {
+            if callback
+                callback.Call(0)
+        } catch {
+        }
+        return
+    }
+    if !WebView2_IsUsableHwnd(hostHwnd) {
+        try {
+            if callback
+                callback.Call(0)
+        } catch {
+        }
+        return
+    }
+    meta := Map()
+    dataDir := WebView2_EnsureScWebLlmSiteDataDir(id, meta)
+    if (dataDir = "") {
+        try {
+            if callback
+                callback.Call(0)
+        } catch {
+        }
+        return
+    }
+    opts := 0
+    try {
+        if IsSet(WebView2DefaultOptions) && WebView2DefaultOptions
+            opts := WebView2DefaultOptions
+    }
+    try {
+        WebView2.CreateEnvironmentAsync(opts, dataDir)
+            .then((env) => _WV2_OnSiteEnvReady(hostHwnd, env, callback, reason, id))
+            .catch((err) => _WV2_OnSiteEnvFailed(callback, err, reason, id))
+    } catch as e {
+        _WV2_OnSiteEnvFailed(callback, e, reason, id)
+    }
+}
+
+_WV2_OnSiteEnvFailed(callback, err, reason := "", siteId := "") {
+    try _WV2_TraceOptional("web_llm", "env_fail", false, Map("site", siteId, "reason", reason, "error", IsObject(err) ? err.Message : String(err)))
+    catch {
+    }
+    try {
+        if callback
+            callback.Call(0, err)
+    } catch {
+    }
+}
+
+_WV2_OnSiteEnvReady(hostHwnd, env, callback, reason := "", siteId := "") {
+    if !WebView2_IsUsableHwnd(hostHwnd) || !IsObject(env) {
+        try {
+            if callback
+                callback.Call(0)
+        } catch {
+        }
+        return
+    }
+    try {
+        env.CreateCoreWebView2ControllerAsync(hostHwnd)
+            .then((ctrl) => _WV2_OnSiteControllerReady(ctrl, callback, reason, siteId))
+            .catch((err) => _WV2_OnSiteEnvFailed(callback, err, reason, siteId))
+    } catch as e {
+        _WV2_OnSiteEnvFailed(callback, e, reason, siteId)
+    }
+}
+
+_WV2_OnSiteControllerReady(ctrl, callback, reason := "", siteId := "") {
+  try {
+        if IsObject(ctrl) {
+            try {
+                wv2 := ctrl.CoreWebView2
+                if IsObject(wv2)
+                    ApplyWebView2PerformanceSettings(wv2)
+            } catch {
+            }
+        }
+        if callback
+            callback.Call(ctrl)
+    } catch as e {
+        _WV2_OnSiteEnvFailed(callback, e, reason, siteId)
+    }
 }
 
 WebView2_GetOrCreateSharedEnvPromise() {
@@ -280,6 +465,12 @@ WebView2_PrepareForScriptReload() {
     try {
         if FuncExists("ScWebEmbedProbePrepareForScriptReload")
             ScWebEmbedProbePrepareForScriptReload()
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
+    }
+    try {
+        if FuncExists("SearchCenterWebLlm_PrepareForScriptReload")
+            SearchCenterWebLlm_PrepareForScriptReload()
     } catch as _e {
         NmerCatch(A_ThisFunc, _e) 
     }
