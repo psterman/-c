@@ -279,11 +279,17 @@ _PQP_OnWebMessage(sender, args) {
         case "nmDockLeave":
             ; lifecycle handled by PQP_Show/PQP_Hide
         case "nmDockCmd":
+            if FuncExists("Nmer_Telemetry_MarkSurfaceAction") {
+                try Nmer_Telemetry_MarkSurfaceAction("prompt_quick_pad", "dock_cmd", Map("source", "_PQP_OnWebMessage"))
+            }
             _PQP_ExecuteDockCmd(msg)
 
         case "search":
             keyword := msg.Has("keyword") ? msg["keyword"] : ""
             category := msg.Has("category") ? msg["category"] : "全部"
+            if FuncExists("Nmer_Telemetry_MarkSurfaceAction") {
+                try Nmer_Telemetry_MarkSurfaceAction("prompt_quick_pad", "search", Map("source", "_PQP_OnWebMessage"))
+            }
             _PQP_DebouncedSearch(keyword, category)
 
         default:
@@ -384,6 +390,9 @@ PQP_Show() {
         reqId := SurfaceManager_Request("prompt_quick_pad", "open", "PQP_Show", Map("visibleBefore", g_PQP_Visible ? 1 : 0))
         try SurfaceManager_BeforeOpen("prompt_quick_pad", "PQP_Show", Map("requestId", reqId, "visibleBefore", g_PQP_Visible ? 1 : 0))
         try SurfaceManager_RegisterSurface("prompt_quick_pad")
+        if FuncExists("Nmer_Telemetry_MarkSurfaceOpen") {
+            try Nmer_Telemetry_MarkSurfaceOpen("prompt_quick_pad", Map("source", "PQP_Show"))
+        }
     }
     try FloatingToolbar_PageDockEnter("prompts")
 
@@ -541,6 +550,9 @@ PQP_Hide() {
     }
     if !skipTel
         try SurfaceManager_ObserveHide("prompt_quick_pad", Map("entry", "PQP_Hide", "requestId", reqId))
+    if FuncExists("Nmer_Telemetry_MarkSurfaceClose") {
+        try Nmer_Telemetry_MarkSurfaceClose("prompt_quick_pad", Map("source", "PQP_Hide"))
+    }
 }
 
 PQP_Dispose(reason := "") {

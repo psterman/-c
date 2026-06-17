@@ -303,13 +303,13 @@ _dumpValue(v) {
         esc := StrReplace(esc, "`r", "\r")
         esc := StrReplace(esc, "`t", "\t")
         return '"' . esc . '"'
+    } else if (t == "Integer" || t == "Float") {
+        return String(v)
     } else if (v = true)
         return "true"
     else if (v = false)
         return "false"
-    else if (t == "Integer" || t == "Float") {
-        return String(v)
-    } else if (IsObject(v)) {
+    else if (IsObject(v)) {
         parts := []
         for prop in v.OwnProps() {
             parts.Push('"' . prop . '":' . _dumpValue(v.%prop%))

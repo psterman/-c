@@ -234,6 +234,12 @@ Nmer_ReadHealthSnapshotJson(*) {
 Nmer_CollectHealthSnapshot(trigger := "user_refresh") {
     snap := Nmer_BuildHealthSnapshot(trigger)
     Nmer_WriteHealthSnapshotJson(snap)
+    if FuncExists("Nmer_Telemetry_Record") {
+        try Nmer_Telemetry_Record("health", "health_snapshot_result", true, Map("trigger", String(trigger)))
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e)
+        }
+    }
     return snap
 }
 

@@ -1,0 +1,6 @@
+﻿== Phase3 Contract Suite (optional) 2026-06-17 10:43:46 ==
+required=False node=c:\Program Files\cursor\resources\app\resources\helpers\node.exe
+SCWV Drift exit=1
+SCWV Fixtures exit=1
+Palette Fixtures exit=1
+SUITE=FAIL failed=SCWV Drift,SCWV Fixtures,Palette Fixtures

@@ -8,6 +8,7 @@
 
 - **未验证的描述**：文档或注释中未经 `tools/ci/Run-MinimalGate.ps1 -Strict` 或实机回归的段落，使用前请自行验证。
 - **`local/` 已存在文件不会在启动时自动覆盖**（仅 missing 时迁移/补全，与 `UserStudio_Load`、`Nmer_MigrateLocalData` 一致）。
+- **混栈治理**：开发者入口见 **[docs/stack-governance.md](docs/stack-governance.md)**；本地菜单 `powershell -NoProfile -File tools\dev\Run-DevMenu.ps1`。
 
 ## 企业 / 运维
 

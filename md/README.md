@@ -5,7 +5,7 @@
 
 [English](readme.en.md) | 简体中文
 
-> **开发者**：首次参与定制或改仓库前请阅读 [AGENTS.md](AGENTS.md)。`local/` 下已存在配置**不会**在启动时被自动覆盖（仅缺失时迁移）。文档中未经 `Run-MinimalGate` 或实机验证的说明请自行核对。
+> **开发者**：首次参与定制或改仓库前请阅读 [AGENTS.md](AGENTS.md) 与 [混栈治理手册](../docs/stack-governance.md)。`local/` 下已存在配置**不会**在启动时被自动覆盖（仅缺失时迁移）。本地门禁：`tools/dev/Run-DevMenu.ps1` 或 `Run-MinimalGate -Strict`；文档中未经验证的说明请自行核对。
 >
 > **企业 / 运维**（密钥 DPAPI、导出 zip、清理）：[docs/nmer-enterprise-ops.md](../docs/nmer-enterprise-ops.md)
 
@@ -79,7 +79,7 @@
 | `Cache/` | 日志与缓存，可定期清空（不含 OpenClaw 状态） |
 | `md/` | 项目文档（README、AGENTS、软件介绍、技术 docs） |
 | `md/docs/` | 开发者/高级用户技术说明 |
-| `archive/` | 历史原型代码，与当前版本无关 |
+| `archive/` | **保留目录，当前为空**；历史原型（如旧 Wails toolbar）已从 Git 删除，见 [`docs/wails-migration-boundary.md`](../docs/wails-migration-boundary.md)。仍在用的 Legacy 实现位于 `modules/Legacy*.ahk`，由 CI 白名单约束，**不在** `archive/` |
 
 更完整的架构说明见 [软件介绍.md](软件介绍.md)。
 

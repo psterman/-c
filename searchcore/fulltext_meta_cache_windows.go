@@ -148,8 +148,8 @@ func (b *blugeIndexer) bumpIndexedFilesIfNew(path string) {
 			return
 		}
 	}
+	// IndexedFiles 以 refreshIndexedCount（Bluge 实际文档数）为准，不在此递增避免虚高。
 	b.mu.Lock()
-	b.status.IndexedFiles++
 	b.status.LastUpdatedRFC3339 = time.Now().Format(time.RFC3339)
 	b.mu.Unlock()
 }

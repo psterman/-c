@@ -1,8 +1,8 @@
 # Legacy bypass 白名单：历史已知调用点（path:line:symbol）
 # 新增命中须改走 SurfaceIntent / WebView 路径，不得直接扩名单除非为 fallback 收口
-牛马.ahk:5347:LegacyConfigGui_Show
-牛马.ahk:5439:LegacyConfigGui_Show
-牛马.ahk:6077:ShowClipboardManager
-牛马.ahk:6080:ShowClipboardManager
-modules\CursorPanelController.ahk:2193:ShowClipboardManager
-modules\CursorPanelController.ahk:2196:ShowClipboardManager
+牛马.ahk:5362:LegacyConfigGui_Show
+牛马.ahk:5454:LegacyConfigGui_Show
+牛马.ahk:6113:ShowClipboardManager
+牛马.ahk:6116:ShowClipboardManager
+modules\CursorPanelController.ahk:2210:ShowClipboardManager
+modules\CursorPanelController.ahk:2213:ShowClipboardManager

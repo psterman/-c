@@ -7,6 +7,7 @@ global g_Nmer_WailsBridgeHealthCacheTick := 0
 global g_Nmer_WailsBridgeHealthBusy := false
 global g_Nmer_WailsBridgeShuttingDown := false
 global g_Nmer_WailsBridgeOpenClawEnvTick := 0
+global g_Nmer_WailsBridgePrevHealth := -1
 
 Nmer_WailsBridgeDefaultAddr(*) {
     addr := Trim(String(EnvGet("NMER_A2UI_BRIDGE_ADDR")))
@@ -1049,7 +1050,7 @@ Nmer_WailsBridgeHealthyHttp(*) {
 
 Nmer_WailsBridgeHealthy(*) {
     global g_Nmer_WailsBridgeHealthCacheOk, g_Nmer_WailsBridgeHealthCacheTick, g_Nmer_WailsBridgeHealthBusy
-    global g_Nmer_WailsBridgeShuttingDown
+    global g_Nmer_WailsBridgeShuttingDown, g_Nmer_WailsBridgePrevHealth
     if !Nmer_WailsBridgeEnabled()
         return false
     if g_Nmer_WailsBridgeShuttingDown
@@ -1071,6 +1072,16 @@ Nmer_WailsBridgeHealthy(*) {
         g_Nmer_WailsBridgeHealthBusy := false
         g_Nmer_WailsBridgeHealthCacheOk := ok
         g_Nmer_WailsBridgeHealthCacheTick := A_TickCount
+        prev := Integer(g_Nmer_WailsBridgePrevHealth)
+        nowState := ok ? 1 : 0
+        if (prev != -1 && prev != nowState && FuncExists("Nmer_Telemetry_Record")) {
+            event := ok ? "bridge_reconnect" : "bridge_disconnect"
+            try Nmer_Telemetry_Record("health", event, ok, Map("trigger", "wails_bridge"))
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e)
+            }
+        }
+        g_Nmer_WailsBridgePrevHealth := nowState
     }
     return ok
 }

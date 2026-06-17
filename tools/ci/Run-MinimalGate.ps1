@@ -23,7 +23,12 @@ $lines.Add("== Minimal Gate $stamp ==")
 $lines.Add("root=$Root")
 
 function Invoke-GateStep {
-    param([string]$Name, [string]$ScriptName, [switch]$StepStrict)
+    param(
+        [string]$Name,
+        [string]$ScriptName,
+        [switch]$StepStrict,
+        [switch]$StepRequired
+    )
     $scriptPath = Join-Path $here $ScriptName
     $lines.Add("")
     $lines.Add("---- $Name ----")
@@ -34,7 +39,9 @@ function Invoke-GateStep {
     $code = 0
     try {
         Push-Location $here
-        if ($StepStrict) {
+        if ($StepRequired) {
+            & $scriptPath -Root $Root -Required 2>&1 | ForEach-Object { $lines.Add([string]$_) }
+        } elseif ($StepStrict) {
             & $scriptPath -Root $Root -Strict 2>&1 | ForEach-Object { $lines.Add([string]$_) }
         } else {
             & $scriptPath -Root $Root 2>&1 | ForEach-Object { $lines.Add([string]$_) }
@@ -58,6 +65,9 @@ $results += Invoke-GateStep "Legacy Bypass" "Validate-LegacyBypass.ps1" -StepStr
 $results += Invoke-GateStep "Migration Pack" "Validate-MigrationPack.ps1"
 $results += Invoke-GateStep "WS Policy" "Validate-WsPolicy.ps1"
 $results += Invoke-GateStep "AHK Launch Matrix" "TryAhkLaunchMatrix.ps1"
+if ($Strict) {
+    $results += Invoke-GateStep "Contract Production" "Run-Phase3ContractSuite.ps1" -StepRequired
+}
 if ($IncludeMemoryProbe) {
     $memScript = Join-Path (Split-Path $here -Parent) "a2ui-diagnostics\memory\Run-ScWebEmbedProbe.ps1"
     $lines.Add("")

@@ -9,12 +9,14 @@
 | 2026-06-xx | 153/153 | rollout 规划会话 | +22：新增 Official A2UI Gray、PaletteA2UIMetrics、PaletteRendererRegistry、PaletteA2UIDesignTokens 等套件 |
 | **2026-06-08** | **153/153** | `run-palette-fixtures.mjs` Wave 0 | 全绿；与上一行一致，无新增/删除用例 |
 | **2026-06-08** | **155/155** | Wave 2 + Action | +2：`action_label_contracts`、`action_policy_contracts` |
+| **2026-06-17** | **160/160** | `run-palette-fixtures.mjs` / `Run-MinimalGate -Strict` | +5：`action-history-shell`(3)、`stream-batcher`、`command-index` |
 
 ## 口径说明
 
 - **128**：早期文档默认引用数（OC-6 渲染路径）。
 - **131**：128 + OC-5 协议相关 fixture（与 128 有重叠计数口径，勿简单相减）。
-- **153**：当前 headless 全量 runner 输出（`passed=N failed=0 ok=true`）。
+- **153**：Wave 0 前后 headless 全量 runner 口径（`passed=N failed=0 ok=true`）。
+- **160**：**当前** headless 全量 runner；`Run-MinimalGate.ps1 -Strict` 内 Contract Production 同口径。
 
 ## 漂移警报规则
 

@@ -259,6 +259,8 @@ function __settingsStudioTestInline(payloadJson, testId, flat) {
       },
       healthSnapshot: null,
       healthSnapshotLoading: false,
+      telemetrySnapshot: null,
+      telemetrySnapshotLoading: false,
       data: {
         cursorPath: "", capslockHoldTimeSeconds: 0.5, capsLockHoldVkEnabled: true, autoStart: false, defaultStartTab: "general",
         themeMode: "", popupScreenIndex: 1, monitorCount: 1,
@@ -5602,6 +5604,11 @@ ${bindListBlock("hk-vk-list-" + subId, renderVkCmdListHtml(preset.commands, stat
       renderHealthSnapshotDom(null, true);
       post({ type: "invokeAction", op: "getHealthSnapshot", payload: { trigger: trigger || "open_panel" } });
     }
+    function requestTelemetrySnapshot(trigger) {
+      state.telemetrySnapshotLoading = true;
+      renderTelemetrySnapshotDom(null, true);
+      post({ type: "invokeAction", op: "getTelemetrySnapshot", payload: { trigger: trigger || "open_panel" } });
+    }
     function renderHealthSnapshotDom(payload, loading) {
       const body = document.getElementById("healthSnapBody");
       const meta = document.getElementById("healthSnapMeta");
@@ -5643,6 +5650,62 @@ ${bindListBlock("hk-vk-list-" + subId, renderVkCmdListHtml(preset.commands, stat
         <div class="health-section-title">Surface 登记</div>
         <table class="health-table"><thead><tr><th>ID</th><th>状态</th><th>角色</th></tr></thead><tbody>${surfRows}</tbody></table>
         ${dbgDir ? `<div class="hint health-log-dir">日志目录：${dbgDir}</div>` : ""}`;
+    }
+    function renderTelemetrySnapshotDom(payload, loading) {
+      const body = document.getElementById("telemetrySnapBody");
+      const meta = document.getElementById("telemetrySnapMeta");
+      if (!body) return;
+      if (loading || state.telemetrySnapshotLoading) {
+        if (meta) meta.textContent = "正在拉取本机统计…";
+        body.innerHTML = `<div class="hint">正在读取本机统计 JSON（仅本机，不外发）…</div>`;
+        return;
+      }
+      const snap = payload || state.telemetrySnapshot;
+      if (!snap || typeof snap !== "object") {
+        if (meta) meta.textContent = "本机统计";
+        body.innerHTML = `<div class="hint">暂无统计，请点击「刷新统计」。</div>`;
+        return;
+      }
+      if (meta) {
+        const t = String(snap.generatedAt || "").trim();
+        meta.textContent = t ? `${t} · 只读` : "本机统计";
+      }
+      const topScopes = Array.isArray(snap.topScopes) ? snap.topScopes : [];
+      const topActions = Array.isArray(snap.topActions) ? snap.topActions : [];
+      const recentFail = String(snap.recentFail || "").trim();
+      const rows = topScopes.map(r => {
+        const scope = esc(String(r.scope || ""));
+        const total = Number(r.total || 0);
+        const ok = Number(r.ok || 0);
+        const fail = Number(r.fail || 0);
+        const lastAt = String(r.lastAt || "");
+        const lastOk = r.lastOk ? "成功" : "失败";
+        const lastError = String(r.lastError || "");
+        return `<tr><td>${scope}</td><td>${total}</td><td>${ok}/${fail}</td><td>${esc(lastAt)}</td><td>${esc(lastOk)}</td><td>${esc(lastError)}</td></tr>`;
+      }).join("");
+      const actionRows = topActions.map(r => {
+        const scope = esc(String(r.scope || ""));
+        const action = esc(String(r.action || ""));
+        const count = Number(r.count || 0);
+        const ok = Number(r.ok || 0);
+        const fail = Number(r.fail || 0);
+        const lastAt = esc(String(r.lastAt || ""));
+        const lastOk = r.lastOk ? "成功" : "失败";
+        const lastError = esc(String(r.lastError || ""));
+        return `<tr><td>${scope}</td><td>${action}</td><td>${count}</td><td>${ok}/${fail}</td><td>${lastAt}</td><td>${lastOk}</td><td>${lastError}</td></tr>`;
+      }).join("");
+      body.innerHTML = `
+        <div class="hint">只记录计数、最近一次成功失败和安全摘要，不包含正文、搜索词、剪贴板内容。</div>
+        ${recentFail ? `<div class="hint" style="margin:6px 0 10px;color:#ffb347;">最近失败：${esc(recentFail)}</div>` : ""}
+        <table class="health-table">
+          <thead><tr><th>scope</th><th>次数</th><th>成功/失败</th><th>最近一次</th><th>结果</th><th>摘要</th></tr></thead>
+          <tbody>${rows || `<tr><td colspan="6" class="hint">暂无统计记录</td></tr>`}</tbody>
+        </table>
+        <div class="health-section-title" style="margin-top:12px;">Top Actions</div>
+        <table class="health-table">
+          <thead><tr><th>scope</th><th>action</th><th>次数</th><th>成功/失败</th><th>最近一次</th><th>结果</th><th>摘要</th></tr></thead>
+          <tbody>${actionRows || `<tr><td colspan="7" class="hint">暂无 action 记录</td></tr>`}</tbody>
+        </table>`;
     }
     function renderTroubleshootCardHtml() {
       return `<div class="card" style="margin-top:12px;">
@@ -6271,11 +6334,20 @@ ${pathRow("autohotkey", "AutoHotkey", paths.autohotkey || "")}
       <button type="button" class="btn" id="btnHealthOpenLogs">打开日志目录</button>
     </div>
   </div>
+  <div class="card" id="telemetrySnapshotCard" style="margin-top:12px;">
+    <div class="title">本机统计 <span class="hint" id="telemetrySnapMeta">只读统计</span></div>
+    <div id="telemetrySnapBody"><div class="hint">正在加载…</div></div>
+    <div class="inline" style="margin-top:12px;flex-wrap:wrap;gap:8px;">
+      <button type="button" class="btn" id="btnTelemetryRefresh">刷新统计</button>
+    </div>
+  </div>
 </div>`;
         document.getElementById("btnExportCfg").addEventListener("click", () => post({ type: "invokeAction", op: "exportConfig" }));
         document.getElementById("btnImportCfg").addEventListener("click", () => post({ type: "invokeAction", op: "importConfig" }));
         document.getElementById("btnResetCfg").addEventListener("click", () => post({ type: "invokeAction", op: "resetToDefaults" }));
         bindHealthSnapshotHandlers();
+        document.getElementById("btnTelemetryRefresh")?.addEventListener("click", () => requestTelemetrySnapshot("user_refresh"));
+        requestTelemetrySnapshot("open_panel");
       } else if (state.activeTab === "storage") {
         const ci = state.cacheInfo || {};
         const root = esc(ci.root || d.userCacheRoot || "");
@@ -7106,7 +7178,16 @@ ${pathRow("autohotkey", "AutoHotkey", paths.autohotkey || "")}
       if (msg.type === "healthSnapshot") {
         state.healthSnapshot = (msg.payload && typeof msg.payload === "object") ? msg.payload : null;
         state.healthSnapshotLoading = false;
-        if (state.activeTab === "advanced") renderHealthSnapshotDom(state.healthSnapshot, false);
+        if (state.activeTab === "advanced") {
+          renderHealthSnapshotDom(state.healthSnapshot, false);
+          renderTelemetrySnapshotDom(state.telemetrySnapshot, false);
+        }
+        return;
+      }
+      if (msg.type === "telemetrySnapshot") {
+        state.telemetrySnapshot = (msg.payload && typeof msg.payload === "object") ? msg.payload : null;
+        state.telemetrySnapshotLoading = false;
+        if (state.activeTab === "advanced") renderTelemetrySnapshotDom(state.telemetrySnapshot, false);
         return;
       }
       if (msg.type === "migrationOptions") {
@@ -7156,7 +7237,7 @@ ${pathRow("autohotkey", "AutoHotkey", paths.autohotkey || "")}
       if (msg.type === "actionResult") {
         const op = String(msg.op || "");
         if (op === "syncNiumaChatLlmToStudio" || op === "loadNiumaProjectBrief") return;
-        if (op === "getHealthSnapshot" || op === "exportDiagnosticsBundle" || op === "openDebugLogsFolder" || op === "copyRecentTraceLog") return;
+        if (op === "getHealthSnapshot" || op === "getTelemetrySnapshot" || op === "exportDiagnosticsBundle" || op === "openDebugLogsFolder" || op === "copyRecentTraceLog") return;
         if (op === "getMigrationOptions" || op === "exportMigrationPack" || op === "importMigrationPack") return;
         if (msg.ok) {
           setStatus("操作成功", "ok");

@@ -1,5 +1,5 @@
 ﻿ahk_launch_matrix
-ts=2026-06-15 10:25:47.662
+ts=2026-06-17 10:43:36.803
 root=-Root
 candidate_count=2
 variant exe="C:\Program Files\AutoHotkey\v2\AutoHotkey64.exe" mode=plain exit=0 out_exists=1 err=""

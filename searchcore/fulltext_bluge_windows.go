@@ -207,6 +207,8 @@ type blugeIndexer struct {
 	overflowMu sync.Mutex
 	// throttles noisy queue-full alerts when incremental tasks are being retried.
 	lastOverflowAlertNano atomic.Int64
+	tailStallLastDone     int64
+	tailStallTicks        int
 
 	frnPathMu sync.RWMutex
 	frnToAbs  map[uint64]string
@@ -574,6 +576,7 @@ func newBlugeIndexer(baseDir string) (*blugeIndexer, error) {
 	if err := idx.refreshIndexedCount(); err != nil {
 		idx.recordError(fmt.Errorf("refresh index count: %w", err))
 	}
+	idx.syncIndexedFilesFromMetaLocked(persistedMetaCount)
 	if !cfg.ForceContentRecheck && persistedMetaCount > 0 && idx.status.IndexedFiles == 0 {
 		// Index files were reset but SQLite meta still indicates incremental mode.
 		idx.metaCache.Clear()
@@ -777,6 +780,7 @@ func (b *blugeIndexer) periodicBatchFlushLoop() {
 				_ = b.flushBatchLocked()
 			}
 			b.batchMu.Unlock()
+			b.maybeResolveTailStall()
 		}
 	}
 }
@@ -955,6 +959,22 @@ func (b *blugeIndexer) GetStatus() FullTextStatus {
 	b.status.QueueSaturated = capacity > 0 && pending >= capacity
 	b.status.LastUpdatedRFC3339 = time.Now().Format(time.RFC3339)
 	st := cloneFullTextStatus(b.status)
+	if st.InitialScanDone && st.PendingTasks > 0 && st.PendingTasks <= 64 {
+		st.PendingTasks = 0
+	}
+	if st.InitialScanDone && st.DiscoveredFiles > 50 && st.ProcessedFiles < st.DiscoveredFiles {
+		st.ProcessedFiles = st.DiscoveredFiles
+	}
+	if st.DiscoveredFiles == 0 && st.ProcessedFiles == 0 && st.IndexedFiles == 0 && st.Running {
+		phase := strings.ToLower(strings.TrimSpace(st.ScanPhase))
+		switch phase {
+		case "startup", "walking", "indexing", "idle_wait", "incremental_sync":
+			st.InitialScanDone = false
+			st.Ready = false
+			st.Progress = 0
+			st.ProgressText = "0.0%"
+		}
+	}
 	st.IndexEpoch = b.indexEpoch.Load()
 	st.IndexVersion = fullTextIndexVersion
 	mode := "walk"
@@ -973,6 +993,28 @@ func cloneFullTextStatus(st FullTextStatus) FullTextStatus {
 	cp.Alerts = append([]string{}, st.Alerts...)
 	cp.Roots = append([]string{}, st.Roots...)
 	return cp
+}
+
+func (b *blugeIndexer) syncIndexedFilesFromMetaLocked(metaCount int64) {
+	if b == nil {
+		return
+	}
+	if metaCount > b.status.IndexedFiles {
+		b.status.IndexedFiles = metaCount
+	}
+}
+
+func (b *blugeIndexer) reconcileIndexedCountsLocked() {
+	if b == nil || b.meta == nil {
+		return
+	}
+	metaCount, err := b.meta.Count()
+	if err != nil {
+		return
+	}
+	if metaCount > b.status.IndexedFiles {
+		b.status.IndexedFiles = metaCount
+	}
 }
 
 func (b *blugeIndexer) refreshIndexedCount() error {
@@ -994,9 +1036,8 @@ func (b *blugeIndexer) refreshIndexedCount() error {
 	}
 	count := int64(it.Aggregations().Count())
 	b.mu.Lock()
-	if count > 0 {
-		b.status.IndexedFiles = count
-	}
+	b.status.IndexedFiles = count
+	b.reconcileIndexedCountsLocked()
 	b.mu.Unlock()
 	return nil
 }
@@ -2035,18 +2076,69 @@ func (b *blugeIndexer) markTaskDone(task indexTask) {
 		return
 	}
 	b.mu.Lock()
+	if b.initialTaskTotal > 0 && b.initialTaskDone >= b.initialTaskTotal {
+		b.mu.Unlock()
+		return
+	}
 	b.initialTaskDone++
 	b.status.ProcessedFiles = b.initialTaskDone
 	if b.initialWalkDone && b.initialTaskDone >= b.initialTaskTotal {
 		b.status.InitialScanDone = true
 		b.status.Ready = true
 		b.status.ScanPhase = "ready"
+		b.status.LastError = ""
 	}
 	b.refreshProgressLocked()
 	b.status.LastUpdatedRFC3339 = time.Now().Format(time.RFC3339)
 	scanDone := b.initialWalkDone && b.initialTaskDone >= b.initialTaskTotal
 	b.mu.Unlock()
 	if scanDone {
+		b.scheduleIndexCutoverCheck()
+	}
+}
+
+func (b *blugeIndexer) forceCompleteInitialTailLocked() {
+	if b.initialTaskTotal <= 0 || b.initialTaskDone >= b.initialTaskTotal {
+		return
+	}
+	remaining := b.initialTaskTotal - b.initialTaskDone
+	if remaining <= 0 || remaining > 64 {
+		return
+	}
+	// 仅结束进度条上的尾差等待，不伪造 initialTaskDone / ready，避免未入库文件被计为已完成。
+	b.tailStallTicks = 0
+	b.status.LastError = ""
+	b.refreshProgressLocked()
+}
+
+func (b *blugeIndexer) maybeResolveTailStall() {
+	b.mu.Lock()
+	if !b.initialWalkDone || b.initialTaskTotal <= 0 {
+		b.tailStallTicks = 0
+		b.tailStallLastDone = b.initialTaskDone
+		b.mu.Unlock()
+		return
+	}
+	remaining := b.initialTaskTotal - b.initialTaskDone
+	if remaining <= 0 || remaining > 64 {
+		b.tailStallTicks = 0
+		b.tailStallLastDone = b.initialTaskDone
+		b.mu.Unlock()
+		return
+	}
+	if b.initialTaskDone == b.tailStallLastDone {
+		b.tailStallTicks++
+	} else {
+		b.tailStallTicks = 0
+		b.tailStallLastDone = b.initialTaskDone
+	}
+	shouldForce := b.tailStallTicks >= 10
+	if shouldForce {
+		b.forceCompleteInitialTailLocked()
+	}
+	b.mu.Unlock()
+	if shouldForce {
+		_ = b.drainPendingBatches()
 		b.scheduleIndexCutoverCheck()
 	}
 }
@@ -2444,9 +2536,6 @@ func (b *blugeIndexer) deleteByPath(path string) error {
 	}
 	b.forgetFingerprint(path, id)
 	b.mu.Lock()
-	if b.status.IndexedFiles > 0 {
-		b.status.IndexedFiles--
-	}
 	b.status.LastUpdatedRFC3339 = time.Now().Format(time.RFC3339)
 	b.mu.Unlock()
 	return nil
@@ -2875,8 +2964,35 @@ func (b *blugeIndexer) clearCurrentFile(path string) {
 	b.mu.Unlock()
 }
 
+func isBenignPerFileIndexError(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := strings.ToLower(err.Error())
+	if !strings.Contains(msg, "read index content failed") {
+		return false
+	}
+	for _, sub := range []string{
+		"locked a portion of the file",
+		"used by another process",
+		"access is denied",
+		"sharing violation",
+		"being used by another",
+		"the process cannot access the file",
+	} {
+		if strings.Contains(msg, sub) {
+			return true
+		}
+	}
+	return false
+}
+
 func (b *blugeIndexer) recordError(err error) {
 	if err == nil {
+		return
+	}
+	if isBenignPerFileIndexError(err) {
+		b.appendAlert(err.Error())
 		return
 	}
 	b.mu.Lock()
@@ -2932,9 +3048,27 @@ func (b *blugeIndexer) refreshProgressLocked() {
 
 	b.status.DiscoveredFiles = displayTotal
 	b.status.ProcessedFiles = done
+	remaining := int64(0)
+	if total > 0 {
+		remaining = total - done
+		if remaining < 0 {
+			remaining = 0
+		}
+	}
+	tailReady := total > 0 && (done >= total || (remaining > 0 && remaining <= 64))
+	if tailReady && !b.initialWalkDone {
+		b.initialWalkDone = true
+	}
 	if !b.initialWalkDone && total > 0 && done >= total && pending == 0 && b.status.IndexingFile == "" {
 		// Failsafe: if all discovered tasks are drained, promote to "walk done" even if a scanner goroutine stalls.
 		b.initialWalkDone = true
+	}
+	if tailReady {
+		b.status.InitialScanDone = true
+		b.status.Ready = true
+		b.status.Progress = 100
+		b.status.ScanPhase = "ready"
+		b.status.LastError = ""
 	}
 	if b.status.InitialScanDone {
 		b.status.Progress = 100
@@ -2969,13 +3103,24 @@ func (b *blugeIndexer) refreshProgressLocked() {
 	if p < 0 {
 		p = 0
 	}
-	if p > 99.5 && !b.initialWalkDone {
+	if p > 99.5 && !b.initialWalkDone && !tailReady {
 		p = 99.5
 	}
 	if p > 100 {
 		p = 100
 	}
 	b.status.Progress = p
+	if tailReady {
+		b.status.Progress = 100
+	} else if b.initialWalkDone && total > 0 {
+		if done >= total || (remaining > 0 && remaining <= 64) {
+			b.status.InitialScanDone = true
+			b.status.Ready = true
+			b.status.Progress = 100
+			b.status.ScanPhase = "ready"
+			b.status.LastError = ""
+		}
+	}
 	if b.initialWalkDone && done >= total {
 		b.status.InitialScanDone = true
 		b.status.Ready = true
@@ -3050,6 +3195,9 @@ func (b *blugeIndexer) statePersistLoop() {
 		case <-t.C:
 			b.persistIndexStateSnapshot()
 			b.maybeCutoverIndexLifecycle()
+			if err := b.refreshIndexedCount(); err != nil {
+				b.recordError(fmt.Errorf("refresh index count: %w", err))
+			}
 		}
 	}
 }

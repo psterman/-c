@@ -163,7 +163,7 @@ html[data-theme="light"] #startup-splash {
 }
 #app.sc-container {
   display: grid;
-  grid-template-rows: auto minmax(0, auto) minmax(0, 1fr) auto;
+  grid-template-rows: auto minmax(0, 1fr) auto;
   width: 100%;
   height: 100%;
   min-height: 0;
@@ -172,7 +172,7 @@ html[data-theme="light"] #startup-splash {
 }
 #app {
   display: grid;
-  grid-template-rows: auto minmax(0, auto) minmax(0, 1fr) auto;
+  grid-template-rows: auto minmax(0, 1fr) auto;
   width: 100%;
   height: 100%;
   min-height: 0;
@@ -1006,15 +1006,21 @@ html[data-theme="light"] #startup-splash {
 #inline-preview.hidden {
   display: none !important;
 }
-#results-head.results-head-compact {
+#results-head.results-head-compact,
+#results-head.results-head-minimal {
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
   align-items: stretch;
   gap: 10px;
-  padding: 12px 14px 10px;
+}
+#results-head.results-head-minimal {
+  padding: 8px 14px 6px;
   border-bottom: 1px solid var(--border-subtle);
   background: rgba(255,255,255,.02);
+}
+#results-head.results-head-minimal .results-head-row {
+  justify-content: flex-end;
 }
 #preview-head {
   flex-shrink: 0;
@@ -2129,19 +2135,60 @@ body.sc-cli-layout #app {
   padding-left: 10px;
   padding-right: 10px;
 }
-.sc-header {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  min-width: 0;
-}
 .sc-search-mid {
   width: 100%;
+  min-width: 0;
 }
 .search-wrapper {
   width: 100%;
   margin: 0;
   transition: box-shadow .2s ease;
+}
+.search-wrapper.sc-compose-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px 10px;
+  border-radius: 18px;
+  border: 1px solid var(--border-subtle);
+  background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,0)), var(--bg-surface);
+  box-shadow: var(--shadow), inset 0 1px 0 rgba(255,255,255,.08);
+}
+.search-wrapper.sc-compose-stack.focused,
+.search-wrapper.sc-compose-stack.has-content {
+  border-color: rgba(255,141,42,.35);
+  box-shadow: 0 0 0 2px rgba(255,141,42,.1), var(--shadow), inset 0 1px 0 rgba(255,255,255,.08);
+}
+.compose-context-slot {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+.compose-context-slot.hidden {
+  display: none !important;
+}
+.compose-local-filters {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+.compose-local-filters .results-head-row {
+  align-items: center;
+}
+.compose-local-filters #filters {
+  flex: 1 1 auto;
+}
+.compose-hint-strip {
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--muted);
+  padding: 0 6px 2px;
+  min-height: 0;
+}
+.compose-hint-strip:empty {
+  display: none;
 }
 .search-wrapper.focused .search-box-inner,
 .search-wrapper.has-content .search-box-inner {
@@ -2289,14 +2336,18 @@ body.sc-cli-layout #app {
   background: var(--bg-surface);
   overflow: hidden;
 }
-.sc-search-mid .search-wrapper {
-  border-radius: 16px;
-}
-.sc-search-mid .search-box-inner {
-  border-radius: 16px;
+.sc-compose-stack .search-box-inner {
+  border-radius: 14px;
   min-height: 54px;
+}
+.sc-compose-stack:not(.focused):not(.has-content) .search-box-inner {
+  border-color: var(--border-subtle);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.08);
+}
+.sc-compose-stack.focused .search-box-inner,
+.sc-compose-stack.has-content .search-box-inner {
   border-color: rgba(255,141,42,.45);
-  box-shadow: 0 0 0 2px rgba(255,141,42,.12), 0 10px 28px rgba(4,10,20,.32);
+  box-shadow: 0 0 0 2px rgba(255,141,42,.12), 0 8px 24px rgba(4,10,20,.28);
 }
 .preview-column {
   min-width: 0;
@@ -2382,12 +2433,18 @@ body.sc-cli-layout #app {
 }
 .sc-mode-bar {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 6px;
   padding: 5px;
   border-radius: 14px;
   border: 1px solid var(--border-subtle);
   background: rgba(0,0,0,.12);
+}
+.sc-mode-bar.sc-mode-bar-quad {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.sc-mode-bar.sc-mode-bar-quint {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
 }
 .sc-mode-bar.sc-mode-bar-duo {
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2457,13 +2514,117 @@ body.sc-cli-layout #app {
   line-height: 1.45;
   color: var(--muted);
 }
-.filter-drawer .sc-tag-card {
+.filter-drawer .sc-tag-card,
+.compose-context .sc-tag-card {
   border: none;
   box-shadow: none;
   background: transparent;
   padding: 0;
 }
-.filter-drawer .sc-tag-card::after { display: none; }
+.compose-context .sc-section-web-cats #categories,
+.compose-context #engines {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  max-height: none;
+  padding-bottom: 2px;
+}
+.compose-context .sc-section + .sc-section {
+  border-top: 1px solid var(--border-subtle);
+  padding-top: 10px;
+  margin-top: 2px;
+}
+.compose-context .sc-section-label {
+  font-size: 10px;
+  margin-bottom: -2px;
+}
+.compose-clip-filters {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 2px 0;
+}
+.compose-clip-filters .filter-chip {
+  flex-shrink: 0;
+}
+.fulltext-context-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  border: 1px solid var(--border-subtle);
+  background: rgba(255,255,255,.03);
+  font-size: 11px;
+  color: var(--muted);
+  min-width: 0;
+}
+.ft-ctx-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #7a8a9a;
+  flex-shrink: 0;
+}
+.ft-ctx-dot.active { background: #22d3ee; box-shadow: 0 0 8px rgba(34,211,238,.75); }
+.ft-ctx-dot.ready { background: #4ade80; box-shadow: 0 0 8px rgba(74,222,128,.75); }
+.ft-ctx-dot.warn { background: #f97316; box-shadow: 0 0 8px rgba(249,115,22,.85); }
+.ft-ctx-cap {
+  font-weight: 600;
+  color: var(--text);
+  flex: 0 1 auto;
+  min-width: 0;
+}
+.ft-ctx-progress {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fulltext-context-status .ft-control-btn {
+  margin-left: auto;
+}
+.compose-context .cli-engine-tabs {
+  padding: 4px 2px;
+  border-bottom: none;
+  background: transparent;
+}
+.ft-task-page {
+  padding: 20px 18px 24px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
+.ft-task-page h3 {
+  margin: 0 0 8px;
+  font-size: 15px;
+  color: var(--text);
+}
+.ft-task-page .ft-task-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+.ft-empty-guide {
+  padding: 18px 16px;
+  color: var(--muted);
+  font-size: 13px;
+  text-align: center;
+}
+.clip-empty-guide,
+.local-empty-guide {
+  padding: 18px 16px;
+  color: var(--muted);
+  font-size: 13px;
+  text-align: center;
+  line-height: 1.55;
+}
+.filter-drawer .sc-tag-card::after,
+.compose-context .sc-tag-card::after { display: none; }
 #tag-card { padding: 0; gap: 8px; }
 .results-filter-strip {
   padding: 0;
@@ -2652,7 +2813,7 @@ body.sc-cli-layout #app {
 }
 .sc-status-cap-live {
   color: var(--text);
-  max-width: 92px;
+  max-width: 140px;
 }
 .sc-status-dot-wrap {
   width: 32px;
@@ -2945,9 +3106,7 @@ body.sc-cli-layout .cli-shell {
 #layout.sc-cli-active #results-card {
   display: none !important;
 }
-.search-wrapper:not(.focused):not(.has-content) + .filter-drawer {
-  opacity: .92;
-}
+html[data-theme="light"] .search-wrapper.sc-compose-stack,
 html[data-theme="light"] .search-box-inner,
 html[data-theme="light"] .filter-drawer,
 html[data-theme="light"] .ft-drawer,
@@ -2957,6 +3116,8 @@ html[data-theme="light"] .sc-status-bar {
   background: var(--bg-surface);
   border-color: var(--border-subtle);
 }
+html[data-theme="light"] .search-wrapper.sc-compose-stack.focused,
+html[data-theme="light"] .search-wrapper.sc-compose-stack.has-content,
 html[data-theme="light"] .search-wrapper.focused .search-box-inner,
 html[data-theme="light"] .search-wrapper.has-content .search-box-inner {
   box-shadow: 0 0 0 3px rgba(214,111,26,.14), 0 8px 24px rgba(20,32,48,.08);
@@ -3021,38 +3182,64 @@ html[data-theme="light"] .search-wrapper.has-content .search-box-inner {
   </div>
 </div>
 <div id="app" class="sc-container">
-  <section class="sc-header sc-page-column">
-    <div class="filter-drawer" id="filter-drawer">
-      <div class="filter-drawer-head">
-        <button type="button" class="filter-drawer-toggle" id="btn-filter-drawer-toggle" aria-expanded="false">
-          <span class="filter-drawer-title">筛选</span>
-          <span class="filter-drawer-summary" id="filter-drawer-summary">本地搜索</span>
-          <span class="chevron" id="filter-drawer-chevron" aria-hidden="true">▶</span>
-        </button>
-      </div>
-      <div class="filter-drawer-body" id="filter-drawer-body">
-        <div class="sc-mode-bar" id="mode-bar" role="tablist" aria-label="搜索模式"></div>
-        <section class="sc-section sc-section-web-cats hidden" id="section-web-cats">
-          <h4 class="sc-section-label">联网分类</h4>
-          <div id="tag-card" class="sc-tag-card">
-            <div id="categories"></div>
-          </div>
-        </section>
-        <section class="sc-section sc-section-engines hidden" id="section-engines">
-          <h4 class="sc-section-label">搜索引擎</h4>
-          <div id="engines"></div>
-        </section>
-      </div>
-    </div>
-
-  </section>
-
   <section class="sc-search-mid sc-page-column">
-    <div class="search-wrapper" id="searchWrapper">
+    <div class="search-wrapper sc-compose-stack" id="searchWrapper">
+      <div class="sc-mode-bar" id="mode-bar" role="tablist" aria-label="搜索模式"></div>
+      <div id="compose-context" class="compose-context" data-active-mode="local">
+        <div class="compose-context-slot hidden" data-mode="local" id="compose-context-local">
+          <div id="results-local-filters" class="results-local-filters compose-local-filters">
+            <div class="results-head-row">
+              <div id="filters" class="results-filter-chips"></div>
+              <button type="button" id="btn-results-more-toggle" class="btn ghost" aria-expanded="false" title="展开子标签与高级筛选">更多<span class="chev">▶</span></button>
+            </div>
+            <div id="results-more-panel" class="results-more-panel collapsed">
+              <div id="head-filters">
+                <div id="subtag-panel" class="hidden">
+                  <div id="subtag-modes"></div>
+                  <div id="subtags"></div>
+                  <div id="subtag-desc"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="compose-context-slot hidden" data-mode="clipboard" id="compose-context-clipboard">
+          <div class="compose-clip-filters" id="compose-clip-filters" role="group" aria-label="剪贴板筛选">
+            <button type="button" class="filter-chip active" data-clip-view="all">全部</button>
+            <button type="button" class="filter-chip" data-clip-view="text">文本</button>
+            <button type="button" class="filter-chip" data-clip-view="image">图片</button>
+            <button type="button" class="filter-chip" data-clip-view="url">链接</button>
+          </div>
+        </div>
+        <div class="compose-context-slot hidden" data-mode="fulltext" id="compose-context-fulltext">
+          <div id="fulltext-context-status" class="fulltext-context-status" aria-live="polite">
+            <span class="ft-ctx-dot" id="ft-ctx-dot" aria-hidden="true"></span>
+            <span class="ft-ctx-cap" id="ft-ctx-cap">准备中</span>
+            <span class="ft-ctx-progress" id="ft-ctx-progress"></span>
+            <button type="button" id="btn-ft-ctx-toggle" class="ft-control-btn">启动索引</button>
+            <button type="button" id="btn-ft-ctx-settings" class="ft-control-btn secondary">设置</button>
+          </div>
+        </div>
+        <div class="compose-context-slot hidden" data-mode="web" id="compose-context-web">
+          <section class="sc-section sc-section-web-cats" id="section-web-cats">
+            <h4 class="sc-section-label">联网分类</h4>
+            <div id="tag-card" class="sc-tag-card">
+              <div id="categories"></div>
+            </div>
+          </section>
+          <section class="sc-section sc-section-engines" id="section-engines">
+            <h4 class="sc-section-label">搜索引擎</h4>
+            <div id="engines"></div>
+          </section>
+        </div>
+        <div class="compose-context-slot hidden" data-mode="cli" id="compose-context-cli">
+          <div id="cli-engine-tabs" class="cli-engine-tabs" role="tablist" aria-label="CLI 引擎标签"></div>
+        </div>
+      </div>
       <div class="search-box-inner" id="searchBoxInner">
         <span class="search-icon-left" id="search-icon-inline">&#128269;</span>
         <div class="search-input-wrap">
-          <textarea id="search" rows="1" placeholder="搜索本地结果，或直接作为网络搜索 / CLI 提示词发送" autocomplete="off" spellcheck="false"></textarea>
+          <textarea id="search" rows="1" placeholder="搜索本地文件与配置…" autocomplete="off" spellcheck="false"></textarea>
           <div id="sc-compose-hints" class="sc-compose-hints" aria-label="撰写区快捷键">
             <span class="sc-compose-hint" data-compose-action="cli_send" title="点击修改"><kbd id="sc-hint-cli-send">Enter</kbd>发送到终端</span>
             <span class="sc-compose-hint" data-compose-action="compose_newline" title="点击修改"><kbd id="sc-hint-compose-newline">Shift+Enter</kbd>换行</span>
@@ -3088,28 +3275,16 @@ html[data-theme="light"] .search-wrapper.has-content .search-box-inner {
           </details>
         </div>
       </div>
+      <div id="compose-hint-strip" class="compose-hint-strip" aria-live="polite"></div>
     </div>
   </section>
 
   <main class="sc-main-content sc-page-column">
   <div id="layout" class="sc-list-layout">
     <div id="results-card" class="card results-column">
-      <div id="results-head" class="results-head-compact">
-        <div id="results-local-filters" class="results-local-filters">
-          <div class="results-head-row">
-            <div id="filters" class="results-filter-chips"></div>
-            <div class="head-sub" id="result-count">0 条</div>
-            <button type="button" id="btn-results-more-toggle" class="btn ghost" aria-expanded="false" title="展开子标签与高级筛选">更多<span class="chev">▶</span></button>
-          </div>
-          <div id="results-more-panel" class="results-more-panel collapsed">
-            <div id="head-filters">
-              <div id="subtag-panel" class="hidden">
-                <div id="subtag-modes"></div>
-                <div id="subtags"></div>
-                <div id="subtag-desc"></div>
-              </div>
-            </div>
-          </div>
+      <div id="results-head" class="results-head-compact results-head-minimal">
+        <div class="results-head-row">
+          <div class="head-sub" id="result-count">0 条</div>
         </div>
       </div>
       <div id="sc-clip-float" class="sc-clip-float hidden" aria-label="最近剪贴板">
@@ -3156,7 +3331,6 @@ html[data-theme="light"] .search-wrapper.has-content .search-box-inner {
               <button type="button" class="cli-btn" id="cliPopBtn" title="在外部浏览器打开">外部</button>
             </div>
           </div>
-          <div id="cli-engine-tabs" class="cli-engine-tabs" role="tablist" aria-label="CLI 引擎标签"></div>
           <div id="cli-frame-stack" class="cli-frame-stack" aria-label="CLI ttyd 终端">
             <div id="cliLoading" class="cli-loading hidden">正在连接 ttyd…</div>
             <iframe id="cliFrame" class="cli-frame" src="about:blank" title="CLI ttyd 终端"></iframe>
@@ -3314,6 +3488,7 @@ const SC_FT_COLLAPSED_KEY = "sc_ft_collapsed_v1";
 const SC_FILTER_COLLAPSED_KEY = "sc_filter_collapsed_v2";
 const SC_RESULTS_MORE_COLLAPSED_KEY = "sc_results_more_collapsed_v1";
 const SC_UI_MODE_KEY = "sc_ui_mode_v1";
+const SC_LAST_NON_CLIPBOARD_UI_MODE_KEY = "sc_last_non_clipboard_ui_mode_v1";
 const SC_ACTIVE_CLI_ENGINE_KEY = "sc_active_cli_engine_v1";
 const SC_NOVICE_SORT_PREF_KEY = "sc_novice_sort_pref_v1";
 const SC_WEB_SEARCH_HIDDEN = false;
@@ -3534,6 +3709,7 @@ const state = {
   clipFloatMaxAgeMs: 180000,
   clipFloatExpanded: false,
   clipboardHomeLock: false,
+  clipboardViewFilter: "all",
   uiMode: "local",
   activeCliEngine: "",
   cliReadyEngines: {},
@@ -4081,7 +4257,7 @@ function onHostForegroundChanged(active) {
       _scHotkeySyncHostPending = false;
       scheduleScHotkeyBindingsSync(80);
     }
-    if (!_scFulltextBackgroundStarted && String(state.filterType || "").toLowerCase() === "fulltext") {
+    if (!_scFulltextBackgroundStarted && (getUIMode() === "fulltext" || String(state.filterType || "").toLowerCase() === "fulltext")) {
       ensureFulltextBackgroundTasks();
     }
   } else {
@@ -4378,7 +4554,7 @@ function syncComposeHintsUi() {
   if (!bar) return;
   const mode = getUIMode();
   const b = getComposeBindings();
-  bar.classList.toggle("visible", mode === "cli" || mode === "local" || mode === "web");
+  bar.classList.toggle("visible", mode === "cli" || mode === "local" || mode === "web" || mode === "clipboard" || mode === "fulltext");
   const map = {
     cli_send: document.getElementById("sc-hint-cli-send"),
     compose_newline: document.getElementById("sc-hint-compose-newline"),
@@ -4506,7 +4682,461 @@ function getFooterHintText() {
 }
 
 function syncFooterHint() {
+  syncComposeChrome();
+}
+
+const COMPOSE_MODE_CHROME = Object.freeze({
+  local: { icon: "&#128269;", btnRun: "搜索", hint: "搜索本机文件、配置与提示词库" },
+  clipboard: { icon: "&#128203;", btnRun: "筛选", hint: "查看复制历史，输入关键词筛选时间线" },
+  fulltext: { icon: "&#128196;", btnRun: "搜索", hint: "输入关键词搜索全文索引" },
+  web: { icon: "&#127760;", btnRun: "搜索", hint: "先选引擎，再输入关键词搜索" },
+  cli: { icon: "&#9000;", btnRun: "发送", hint: "输入内容发送到下方终端" }
+});
+
+function normalizeUiMode(mode) {
+  const m = String(mode || "").toLowerCase();
+  if (m === "cli") return "cli";
+  if (m === "web" && !SC_WEB_SEARCH_HIDDEN) return "web";
+  if (m === "clipboard") return "clipboard";
+  if (m === "fulltext") return "fulltext";
+  return "local";
+}
+
+function syncComposeContext() {
+  const ctx = document.getElementById("compose-context");
+  if (!ctx) return;
+  const mode = getUIMode();
+  ctx.setAttribute("data-active-mode", mode);
+  ctx.querySelectorAll(".compose-context-slot").forEach((slot) => {
+    const slotMode = String(slot.getAttribute("data-mode") || "");
+    slot.classList.toggle("hidden", slotMode !== mode);
+  });
+  renderClipComposeFilters();
+  if (mode === "fulltext") syncFulltextComposeContext();
+  if (mode === "cli") renderCliEngineTabs();
+  renderClipFloatBar();
+}
+
+function isFulltextIndexReady() {
+  return isFulltextIndexReadyFromPayload(state.fulltext || {});
+}
+
+function isFulltextIndexNotReady() {
+  const ft = state.fulltext || {};
+  if (isFulltextIndexReady()) return false;
+  if (ft.lastError && !ft.running) return true;
+  return !ft.running || (ft.running && !ft.ready);
+}
+
+function isFulltextBlockingError() {
+  const ft = state.fulltext || {};
+  if (!ft.lastError) return false;
+  if (isFulltextIndexReady()) return false;
+  return !ft.running;
+}
+
+function fulltextHasCorpus(ft) {
+  if (!ft || typeof ft !== "object") return false;
+  return (Number(ft.discoveredFiles) || 0) > 0
+    || (Number(ft.processedFiles) || 0) > 0
+    || (Number(ft.indexedFiles) || 0) > 0;
+}
+
+function isFulltextIndexReadyFromPayload(ft) {
+  if (!ft || typeof ft !== "object") return false;
+  const phase = String(ft.scanPhase || "").toLowerCase();
+  if (phase === "setup_required" || phase === "startup" || phase === "walking" || phase === "idle_wait") {
+    return false;
+  }
+  const hasCorpus = fulltextHasCorpus(ft);
+  if (!hasCorpus) {
+    return !!(ft.ready && ft.initialScanDone && (phase === "ready" || phase === "idle") && !ft.running);
+  }
+  if (ft.ready || ft.initialScanDone) return true;
+  const discovered = Number(ft.discoveredFiles) || 0;
+  const processed = Number(ft.processedFiles) || 0;
+  const pending = Number(ft.pendingTasks) || 0;
+  if (discovered > 50) {
+    const tail = Math.max(pending, discovered - processed);
+    if (processed >= discovered || tail <= 64) return true;
+    if (processed / discovered >= 0.995) return true;
+  }
+  return false;
+}
+
+function getReportedFulltextPending(ft) {
+  const src = ft || state.fulltext || {};
+  if (isFulltextIndexReadyFromPayload(src)) return 0;
+  return Number(src.pendingTasks) || 0;
+}
+
+function buildFulltextStatusModel(ft) {
+  const src = ft || state.fulltext || {};
+  const indexed = Number(src.indexedFiles) || 0;
+  const discovered = Number(src.discoveredFiles) || 0;
+  const processed = Number(src.processedFiles) || 0;
+  const pendingRaw = Number(src.pendingTasks) || 0;
+  const ready = isFulltextIndexReadyFromPayload(src);
+  const running = !!src.running;
+  const building = running && !ready;
+  const phaseRaw = String(src.scanPhase || "").toLowerCase();
+  const libraryCount = indexed;
+  const roundTotal = Math.max(discovered, processed + (ready ? 0 : pendingRaw));
+  const roundPct = roundTotal > 0 ? Math.min(100, (processed * 100) / roundTotal) : 0;
+  const phaseMap = {
+    startup: "准备中",
+    walking: "扫描目录",
+    indexing: "建立索引",
+    idle_wait: "等待空闲",
+    ready: "索引就绪",
+    idle: "空闲",
+    incremental_sync: "增量同步"
+  };
+  const phaseLabel = phaseMap[phaseRaw] || (running ? "索引运行中" : "空闲");
+  const blocking = isFulltextBlockingError();
+  const model = {
+    ready, running, building, indexed, discovered, processed, pendingRaw,
+    libraryCount, roundTotal, roundPct, phaseLabel, phaseRaw, blocking
+  };
+
+  if (blocking) {
+    model.stateText = "索引异常";
+    model.progressText = String(src.lastError || "索引异常");
+    model.progressTitle = "索引服务报告错误";
+    model.queueText = "—";
+    model.queueTitle = "";
+    model.quantityText = libraryCount > 0 ? `索引库 ${libraryCount} 个` : "索引库 0 个";
+    model.quantityTitle = "";
+    model.caption = "索引异常";
+    model.hint = String(src.lastError || "索引异常，请打开全文索引控制台查看详情。");
+    return model;
+  }
+
+  if (ready) {
+    model.stateText = running ? "可搜索（监控中）" : "索引就绪";
+    model.progressText = libraryCount > 0
+      ? `索引库 ${libraryCount} 个文件`
+      : "索引范围为空";
+    model.progressTitle = libraryCount > 0
+      ? "当前已入库、可供全文检索的文件总数"
+      : "尚未发现可索引文件，请检查索引范围设置";
+    if (pendingRaw > 0 && running) {
+      model.queueText = `后台处理 ${pendingRaw} 项`;
+      model.queueTitle = "变更文件正在写入索引，不影响当前搜索";
+    } else if (running) {
+      model.queueText = "监听文件变更";
+      model.queueTitle = "增量监听已启用，新变更会自动入库";
+    } else {
+      model.queueText = "已停止";
+      model.queueTitle = "索引服务未运行";
+    }
+    if (libraryCount > 0) {
+      model.quantityText = (discovered > 0 && discovered !== libraryCount)
+        ? `索引库 ${libraryCount} 个 · 本轮扫描 ${discovered}`
+        : `索引库 ${libraryCount} 个`;
+      model.quantityTitle = (discovered > 0 && discovered !== libraryCount)
+        ? "索引库=已入库可检索文件；本轮扫描=当前轮次发现的候选文件（含将被跳过的）"
+        : "已入库可供检索的文件总数";
+    } else {
+      model.quantityText = `索引库 0 个${discovered > 0 ? ` · 本轮发现 ${discovered}` : ""}`;
+      model.quantityTitle = "索引库为累计入库数；本轮发现为当前扫描轮次找到的候选文件";
+    }
+    model.caption = running
+      ? (libraryCount > 0 ? `可搜索 · ${libraryCount}` : "可搜索")
+      : "索引就绪";
+    const ver = String(src.indexVersion || "").trim();
+    model.hint = libraryCount > 0
+      ? `全文索引可正常使用（${libraryCount} 个文件${ver ? `，版本 ${ver}` : ""}），文件变更会自动同步。`
+      : (ver ? `全文索引已启动（版本 ${ver}），等待首次扫描。` : "全文索引已启动，等待首次扫描。");
+    return model;
+  }
+
+  if (building) {
+    model.stateText = `${phaseLabel}（处理中）`;
+    if (roundTotal > 0) {
+      model.progressText = indexed > 0
+        ? `已处理 ${processed} / ${roundTotal}（${roundPct.toFixed(1)}%）· 已入库 ${indexed}`
+        : `已处理 ${processed} / ${roundTotal}（${roundPct.toFixed(1)}%）`;
+      model.progressTitle = "已处理=扫描过的候选文件（含跳过/未变更）；已入库=真正写入索引、可被全文检索的文件";
+    } else if (libraryCount > 0) {
+      model.progressText = `续建索引 · 已入库 ${libraryCount}`;
+      model.progressTitle = "全量构建进行中，索引库中已有历史数据";
+    } else {
+      model.progressText = String(src.progressDetail || phaseLabel || "扫描准备中…");
+      model.progressTitle = "正在发现待索引文件";
+    }
+    model.queueText = pendingRaw > 0 ? `待处理 ${pendingRaw}` : "处理中";
+    model.queueTitle = pendingRaw > 0 ? "等待写入索引的任务数" : "索引任务正在执行";
+    model.quantityText = libraryCount > 0
+      ? `索引库 ${libraryCount} 个 · 本轮发现 ${discovered}`
+      : `本轮发现 ${discovered}`;
+    model.quantityTitle = "索引库为已累计入库数；本轮发现为当前扫描到的候选文件数";
+    model.caption = roundTotal > 0 ? `${phaseLabel} ${roundPct.toFixed(1)}%` : phaseLabel;
+    const eta = formatEtaHuman(src.etaSeconds);
+    model.hint = eta
+      ? `索引构建中，预计剩余约 ${eta}。可先使用「文件」子标签定位本地内容。`
+      : "索引构建中。可先使用「文件」子标签定位本地内容。";
+    return model;
+  }
+
+  model.stateText = phaseLabel;
+  model.progressText = libraryCount > 0 ? `已入库 ${libraryCount} 个文件` : "尚未开始";
+  model.progressTitle = "启动索引后开始扫描";
+  model.queueText = "未启动";
+  model.queueTitle = "";
+  model.quantityText = libraryCount > 0 ? `索引库 ${libraryCount} 个` : "索引库 0 个";
+  model.quantityTitle = "";
+  model.caption = phaseLabel;
+  model.hint = "启停索引、扫描方案、存储目录等请在配置面板「搜索设置」内的全文索引控制台操作。";
+  return model;
+}
+
+function syncFulltextComposeContext() {
+  const ft = state.fulltext || {};
+  const model = buildFulltextStatusModel(ft);
+  const dot = document.getElementById("ft-ctx-dot");
+  const cap = document.getElementById("ft-ctx-cap");
+  const prog = document.getElementById("ft-ctx-progress");
+  const toggleBtn = document.getElementById("btn-ft-ctx-toggle");
+  if (dot) {
+    dot.classList.remove("active", "ready", "warn");
+    if (model.blocking) dot.classList.add("warn");
+    else if (model.ready) dot.classList.add("ready");
+    else if (model.running) dot.classList.add("active");
+  }
+  if (cap) {
+    if (model.blocking) cap.textContent = "索引异常";
+    else if (model.ready) cap.textContent = model.running ? "索引监控中" : "索引已就绪";
+    else if (model.running) cap.textContent = "索引构建中";
+    else cap.textContent = "索引未启动";
+  }
+  if (prog) {
+    if (model.blocking) {
+      prog.textContent = model.progressText;
+    } else if (model.building) {
+      prog.textContent = model.progressText;
+    } else if (model.ready) {
+      prog.textContent = model.progressText;
+    } else {
+      prog.textContent = model.libraryCount > 0 ? model.progressText : "可在下方设置索引范围并启动";
+    }
+  }
+  if (toggleBtn) {
+    const running = !!ft.running;
+    toggleBtn.textContent = running ? "停止索引" : "启动索引";
+    toggleBtn.title = running ? "停止全文索引" : "启动全文索引";
+  }
+}
+
+function syncComposeHintStrip() {
+  const hintStrip = document.getElementById("compose-hint-strip");
+  if (!hintStrip) return;
+  const mode = getUIMode();
+  const meta = COMPOSE_MODE_CHROME[mode] || COMPOSE_MODE_CHROME.local;
+  if (mode === "fulltext") {
+    const kw = String(state.keyword || "").trim();
+    if (!kw && isFulltextIndexNotReady()) {
+      hintStrip.textContent = "索引尚未就绪，可先启动索引或前往设置";
+      return;
+    }
+    if (!kw && isFulltextIndexReady()) {
+      hintStrip.textContent = "输入关键词搜索全文索引";
+      return;
+    }
+  }
+  if (mode === "clipboard") {
+    const kw = String(state.keyword || "").trim();
+    hintStrip.textContent = kw
+      ? "输入关键词筛选剪贴板时间线"
+      : "浏览复制历史；输入关键词可筛选条目";
+    return;
+  }
+  if (mode === "local") {
+    const ft = String(state.filterType || "");
+    if (ft === "template") {
+      hintStrip.textContent = "浏览或搜索提示词库";
+      return;
+    }
+  }
+  if (mode === "web") {
+    hintStrip.textContent = "先选引擎，再输入关键词搜索";
+    return;
+  }
+  hintStrip.textContent = meta.hint;
+}
+
+function renderClipComposeFilters() {
+  const wrap = document.getElementById("compose-clip-filters");
+  if (!wrap || getUIMode() !== "clipboard") return;
+  const active = String(state.clipboardViewFilter || "all");
+  wrap.querySelectorAll("[data-clip-view]").forEach((btn) => {
+    const v = String(btn.getAttribute("data-clip-view") || "");
+    btn.classList.toggle("active", v === active);
+  });
+}
+
+function resultRowDataType(item) {
+  return String((item && (item.dataType || item.originalDataType || item.type)) || "").toLowerCase();
+}
+
+function isClipboardTimelineRow(item) {
+  const dt = resultRowDataType(item);
+  return dt === "clipboard" || dt === "clipboard_top" || dt === "clip";
+}
+
+function isFulltextResultRow(item) {
+  const dt = resultRowDataType(item);
+  if (dt === "fulltext") return true;
+  if (dt === "file" || dt === "folder") {
+    const hits = getHitContextList(item);
+    return Array.isArray(hits) && hits.length > 0;
+  }
+  return false;
+}
+
+function getDisplayResults() {
+  const rows = Array.isArray(state.results) ? state.results : [];
+  const mode = getUIMode();
+  if (mode === "clipboard") {
+    const view = String(state.clipboardViewFilter || "all");
+    if (view === "all") return rows;
+    return rows.filter((item) => {
+      const dt = resultRowDataType(item);
+      if (view === "text") return dt === "text" || dt === "clipboard" || dt === "code";
+      if (view === "image") return dt === "image";
+      if (view === "url") return dt === "url" || dt === "link" || dt === "web";
+      return true;
+    });
+  }
+  if (mode === "fulltext") {
+    return rows.filter((item) => isFulltextResultRow(item));
+  }
+  if (mode === "local") {
+    return rows.filter((item) => !isClipboardTimelineRow(item));
+  }
+  return rows;
+}
+
+function buildFulltextTaskPageHtml() {
+  const ft = state.fulltext || {};
+  const blocking = isFulltextBlockingError();
+  const err = blocking ? "<p class=\"ft-task-err\">" + escapeHtml(String(ft.lastError)) + "</p>" : "";
+  const warn = (!blocking && ft.lastError)
+    ? "<p class=\"ft-task-warn\">部分文件暂不可读（如被其它程序占用），不影响已索引内容搜索。</p>"
+    : "";
+  const detail = ft.running
+    ? "<p>索引正在构建，可在上方状态条查看进度。</p>"
+    : "<p>全文索引尚未就绪。启动索引后即可搜索本机文件内容。</p>";
+  return "<div class=\"ft-task-page\">" +
+    "<h3>全文索引" + (blocking ? "异常" : (ft.running ? "构建中" : "未就绪")) + "</h3>" +
+    detail + warn + err +
+    "<div class=\"ft-task-actions\">" +
+    "<button type=\"button\" class=\"btn primary\" id=\"ft-task-start-btn\">" + (ft.running ? "查看进度" : "启动索引") + "</button>" +
+    "<button type=\"button\" class=\"btn\" id=\"ft-task-settings-btn\">搜索设置</button>" +
+    "</div></div>";
+}
+
+function bindFulltextTaskPageActions(root) {
+  if (!root) return;
+  const startBtn = root.querySelector("#ft-task-start-btn");
+  const settingsBtn = root.querySelector("#ft-task-settings-btn");
+  if (startBtn) {
+    startBtn.addEventListener("click", () => {
+      const ft = state.fulltext || {};
+      const act = ft.running ? "stop" : "start";
+      postToAhk({ type: "fulltextControl", control: act });
+      requestFulltextStatus(true);
+    });
+  }
+  if (settingsBtn) {
+    settingsBtn.addEventListener("click", () => {
+      postToAhk({ type: "openSettingsPanel", defaultStartTab: "search" });
+    });
+  }
+}
+
+function buildLocalEmptyStateHtml() {
+  const kw = String(state.keyword || "").trim();
+  const skel = state.loading ? buildSkeletonListHtml(7) : "";
+  if (kw) {
+    return "<div class=\"empty\">未找到匹配的本地内容。</div>" + skel;
+  }
+  const ft = String(state.filterType || "");
+  if (ft === "template") {
+    return "<div class=\"empty local-empty-guide\">浏览提示词库，或输入关键词搜索。</div>" + skel;
+  }
+  return "<div class=\"empty local-empty-guide\">输入关键词搜索本机文件、配置与提示词，或使用上方筛选。</div>" + skel;
+}
+
+function buildClipboardEmptyStateHtml() {
+  const kw = String(state.keyword || "").trim();
+  const view = String(state.clipboardViewFilter || "all");
+  const skel = state.loading ? buildSkeletonListHtml(7) : "";
+  if (kw) {
+    return "<div class=\"empty clip-empty-guide\">没有匹配的剪贴板记录，试试其他关键词。</div>" + skel;
+  }
+  if (view !== "all") {
+    return "<div class=\"empty clip-empty-guide\">当前类型下暂无记录，可切换「全部」或输入关键词筛选。</div>" + skel;
+  }
+  return "<div class=\"empty clip-empty-guide\">复制记录将在此显示；输入关键词可筛选历史条目。</div>" + skel;
+}
+
+function renderFulltextEmptyState(list) {
+  const kw = String(state.keyword || "").trim();
+  const skel = state.loading ? buildSkeletonListHtml(7) : "";
+  if (!kw && isFulltextIndexReady()) {
+    list.innerHTML = "<div class=\"empty ft-empty-guide\">输入关键词搜索全文索引</div>" + skel;
+    return;
+  }
+  if (!kw && isFulltextIndexNotReady()) {
+    list.innerHTML = buildFulltextTaskPageHtml() + skel;
+    bindFulltextTaskPageActions(list);
+    return;
+  }
+  const inTransition = Date.now() < Number(state.fulltextEmptyTransitionUntil || 0);
+  const lead = inTransition
+    ? "<span class=\"empty-lead\"><span class=\"empty-dot\"></span>全文搜索更新中…</span><br>"
+    : "";
+  list.innerHTML = "<div class=\"empty\">" + lead + "未找到全文命中。</div>" + skel;
+}
+
+function syncComposeChrome() {
+  const mode = getUIMode();
+  const meta = COMPOSE_MODE_CHROME[mode] || COMPOSE_MODE_CHROME.local;
+  const searchInput = document.getElementById("search");
+  const btnRun = document.getElementById("btn-run");
+  const icon = document.getElementById("search-icon-inline");
+  const hintStrip = document.getElementById("compose-hint-strip");
+  const engineToggle = document.getElementById("engineToggle");
+  const b = getComposeBindings();
+  if (icon) icon.innerHTML = meta.icon;
+  if (btnRun) btnRun.textContent = meta.btnRun;
+  syncComposeHintStrip();
+  if (searchInput) {
+    if (mode === "cli") {
+      searchInput.placeholder = "输入提示词，" + formatComposeChordLabel(b.cli_send) + " 发送到下方终端";
+    } else if (mode === "web") {
+      searchInput.placeholder = "输入关键词，选引擎后搜索";
+    } else if (mode === "clipboard") {
+      searchInput.placeholder = "筛选剪贴板历史…";
+    } else if (mode === "fulltext") {
+      searchInput.placeholder = "搜索全文索引…";
+    } else {
+      searchInput.placeholder = "搜索本地文件与配置…";
+    }
+  }
+  if (engineToggle) {
+    const showEngine = mode === "local" || mode === "fulltext" || mode === "clipboard";
+    engineToggle.style.display = showEngine ? "" : "none";
+  }
   syncComposeHintsUi();
+  syncComposeContext();
+  const stack = document.getElementById("searchWrapper");
+  if (stack) {
+    ["local", "clipboard", "fulltext", "web", "cli"].forEach((id) => {
+      stack.classList.toggle("sc-mode-" + id, mode === id);
+    });
+  }
 }
 
 function saveFulltextCollapsed() {
@@ -4519,13 +5149,31 @@ function isScNarrow() {
   return window.innerWidth < 960;
 }
 
+function loadLastNonClipboardUiMode() {
+  try {
+    const v = localStorage.getItem(SC_LAST_NON_CLIPBOARD_UI_MODE_KEY);
+    if (v === "local" || v === "cli" || v === "fulltext") return v;
+    if (v === "web" && !SC_WEB_SEARCH_HIDDEN) return "web";
+  } catch (_) {}
+  return "local";
+}
+
+function rememberUiModePref(mode, persist) {
+  if (!persist) return;
+  const m = normalizeUiMode(mode);
+  try { localStorage.setItem(SC_UI_MODE_KEY, m); } catch (_) {}
+  if (m !== "clipboard") {
+    try { localStorage.setItem(SC_LAST_NON_CLIPBOARD_UI_MODE_KEY, m); } catch (_) {}
+  }
+}
+
 function loadUIModePref() {
   try {
     const v = localStorage.getItem(SC_UI_MODE_KEY);
-    if (v === "local" || v === "cli") state.uiMode = v;
+    if (v === "local" || v === "cli" || v === "clipboard" || v === "fulltext") state.uiMode = v;
     else if (v === "web" && !SC_WEB_SEARCH_HIDDEN) state.uiMode = "web";
   } catch (_) {}
-  if (!state.uiMode) state.uiMode = "local";
+  if (!state.uiMode) state.uiMode = loadLastNonClipboardUiMode();
   try {
     const cli = String(localStorage.getItem(SC_ACTIVE_CLI_ENGINE_KEY) || "").trim();
     if (cli) state.activeCliEngine = normalizeCliEngineId(cli);
@@ -4539,50 +5187,84 @@ function inferUIModeFromCategory(key) {
 }
 
 function getUIMode() {
-  if (state.uiMode === "cli") return "cli";
-  if (state.uiMode === "web" && !SC_WEB_SEARCH_HIDDEN) return "web";
-  if (state.uiMode === "local") return "local";
+  const m = String(state.uiMode || "");
+  if (m === "clipboard" || m === "fulltext") return m;
+  if (m === "cli") return "cli";
+  if (m === "web" && !SC_WEB_SEARCH_HIDDEN) return "web";
+  if (m === "local") return "local";
+  const ft = String(state.filterType || "");
+  if (ft === "clipboard") return "clipboard";
+  if (ft === "fulltext") return "fulltext";
   return inferUIModeFromCategory(state.currentCategoryKey);
+}
+
+function bridgeUiModeFilterType(m, skipHostPost) {
+  const prevFilter = String(state.filterType || "");
+  if (m === "clipboard") {
+    state.unifiedMode = "clipboard";
+    if (prevFilter !== "clipboard") {
+      state.filterType = "clipboard";
+      if (!skipHostPost) postToAhk({ type: "setFilter", filterType: "clipboard", keyword: state.keyword || "" });
+    }
+    return;
+  }
+  if (m === "fulltext") {
+    state.clipboardHomeLock = false;
+    state.unifiedMode = "search";
+    if (prevFilter !== "fulltext") {
+      state.filterType = "fulltext";
+      if (!skipHostPost) postToAhk({ type: "setFilter", filterType: "fulltext", keyword: state.keyword || "" });
+      ensureFulltextBackgroundTasks();
+    }
+    return;
+  }
+  state.clipboardHomeLock = false;
+  state.unifiedMode = "search";
+  if (prevFilter === "clipboard" || prevFilter === "fulltext") {
+    state.filterType = "";
+    if (!skipHostPost) postToAhk({ type: "setFilter", filterType: "", keyword: state.keyword || "" });
+  }
 }
 
 function syncModeSections() {
   const mode = getUIMode();
-  const secCats = document.getElementById("section-web-cats");
-  const secEng = document.getElementById("section-engines");
-  const resultsFilters = document.getElementById("results-local-filters");
   const resultsCard = document.getElementById("results-card");
   const previewColumn = document.getElementById("local-preview-column");
   const cliWorkspace = document.getElementById("cli-workspace");
   const layout = document.getElementById("layout");
-  if (secCats) secCats.classList.toggle("hidden", mode !== "web");
-  if (secEng) secEng.classList.toggle("hidden", mode !== "web");
-  if (resultsFilters) resultsFilters.classList.toggle("hidden", mode !== "local");
+  const isSearchResults = mode === "local" || mode === "clipboard" || mode === "fulltext";
   if (resultsCard) resultsCard.classList.toggle("hidden", mode === "cli" || mode === "web");
   if (previewColumn) previewColumn.classList.toggle("hidden", mode === "cli" || mode === "web");
   if (cliWorkspace) cliWorkspace.classList.toggle("hidden", mode !== "cli");
   if (layout) layout.classList.toggle("sc-cli-active", mode === "cli");
   document.body.classList.toggle("sc-cli-layout", mode === "cli");
-  const drawer = document.getElementById("filter-drawer");
-  if (drawer) {
-    drawer.classList.toggle("sc-mode-local", mode === "local");
-    drawer.classList.toggle("sc-mode-web", mode === "web");
-    drawer.classList.toggle("sc-mode-cli", mode === "cli");
-  }
   if (mode === "cli") scheduleSyncCliWorkspace(true);
   if (mode === "cli") unmountInlinePreview();
-  else mountInlinePreview();
+  else if (isSearchResults) mountInlinePreview();
+  else unmountInlinePreview();
+}
+
+function getModeBarItems() {
+  const items = [
+    { id: "local", label: "本地搜索", desc: "文件、配置与提示词库" },
+    { id: "clipboard", label: "剪贴板", desc: "复制历史与时间线" },
+    { id: "fulltext", label: "全文搜索", desc: "索引检索" },
+    { id: "web", label: "联网搜索", desc: "大模型与搜索引擎" },
+    { id: "cli", label: "终端 CLI", desc: "ttyd 多终端" }
+  ];
+  return items.filter((m) => m.id !== "web" || !SC_WEB_SEARCH_HIDDEN);
 }
 
 function renderModeBar() {
   const bar = document.getElementById("mode-bar");
   if (!bar) return;
   const mode = getUIMode();
-  const modes = [
-    { id: "local", label: "本地搜索", desc: "文件、剪贴板、配置" },
-    { id: "web", label: "联网搜索", desc: "大模型与搜索引擎" },
-    { id: "cli", label: "终端 CLI", desc: "ttyd 多标签终端" }
-  ];
-  bar.classList.remove("sc-mode-bar-duo");
+  const modes = getModeBarItems();
+  bar.classList.remove("sc-mode-bar-duo", "sc-mode-bar-trio", "sc-mode-bar-quad", "sc-mode-bar-quint");
+  if (modes.length >= 5) bar.classList.add("sc-mode-bar-quint");
+  else if (modes.length === 4) bar.classList.add("sc-mode-bar-quad");
+  else if (modes.length === 3) bar.classList.add("sc-mode-bar-trio");
+  else if (modes.length === 2) bar.classList.add("sc-mode-bar-duo");
   bar.innerHTML = "";
   modes.forEach((m) => {
     const btn = document.createElement("button");
@@ -4598,11 +5280,52 @@ function renderModeBar() {
   });
 }
 
+const scModeResultsCache = {};
+
+function scCacheModeResults(mode) {
+  const m = normalizeUiMode(mode);
+  if (m !== "local" && m !== "clipboard" && m !== "fulltext") return;
+  scModeResultsCache[m] = {
+    keyword: String(state.keyword || ""),
+    filterType: String(state.filterType || ""),
+    resultsRaw: Array.isArray(state.resultsRaw) ? state.resultsRaw.slice() : [],
+    results: Array.isArray(state.results) ? state.results.slice() : [],
+    hasMore: !!state.hasMore,
+  };
+}
+
+function scRestoreModeResultsCache(mode) {
+  const m = normalizeUiMode(mode);
+  const snap = scModeResultsCache[m];
+  if (!snap) return false;
+  if (String(snap.keyword || "") !== String(state.keyword || "")) return false;
+  if (m === "local" && String(snap.filterType || "") !== String(state.filterType || "")) return false;
+  if (!(snap.resultsRaw || []).length) return false;
+  state.resultsRaw = snap.resultsRaw.slice();
+  state.results = snap.results.slice();
+  state.hasMore = !!snap.hasMore;
+  return true;
+}
+
+function kickModeResultsRefresh(mode, skipHostPost, force) {
+  if (skipHostPost) return;
+  const m = normalizeUiMode(mode);
+  if (m !== "local" && m !== "clipboard" && m !== "fulltext") return;
+  const kw = String(state.keyword || "").trim();
+  if (kw) {
+    runSearchNow();
+    return;
+  }
+  if (m === "local") {
+    scRequestSearchHomeRefresh(!!force);
+  } else if (m === "clipboard") {
+    postToAhk({ type: "reloadBlankHome" });
+  }
+}
+
 function setUIMode(mode, persist, skipHostPost, skipCategoryReset) {
-  let m = "local";
-  if (mode === "cli") m = "cli";
-  else if (mode === "web" && !SC_WEB_SEARCH_HIDDEN) m = "web";
-  else if (mode === "local") m = "local";
+  const prevMode = getUIMode();
+  const m = normalizeUiMode(mode);
   const searchInput = document.getElementById("search");
   if (!skipHostPost) {
     if (m === "cli") {
@@ -4615,11 +5338,36 @@ function setUIMode(mode, persist, skipHostPost, skipCategoryReset) {
     }
   }
   state.uiMode = m;
-  if (persist) {
-    try { localStorage.setItem(SC_UI_MODE_KEY, m); } catch (_) {}
+  if (m !== "clipboard" && state.clipboardViewFilter !== "all") {
+    state.clipboardViewFilter = "all";
   }
+  if (prevMode === "clipboard" && m !== "clipboard") {
+    state.loading = false;
+    state.loadingTier = "";
+    state.clipboardHomeLock = false;
+    state.statusLine = "";
+  }
+  rememberUiModePref(m, persist);
   if (!skipHostPost) {
     try { postToAhk({ type: "setUiMode", mode: m }); } catch (_) {}
+  }
+  if (!skipCategoryReset) bridgeUiModeFilterType(m, skipHostPost);
+  const modeFamilyChanged =
+    prevMode !== m
+    && (
+      prevMode === "clipboard" || m === "clipboard"
+      || prevMode === "fulltext" || m === "fulltext"
+      || prevMode === "local" || m === "local"
+    );
+  if (modeFamilyChanged && prevMode !== m) {
+    scCacheModeResults(prevMode);
+    const restored = scRestoreModeResultsCache(m);
+    if (!restored) {
+      state.resultsRaw = [];
+      state.results = [];
+    }
+    state.loading = !restored && (m === "local" || m === "clipboard" || (m === "fulltext" && !isFulltextIndexReady()));
+    if (!skipHostPost) kickModeResultsRefresh(m, false, !restored);
   }
   if (m === "cli") {
     setCliTerminalFocusLock(true);
@@ -4633,7 +5381,7 @@ function setUIMode(mode, persist, skipHostPost, skipCategoryReset) {
     setActiveCliFrame(getActiveCliEngine());
   } else {
     setCliTerminalFocusLock(false);
-    if (searchInput) {
+    if (searchInput && m !== "cli") {
       try { searchInput.focus(); } catch (_) {}
     }
     if (!skipHostPost && !skipCategoryReset) {
@@ -4651,31 +5399,13 @@ function setUIMode(mode, persist, skipHostPost, skipCategoryReset) {
   }
   renderModeBar();
   syncModeSections();
-  syncFilterDrawerSummary();
-  syncFooterHint();
+  syncComposeChrome();
   renderCliEngineTabs();
   renderCategories();
   renderEngines();
-  if (m === "local") {
+  if (m === "local" || m === "clipboard" || m === "fulltext") {
     renderResults();
-    if (!skipHostPost && !state.keyword && !(state.resultsRaw || []).length) {
-      scRequestSearchHomeRefresh();
-    }
-  }
-  if (searchInput) {
-    const b = getComposeBindings();
-    if (m === "cli") {
-      searchInput.placeholder = "输入提示词，" + formatComposeChordLabel(b.cli_send) + " 发送到下方终端（点击快捷键条可改）";
-    } else if (m === "web") {
-      searchInput.placeholder = "输入关键词，选引擎后 " + formatComposeChordLabel(b.local_run) + " 并发网页搜索";
-    } else {
-      searchInput.placeholder = "搜索本地结果，" + formatComposeChordLabel(b.local_run) + " 搜索";
-    }
-  }
-  const drawer = document.getElementById("filter-drawer");
-  if (drawer) {
-    if (m === "web" && drawer.classList.contains("collapsed")) setFilterCollapsed(false, false);
-    else if (drawer.classList.contains("collapsed")) setFilterCollapsed(false, false);
+    if (m === "fulltext") requestFulltextStatus(false);
   }
   if (!skipHostPost) {
     if (m === "cli") {
@@ -4705,35 +5435,62 @@ function setUIMode(mode, persist, skipHostPost, skipCategoryReset) {
   }
 }
 
-function syncFilterDrawerSummary() {
-  const el = document.getElementById("filter-drawer-summary");
-  if (!el) return;
-  const mode = getUIMode();
-  if (mode === "local") {
-    const ft = String(state.filterType || "");
-    const chip = (state.filters || []).find((f) => f && f.key === ft);
-    if (ft === "clipboard") {
-      el.textContent = "本地搜索 · 剪贴板时间线";
-    } else if (chip && chip.text) {
-      el.textContent = "本地搜索 · " + chip.text;
-    } else {
-      el.textContent = "本地搜索";
-    }
-    return;
+function syncFilterDrawerSummary() {}
+
+function getFilterCollapsedPref() {
+  return false;
+}
+
+function syncFilterDrawerUi() {}
+
+function setFilterCollapsed() {}
+
+function initComposeClipFilters() {
+  const wrap = document.getElementById("compose-clip-filters");
+  if (!wrap) return;
+  wrap.addEventListener("click", (e) => {
+    const btn = e.target && e.target.closest ? e.target.closest("[data-clip-view]") : null;
+    if (!btn || getUIMode() !== "clipboard") return;
+    e.preventDefault();
+    const next = String(btn.getAttribute("data-clip-view") || "all");
+    if (state.clipboardViewFilter === next) return;
+    state.clipboardViewFilter = next;
+    renderClipComposeFilters();
+    renderResults();
+    syncResultCountLabel();
+  });
+}
+
+function initFulltextContextControls() {
+  const toggleBtn = document.getElementById("btn-ft-ctx-toggle");
+  const settingsBtn = document.getElementById("btn-ft-ctx-settings");
+  if (toggleBtn) {
+    toggleBtn.addEventListener("click", () => {
+      const ft = state.fulltext || {};
+      const act = ft.running ? "stop" : "start";
+      postToAhk({ type: "fulltextControl", control: act });
+      requestFulltextStatus(true);
+    });
   }
-  if (mode === "cli") {
-    const n = (state.selectedEngines || []).length;
-    el.textContent = n ? ("终端 CLI · " + n + " 个引擎") : "终端 CLI";
-    return;
+  if (settingsBtn) {
+    settingsBtn.addEventListener("click", () => {
+      postToAhk({ type: "openSettingsPanel", defaultStartTab: "search" });
+    });
   }
-  if (mode === "web") {
-    const cat = (state.categories || []).find((c) => c && c.key === state.currentCategoryKey);
-    const n = (state.selectedEngines || []).length;
-    const catLabel = cat && cat.text ? cat.text : "联网";
-    el.textContent = n ? ("联网搜索 · " + catLabel + " · " + n + " 个引擎") : ("联网搜索 · " + catLabel);
-    return;
+}
+
+function initComposeStack() {
+  loadUIModePref();
+  const ft = String(state.filterType || "");
+  if ((ft === "clipboard" || ft === "fulltext") && (state.uiMode === "local" || !state.uiMode)) {
+    state.uiMode = ft;
   }
-  el.textContent = "本地搜索";
+  initComposeClipFilters();
+  initFulltextContextControls();
+  setUIMode(getUIMode(), false, true);
+  renderModeBar();
+  syncModeSections();
+  syncComposeChrome();
 }
 
 function cliPortForEngine(engine) {
@@ -5199,7 +5956,7 @@ function initCliTerminalControls() {
   document.addEventListener("pointerdown", (e) => {
     if (getUIMode() !== "cli") return;
     const t = e.target;
-    if (t && t.closest && (t.closest(".cli-frame-stack") || t.closest("#cli-engine-tabs"))) {
+    if (t && t.closest && (t.closest(".cli-frame-stack") || t.closest("#cli-engine-tabs") || t.closest("#compose-context-cli"))) {
       setCliTerminalFocusLock(true);
       if (t.closest(".cli-frame-stack")) {
         focusCliTerminalFrame();
@@ -5263,63 +6020,8 @@ function handleTtydHostMessage(payload) {
   return false;
 }
 
-function getFilterCollapsedPref() {
-  try {
-    const v = localStorage.getItem(SC_FILTER_COLLAPSED_KEY);
-    if (v === "1") return true;
-    if (v === "0") return false;
-  } catch (_) {}
-  return true;
-}
-
-function syncFilterDrawerUi() {
-  const drawer = document.getElementById("filter-drawer");
-  if (!drawer) return;
-  const collapsed = drawer.classList.contains("collapsed");
-  const chevron = document.getElementById("filter-drawer-chevron");
-  const toggle = document.getElementById("btn-filter-drawer-toggle");
-  if (chevron) chevron.textContent = collapsed ? "▶" : "▼";
-  if (toggle) toggle.setAttribute("aria-expanded", collapsed ? "false" : "true");
-}
-
-function setFilterCollapsed(collapsed, persist) {
-  const drawer = document.getElementById("filter-drawer");
-  if (!drawer) return;
-  drawer.classList.toggle("collapsed", !!collapsed);
-  if (persist) {
-    try { localStorage.setItem(SC_FILTER_COLLAPSED_KEY, collapsed ? "1" : "0"); } catch (_) {}
-  }
-  syncFilterDrawerUi();
-  syncFilterDrawerSummary();
-}
-
 function initFilterDrawer() {
-  loadUIModePref();
-  setUIMode(getUIMode(), false, true);
-  const drawer = document.getElementById("filter-drawer");
-  const btn = document.getElementById("btn-filter-drawer-toggle");
-  if (!drawer) return;
-  renderModeBar();
-  syncModeSections();
-  syncFilterDrawerSummary();
-  setFilterCollapsed(getFilterCollapsedPref(), false);
-  if (btn) {
-    btn.addEventListener("click", () => {
-      setFilterCollapsed(!drawer.classList.contains("collapsed"), true);
-    });
-  }
-  let resizeTimer = 0;
-  window.addEventListener("resize", () => {
-    if (resizeTimer) clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(() => {
-      resizeTimer = 0;
-      try {
-        if (localStorage.getItem(SC_FILTER_COLLAPSED_KEY) != null) return;
-      } catch (_) {}
-      setFilterCollapsed(isScNarrow(), false);
-      syncNarrowPreview();
-    }, 120);
-  });
+  initComposeStack();
 }
 
 function getResultsMoreCollapsedPref() {
@@ -5365,9 +6067,13 @@ function initResultsMoreCollapse() {
 
 function buildDockStatusTooltip() {
   if (state.statusLine) return String(state.statusLine);
+  const mode = getUIMode();
   const n = Array.isArray(state.results) ? state.results.length : 0;
-  if (state.clipboardHomeLock || String(state.filterType || "") === "clipboard") {
+  if (mode === "clipboard") {
     return n > 0 ? ("剪贴板时间线 · " + n + " 条") : "剪贴板时间线";
+  }
+  if (mode === "fulltext") {
+    return n > 0 ? ("全文命中 · " + n + " 条") : "全文搜索";
   }
   const eng = Array.isArray(state.selectedEngines) ? state.selectedEngines.length : 0;
   const limit = state.limit || 30;
@@ -5375,11 +6081,14 @@ function buildDockStatusTooltip() {
 }
 
 function buildDockStatusCaption() {
-  if (state.clipboardHomeLock || String(state.filterType || "") === "clipboard") {
-    const n = Array.isArray(state.results) ? state.results.length : 0;
+  const mode = getUIMode();
+  const n = Array.isArray(state.results) ? state.results.length : 0;
+  if (mode === "clipboard") {
     return n > 0 ? ("剪贴板 " + n + " 条") : "剪贴板";
   }
-  const n = Array.isArray(state.results) ? state.results.length : 0;
+  if (mode === "fulltext") {
+    return n > 0 ? ("全文 " + n + " 条") : "全文搜索";
+  }
   const eng = Array.isArray(state.selectedEngines) ? state.selectedEngines.length : 0;
   if (state.statusLine) {
     const m = String(state.statusLine).match(/本地结果\s*(\d+)\s*条/);
@@ -5390,27 +6099,7 @@ function buildDockStatusCaption() {
 }
 
 function buildFtStatusCaption() {
-  const ft = state.fulltext || {};
-  const phaseMap = {
-    startup: "准备中",
-    walking: "扫描目录",
-    indexing: "建立索引",
-    idle_wait: "等待空闲",
-    ready: "索引就绪",
-    idle: "空闲"
-  };
-  const phaseRaw = String(ft.scanPhase || "").toLowerCase();
-  let phase = phaseMap[phaseRaw] || (ft.running ? "索引运行" : "空闲");
-  if (ft.running && ft.ready && phaseRaw === "indexing") phase = "建立索引";
-  else if (ft.running && ft.ready && phaseRaw !== "indexing") phase = phaseMap[phaseRaw] || "监控中";
-  const discovered = Number(ft.discoveredFiles) || 0;
-  const processed = Number(ft.processedFiles) || 0;
-  const pending = Number(ft.pendingTasks) || 0;
-  const total = Math.max(discovered, processed + pending);
-  if (ft.lastError && !ft.running) return "索引异常";
-  if (ft.running && total > 0) return phase + " " + processed + "/" + total;
-  if (ft.ready) return "索引就绪";
-  return phase;
+  return buildFulltextStatusModel(state.fulltext || {}).caption;
 }
 
 function buildFtSummaryTooltip() {
@@ -5444,7 +6133,13 @@ function syncStatusBarUi() {
   const status = document.getElementById("status");
   if (status) status.textContent = tip;
   const ftCap = document.getElementById("ft-status-cap");
-  if (ftCap) ftCap.textContent = buildFtStatusCaption();
+  if (ftCap) {
+    ftCap.textContent = buildFtStatusCaption();
+    const model = buildFulltextStatusModel(state.fulltext || {});
+    ftCap.title = model.ready && model.libraryCount > 0
+      ? model.progressText
+      : buildFtSummaryTooltip();
+  }
   const ftDot = document.getElementById("ft-summary-dot");
   if (ftDot) ftDot.title = buildFtSummaryTooltip();
   const toggleCap = document.getElementById("ft-toggle-cap");
@@ -5536,6 +6231,11 @@ function openQuickHotkeyEntry() {
     setTimeout(() => btn.classList.remove("pulse"), 280);
   }
   beginCapsHoldHint();
+  const uiMode = getUIMode();
+  if (uiMode === "clipboard" || uiMode === "fulltext") {
+    openHotkeyBindDialog("filter", uiMode, uiMode === "clipboard" ? "剪贴板" : "全文搜索");
+    return;
+  }
   const f = String(state.filterType || "");
   if (f) {
     const row = (state.filters || []).find((it) => String(it && it.key || "") === f);
@@ -5960,15 +6660,29 @@ function fulltextLooksLikePlaceholder(ft) {
   if (!ft || typeof ft !== "object") return true;
   const disc = Number(ft.discoveredFiles) || 0;
   const proc = Number(ft.processedFiles) || 0;
+  const indexed = Number(ft.indexedFiles) || 0;
+  if (disc > 0 || proc > 0 || indexed > 0) return false;
   const phase = String(ft.scanPhase || "").toLowerCase();
   const detail = String(ft.progressDetail || "");
-  return disc === 0 && proc === 0 && (!phase || phase === "idle") && (!detail || detail === "未开始扫描");
+  if (ft.running && phase !== "ready" && phase !== "idle") return true;
+  if (ft.running && (ft.ready || ft.initialScanDone)) return true;
+  if (!phase || phase === "idle" || phase === "startup") return true;
+  return (!detail || detail === "未开始扫描" || detail === "not started" || detail === "waiting to scan");
 }
 
 function applyFulltextStatus(payload) {
   const prev = state.fulltext && typeof state.fulltext === "object" ? state.fulltext : {};
   const incoming = normalizeFulltextPayload(payload || {});
   const merged = Object.assign({}, prev, incoming);
+  if ((Number(prev.discoveredFiles) || 0) > 0 && (Number(merged.discoveredFiles) || 0) === 0) {
+    merged.discoveredFiles = prev.discoveredFiles;
+  }
+  if ((Number(prev.processedFiles) || 0) > 0 && (Number(merged.processedFiles) || 0) === 0) {
+    merged.processedFiles = prev.processedFiles;
+  }
+  if ((Number(prev.indexedFiles) || 0) > 0 && (Number(merged.indexedFiles) || 0) === 0) {
+    merged.indexedFiles = prev.indexedFiles;
+  }
   if (fulltextLooksLikePlaceholder(incoming) && !fulltextLooksLikePlaceholder(prev)) {
     if ((Number(prev.discoveredFiles) || 0) > 0) merged.discoveredFiles = prev.discoveredFiles;
     if ((Number(prev.processedFiles) || 0) > 0) merged.processedFiles = prev.processedFiles;
@@ -5982,7 +6696,13 @@ function applyFulltextStatus(payload) {
       merged.progressDetail = prev.progressDetail;
     }
   }
+  if (isFulltextIndexReadyFromPayload(merged)) {
+    merged.ready = true;
+    merged.initialScanDone = true;
+    merged.lastError = "";
+  }
   state.fulltext = normalizeFulltextPayload(merged);
+  const ftModel = buildFulltextStatusModel(state.fulltext);
   const cfg = payload && payload.config && typeof payload.config === "object" ? payload.config : null;
   if (cfg) {
     let scheme = String(cfg.scanScheme || "").trim().toLowerCase();
@@ -6004,57 +6724,38 @@ function applyFulltextStatus(payload) {
     el.classList.remove("off", "active", "ready", "warn");
     el.classList.add(state.fulltext.engine_lights[idx] || "off");
   });
-  const phaseRaw = String(state.fulltext.scanPhase || "").toLowerCase();
+  const phaseRaw = ftModel.phaseRaw;
   const hasCurrentIndexingFile = !!extractIndexerPath(state.fulltext.indexing_file || "");
   const indexingActive = !!state.fulltext.running && phaseRaw === "indexing" && hasCurrentIndexingFile;
   const lightPackEl = document.querySelector(".sc-status-metrics-hidden .ft-light-pack");
   if (lightPackEl) {
     lightPackEl.classList.toggle("hidden", !indexingActive);
   }
-  const discovered = Number(state.fulltext.discoveredFiles) || 0;
-  const processed = Number(state.fulltext.processedFiles) || 0;
-  const pending = Number(state.fulltext.pendingTasks) || 0;
-  const queueCap = Number(state.fulltext.queueCapacity) || 0;
-  const queueSat = !!state.fulltext.queueSaturated;
-  const indexed = Number(state.fulltext.indexedFiles) || 0;
-  const total = Math.max(discovered, processed + pending);
-  const pct = total > 0 ? Math.max(0, Math.min(100, (processed * 100) / total)) : 0;
-  const phaseMap = {
-    startup: "准备中",
-    walking: "扫描目录",
-    indexing: "建立索引",
-    idle_wait: "等待空闲",
-    ready: "索引就绪",
-    idle: "空闲"
-  };
-  const phase = phaseMap[state.fulltext.scanPhase] || (state.fulltext.running ? "索引运行中" : "空闲");
   const mode = formatScanModeBadge(state.fulltext.scan_mode);
   const eta = formatEtaHuman(state.fulltext.etaSeconds);
   const speedTxt = state.fulltext.efficiencyText || `${state.fulltext.filesPerSec.toFixed(2)} 文件/秒`;
   const path = extractIndexerPath(state.fulltext.indexing_file || "");
   const displayName = path ? splitPathPreview(path).name : "";
-  const queueText = queueCap > 0 ? `${pending}/${queueCap}` : `${pending}`;
 
   const stateBox = document.getElementById("ft-state-box");
   if (stateBox) {
-    const stateTxt = state.fulltext.running ? `${phase}${state.fulltext.ready ? "（监控）" : "（处理中）"}` : phase;
-    stateBox.textContent = `状态: ${stateTxt}`;
-    stateBox.title = `状态含义: ${stateTxt}`;
+    stateBox.textContent = `状态: ${ftModel.stateText}`;
+    stateBox.title = `状态含义: ${ftModel.stateText}`;
   }
   const progressBox = document.getElementById("ft-progress-box");
   if (progressBox) {
-    progressBox.textContent = `进度: 已处理 ${processed} / ${total}${total > 0 ? `（${pct.toFixed(1)}%）` : ""}`;
-    progressBox.title = "进度含义: 当前轮次已处理数量 / 当前轮次总量";
+    progressBox.textContent = `进度: ${ftModel.progressText}`;
+    progressBox.title = ftModel.progressTitle || "进度含义: 当前轮次已处理数量 / 当前轮次总量";
   }
   const queueBox = document.getElementById("ft-queue-box");
   if (queueBox) {
-    queueBox.textContent = `队列: 待处理 ${queueText}${queueSat ? "（接近满载）" : ""}`;
-    queueBox.title = "队列含义: 等待被索引处理的任务数量 / 队列容量";
+    queueBox.textContent = `队列: ${ftModel.queueText}`;
+    queueBox.title = ftModel.queueTitle || "队列含义: 等待被索引处理的任务数量";
   }
   const indexedBox = document.getElementById("ft-indexed-box");
   if (indexedBox) {
-    indexedBox.textContent = `数量: 索引库累计 ${indexed} · 本轮发现 ${discovered}`;
-    indexedBox.title = "数量关系: 索引库累计=历史累计结果；本轮发现=当前轮次扫描到的候选文件，二者不必相等";
+    indexedBox.textContent = `数量: ${ftModel.quantityText}`;
+    indexedBox.title = ftModel.quantityTitle || "";
   }
   const incrementalBox = document.getElementById("ft-incremental-box");
   if (incrementalBox) {
@@ -6096,21 +6797,12 @@ function applyFulltextStatus(payload) {
   if (hintEl) {
     const alerts = Array.isArray(state.fulltext.alerts) ? state.fulltext.alerts : [];
     const hasForceRebuild = alerts.some((x) => isForceRebuildAlert(x));
-    const phaseLo = String(state.fulltext.scanPhase || "").toLowerCase();
-    const isBuilding = !!state.fulltext.running && (!state.fulltext.ready || !state.fulltext.initialScanDone) &&
-      (phaseLo === "walking" || phaseLo === "indexing" || phaseLo === "incremental_sync" || (Number(state.fulltext.pendingTasks) || 0) > 0);
-    let hint = "启停索引、扫描方案、存储目录等请在配置面板「搜索设置」内的全文索引控制台操作。";
+    let hint = ftModel.hint;
     if (hasForceRebuild) {
-      hint = "检测到索引版本升级，正在首次重建全文索引。重建期间可先用“文件”标签，全文命中会逐步完整。";
+      hint = "检测到索引版本升级，正在首次重建全文索引。重建期间可先用「文件」子标签，全文命中会逐步完整。";
       const etaFr = formatEtaHuman(state.fulltext.etaSeconds);
       if (etaFr) hint += ` 预计剩余约 ${etaFr}。`;
-    } else if (isBuilding) {
-      hint = eta
-        ? `索引构建中，预计剩余约 ${eta}。增量变更会排队重试；首次构建时可优先用「文件」子标签定位。`
-        : "索引构建中。增量变更会排队重试；首次构建时可优先用「文件」子标签定位。";
-    } else if (state.fulltext.ready && state.fulltext.indexVersion) {
-      hint = `全文索引已就绪（版本 ${state.fulltext.indexVersion}）。重建与高级参数请打开全文索引控制台。`;
-    } else if (state.fulltext.lastError) {
+    } else if (state.fulltext.lastError && !ftModel.ready) {
       hint = `索引提示：${state.fulltext.lastError}`;
     }
     const badge = discoveryBadgeHtml(state.fulltext.discoverySummary);
@@ -6128,6 +6820,12 @@ function applyFulltextStatus(payload) {
     toggleBtn.setAttribute("aria-label", toggleBtn.title);
   }
   syncStatusBarUi();
+  syncFulltextComposeContext();
+  if (getUIMode() === "fulltext") {
+    syncComposeHintStrip();
+    const list = document.getElementById("result-list");
+    if (list && !getDisplayResults().length) renderFulltextEmptyState(list);
+  }
 }
 
 function requestFulltextStatus(withConfig = false) {
@@ -6366,14 +7064,14 @@ function applyUnifiedMode(mode) {
   state.unifiedMode = m;
   if (m === "clipboard") {
     state.clipboardHomeLock = true;
-    if (getUIMode() !== "local") setUIMode("local", false);
-    state.filterType = "clipboard";
+    setUIMode("clipboard", false, false, true);
     if (prevFilter !== "clipboard") {
+      state.filterType = "clipboard";
       postToAhk({ type: "setFilter", filterType: "clipboard", keyword: state.keyword || "" });
     }
   } else {
     state.clipboardHomeLock = false;
-    if (getUIMode() !== "local") setUIMode("local", false);
+    setUIMode("local", false, false, true);
     state.filterType = "";
     if (prevFilter !== "") {
       postToAhk({ type: "setFilter", filterType: "", keyword: state.keyword || "" });
@@ -6381,9 +7079,6 @@ function applyUnifiedMode(mode) {
   }
   syncDockStatusText();
   renderFilters();
-  syncFilterDrawerSummary();
-  const drawer = document.getElementById("filter-drawer");
-  if (drawer && drawer.classList.contains("collapsed")) setFilterCollapsed(false, false);
 }
 
 function focusSearchInput() {
@@ -6422,6 +7117,11 @@ function renderClipFloatBar() {
   const bar = document.getElementById("sc-clip-float");
   const chips = document.getElementById("sc-clip-float-chips");
   if (!bar || !chips) return;
+  if (getUIMode() !== "clipboard") {
+    bar.classList.add("hidden");
+    chips.innerHTML = "";
+    return;
+  }
   const items = Array.isArray(state.recentClips) ? state.recentClips : [];
   const fresh = clipFloatHasFreshItems();
   if (!fresh || !items.length) {
@@ -6501,13 +7201,25 @@ function refreshClipFloatFromServer() {
   renderClipFloatBar();
 }
 
+function resolveHostShowUiMode(payload, triggerSource) {
+  const src = String(triggerSource || "");
+  if (src === "clipboard_hotkey") return "clipboard";
+  if (src === "fulltext_hotkey") return "fulltext";
+  if (src === "search_hotkey") return loadLastNonClipboardUiMode();
+  const hostMode = payload && payload.uiMode != null ? normalizeUiMode(payload.uiMode) : "";
+  if (hostMode && hostMode !== "clipboard") return hostMode;
+  return loadLastNonClipboardUiMode();
+}
+
 function applyHostShow(payload) {
-  if (payload && payload.clipboardHomeLock) state.clipboardHomeLock = true;
   const src = String(payload && payload.triggerSource || "");
+  if (payload && payload.clipboardHomeLock === true) state.clipboardHomeLock = true;
+  else if (payload && payload.clipboardHomeLock === false) state.clipboardHomeLock = false;
+
   if (src === "clipboard_hotkey") {
     const alreadyClip =
       state.clipboardHomeLock
-      && state.unifiedMode === "clipboard"
+      && getUIMode() === "clipboard"
       && String(state.filterType || "") === "clipboard"
       && !String(state.keyword || "").trim();
     state.clipboardHomeLock = true;
@@ -6515,33 +7227,55 @@ function applyHostShow(payload) {
       state.keyword = "";
       const input = document.getElementById("search");
       if (input) input.value = "";
-      applyUnifiedMode("clipboard");
-      postToAhk({
-        type: "searchGoRequest",
-        keyword: "",
-        offset: 0,
-        limit: effectiveSearchLimit(),
-        goType: "clipboard"
-      });
+      setUIMode("clipboard", false, true, true);
+      postToAhk({ type: "reloadBlankHome" });
+    } else {
+      renderModeBar();
+      syncModeSections();
+      syncComposeChrome();
     }
     syncDockStatusText();
     showClipFloatBar(true, true);
-    setTimeout(() => focusResultListFirstRow(), 120);
+    const focus = String(payload && payload.focus || "list");
+    if (focus === "list") setTimeout(() => focusResultListFirstRow(), 120);
+    else focusSearchInput();
     return;
   }
-  if (payload && payload.clipboardHomeLock === false) state.clipboardHomeLock = false;
-  if (payload && payload.clipboardHomeLock === true) {
-    state.clipboardHomeLock = true;
+
+  if (src === "fulltext_hotkey") {
+    state.clipboardHomeLock = false;
+    state.keyword = "";
+    const input = document.getElementById("search");
+    if (input) input.value = "";
+    setUIMode("fulltext", false, true, true);
+    syncDockStatusText();
+    refreshClipFloatFromServer();
+    focusSearchInput();
     return;
   }
-  if (state.clipboardHomeLock) return;
+
+  if (payload && payload.clipboardHomeLock === true && src !== "search_hotkey") {
+    return;
+  }
+  if (state.clipboardHomeLock && src !== "search_hotkey") return;
+
+  const targetMode = resolveHostShowUiMode(payload, src);
   state.clipboardHomeLock = false;
   state.keyword = "";
   const input = document.getElementById("search");
   if (input) input.value = "";
-  applyUnifiedMode("search");
-  postToAhk({ type: "reloadBlankHome" });
-  focusSearchInput();
+  const skipHost = src !== "search_hotkey";
+  setUIMode(targetMode, false, skipHost, true);
+  if (targetMode === "local") {
+    postToAhk({ type: "reloadBlankHome" });
+  } else if (targetMode === "fulltext") {
+    ensureFulltextBackgroundTasks();
+    scRequestSearchHomeRefresh();
+  }
+  syncDockStatusText();
+  const focus = String(payload && payload.focus || "input");
+  if (focus === "list") setTimeout(() => focusResultListFirstRow(), 120);
+  else focusSearchInput();
   refreshClipFloatFromServer();
 }
 
@@ -6955,8 +7689,9 @@ function buildSubtagDebugLine(rule) {
 function syncResultCountLabel() {
   const el = document.getElementById("result-count");
   if (!el) return;
-  const n = Array.isArray(state.results) ? state.results.length : 0;
-  const base = Array.isArray(state.resultsRaw) ? state.resultsRaw.length : n;
+  const shown = getDisplayResults();
+  const n = shown.length;
+  const base = Array.isArray(state.results) ? state.results.length : n;
   if (base !== n) {
     el.textContent = `${n} 条（共 ${base} 条）`;
   } else {
@@ -7192,12 +7927,19 @@ function renderEngines() {
 
 function renderFilters() {
   const wrap = document.getElementById("filters");
+  if (!wrap) return;
   wrap.innerHTML = "";
-  state.filters.forEach((filter) => {
+  if (getUIMode() !== "local") {
+    renderSubtagPanel();
+    updateHotkeyHighlights();
+    return;
+  }
+  getRenderableLocalFilters().forEach((filter) => {
     const hotkey = getHintHotkey("filter", filter.key);
     const el = document.createElement("button");
     el.type = "button";
-    el.className = "filter-chip hotkey-item" + (filter.key === state.filterType ? " active" : "");
+    const activeKey = String(state.filterType || "");
+    el.className = "filter-chip hotkey-item" + (String(filter.key || "") === activeKey ? " active" : "");
     el.dataset.hotkey = hotkey || "";
     el.dataset.hotkeyGroup = "filter";
     el.dataset.hotkeyValue = String(filter.key || "");
@@ -7205,17 +7947,15 @@ function renderFilters() {
     el.dataset.filterKey = filter.key || "";
     el.innerHTML = "<span class=\"filter-label\">" + escapeHtml(filter.text) + "</span>" + hotkeyHintHtml(hotkey, "filter", filter.key, filter.text);
     const applyFilter = () => {
-      if (getUIMode() !== "local") setUIMode("local", true, false, true);
       const input = document.getElementById("search");
       const keyword = input ? String(input.value || "") : String(state.keyword || "");
       state.keyword = keyword;
       const fk = String(filter.key || "");
       const nextFilter = (fk === state.filterType) ? "" : fk;
-      if (nextFilter !== "clipboard") state.clipboardHomeLock = false;
+      state.clipboardHomeLock = false;
       state.filterType = nextFilter;
       renderFilters();
-      syncFilterDrawerSummary();
-      if (getUIMode() === "local") renderResults();
+      renderResults();
       postToAhk({ type: "setFilter", filterType: nextFilter, keyword, queryId: scNextQueryId() });
     };
     let pressedHandled = false;
@@ -7380,26 +8120,27 @@ function renderResults() {
   clearResultList(list);
   disconnectLoadMoreObserver();
 
-  if (!state.results.length) {
+  const displayResults = getDisplayResults();
+  if (!displayResults.length) {
     state.expandedRow = 0;
     unmountInlinePreview();
-    const isFulltextFilter = resolveFilterKey() === "fulltext";
-    const inTransition = isFulltextFilter && Date.now() < Number(state.fulltextEmptyTransitionUntil || 0);
-    const emptyClass = "empty" + (inTransition ? " empty-transition" : "");
-    const lead = inTransition
-      ? "<span class=\"empty-lead\"><span class=\"empty-dot\"></span>全文搜索视图已切换，等待结果更新…</span><br>"
-      : "";
-    const skel = state.loading ? buildSkeletonListHtml(7) : "";
-    list.innerHTML =
-      "<div class=\"" + emptyClass + "\">" + lead + "暂无结果。<br>你可以在输入框输入关键词搜索本地内容，或选择引擎后执行网络搜索 / CLI 发送。</div>" +
-      skel;
+    const mode = getUIMode();
+    if (mode === "fulltext") {
+      renderFulltextEmptyState(list);
+      return;
+    }
+    if (mode === "clipboard") {
+      list.innerHTML = buildClipboardEmptyStateHtml();
+      return;
+    }
+    list.innerHTML = buildLocalEmptyStateHtml();
     return;
   }
 
-  if (state.selectedRow < 1 || !state.results.some((entry) => entry.row == state.selectedRow)) {
-    state.selectedRow = state.results.length ? state.results[0].row : 1;
+  if (state.selectedRow < 1 || !displayResults.some((entry) => entry.row == state.selectedRow)) {
+    state.selectedRow = displayResults.length ? displayResults[0].row : 1;
   }
-  if (state.expandedRow && !state.results.some((entry) => entry.row == state.expandedRow)) {
+  if (state.expandedRow && !displayResults.some((entry) => entry.row == state.expandedRow)) {
     state.expandedRow = 0;
     unmountInlinePreview();
   }
@@ -7495,7 +8236,9 @@ function renderResults() {
   };
 
   const audience = state.subtagAudience === "geek" ? "geek" : "newbie";
-  const showBuckets = audience === "newbie"
+  const clipFiltered = getUIMode() === "clipboard" && String(state.clipboardViewFilter || "all") !== "all";
+  const showBuckets = !clipFiltered
+    && audience === "newbie"
     && state.resultBuckets
     && Array.isArray(state.resultBuckets.priority)
     && Array.isArray(state.resultBuckets.others)
@@ -7514,11 +8257,11 @@ function renderResults() {
     list.appendChild(h2);
     state.resultBuckets.others.forEach(renderOneRow);
   } else {
-    state.results.forEach(renderOneRow);
+    displayResults.forEach(renderOneRow);
   }
 
-  if (state.results.length < 7 && state.loading) {
-    list.insertAdjacentHTML("beforeend", buildSkeletonListHtml(7 - state.results.length));
+  if (displayResults.length < 7 && state.loading) {
+    list.insertAdjacentHTML("beforeend", buildSkeletonListHtml(7 - displayResults.length));
   }
 
   if (state.hasMore) {
@@ -9041,12 +9784,19 @@ function normalizeStringListPayload(raw) {
   return normalizeListPayload(raw).map((v) => String(v || "")).filter(Boolean);
 }
 
+function isModeLevelFilterKey(key) {
+  const k = String(key || "").toLowerCase();
+  return k === "clipboard" || k === "fulltext";
+}
+
+function getRenderableLocalFilters() {
+  return (state.filters || []).filter((f) => !isModeLevelFilterKey(f && f.key));
+}
+
 function fallbackFilterPayload() {
   return [
     { key: "", text: "全部" },
     { key: "File", text: "文件" },
-    { key: "fulltext", text: "全文搜索" },
-    { key: "clipboard", text: "剪贴板" },
     { key: "template", text: "提示词" },
     { key: "config", text: "配置" },
     { key: "hotkey", text: "快捷键" },
@@ -9083,7 +9833,7 @@ function applyState(payload) {
 }
 
 function scResultsNeedDefaultSearchKick() {
-  if (state.clipboardHomeLock || state.keyword) return false;
+  if (getUIMode() === "clipboard" || state.keyword) return false;
   const rows = Array.isArray(state.resultsRaw) ? state.resultsRaw : [];
   if (!rows.length) return true;
   const hasHistory = rows.some((r) => {
@@ -9100,11 +9850,11 @@ function scResultsNeedDefaultSearchKick() {
   return false;
 }
 
-function scRequestSearchHomeRefresh() {
+function scRequestSearchHomeRefresh(force) {
   if (getUIMode() === "cli" || getUIMode() === "web") return;
-  if (state.clipboardHomeLock || state.keyword) return;
+  if (getUIMode() === "clipboard" || state.keyword) return;
   const now = Date.now();
-  if (now - _localInitKickAt < 600) return;
+  if (!force && now - _localInitKickAt < 600) return;
   _localInitKickAt = now;
   postToAhk({ type: "refreshSearchHome", queryId: scNextQueryId() });
 }
@@ -9132,21 +9882,34 @@ function applyStateNow(payload) {
   const prevFilterType = String(state.filterType || "");
   const incomingFilter = String(payload.filterType || "");
   const msgType = String(payload.type || "");
+  const activeUiMode = normalizeUiMode(state.uiMode || getUIMode());
+  const incomingHostMode = payload.uiMode != null ? normalizeUiMode(payload.uiMode) : "";
+  const staleClipboardHost =
+    !state.clipboardHomeLock
+    && activeUiMode !== "clipboard"
+    && (incomingHostMode === "clipboard" || incomingFilter === "clipboard");
+  if (staleClipboardHost) {
+    payload.uiMode = activeUiMode;
+    payload.filterType = activeUiMode === "fulltext" ? "fulltext" : "";
+  }
   const lockBlocksFilter =
     state.clipboardHomeLock
+    && activeUiMode === "clipboard"
     && incomingFilter !== "clipboard"
     && incomingFilter !== "";
   if (lockBlocksFilter) {
     payload.filterType = "clipboard";
   }
-  if (state.unifiedMode === "clipboard" && msgType === "init" && incomingFilter !== "clipboard" && incomingFilter !== "") {
+  if (activeUiMode === "clipboard" && state.unifiedMode === "clipboard" && msgType === "init" && incomingFilter !== "clipboard" && incomingFilter !== "") {
     return;
   }
   applied = true;
   if (payload.uiMode != null) {
     const um = String(payload.uiMode || "").toLowerCase();
-    if (um === "local" || um === "cli") state.uiMode = um;
+    if (um === "local" || um === "cli" || um === "clipboard" || um === "fulltext") state.uiMode = um;
     else if (um === "web" && !SC_WEB_SEARCH_HIDDEN) state.uiMode = "web";
+    state.unifiedMode = (um === "clipboard") ? "clipboard" : "search";
+    if (um !== "clipboard") state.clipboardHomeLock = false;
   }
   const incomingKeyword = String(payload.keyword || "");
   const searchEl = document.getElementById("search");
@@ -9173,11 +9936,24 @@ function applyStateNow(payload) {
       }, 0);
     }
   }
-  state.filters = normalizeListPayload(payload.filters);
+  state.filters = normalizeListPayload(payload.filters).filter((f) => !isModeLevelFilterKey(f && f.key));
   if (!state.filters.length) {
     state.filters = fallbackFilterPayload();
   }
   state.filterType = payload.filterType || "";
+  if (payload.uiMode == null || payload.uiMode === "") {
+    if (state.filterType === "clipboard") {
+      state.uiMode = "clipboard";
+    } else if (state.filterType === "fulltext") {
+      state.uiMode = "fulltext";
+      state.clipboardHomeLock = false;
+    } else if (state.uiMode === "clipboard" || state.uiMode === "fulltext") {
+      state.uiMode = "local";
+      state.clipboardHomeLock = false;
+    }
+  } else if (String(payload.uiMode || "").toLowerCase() !== "clipboard") {
+    state.clipboardHomeLock = false;
+  }
   if (state.filterType === "fulltext" && prevFilterType !== "fulltext") {
     state.fulltextEmptyTransitionUntil = Date.now() + 1200;
     ensureFulltextBackgroundTasks();
@@ -9205,7 +9981,17 @@ function applyStateNow(payload) {
   } else if ((msgType === "state" || msgType === "init") && isLocalHomeView && !incomingResults.length && prevHomeRows) {
     // debounced/重复 init 空结果不覆盖已展示的历史首页
   } else {
-    state.resultsRaw = incomingResults;
+    const viewMode = getUIMode();
+    const rejectClipboardTimeline =
+      incomingResults.length > 0
+      && incomingResults.every((r) => isClipboardTimelineRow(r))
+      && (
+        viewMode === "fulltext"
+        || (viewMode === "local" && !state.clipboardHomeLock && String(state.filterType || "") !== "clipboard")
+      );
+    if (!rejectClipboardTimeline) {
+      state.resultsRaw = incomingResults;
+    }
   }
   applySubtagResultView();
   if (payload.loadingTier != null)
@@ -9219,6 +10005,9 @@ function applyStateNow(payload) {
     state.loading = true;
   } else {
     state.loading = false;
+  }
+  if (!keepLocalDraft && (state.resultsRaw || []).length) {
+    scCacheModeResults(getUIMode());
   }
   state.hasMore = !!payload.hasMore;
   state.isCliCategory = !!payload.isCliCategory;
@@ -9265,7 +10054,7 @@ function applyStateNow(payload) {
     _lastFtUiApplyAt = Date.now();
   }
   syncResultCountLabel();
-  document.getElementById("btn-run").textContent = getUIMode() === "cli" ? "发送" : (getUIMode() === "web" ? "网页搜索" : "搜索");
+  syncComposeChrome();
   document.getElementById("btn-open-cli").style.display = state.isCliCategory ? "inline-flex" : "none";
   syncFooterHint();
   syncRecycleBadge();
@@ -9294,16 +10083,15 @@ function applyStateNow(payload) {
   renderEngines();
   renderCliEngineTabs();
   renderFilters();
-  syncFilterDrawerSummary();
+  syncComposeChrome();
   scheduleScHotkeyBindingsSyncFromState(500);
   if (getUIMode() !== "cli" && getUIMode() !== "web") {
     renderResults();
     if (msgType === "init" && scResultsNeedDefaultSearchKick()) {
-      scRequestSearchHomeRefresh();
+      scRequestSearchHomeRefresh(true);
     }
   }
   syncEngineModeButton();
-  syncFilterDrawerUi();
   syncFtDrawerSummary();
   updateChromeTopMostButton();
   const needPreviewResize = getUIMode() === "local" && (!!state.previewPath || state.expandedRow > 0);
@@ -9781,8 +10569,29 @@ if (window.chrome && window.chrome.webview) {
       postToAhk({ type: "toggleEngine", engine: payload.engine || "" });
       return;
     }
+    if (payload.type === "setUiMode") {
+      const um = normalizeUiMode(payload.mode || "local");
+      const localSubFilter = String(payload.filterType || "");
+      setUIMode(um, false, false, um !== "local" || !localSubFilter);
+      if (um === "local" && localSubFilter) {
+        state.filterType = localSubFilter;
+        renderFilters();
+        postToAhk({ type: "setFilter", filterType: localSubFilter, keyword: state.keyword || "" });
+      }
+      return;
+    }
     if (payload.type === "setFilter") {
-      postToAhk({ type: "setFilter", filterType: payload.filterType || "" });
+      const ft = String(payload.filterType || "");
+      if (ft.toLowerCase() === "fulltext") {
+        setUIMode("fulltext", false, false);
+        return;
+      }
+      if (ft.toLowerCase() === "clipboard") {
+        setUIMode("clipboard", false, false);
+        return;
+      }
+      if (ft) setUIMode("local", false, false, true);
+      postToAhk({ type: "setFilter", filterType: ft, keyword: state.keyword || "" });
       return;
     }
     if (payload.type === "setLimit") {
@@ -9899,9 +10708,18 @@ if (window.chrome && window.chrome.webview) {
     if (phase) {
       state.hostLifecycle = phase;
       if (phase === "clip_db_recovery") {
-        state.loading = true;
-        state.loadingTier = "remote";
-        state.statusLine = "剪贴板库恢复中，检索服务短暂暂停…";
+        if (getUIMode() === "clipboard") {
+          state.loading = true;
+          state.loadingTier = "remote";
+          state.statusLine = "剪贴板库恢复中，检索服务短暂暂停…";
+        }
+      } else if (phase === "open" && String(state.statusLine || "").indexOf("剪贴板库恢复") >= 0) {
+        state.loading = false;
+        state.loadingTier = "";
+        state.statusLine = "";
+        if (getUIMode() === "clipboard") {
+          postToAhk({ type: "reloadBlankHome" });
+        }
       }
     }
     return;

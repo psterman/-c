@@ -40,6 +40,12 @@ VK_Execute(cmdId) {
     cid := Trim(String(cmdId))
     if (cid = "")
         return false
+    if FuncExists("Nmer_Telemetry_Record") {
+        try Nmer_Telemetry_Record("cmd", cid, true, Map("source", "VK_Execute"))
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e)
+        }
+    }
 
     fn := ""
     try {
@@ -293,40 +299,35 @@ VK_ExecCursorHelperCmd(cmdId) {
 
             case "sc_filter_text":
                 if (_VK_H("IsSearchCenterActive"))
-                    VK_SearchCenterSetFilter("File")
+                    VK_SearchCenterSetUiModeWithFilter("local", "File")
                 executed := true
             case "sc_filter_fulltext":
                 if (_VK_H("IsSearchCenterActive"))
-                    VK_SearchCenterSetFilter("fulltext")
+                    VK_SearchCenterSetUiMode("fulltext")
                 executed := true
             case "sc_filter_clipboard":
-                if (_VK_H("IsSearchCenterActive")) {
-                    global SearchCenterFilterType, SearchCenterWebKeyword, SearchCenterCurrentLimit
-                    SearchCenterFilterType := "clipboard"
-                    try SCWV_SetUnifiedMode("clipboard", true)
-                    VK_SearchCenterSetFilter("clipboard")
-                    _SCWV_RunClipboardTimelineSearch(Trim(SearchCenterWebKeyword), 0, SearchCenterCurrentLimit)
-                }
+                if (_VK_H("IsSearchCenterActive"))
+                    VK_SearchCenterSetUiMode("clipboard")
                 executed := true
             case "sc_filter_prompt":
                 if (_VK_H("IsSearchCenterActive"))
-                    VK_SearchCenterSetFilter("template")
+                    VK_SearchCenterSetUiModeWithFilter("local", "template")
                 executed := true
             case "sc_filter_config":
                 if (_VK_H("IsSearchCenterActive"))
-                    VK_SearchCenterSetFilter("config")
+                    VK_SearchCenterSetUiModeWithFilter("local", "config")
                 executed := true
             case "sc_filter_hotkey":
                 if (_VK_H("IsSearchCenterActive"))
-                    VK_SearchCenterSetFilter("hotkey")
+                    VK_SearchCenterSetUiModeWithFilter("local", "hotkey")
                 executed := true
             case "sc_filter_function":
                 if (_VK_H("IsSearchCenterActive"))
-                    VK_SearchCenterSetFilter("function")
+                    VK_SearchCenterSetUiModeWithFilter("local", "function")
                 executed := true
             case "sc_filter_pinned":
                 if (_VK_H("IsSearchCenterActive"))
-                    VK_SearchCenterSetFilter("pinned")
+                    VK_SearchCenterSetUiModeWithFilter("local", "pinned")
                 executed := true
             case "sc_compose_send":
                 if (_VK_H("IsSearchCenterActive"))
@@ -399,7 +400,7 @@ VK_ExecCursorHelperCmd(cmdId) {
                     VK_HubCapsuleAction("set_trigger_capslock")
                     executed := true
                 } else if (_VK_H("IsSearchCenterActive")) {
-                    VK_SearchCenterSetFilter("template")
+                    VK_SearchCenterSetUiModeWithFilter("local", "template")
                     executed := true
                 } else {
                     HandleDynamicHotkey(HotkeyC != "" ? HotkeyC : "c", "C")
@@ -416,8 +417,7 @@ VK_ExecCursorHelperCmd(cmdId) {
                     VK_ClipboardSetContinuousPaste(true)
                     executed := true
                 } else if (_VK_H("IsSearchCenterActive")) {
-                    VK_SearchCenterSetFilter("clipboard")
-                    try SCWV_SetUnifiedMode("clipboard", true)
+                    VK_SearchCenterSetUiMode("clipboard")
                     executed := true
                 } else if GetKeyState("Shift", "P") {
                     _VK_H("CapsLockPaste")
@@ -437,7 +437,7 @@ VK_ExecCursorHelperCmd(cmdId) {
                     VK_HubCapsuleAction("set_trigger_double")
                     executed := true
                 } else if (_VK_H("IsSearchCenterActive")) {
-                    VK_SearchCenterSetFilter("clipboard")
+                    VK_SearchCenterSetUiMode("clipboard")
                     executed := true
                 } else {
                     HandleDynamicHotkey(HotkeyX != "" ? HotkeyX : "x", "X")
@@ -491,7 +491,7 @@ VK_ExecCursorHelperCmd(cmdId) {
                     VK_PromptQuickPadAction("capture_load_selected")
                     executed := true
                 } else if (_VK_H("IsSearchCenterActive")) {
-                    VK_SearchCenterSetFilter("File")
+                    VK_SearchCenterSetUiModeWithFilter("local", "File")
                     executed := true
                 } else {
                     HandleDynamicHotkey(HotkeyZ != "" ? HotkeyZ : "z", "Z")
@@ -871,6 +871,21 @@ VK_SearchCenterSetFilter(filterType) {
     return VK_SearchCenterPost('{"type":"setFilter","filterType":"' . filterType . '"}')
 }
 
+VK_SearchCenterSetUiMode(mode) {
+    m := StrLower(Trim(String(mode)))
+    if (m = "")
+        m := "local"
+    return VK_SearchCenterPost('{"type":"setUiMode","mode":"' . m . '"}')
+}
+
+VK_SearchCenterSetUiModeWithFilter(mode, filterType) {
+    m := StrLower(Trim(String(mode)))
+    if (m = "")
+        m := "local"
+    ft := Trim(String(filterType))
+    return VK_SearchCenterPost('{"type":"setUiMode","mode":"' . m . '","filterType":"' . ft . '"}')
+}
+
 VK_SearchCenterToggleEngine(engineKey) {
     return VK_SearchCenterPost('{"type":"toggleEngine","engine":"' . engineKey . '"}')
 }
@@ -1120,6 +1135,12 @@ VK_NoteLastChFromCapsLockKey(keyLower) {
             VK_NoteLastExecutedId(bid)
             if FuncExists("ChordUsage_Record")
                 ChordUsage_Record(bid)
+            if FuncExists("Nmer_Telemetry_Record") {
+                try Nmer_Telemetry_Record("cmd", bid, true, Map("source", "VK_NoteLastChFromCapsLockKey"))
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e)
+                }
+            }
             return
         }
     }
@@ -1136,6 +1157,12 @@ VK_NoteLastChFromCapsLockKey(keyLower) {
         VK_NoteLastExecutedId(cmdId)
         if FuncExists("ChordUsage_Record")
             ChordUsage_Record(cmdId)
+        if FuncExists("Nmer_Telemetry_Record") {
+            try Nmer_Telemetry_Record("cmd", cmdId, true, Map("source", "VK_NoteLastChFromCapsLockKey"))
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e)
+            }
+        }
     }
 }
 

@@ -43,8 +43,11 @@ Nmer_ExportMigrationPack(opts := "") {
             exportOpts["groups"] := opts["groups"]
     }
     groups := Nmer_ResolveMigrationGroups(exportOpts)
-    if !groups.Length
+    if !groups.Length {
+        if FuncExists("Nmer_Telemetry_Record")
+            try Nmer_Telemetry_Record("migration", "export", false, Map("source", "Nmer_ExportMigrationPack", "ok", false))
         return Map("ok", false, "error", "请至少选择一项迁移内容")
+    }
     exportOpts["groups"] := groups
     if (outZip = "") {
         diagDir := FuncExists("Nmer_DiagnosticsDir") ? Nmer_DiagnosticsDir() : (Nmer_RepoRoot() . "\Cache\diagnostics")
@@ -56,6 +59,8 @@ Nmer_ExportMigrationPack(opts := "") {
     optsFile := ""
     try optsFile := Nmer_WriteMigrationOptionsJson(exportOpts)
     catch as e {
+        if FuncExists("Nmer_Telemetry_Record")
+            try Nmer_Telemetry_Record("migration", "export", false, Map("source", "Nmer_ExportMigrationPack", "ok", false))
         return Map("ok", false, "error", e.Message)
     }
     args := '-Root "' . Nmer_RepoRoot() . '" -OptionsJson "' . optsFile . '" -OutZip "' . outZip . '"'
@@ -72,38 +77,62 @@ Nmer_ExportMigrationPack(opts := "") {
         catch as _e {
             NmerCatch(A_ThisFunc, _e)
         }
+    if FuncExists("Nmer_Telemetry_Record")
+        try Nmer_Telemetry_Record("migration", "export", !!r.Get("ok", false), Map("source", "Nmer_ExportMigrationPack", "ok", !!r.Get("ok", false)))
     return r
 }
 
 Nmer_PreviewMigrationPack(zipPath) {
     zipPath := Trim(String(zipPath))
-    if (zipPath = "" || !FileExist(zipPath))
+    if (zipPath = "" || !FileExist(zipPath)) {
+        if FuncExists("Nmer_Telemetry_Record")
+            try Nmer_Telemetry_Record("migration", "preview", false, Map("source", "Nmer_PreviewMigrationPack", "ok", false))
         return Map("ok", false, "error", "迁移包文件不存在")
+    }
     previewOut := A_Temp . "\nmer_migration_preview_" . A_TickCount . ".json"
     args := '-ZipPath "' . zipPath . '" -Root "' . Nmer_RepoRoot() . '" -OutJson "' . previewOut . '"'
     r := Nmer_RunMigrationPs1("Nmer-PreviewMigration.ps1", args)
-    if !r.Get("ok", false)
+    if !r.Get("ok", false) {
+        if FuncExists("Nmer_Telemetry_Record")
+            try Nmer_Telemetry_Record("migration", "preview", false, Map("source", "Nmer_PreviewMigrationPack", "ok", false))
         return Map("ok", false, "error", r.Get("error", "预览失败"))
-    if !FileExist(previewOut)
+    }
+    if !FileExist(previewOut) {
+        if FuncExists("Nmer_Telemetry_Record")
+            try Nmer_Telemetry_Record("migration", "preview", false, Map("source", "Nmer_PreviewMigrationPack", "ok", false))
         return Map("ok", false, "error", "无法读取迁移包预览")
+    }
     try {
         raw := FileRead(previewOut, "UTF-8")
         FileDelete(previewOut)
-        if !FuncExists("Jxon_Load")
+        if !FuncExists("Jxon_Load") {
+            if FuncExists("Nmer_Telemetry_Record")
+                try Nmer_Telemetry_Record("migration", "preview", false, Map("source", "Nmer_PreviewMigrationPack", "ok", false))
             return Map("ok", false, "error", "Jxon_Load 不可用")
+        }
         parsed := Jxon_Load(raw)
-        if !(parsed is Map)
+        if !(parsed is Map) {
+            if FuncExists("Nmer_Telemetry_Record")
+                try Nmer_Telemetry_Record("migration", "preview", false, Map("source", "Nmer_PreviewMigrationPack", "ok", false))
             return Map("ok", false, "error", "预览 JSON 无效")
+        }
+        if FuncExists("Nmer_Telemetry_Record")
+            try Nmer_Telemetry_Record("migration", "preview", true, Map("source", "Nmer_PreviewMigrationPack", "ok", true))
         return parsed
     } catch as e2 {
+        if FuncExists("Nmer_Telemetry_Record")
+            try Nmer_Telemetry_Record("migration", "preview", false, Map("source", "Nmer_PreviewMigrationPack", "ok", false))
         return Map("ok", false, "error", e2.Message)
     }
 }
 
 Nmer_ImportMigrationPack(zipPath, force := true) {
     zipPath := Trim(String(zipPath))
-    if (zipPath = "" || !FileExist(zipPath))
+    if (zipPath = "" || !FileExist(zipPath)) {
+        if FuncExists("Nmer_Telemetry_Record")
+            try Nmer_Telemetry_Record("migration", "import", false, Map("source", "Nmer_ImportMigrationPack", "ok", false))
         return Map("ok", false, "error", "迁移包文件不存在")
+    }
     args := '-ZipPath "' . zipPath . '" -Root "' . Nmer_RepoRoot() . '"'
     if force
         args .= " -Force"
@@ -116,6 +145,8 @@ Nmer_ImportMigrationPack(zipPath, force := true) {
             }
         r["postImportNote"] := "导入完成。请打开「智能定制」重新填写 API Key，并建议重启牛马。"
     }
+    if FuncExists("Nmer_Telemetry_Record")
+        try Nmer_Telemetry_Record("migration", "import", !!r.Get("ok", false), Map("source", "Nmer_ImportMigrationPack", "ok", !!r.Get("ok", false)))
     return r
 }
 

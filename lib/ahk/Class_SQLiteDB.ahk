@@ -324,7 +324,7 @@ Class SQLiteDB {
          This.ErrorCode := RC
          Return False
       }
-		ST := This._Statement()
+		ST := SQLiteDB._Statement()
       ST.ParamCount := DllCall("SQlite3.dll\sqlite3_bind_parameter_count", "Ptr", Stmt, "Cdecl Int")
       ST._Handle := Stmt
       ST._DB := This

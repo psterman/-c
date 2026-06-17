@@ -158,6 +158,12 @@ Nmer_CopyRecentTraceToClipboard(maxLines := 60) {
 }
 
 Nmer_ExportDiagnosticsBundle(*) {
+    if FuncExists("Nmer_Telemetry_Record") {
+        try Nmer_Telemetry_Record("diagnostics", "export_bundle_start", true, Map("trigger", "manual"))
+        catch as _e {
+            NmerDiag_CallOptional("NmerCatch", A_ThisFunc, _e)
+        }
+    }
     if FuncExists("Nmer_CollectHealthSnapshot") {
         try NmerDiag_CallOptional("Nmer_CollectHealthSnapshot", "export_bundle")
         catch as _e0 {
@@ -174,6 +180,12 @@ Nmer_ExportDiagnosticsBundle(*) {
     try DirCreate(outDir)
     catch as _e {
         NmerDiag_CallOptional("NmerCatch", A_ThisFunc, _e)
+        if FuncExists("Nmer_Telemetry_Record") {
+            try Nmer_Telemetry_Record("diagnostics", "export_bundle", false, Map("error", "mkdir_failed"))
+            catch as _e2 {
+                NmerDiag_CallOptional("NmerCatch", A_ThisFunc, _e2)
+            }
+        }
         try TrayTip("牛马", "无法创建诊断目录", "Iconx 2")
         return false
     }
@@ -230,6 +242,12 @@ Nmer_ExportDiagnosticsBundle(*) {
     try Run('explorer.exe /select,"' . outDir . '"')
     catch as _e6 {
         NmerDiag_CallOptional("NmerCatch", A_ThisFunc, _e6)
+    }
+    if FuncExists("Nmer_Telemetry_Record") {
+        try Nmer_Telemetry_Record("diagnostics", "export_bundle", true, Map("files", copied, "trigger", "manual"))
+        catch as _e7 {
+            NmerDiag_CallOptional("NmerCatch", A_ThisFunc, _e7)
+        }
     }
     return true
 }

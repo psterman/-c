@@ -88,12 +88,16 @@ global g_SCWV_CurrentToken := 0
 global g_SCWV_ChannelTokens := Map("openclose", 0, "search", 0, "menu", 0, "preview", 0)
 global g_SCWV_ParentTxnID := 0
 global g_SCWV_UnifiedMode := "search" ; search | clipboard
-global g_SCWV_PendingTriggerSource := "" ; search_hotkey | clipboard_hotkey
+global g_SCWV_PendingTriggerSource := "" ; search_hotkey | clipboard_hotkey | fulltext_hotkey
 global g_SCWV_ClipboardHomeLock := false ; CapsLock+V 会话内禁止回落到搜索历史空白页
-global g_SCWV_UiMode := "local" ; local | web | cli（搜索中心 UI 模式）
+global g_SCWV_UiMode := "local" ; local | clipboard | fulltext | web | cli（搜索中心 UI 模式）
 global g_SCWV_ClipboardHotMaxAgeSec := 180
 global g_SCWV_PostHostShowScheduled := false
 global g_SCWV_LastClipboardTimelineTick := 0
+global g_SCWV_ClipboardTimelineScheduled := false
+global g_SCWV_ClipboardTimelineRetries := 0
+global g_SCWV_ClipboardDbEnsureRetries := 0
+global g_SCWV_ClipboardTimelineGen := 0
 global g_SCWV_PhaseLastChanged := 0
 global g_SCWV_CloseAfterReady := false
 global g_SCWV_AntiHangTimerArmed := false
@@ -440,6 +444,18 @@ SCWV_SubmitIntent(intent, priority := 50, payload := 0) {
         normalized := "FORCE_RESET"
     if (normalized = "")
         return
+    if FuncExists("Nmer_Telemetry_Record") {
+        telemAction := ""
+        if (normalized = "OPEN")
+            telemAction := "search_center_intent_open"
+        else if (normalized = "CLOSE")
+            telemAction := "search_center_intent_close"
+        else if (normalized = "FORCE_RESET")
+            telemAction := "search_center_intent_force_reset"
+        if (telemAction != "") {
+            try Nmer_Telemetry_Record("surface", telemAction, true, Map("source", "SCWV_SubmitIntent"))
+        }
+    }
     if (g_SCWV_CloseCommitActive && A_TickCount >= g_SCWV_CloseCommitUntilTick) {
         ; 关闭提交窗口已过期，立即释放，避免 OPEN 被永久拦截
         g_SCWV_CloseCommitActive := false
@@ -694,6 +710,16 @@ SCWV_TransitionTo(targetPhase, reason := "", payload := 0, priority := 50) {
     ts := StrUpper(Trim(String(targetPhase)))
     if !(ts = SCWV_PHASE_OPEN || ts = SCWV_PHASE_CLOSED)
         return false
+    if FuncExists("Nmer_Telemetry_Record") {
+        try {
+            if (ts = SCWV_PHASE_OPEN)
+                Nmer_Telemetry_Record("surface", "search_center_transition_open", true, Map("source", "SCWV_TransitionTo"))
+            else
+                Nmer_Telemetry_Record("surface", "search_center_transition_close", true, Map("source", "SCWV_TransitionTo"))
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e)
+        }
+    }
     cur := StrUpper(Trim(String(g_SCWV_CurrentPhase)))
     if !(g_SCWV_TransitionCtx is Map)
         g_SCWV_TransitionCtx := Map("allow", false)
@@ -807,6 +833,58 @@ SCWV_GetUnifiedMode() {
     return (m = "clipboard") ? "clipboard" : "search"
 }
 
+_SCWV_NormalizeUiMode(mode) {
+    m := StrLower(Trim(String(mode)))
+    if (m = "cli")
+        return "cli"
+    if (m = "web")
+        return "web"
+    if (m = "clipboard")
+        return "clipboard"
+    if (m = "fulltext")
+        return "fulltext"
+    return "local"
+}
+
+_SCWV_TriggerSourceUiMode(triggerSource) {
+    ts := StrLower(Trim(String(triggerSource)))
+    if (ts = "clipboard_hotkey")
+        return "clipboard"
+    if (ts = "fulltext_hotkey")
+        return "fulltext"
+    return ""
+}
+
+_SCWV_ApplyOpenUiMode(uiMode, triggerSource := "") {
+    global g_SCWV_UiMode, SearchCenterFilterType, g_SCWV_ClipboardHomeLock, g_SCWV_UnifiedMode
+    um := _SCWV_NormalizeUiMode(uiMode)
+    tsMode := _SCWV_TriggerSourceUiMode(triggerSource)
+    if (tsMode != "")
+        um := tsMode
+    g_SCWV_UiMode := um
+    if (um = "clipboard") {
+        SearchCenterFilterType := "clipboard"
+        g_SCWV_ClipboardHomeLock := (Trim(String(triggerSource)) = "clipboard_hotkey")
+        g_SCWV_UnifiedMode := "clipboard"
+    } else if (um = "fulltext") {
+        SearchCenterFilterType := "fulltext"
+        g_SCWV_ClipboardHomeLock := false
+        g_SCWV_UnifiedMode := "search"
+    } else if (um = "local") {
+        g_SCWV_ClipboardHomeLock := false
+        g_SCWV_UnifiedMode := "search"
+        if (SearchCenterFilterType = "clipboard" || SearchCenterFilterType = "fulltext")
+            SearchCenterFilterType := ""
+    } else {
+        g_SCWV_ClipboardHomeLock := false
+        if (um = "web" || um = "cli") {
+            if (SearchCenterFilterType = "clipboard" || SearchCenterFilterType = "fulltext")
+                SearchCenterFilterType := ""
+            g_SCWV_UnifiedMode := "search"
+        }
+    }
+}
+
 SCWV_IsClipboardUnifiedActive() {
     return (SCWV_IsVisible() && SCWV_GetUnifiedMode() = "clipboard")
 }
@@ -834,6 +912,8 @@ _SCWV_ApplyOpenWhileVisible(payload := 0) {
             im := StrLower(Trim(String(payload["initialMode"])))
             if (im = "clipboard")
                 ts := "clipboard_hotkey"
+            else if (im = "fulltext")
+                ts := "fulltext_hotkey"
             else if (ts = "")
                 ts := "search_hotkey"
         }
@@ -843,16 +923,29 @@ _SCWV_ApplyOpenWhileVisible(payload := 0) {
     g_SCWV_PendingTriggerSource := ts
     g_SCWV_ClipboardHomeLock := (ts = "clipboard_hotkey")
     if (ts = "clipboard_hotkey") {
-        SearchCenterFilterType := "clipboard"
+        _SCWV_ApplyOpenUiMode("clipboard", ts)
         SearchCenterWebKeyword := ""
         try SCWV_SetUnifiedMode("clipboard", true)
         SetTimer((*) => _SCWV_RunClipboardTimelineSearch("", 0, SearchCenterCurrentLimit), -20)
         SetTimer(SCWV_PostHostShow, -80)
         return
     }
-    g_SCWV_ClipboardHomeLock := false
+    if (ts = "fulltext_hotkey") {
+        _SCWV_ApplyOpenUiMode("fulltext", ts)
+        SearchCenterWebKeyword := ""
+        try SCWV_SetUnifiedMode("search", true)
+        try SCProvider_FullTextAdmin_MaybePost(true)
+        _SCWV_RefreshLocalHomeView()
+        SetTimer(SCWV_PostHostShow, -80)
+        try SCWV_RequestFocusInput()
+        return
+    }
+    global g_SCWV_UiMode
+    um := _SCWV_NormalizeUiMode(g_SCWV_UiMode)
+    if (um = "clipboard" || um = "fulltext")
+        um := "local"
+    _SCWV_ApplyOpenUiMode(um, ts)
     g_SCWV_PendingTriggerSource := "search_hotkey"
-    try SearchCenterFilterType := ""
     try SCWV_SetUnifiedMode("search", true)
     if (Trim(SearchCenterWebKeyword) = "")
         _SCWV_ScheduleLocalHomeRefresh(40)
@@ -861,18 +954,28 @@ _SCWV_ApplyOpenWhileVisible(payload := 0) {
 }
 
 SCWV_OpenUnified(mode := "search", keyword := "", triggerSource := "") {
-    global SearchCenterFilterType, SearchCenterWebKeyword, g_SCWV_PendingTriggerSource, g_SCWV_ClipboardHomeLock
+    global SearchCenterFilterType, SearchCenterWebKeyword, g_SCWV_PendingTriggerSource, g_SCWV_ClipboardHomeLock, g_SCWV_UiMode
     m := StrLower(Trim(String(mode)))
-    if (m != "clipboard")
+    if (m != "clipboard" && m != "fulltext")
         m := "search"
     ts := Trim(String(triggerSource))
-    if (ts = "")
-        ts := (m = "clipboard") ? "clipboard_hotkey" : "search_hotkey"
+    if (ts = "") {
+        if (m = "clipboard")
+            ts := "clipboard_hotkey"
+        else if (m = "fulltext")
+            ts := "fulltext_hotkey"
+        else
+            ts := "search_hotkey"
+    }
     g_SCWV_PendingTriggerSource := ts
     g_SCWV_ClipboardHomeLock := (ts = "clipboard_hotkey")
-    SCWV_SetUnifiedMode(m, false)
+    SCWV_SetUnifiedMode(m = "clipboard" ? "clipboard" : "search", false)
     if (m = "clipboard") {
         try SearchCenterFilterType := "clipboard"
+        g_SCWV_UiMode := "clipboard"
+    } else if (m = "fulltext") {
+        try SearchCenterFilterType := "fulltext"
+        g_SCWV_UiMode := "fulltext"
     } else {
         try SearchCenterFilterType := ""
         try _SCWV_SetCategoryByKey("ai")
@@ -900,7 +1003,7 @@ SCWV_PostHostShow(*) {
 
 _SCWV_PostHostShowFire(*) {
     global g_SCWV_PendingTriggerSource, g_SCWV_Ready, g_SCWV_WV2, g_SCWV_Visible, g_SCWV_ClipboardHomeLock
-    global g_SCWV_PostHostShowScheduled
+    global g_SCWV_PostHostShowScheduled, g_SCWV_UiMode
     g_SCWV_PostHostShowScheduled := false
     if !g_SCWV_Visible || !g_SCWV_Ready || !g_SCWV_WV2
         return
@@ -913,11 +1016,16 @@ _SCWV_PostHostShowFire(*) {
         else
             ts := "search_hotkey"
     }
+    tsMode := _SCWV_TriggerSourceUiMode(ts)
+    if (tsMode != "")
+        _SCWV_ApplyOpenUiMode(tsMode, ts)
+    um := _SCWV_NormalizeUiMode(g_SCWV_UiMode)
     focus := (ts = "clipboard_hotkey") ? "list" : "input"
     try {
         SCWV_PostJson(Map(
             "type", "hostShow",
             "triggerSource", ts,
+            "uiMode", um,
             "initialMode", SCWV_GetUnifiedMode(),
             "focus", focus,
             "clipboardHomeLock", g_SCWV_ClipboardHomeLock ? true : false
@@ -927,7 +1035,7 @@ _SCWV_PostHostShowFire(*) {
     try _SCWV_PushClipFloatToWeb()
     catch {
     }
-    if (ts != "clipboard_hotkey")
+    if (ts != "clipboard_hotkey" && ts != "fulltext_hotkey")
         SCWV_EnsureSearchHomeVisible()
     try {
         if FuncExists("CapsLock_RestoreForUiTypingOpen")
@@ -1060,26 +1168,37 @@ _SCWV_PushLoadingTierState(tier := "shell") {
 _SCWV_RefreshLocalHomeView() {
     global SearchCenterWebKeyword, SearchCenterFilterType, g_SCWV_ClipboardHomeLock, g_SCWV_UiMode
     global SearchCenterEngineMode, SearchCenterCurrentLimit, SearchCenterSearchResults, SearchCenterHasMoreData
-    global g_SCWV_LastClipboardTimelineTick
 
-    if g_SCWV_ClipboardHomeLock || SCWV_IsWebSearchUIMode()
+    if SCWV_IsWebSearchUIMode()
         return
-    if (StrLower(Trim(String(g_SCWV_UiMode))) = "cli")
+    um := StrLower(Trim(String(g_SCWV_UiMode)))
+    if (um = "cli")
         return
     if (Trim(SearchCenterWebKeyword) != "")
         return
 
-    g_SCWV_UiMode := "local"
-
-    if (SearchCenterFilterType = "clipboard") {
-        nowTick := A_TickCount
-        if (nowTick - Integer(g_SCWV_LastClipboardTimelineTick) >= 500) {
-            g_SCWV_LastClipboardTimelineTick := nowTick
-            _SCWV_SetLoadingTier("local")
-            SetTimer((*) => SCProvider_RouteSearch(SCProvider_BuildCtx("", 0, SearchCenterCurrentLimit, "clipboard")), -40)
-        }
+    if (um = "fulltext" || SearchCenterFilterType = "fulltext") {
+        g_SCWV_UiMode := "fulltext"
+        SearchCenterFilterType := "fulltext"
+        g_SCWV_ClipboardHomeLock := false
+        SearchCenterSearchResults := []
+        SearchCenterHasMoreData := false
+        SCProvider_FullTextAdmin_MaybePost(true)
+        SCWV_PushState("init")
         return
     }
+
+    if (um = "clipboard" || SearchCenterFilterType = "clipboard") {
+        g_SCWV_UiMode := "clipboard"
+        SearchCenterFilterType := "clipboard"
+        _SCWV_RunClipboardTimelineSearch("", 0, SearchCenterCurrentLimit)
+        return
+    }
+
+    g_SCWV_ClipboardHomeLock := false
+    g_SCWV_UiMode := "local"
+    if (SearchCenterFilterType = "clipboard" || SearchCenterFilterType = "fulltext")
+        SearchCenterFilterType := ""
 
     if (Trim(String(SearchCenterFilterType)) = "") {
         _SCWV_SetLoadingTier("local")
@@ -1724,7 +1843,7 @@ _SCWV_IsUserInitiatedOpen(payload) {
         return false
     r := StrLower(Trim(String(payload.Get("reason", ""))))
     ts := StrLower(Trim(String(payload.Get("triggerSource", ""))))
-    if (ts = "search_hotkey" || ts = "clipboard_hotkey")
+    if (ts = "search_hotkey" || ts = "clipboard_hotkey" || ts = "fulltext_hotkey")
         return true
     if (InStr(r, "toolbar_search") || InStr(r, "search_hotkey") || InStr(r, "ftb_") || InStr(r, "tray_"))
         return true
@@ -3549,6 +3668,9 @@ _SCWV_ExecuteGoSearchHttp(offset := 0, keyword := "", goType := "", limit := 0, 
         _SCWV_SetPendingGoSearch(off, kw, gt, lim, cqid, retry)
         return
     }
+    if FuncExists("Nmer_Telemetry_Record") {
+        try Nmer_Telemetry_Record("search", "search_center_query", true, Map("source", "_SCWV_ExecuteGoSearchHttp"))
+    }
 
     reqID := g_SCWV_RequestID + 1
     g_SCWV_RequestID := reqID
@@ -3735,6 +3857,12 @@ SCWV_Show(reason := "", triggerSource := "") {
     reqId := SurfaceManager_Request("search_center", "open", "SCWV_Show", Map("reason", reason, "triggerSource", triggerSource))
     try SurfaceManager_BeforeOpen("search_center", "SCWV_Show", Map("requestId", reqId, "reason", reason, "triggerSource", triggerSource))
     try SurfaceManager_RegisterSurface("search_center")
+    if FuncExists("Nmer_Telemetry_MarkSurfaceOpen") {
+        try Nmer_Telemetry_MarkSurfaceOpen("search_center", Map("source", "SCWV_Show"))
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e)
+        }
+    }
     global g_SCWV_Gui, g_SCWV_Visible, g_SCWV_Ready, g_SCWV_UI_Ready, g_SCWV_FirstFrameSeen, g_SCWV_WaitingUiFinishedReveal, g_SCWV_Ctrl, g_SCWV_WV2, GuiID_SearchCenter, g_SCWV_LastShown, SearchCenterWebKeyword
     global g_SCWV_ShowWaitStartTick, g_SCWV_ShowRecoveryAttempts
     global SearchCenterEngineMode, g_SCWV_LifecyclePhase, g_SCWV_TransitionCtx, g_SCWV_LimitedRecoverReloadAttempts, g_SCWV_CurrentToken
@@ -3803,16 +3931,25 @@ SCWV_Show(reason := "", triggerSource := "") {
         ; 已可见时仅在非最大化态补一次最大化，避免反复状态切换导致横跳。
         SCWV_EnsureMaximized()
         if (ts = "clipboard_hotkey") {
-            SearchCenterFilterType := "clipboard"
+            _SCWV_ApplyOpenUiMode("clipboard", ts)
             SearchCenterWebKeyword := ""
             try SCWV_SetUnifiedMode("clipboard", true)
             if (SearchCenterEngineMode = "go")
                 SetTimer(_SCWV_RunDeferredSearchCoreEnsure, -10)
             SetTimer((*) => _SCWV_RunClipboardTimelineSearch("", 0, SearchCenterCurrentLimit), -20)
+        } else if (ts = "fulltext_hotkey") {
+            _SCWV_ApplyOpenUiMode("fulltext", ts)
+            SearchCenterWebKeyword := ""
+            if (SearchCenterEngineMode = "go")
+                SetTimer(_SCWV_RunDeferredSearchCoreEnsure, -10)
+            try SCProvider_FullTextAdmin_MaybePost(true)
+            _SCWV_RefreshLocalHomeView()
         } else if (ts = "search_hotkey") {
-            global g_SCWV_ClipboardHomeLock
-            g_SCWV_ClipboardHomeLock := false
-            try SearchCenterFilterType := ""
+            global g_SCWV_ClipboardHomeLock, g_SCWV_UiMode
+            um := _SCWV_NormalizeUiMode(g_SCWV_UiMode)
+            if (um = "clipboard" || um = "fulltext")
+                um := "local"
+            _SCWV_ApplyOpenUiMode(um, ts)
             try SCWV_SetUnifiedMode("search", true)
             if (Trim(SearchCenterWebKeyword) = "")
                 _SCWV_ScheduleLocalHomeRefresh(40)
@@ -3921,12 +4058,21 @@ SCWV_Show(reason := "", triggerSource := "") {
         if (SearchCenterEngineMode = "go")
             SetTimer(_SCWV_RunDeferredSearchCoreEnsure, -10)
         if (ts = "clipboard_hotkey") {
-            SearchCenterFilterType := "clipboard"
+            _SCWV_ApplyOpenUiMode("clipboard", ts)
             SearchCenterWebKeyword := ""
             SetTimer((*) => _SCWV_RunClipboardTimelineSearch("", 0, SearchCenterCurrentLimit), -20)
+        } else if (ts = "fulltext_hotkey") {
+            _SCWV_ApplyOpenUiMode("fulltext", ts)
+            SearchCenterWebKeyword := ""
+            try SCProvider_FullTextAdmin_MaybePost(true)
+            if (Trim(SearchCenterWebKeyword) = "")
+                _SCWV_RefreshLocalHomeView()
         } else {
-            global g_SCWV_ClipboardHomeLock
-            g_SCWV_ClipboardHomeLock := false
+            global g_SCWV_UiMode
+            um := _SCWV_NormalizeUiMode(g_SCWV_UiMode)
+            if (um = "clipboard" || um = "fulltext")
+                um := "local"
+            _SCWV_ApplyOpenUiMode(um, ts)
             if (Trim(SearchCenterWebKeyword) = "")
                 _SCWV_ScheduleLocalHomeRefresh(60)
         }
@@ -4052,6 +4198,12 @@ SCWV_Hide(PersistSelection := true) {
     if !skipTel {
         reqId := SurfaceManager_Request("search_center", "close", "SCWV_Hide", Map("persistSelection", PersistSelection ? 1 : 0))
         try SurfaceManager_ObserveHide("search_center", Map("entry", "SCWV_Hide", "persistSelection", PersistSelection ? 1 : 0, "requestId", reqId))
+    }
+    if SCWV_FuncExists("Nmer_Telemetry_MarkSurfaceClose") {
+        try Nmer_Telemetry_MarkSurfaceClose("search_center", Map("source", "SCWV_Hide"))
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e)
+        }
     }
     global g_SCWV_Gui, g_SCWV_Visible, g_SCWV_WaitingUiFinishedReveal, g_SCWV_SearchTimer, GuiID_SearchCenter, g_SCWV_PendingJsonQueue
     global g_SCWV_DeactivateBlockUntil, g_SCWV_DeactivateBlockReason, g_SCWV_ShowWaitStartTick, g_SCWV_ShowRecoveryAttempts
@@ -4522,12 +4674,15 @@ SCWV_ProcessWebMessageJson(jsonStr) {
                 _SCWV_EnsureDefaultWebEngines(GetSearchCenterCurrentCategoryKey())
             kwReady := Trim(SearchCenterWebKeyword)
             if !SCWV_IsWebSearchUIMode() {
-                global g_SCWV_UiMode
+                global g_SCWV_UiMode, g_SCWV_ClipboardHomeLock
                 um := StrLower(Trim(String(g_SCWV_UiMode)))
                 if (um != "cli") {
-                    if (kwReady = "")
-                        _SCWV_ScheduleLocalHomeRefresh(40)
-                    else
+                    if (kwReady = "") {
+                        if (um = "clipboard" || SearchCenterFilterType = "clipboard")
+                            SetTimer((*) => _SCWV_RunClipboardTimelineSearch("", 0, SearchCenterCurrentLimit), -40)
+                        else
+                            _SCWV_ScheduleLocalHomeRefresh(40)
+                    } else
                         SCWV_PushState("init")
                 } else {
                     SCWV_PushState("init")
@@ -4611,8 +4766,13 @@ SCWV_ProcessWebMessageJson(jsonStr) {
             clientQueryID := _SCWV_AdoptClientQueryID(msg)
             SearchCenterWebKeyword := Trim(kw0)
             if (SearchCenterWebKeyword = "") {
-                global g_SCWV_ClipboardHomeLock
-                if (g_SCWV_ClipboardHomeLock || _SCWV_HandleEmptyKeywordSearchIntent(off0, lim0, gt0))
+                global g_SCWV_ClipboardHomeLock, g_SCWV_UiMode
+                umEmpty := StrLower(Trim(String(g_SCWV_UiMode)))
+                if (umEmpty = "clipboard" || SearchCenterFilterType = "clipboard") {
+                    _SCWV_RunClipboardTimelineSearch("", off0, lim0)
+                    return
+                }
+                if (_SCWV_HandleEmptyKeywordSearchIntent(off0, lim0, gt0))
                     return
                 SearchCenterHasMoreData := false
                 _SCWV_RefreshLocalHomeView()
@@ -4666,12 +4826,14 @@ SCWV_ProcessWebMessageJson(jsonStr) {
         case "nmDockCmd":
             _SCWV_ExecuteDockCmd(msg)
         case "reloadBlankHome":
-            global SearchCenterFilterType, SearchCenterWebKeyword, g_SCWV_ClipboardHomeLock
-            if g_SCWV_ClipboardHomeLock {
+            global SearchCenterFilterType, SearchCenterWebKeyword, g_SCWV_ClipboardHomeLock, g_SCWV_UiMode
+            umReload := StrLower(Trim(String(g_SCWV_UiMode)))
+            if (umReload = "clipboard" || SearchCenterFilterType = "clipboard") {
                 SearchCenterFilterType := "clipboard"
-                _SCWV_RunClipboardTimelineSearch("", 0, SearchCenterCurrentLimit)
+                _SCWV_RunClipboardTimelineSearch("", 0, SearchCenterCurrentLimit, true)
                 return
             }
+            g_SCWV_ClipboardHomeLock := false
             SearchCenterFilterType := ""
             SearchCenterWebKeyword := ""
             try SCWV_SetUnifiedMode("search", false)
@@ -4685,8 +4847,13 @@ SCWV_ProcessWebMessageJson(jsonStr) {
             try OutputDebug("[SCWV] search request keyword_len=" . StrLen(keyword))
             SearchCenterWebKeyword := Trim(String(keyword))
             if (SearchCenterWebKeyword = "") {
-                global g_SCWV_ClipboardHomeLock
-                if (g_SCWV_ClipboardHomeLock || _SCWV_HandleEmptyKeywordSearchIntent(0, 0, _SCWV_MapFilterToGoSearchType(SearchCenterFilterType)))
+                global g_SCWV_UiMode
+                umEmpty := StrLower(Trim(String(g_SCWV_UiMode)))
+                if (umEmpty = "clipboard" || SearchCenterFilterType = "clipboard") {
+                    _SCWV_RunClipboardTimelineSearch("", 0, SearchCenterCurrentLimit)
+                    return
+                }
+                if (_SCWV_HandleEmptyKeywordSearchIntent(0, 0, _SCWV_MapFilterToGoSearchType(SearchCenterFilterType)))
                     return
                 SearchCenterHasMoreData := false
                 _SCWV_RefreshLocalHomeView()
@@ -4706,26 +4873,35 @@ SCWV_ProcessWebMessageJson(jsonStr) {
                 g_SCWV_UiMode := "cli"
             else if (um != "local" && ck != "")
                 g_SCWV_UiMode := "web"
-            if (Trim(SearchCenterWebKeyword) != "")
-                SetTimer(_SCWV_PostRequestSearchGo, -60)
-            else if (StrLower(Trim(String(g_SCWV_UiMode))) = "local")
+    if (Trim(SearchCenterWebKeyword) != "")
+        SetTimer(_SCWV_PostRequestSearchGo, -1)
+    else if (StrLower(Trim(String(g_SCWV_UiMode))) = "local")
                 _SCWV_RefreshLocalHomeView()
             else
                 SCWV_PushState("init")
         case "setFilter":
             global SearchCenterFilterType, SearchCenterWebKeyword, g_SCWV_ClipboardHomeLock, g_SCWV_UiMode
             _SCWV_AdoptClientQueryID(msg)
-            g_SCWV_UiMode := "local"
             nextFilter := msg.Has("filterType") ? String(msg["filterType"]) : ""
-            ; 全文筛选改为幂等开启：避免重复点击/热键重复下发把 fulltext 误切回空筛选。
-            if (nextFilter = "fulltext")
+            ; 全文/剪贴板改由主模式导航承载，不再作为结果区 chip
+            if (nextFilter = "fulltext") {
                 SearchCenterFilterType := "fulltext"
-            else if (g_SCWV_ClipboardHomeLock && nextFilter = "clipboard")
+                g_SCWV_UiMode := "fulltext"
+                g_SCWV_ClipboardHomeLock := false
+            } else if (nextFilter = "clipboard") {
                 SearchCenterFilterType := "clipboard"
-            else {
-                if (nextFilter != "clipboard" && nextFilter != "")
+                g_SCWV_UiMode := "clipboard"
+                if (Trim(String(g_SCWV_PendingTriggerSource)) = "clipboard_hotkey")
+                    g_SCWV_ClipboardHomeLock := true
+                else
                     g_SCWV_ClipboardHomeLock := false
+            } else {
+                g_SCWV_ClipboardHomeLock := false
                 SearchCenterFilterType := nextFilter
+                if (SearchCenterFilterType = "fulltext")
+                    g_SCWV_UiMode := "fulltext"
+                else
+                    g_SCWV_UiMode := "local"
             }
             if msg.Has("keyword")
                 SearchCenterWebKeyword := Trim(String(msg["keyword"]))
@@ -4738,7 +4914,7 @@ SCWV_ProcessWebMessageJson(jsonStr) {
             catch {
             }
             if (Trim(SearchCenterWebKeyword) != "") {
-                SetTimer(_SCWV_PostRequestSearchGo, -60)
+                SetTimer(_SCWV_PostRequestSearchGo, -1)
                 SCWV_PushState("init")
                 return
             }
@@ -4788,23 +4964,63 @@ SCWV_ProcessWebMessageJson(jsonStr) {
                 _SCWV_ApplySelectedEnginesFromWeb(msg["selectedEngines"])
             _SCWV_BatchSearch()
         case "setUiMode":
-            global g_SCWV_UiMode, SearchCenterWebKeyword, g_SCWV_CliTerminalFocus
+            global g_SCWV_UiMode, SearchCenterWebKeyword, g_SCWV_CliTerminalFocus, SearchCenterFilterType, g_SCWV_ClipboardHomeLock
+            global g_SCWV_ClipboardTimelineGen
             m := msg.Has("mode") ? StrLower(Trim(String(msg["mode"]))) : "local"
-            if (m != "cli" && m != "web")
-                m := "local"
-            g_SCWV_UiMode := m
-            if (m != "cli")
+            if (m = "clipboard") {
+                g_SCWV_UiMode := "clipboard"
+                if (Trim(String(g_SCWV_PendingTriggerSource)) = "clipboard_hotkey")
+                    g_SCWV_ClipboardHomeLock := true
+                else
+                    g_SCWV_ClipboardHomeLock := false
+                SearchCenterFilterType := "clipboard"
                 g_SCWV_CliTerminalFocus := false
-            if (m = "web") {
-                _SCWV_EnsureDefaultWebEngines(GetSearchCenterCurrentCategoryKey())
-                SCWV_PushState("init")
-            } else if (m = "local") {
+                if (Trim(SearchCenterWebKeyword) = "")
+                    _SCWV_RunClipboardTimelineSearch("", 0, SearchCenterCurrentLimit, true)
+                else {
+                    SetTimer(_SCWV_PostRequestSearchGo, -1)
+                    SCWV_PushState("init")
+                }
+            } else if (m = "fulltext") {
+                g_SCWV_UiMode := "fulltext"
+                g_SCWV_ClipboardHomeLock := false
+                g_SCWV_ClipboardTimelineGen++
+                SearchCenterFilterType := "fulltext"
+                g_SCWV_CliTerminalFocus := false
+                if (Trim(SearchCenterWebKeyword) = "") {
+                    SCProvider_FullTextAdmin_MaybePost(true)
+                    _SCWV_RefreshLocalHomeView()
+                } else {
+                    SetTimer(_SCWV_PostRequestSearchGo, -1)
+                    SCWV_PushState("init")
+                }
+            } else if (m = "cli" || m = "web") {
+                g_SCWV_UiMode := m
+                g_SCWV_ClipboardHomeLock := false
+                g_SCWV_ClipboardTimelineGen++
+                if (SearchCenterFilterType = "clipboard" || SearchCenterFilterType = "fulltext")
+                    SearchCenterFilterType := ""
+                if (m != "cli")
+                    g_SCWV_CliTerminalFocus := false
+                if (m = "web") {
+                    _SCWV_EnsureDefaultWebEngines(GetSearchCenterCurrentCategoryKey())
+                    SCWV_PushState("init")
+                } else {
+                    SCWV_PushState("init")
+                }
+            } else {
+                g_SCWV_UiMode := "local"
+                g_SCWV_ClipboardHomeLock := false
+                g_SCWV_ClipboardTimelineGen++
+                g_SCWV_CliTerminalFocus := false
+                if (SearchCenterFilterType = "clipboard" || SearchCenterFilterType = "fulltext")
+                    SearchCenterFilterType := ""
                 if (Trim(SearchCenterWebKeyword) = "")
                     SCWV_EnsureSearchHomeVisible()
-                else
+                else {
+                    SetTimer(_SCWV_PostRequestSearchGo, -1)
                     SCWV_PushState("init")
-            } else {
-                SCWV_PushState("init")
+                }
             }
         case "requestUiRefresh":
             global g_SCWV_UiMode, SearchCenterWebKeyword
@@ -4815,8 +5031,10 @@ SCWV_ProcessWebMessageJson(jsonStr) {
             } else if (m = "local") {
                 if (Trim(SearchCenterWebKeyword) = "")
                     SCWV_EnsureSearchHomeVisible()
-                else
+                else {
+                    SetTimer(_SCWV_PostRequestSearchGo, -1)
                     SCWV_PushState("init")
+                }
             } else {
                 SCWV_PushState("init")
             }
@@ -5581,11 +5799,16 @@ SCWV_PushState(msgType := "state") {
     }
 
     currentCategoryKey := GetSearchCenterCurrentCategoryKey()
-    global g_SCWV_ClipboardHomeLock
-    if (g_SCWV_ClipboardHomeLock || SearchCenterFilterType = "clipboard") {
+    global g_SCWV_ClipboardHomeLock, g_SCWV_UiMode
+    umStatus := StrLower(Trim(String(g_SCWV_UiMode)))
+    if (umStatus = "clipboard" || SearchCenterFilterType = "clipboard") {
         status := "剪贴板时间线"
         if (results.Length > 0)
             status .= " · " . results.Length . " 条"
+    } else if (umStatus = "fulltext" || SearchCenterFilterType = "fulltext") {
+        status := "全文搜索"
+        if (results.Length > 0)
+            status .= " · " . results.Length . " 条命中"
     } else {
         status := "本地结果 " . results.Length . " 条"
         status .= " · 已选引擎 " . (IsObject(SearchCenterSelectedEngines) ? SearchCenterSelectedEngines.Length : 0) . " 个"
@@ -6172,8 +6395,6 @@ _SCWV_BuildFilterPayload() {
     return [
         Map("key", "", "text", "全部"),
         Map("key", "File", "text", "文件"),
-        Map("key", "fulltext", "text", "全文搜索"),
-        Map("key", "clipboard", "text", "剪贴板"),
         Map("key", "template", "text", "提示词"),
         Map("key", "config", "text", "配置"),
         Map("key", "hotkey", "text", "快捷键"),
@@ -6958,6 +7179,12 @@ SearchCenter_RunQueryWithKeyword(keyword) {
     keyword := Trim(String(keyword))
     if (keyword = "")
         return
+    if FuncExists("Nmer_Telemetry_Record") {
+        try Nmer_Telemetry_Record("search", "search_center_query", true, Map("source", "SearchCenter_RunQueryWithKeyword"))
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e)
+        }
+    }
 
     SearchCenterWebKeyword := keyword
 
@@ -7014,8 +7241,23 @@ _SCWV_CmdDisplayName(cmdId) {
 _SCWV_AniMenuShow(hwnd) {
     if !hwnd
         return
-    try DllCall("user32\AnimateWindow", "ptr", hwnd, "uint", 100, "uint", 0x80000)
-    catch {
+    try {
+        DllCall("SetWindowPos", "Ptr", hwnd, "Ptr", -1, "Int", 0, "Int", 0, "Int", 0, "Int", 0, "UInt", 0x1 | 0x2 | 0x10)
+    } catch {
+    }
+}
+
+_SCWV_DarkMenuShowSized(guiObj, posX, posY, menuW, menuH) {
+    if !IsObject(guiObj) || !guiObj
+        return
+    guiObj.Show("x" . posX . " y" . posY . " w" . menuW . " h" . menuH . " NoActivate")
+    try {
+        hwnd := guiObj.Hwnd
+        if hwnd {
+            DllCall("SetWindowPos", "Ptr", hwnd, "Ptr", -1, "Int", posX, "Int", posY, "Int", menuW, "Int", menuH, "UInt", 0x10)
+            _SCWV_DarkMenuRoundCorners(hwnd)
+        }
+    } catch {
     }
 }
 
@@ -7531,24 +7773,11 @@ _SCWV_ShowDarkSubMenuAt(children, posX, posY) {
     else if posY + MenuHeight > ScreenHeight - 8
         posY := ScreenHeight - MenuHeight - 8
     ownOpt := ""
-    ownerHwnd := 0
-    if IsObject(g_SCWV_DarkCtxGui) && g_SCWV_DarkCtxGui {
-        try ownerHwnd := g_SCWV_DarkCtxGui.Hwnd
-        catch {
-        }
-    }
-    if !ownerHwnd && IsObject(g_SCWV_Gui) && g_SCWV_Gui {
-        try ownerHwnd := g_SCWV_Gui.Hwnd
-        catch {
-        }
-    }
-    if ownerHwnd
-        ownOpt := " +Owner" . ownerHwnd
-    g_SCWV_DarkSubGui := Gui("+AlwaysOnTop +ToolWindow -Caption -DPIScale" . ownOpt, "SearchCtxSub")
-    g_SCWV_DarkSubGui.BackColor := "59341c"
+    g_SCWV_DarkSubGui := Gui("+AlwaysOnTop +ToolWindow -Caption -DPIScale -Theme" . ownOpt, "SearchCtxSub")
+    g_SCWV_DarkSubGui.BackColor := "1a1a1a"
     g_SCWV_DarkSubGui.MarginX := 0
     g_SCWV_DarkSubGui.MarginY := 0
-    g_SCWV_DarkSubGui.Add("Text", "x" . Df . " y" . Df . " w" . (MenuWidth - 2 * Df) . " h" . (MenuHeight - 2 * Df) . " Background1a1a1a", "")
+    g_SCWV_DarkSubGui.Add("Text", "x0 y0 w" . MenuWidth . " h" . MenuHeight . " Background1a1a1a", "")
     g_SCWV_DarkSubCmdByIdx := Map()
     g_SCWV_DarkSubItemCount := n
     Loop children.Length {
@@ -7565,11 +7794,7 @@ _SCWV_ShowDarkSubMenuAt(children, posX, posY) {
         if (id != "")
             g_SCWV_DarkSubCmdByIdx[i] := id
     }
-    g_SCWV_DarkSubGui.Show("x" . posX . " y" . posY . " w" . MenuWidth . " h" . MenuHeight)
-    try _SCWV_AniMenuShow(g_SCWV_DarkSubGui.Hwnd)
-    catch {
-    }
-    _SCWV_DarkMenuRoundCorners(g_SCWV_DarkSubGui.Hwnd)
+    _SCWV_DarkMenuShowSized(g_SCWV_DarkSubGui, posX, posY, MenuWidth, MenuHeight)
     try FocusBroker_Request("SearchCenter", g_SCWV_DarkSubGui.Hwnd, 20, "dark_sub_menu", 300)
     catch {
     }
@@ -7632,11 +7857,76 @@ _SCWV_OnDarkSearchMenuClick_Continue(c, row, *) {
     }
 }
 
+_SCWV_FlattenSearchCtxSpecForPopup(spec) {
+    flat := []
+    if !(spec is Array)
+        return flat
+    for ent in spec {
+        if !(ent is Map)
+            continue
+        if (ent.Has("k") && String(ent["k"]) = "sub" && ent.Has("children")) {
+            grp := Trim(StrReplace(String(ent.Has("t") ? ent["t"] : ""), "▶", ""))
+            for ch in ent["children"] {
+                if !(ch is Map)
+                    continue
+                cid := ch.Has("id") ? Trim(String(ch["id"])) : ""
+                ct := ch.Has("t") ? String(ch["t"]) : ""
+                if (cid = "" && ct = "")
+                    continue
+                flat.Push(Map("Text", (grp != "" ? grp . " · " : "") . ct, "CmdId", cid))
+            }
+            continue
+        }
+        cid := ent.Has("id") ? Trim(String(ent["id"])) : ""
+        t := ent.Has("t") ? String(ent["t"]) : ""
+        if (cid = "" && t = "")
+            continue
+        flat.Push(Map("Text", t, "CmdId", cid))
+    }
+    return flat
+}
+
+_SCWV_SearchCtxMenuAction(cmdId, *) {
+    global g_SCWV_MenuActionRow, g_SCWV_Gui
+    c := Trim(String(cmdId))
+    row := g_SCWV_MenuActionRow
+    if (c != "" && _SCWV_IsMenuTargetStillValid(row))
+        SC_ExecuteContextCommand(c, row)
+    if _SCWV_ShouldRefocusSearchAfterCmd(c) && g_SCWV_Gui {
+        try FocusBroker_Request("SearchCenter", g_SCWV_Gui.Hwnd, 20, "ctx_refocus", 300)
+        catch {
+        }
+    }
+    if _SCWV_ShouldRefocusSearchAfterCmd(c) {
+        try SCWV_RequestFocusInput()
+        catch {
+        }
+    }
+}
+
 _SCWV_ShowDarkSearchRowMenuAt(spec, posX, posY) {
     global g_SCWV_DarkCtxGui, g_SCWV_DarkCtxCmdByIdx, g_SCWV_DarkCtxHoverIdx, g_SCWV_DarkCtxSubSpecByIdx, g_SCWV_DarkCtxItemCount
     _SCWV_DestroyDarkRowMenus()
     if !(spec is Array) || spec.Length = 0
         spec := [Map("k", "cmd", "id", "", "t", "（未配置菜单）")]
+    if IsSet(ShowDarkStylePopupMenuAt) {
+        flat := _SCWV_FlattenSearchCtxSpecForPopup(spec)
+        menuItems := []
+        for ent in flat {
+            cid := ent.Has("CmdId") ? Trim(String(ent["CmdId"])) : ""
+            txt := ent.Has("Text") ? String(ent["Text"]) : ""
+            if (txt = "")
+                continue
+            item := {Text: txt}
+            if (cid != "")
+                item.Action := _SCWV_SearchCtxMenuAction.Bind(cid)
+            menuItems.Push(item)
+        }
+        if (menuItems.Length = 0)
+            menuItems.Push({Text: "（无菜单项）"})
+        ShowDarkStylePopupMenuAt(menuItems, posX + 2, posY + 2)
+        return
+    }
     _SCWV_DarkMenuLayout(&Df, &Pad, &MenuItemHeight, &innerTop)
     n := spec.Length
     g_SCWV_DarkCtxItemCount := n
@@ -7653,24 +7943,15 @@ _SCWV_ShowDarkSearchRowMenuAt(spec, posX, posY) {
         posX := ScreenWidth - MenuWidth - 8
     if posY < 8
         posY := 8
-    else if posY + MenuHeight > ScreenHeight - 8
+    else     if posY + MenuHeight > ScreenHeight - 8
         posY := ScreenHeight - MenuHeight - 8
 
     ownOpt := ""
-    global g_SCWV_Gui
-    if IsObject(g_SCWV_Gui) && g_SCWV_Gui {
-        try {
-            oh := g_SCWV_Gui.Hwnd
-            if oh
-                ownOpt := " +Owner" . oh
-        } catch {
-        }
-    }
     g_SCWV_DarkCtxGui := Gui("+AlwaysOnTop +ToolWindow -Caption -DPIScale" . ownOpt, "SearchCtx")
-    g_SCWV_DarkCtxGui.BackColor := "59341c"
+    g_SCWV_DarkCtxGui.BackColor := "1a1a1a"
     g_SCWV_DarkCtxGui.MarginX := 0
     g_SCWV_DarkCtxGui.MarginY := 0
-    g_SCWV_DarkCtxGui.Add("Text", "x" . Df . " y" . Df . " w" . (MenuWidth - 2 * Df) . " h" . (MenuHeight - 2 * Df) . " Background1a1a1a", "")
+    g_SCWV_DarkCtxGui.Add("Text", "x0 y0 w" . MenuWidth . " h" . MenuHeight . " Background1a1a1a", "")
     g_SCWV_DarkCtxCmdByIdx := Map()
     g_SCWV_DarkCtxSubSpecByIdx := Map()
     g_SCWV_DarkCtxHoverIdx := 0
@@ -7692,13 +7973,12 @@ _SCWV_ShowDarkSearchRowMenuAt(spec, posX, posY) {
             g_SCWV_DarkCtxCmdByIdx[i] := id
     }
     g_SCWV_DarkCtxGui.Show("x" . posX . " y" . posY . " w" . MenuWidth . " h" . MenuHeight)
-    try _SCWV_AniMenuShow(g_SCWV_DarkCtxGui.Hwnd)
-    catch {
+    try {
+        if g_SCWV_DarkCtxGui.Hwnd
+            DllCall("SetWindowPos", "Ptr", g_SCWV_DarkCtxGui.Hwnd, "Ptr", -1, "Int", 0, "Int", 0, "Int", 0, "Int", 0, "UInt", 0x1 | 0x2)
+    } catch {
     }
     _SCWV_DarkMenuRoundCorners(g_SCWV_DarkCtxGui.Hwnd)
-    try FocusBroker_Request("SearchCenter", g_SCWV_DarkCtxGui.Hwnd, 20, "dark_ctx_menu", 300)
-    catch {
-    }
     SetTimer(_SCWV_CheckDarkSearchCtxMouse, 45)
     SetTimer(_SCWV_CloseDarkSearchCtxIfOutside, 80)
 }
@@ -9958,31 +10238,77 @@ _SCWV_HandleEmptyKeywordSearchIntent(offset := 0, limit := 0, goType := "") {
     return true
 }
 
+_SCWV_OnClipboardDbReady() {
+    global g_SCWV_LifecyclePhase, g_SCWV_UiMode, g_SCWV_Visible, SearchCenterFilterType
+    if (Trim(String(g_SCWV_LifecyclePhase)) = "clip_db_recovery") {
+        try SCWV_BroadcastHostLifecycle("open", "clip_db_ready")
+        catch {
+        }
+    }
+    if !g_SCWV_Visible
+        return
+    um := StrLower(Trim(String(g_SCWV_UiMode)))
+    if (um = "clipboard" || SearchCenterFilterType = "clipboard") {
+        SetTimer((*) => _SCWV_RunClipboardTimelineSearch("", 0, 0, true), -200)
+    }
+    if SCWV_FuncExists("SearchCore_EnsureStatus")
+        SetTimer((*) => SearchCore_EnsureStatus(false, "clip_db_ready"), -1200)
+}
+
 _SCWV_EnsureClipboardDb() {
-    global ClipboardFTS5DB
+    global ClipboardFTS5DB, g_SCWV_ClipboardDbEnsureRetries
     if (IsSet(ClipboardFTS5DB) && ClipboardFTS5DB && ClipboardFTS5DB != 0)
         return true
     if !SCWV_FuncExists("InitClipboardFTS5DB")
         return false
+    if (g_SCWV_ClipboardDbEnsureRetries >= 3)
+        return false
     try {
         if !InitClipboardFTS5DB()
             return false
+        g_SCWV_ClipboardDbEnsureRetries := 0
     } catch {
+        g_SCWV_ClipboardDbEnsureRetries++
+        if (g_SCWV_ClipboardDbEnsureRetries < 3)
+            SetTimer((*) => _SCWV_EnsureClipboardDb(), -600)
         return false
     }
     return (IsSet(ClipboardFTS5DB) && ClipboardFTS5DB && ClipboardFTS5DB != 0)
 }
 
-_SCWV_RunClipboardTimelineSearch(keyword := "", offset := 0, limit := 0) {
-    global SearchCenterFilterType, SearchCenterEngineMode, SearchCenterWebKeyword, SearchCenterCurrentLimit
-    global g_SCWV_ClipboardHomeLock, g_SCWV_PendingTriggerSource, g_SCWV_LastClipboardTimelineTick
+_SCWV_RunClipboardTimelineSearch(keyword := "", offset := 0, limit := 0, force := false) {
+    global g_SCWV_LastClipboardTimelineTick, g_SCWV_ClipboardTimelineScheduled, g_SCWV_ClipboardTimelineGen
     nowTick := A_TickCount
-    if (Trim(String(keyword)) = "" && (nowTick - Integer(g_SCWV_LastClipboardTimelineTick)) < 350)
+    if (!force && Trim(String(keyword)) = "" && (nowTick - Integer(g_SCWV_LastClipboardTimelineTick)) < 350)
         return
     g_SCWV_LastClipboardTimelineTick := nowTick
+    if (g_SCWV_ClipboardTimelineScheduled && !force)
+        return
+    g_SCWV_ClipboardTimelineScheduled := true
+    gen := ++g_SCWV_ClipboardTimelineGen
+    SetTimer(_SCWV_RunClipboardTimelineSearchWorker.Bind(keyword, offset, limit, force, gen), -1)
+}
+
+_SCWV_RunClipboardTimelineSearchWorker(keyword, offset, limit, force, gen) {
+    global g_SCWV_ClipboardTimelineScheduled, g_SCWV_UiMode, g_SCWV_ClipboardTimelineGen
+    g_SCWV_ClipboardTimelineScheduled := false
+    if (gen != g_SCWV_ClipboardTimelineGen)
+        return
+    if (StrLower(Trim(String(g_SCWV_UiMode))) != "clipboard" && Trim(String(keyword)) = "")
+        return
+    _SCWV_RunClipboardTimelineSearchCore(keyword, offset, limit, force, gen)
+}
+
+_SCWV_RunClipboardTimelineSearchCore(keyword := "", offset := 0, limit := 0, force := false, gen := 0) {
+    global SearchCenterFilterType, SearchCenterEngineMode, SearchCenterWebKeyword, SearchCenterCurrentLimit
+    global g_SCWV_ClipboardHomeLock, g_SCWV_PendingTriggerSource, g_SCWV_UiMode, g_SCWV_ClipboardTimelineGen
+    if (gen && gen != g_SCWV_ClipboardTimelineGen)
+        return
     SearchCenterFilterType := "clipboard"
-    g_SCWV_ClipboardHomeLock := true
-    g_SCWV_PendingTriggerSource := "clipboard_hotkey"
+    if (Trim(String(g_SCWV_PendingTriggerSource)) = "clipboard_hotkey")
+        g_SCWV_ClipboardHomeLock := true
+    else if (StrLower(Trim(String(g_SCWV_UiMode))) = "clipboard")
+        g_SCWV_ClipboardHomeLock := false
     kw := Trim(String(keyword))
     off := Integer(offset)
     if (off < 0)
@@ -9993,11 +10319,12 @@ _SCWV_RunClipboardTimelineSearch(keyword := "", offset := 0, limit := 0) {
     if (lim <= 0)
         lim := 30
     SearchCenterWebKeyword := kw
-    try SCWV_SetUnifiedMode("clipboard", true)
-    catch {
+    if (Trim(String(g_SCWV_PendingTriggerSource)) = "clipboard_hotkey") {
+        try SCWV_SetUnifiedMode("clipboard", true)
+        catch {
+        }
     }
     _SCWV_EnsureClipboardDb()
-    ; SearchCenterCore 对空 q 固定返回 []，剪贴板时间线必须走 ClipMain 本地库
     if (kw = "") {
         _SCWV_ApplyClipboardTimelineLocal(kw, off, lim)
         return
@@ -10011,6 +10338,58 @@ _SCWV_RunClipboardTimelineSearch(keyword := "", offset := 0, limit := 0) {
         return
     }
     _SCWV_ApplyClipboardTimelineLocal(kw, off, lim)
+}
+
+_SCWV_LoadClipMainTimeline(keyword := "", offset := 0, limit := 30) {
+    GoItems := []
+    if !_SCWV_EnsureClipboardDb()
+        return GoItems
+    global ClipboardFTS5DB
+    if !(IsSet(ClipboardFTS5DB) && ClipboardFTS5DB && ClipboardFTS5DB != 0)
+        return GoItems
+    off := Integer(offset)
+    if (off < 0)
+        off := 0
+    lim := Integer(limit)
+    if (lim <= 0)
+        lim := 30
+    kw := Trim(String(keyword))
+    where := "1=1"
+    params := []
+    if (kw != "") {
+        where .= " AND Content LIKE ?"
+        params.Push("%" . kw . "%")
+    }
+    sql := "SELECT ID, Content, Timestamp, DataType, SourceApp, LastCopyTime FROM ClipMain WHERE " . where
+        . " ORDER BY IsFavorite DESC, ID DESC LIMIT " . lim . " OFFSET " . off
+    try {
+        table := ""
+        ok := false
+        if (params.Length > 0) {
+            if SCWV_FuncExists("SqlSafe_GetTable")
+                ok := SqlSafe_GetTable(ClipboardFTS5DB, &table, sql, params*)
+            else
+                ok := false
+        } else {
+            ok := ClipboardFTS5DB.GetTable(sql, &table)
+        }
+        if ok && IsObject(table) && table.HasRows && table.Rows.Length > 0 {
+            loop table.Rows.Length {
+                r := table.Rows[A_Index]
+                cp := Map(
+                    "ID", Integer(r[1]),
+                    "Content", String(r[2]),
+                    "Timestamp", String(r[3]),
+                    "DataType", String(r[4]),
+                    "SourceApp", String(r[5]),
+                    "LastCopyTime", String(r[6])
+                )
+                GoItems.Push(_SCWV_ConvertCpItemToGoItem(cp))
+            }
+        }
+    } catch {
+    }
+    return GoItems
 }
 
 _SCWV_ConvertCpItemToGoItem(cpItem) {
@@ -10053,7 +10432,10 @@ _SCWV_ConvertCpItemToGoItem(cpItem) {
 }
 
 _SCWV_ApplyClipboardTimelineLocal(keyword := "", offset := 0, limit := 0) {
-    global SearchCenterSearchResults, SearchCenterHasMoreData, SearchCenterCurrentLimit, g_SCWV_SkipHostSort
+    global SearchCenterSearchResults, SearchCenterHasMoreData, SearchCenterCurrentLimit, g_SCWV_SkipHostSort, g_SCWV_UiMode
+    kw := Trim(String(keyword))
+    if (StrLower(Trim(String(g_SCWV_UiMode))) != "clipboard" && kw = "")
+        return
     _SCWV_EnsureClipboardDb()
     lim := Integer(limit)
     if (lim <= 0)
@@ -10063,9 +10445,8 @@ _SCWV_ApplyClipboardTimelineLocal(keyword := "", offset := 0, limit := 0) {
     off := Integer(offset)
     if (off < 0)
         off := 0
-    kw := Trim(String(keyword))
-    GoItems := []
-    if SCWV_FuncExists("_CP_LoadItems") {
+    GoItems := _SCWV_LoadClipMainTimeline(kw, off, lim)
+    if (GoItems.Length = 0 && SCWV_FuncExists("_CP_LoadItems")) {
         for _, cp in _CP_LoadItems(kw, "all", off, lim)
             GoItems.Push(_SCWV_ConvertCpItemToGoItem(cp))
     }
@@ -10077,8 +10458,23 @@ _SCWV_ApplyClipboardTimelineLocal(keyword := "", offset := 0, limit := 0) {
                 "DataType", r["dataType"]
             )))
     }
-    if (GoItems.Length = 0)
+    if (GoItems.Length = 0) {
+        if (off = 0) {
+            SearchCenterSearchResults := []
+            SearchCenterHasMoreData := false
+            SCWV_PushState("state")
+            _SCWV_SetLoadingTier("")
+            global g_SCWV_ClipboardTimelineRetries, g_SCWV_UiMode
+            if (kw = "" && StrLower(Trim(String(g_SCWV_UiMode))) = "clipboard") {
+                g_SCWV_ClipboardTimelineRetries++
+                if (g_SCWV_ClipboardTimelineRetries <= 2)
+                    SetTimer((*) => _SCWV_RunClipboardTimelineSearch("", 0, lim, true), -800)
+            }
+        }
         return false
+    }
+    global g_SCWV_ClipboardTimelineRetries
+    g_SCWV_ClipboardTimelineRetries := 0
     if (off = 0)
         SearchCenterSearchResults := []
     SearchCenterHasMoreData := GoItems.Length >= lim

@@ -1,0 +1,13 @@
+# frozen-path-allowlist.txt — 唯一 allowlist 源（Validate-FrozenPathPolicy.ps1 只读此文件）
+# 新增须 PR：类别 + 理由 + 为何不是默认入口
+# 禁止：新功能文档、README/AGENTS/conventions/stack-governance 本身、通配整个 docs/ 或 a2ui-diagnostics/
+
+# 历史归档
+docs/a2ui-rollout-*.md
+
+# 旧签收文档
+tools/a2ui-diagnostics/README.md
+
+# 专项回退（rollback only，见 stack-governance.md §5）
+tools/a2ui-diagnostics/Run-HybridSignoff.ps1
+tools/a2ui-diagnostics/Run-HybridCpSignoffPipeline.ps1

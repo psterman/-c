@@ -37,7 +37,11 @@
 ## Git 与提交
 
 - 中文 commit subject，见 [`.cursor/rules/commit-zh.mdc`](../.cursor/rules/commit-zh.mdc)。
+- 混栈治理手册：[`docs/stack-governance.md`](stack-governance.md)（术语、DevMenu、契约 **production**）。
+- 本地开发菜单：`tools/dev/Run-DevMenu.ps1`（required/optional 分项 + Summary）。
+- 契约 production 门禁：`Run-MinimalGate.ps1 -Strict`（含 `Run-Phase3ContractSuite.ps1 -Required`）；单独跑见 `ci-minimal-gate.md`。
 - 最小 CI 门（本地）：[`docs/ci-minimal-gate.md`](ci-minimal-gate.md) → `tools/ci/Run-MinimalGate.ps1 -Strict`。
+- PR 自检：[`docs/pull-request-checklist.md`](pull-request-checklist.md)。
 - PR 改 Hub / palette A2UI 时：[`docs/pr-architecture-discipline.md`](pr-architecture-discipline.md)。
 
 ## Agent 修改范围

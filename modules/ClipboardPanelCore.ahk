@@ -406,6 +406,9 @@ CP_Show() {
         reqId := SurfaceManager_Request("clipboard_panel", "open", "CP_Show", Map("redirect", g_CP_UnifiedRedirectEnabled ? 1 : 0))
         try SurfaceManager_BeforeOpen("clipboard_panel", "CP_Show", Map("requestId", reqId, "redirect", g_CP_UnifiedRedirectEnabled ? 1 : 0))
         try SurfaceManager_RegisterSurface("clipboard_panel")
+        if FuncExists("Nmer_Telemetry_MarkSurfaceOpen") {
+            try Nmer_Telemetry_MarkSurfaceOpen("clipboard_panel", Map("source", "CP_Show"))
+        }
     }
     if g_CP_UnifiedRedirectEnabled {
         try FloatingToolbar_PageDockEnter("clipboard")
@@ -500,6 +503,9 @@ CP_Hide() {
         }
         if !skipTel
             try SurfaceManager_ObserveHide("clipboard_panel", Map("entry", "CP_Hide", "redirect", "scwv_unified", "requestId", reqId))
+        if FuncExists("Nmer_Telemetry_MarkSurfaceClose") {
+            try Nmer_Telemetry_MarkSurfaceClose("clipboard_panel", Map("source", "CP_Hide", "mode", "unified"))
+        }
         return
     }
     global g_CP_Gui, g_CP_Visible, g_CP_SearchTimer, g_CP_WM_ActivateHideCallback
@@ -525,6 +531,9 @@ CP_Hide() {
         g_CP_Gui.Hide()
     if !skipTel
         try SurfaceManager_ObserveHide("clipboard_panel", Map("entry", "CP_Hide", "requestId", reqId))
+    if FuncExists("Nmer_Telemetry_MarkSurfaceClose") {
+        try Nmer_Telemetry_MarkSurfaceClose("clipboard_panel", Map("source", "CP_Hide", "mode", "legacy"))
+    }
 }
 
 CP_Dispose(reason := "") {
@@ -1612,6 +1621,9 @@ _CP_DoPaste(id, keepOpen := false) {
         return
 
     try {
+        if FuncExists("Nmer_Telemetry_Record") {
+            try Nmer_Telemetry_Record("cmd", "cp_paste", true, Map("source", "_CP_DoPaste"))
+        }
         row := _CP_GetClipRow(id)
         content := row["content"]
         dataType := row["dataType"]
@@ -1730,6 +1742,9 @@ _CP_DoDelete(id) {
         return
 
     try {
+        if FuncExists("Nmer_Telemetry_Record") {
+            try Nmer_Telemetry_Record("cmd", "cp_delete", true, Map("source", "_CP_DoDelete"))
+        }
         if SqlSafe_Exec(ClipboardFTS5DB, "DELETE FROM ClipMain WHERE ID = ?", id) {
             CP_SendToWeb('{"type":"deleted","id":' . id . '}')
         }
@@ -1746,6 +1761,9 @@ _CP_DoPin(id) {
         return
 
     try {
+        if FuncExists("Nmer_Telemetry_Record") {
+            try Nmer_Telemetry_Record("cmd", "cp_pin", true, Map("source", "_CP_DoPin"))
+        }
         SQL := "SELECT IsFavorite FROM ClipMain WHERE ID = ?"
         table := ""
         currentState := 0
@@ -1771,6 +1789,9 @@ _CP_DoCopyPlain(id, keepOpen := false) {
         return
 
     try {
+        if FuncExists("Nmer_Telemetry_Record") {
+            try Nmer_Telemetry_Record("cmd", "cp_copy_plain", true, Map("source", "_CP_DoCopyPlain"))
+        }
         row := _CP_GetClipRow(id)
         if row["content"] != ""
             A_Clipboard := row["content"]
@@ -1786,6 +1807,9 @@ _CP_DoCopyToClipboard(id, keepOpen := false) {
     if !ClipboardFTS5DB || ClipboardFTS5DB = 0
         return
     try {
+        if FuncExists("Nmer_Telemetry_Record") {
+            try Nmer_Telemetry_Record("cmd", "cp_copy", true, Map("source", "_CP_DoCopyToClipboard"))
+        }
         row := _CP_GetClipRow(id)
         content := row["content"]
         dataType := row["dataType"]
@@ -1816,6 +1840,9 @@ _CP_DoPastePlain(id, keepOpen := false) {
     if !ClipboardFTS5DB || ClipboardFTS5DB = 0
         return
     try {
+        if FuncExists("Nmer_Telemetry_Record") {
+            try Nmer_Telemetry_Record("cmd", "cp_paste_plain", true, Map("source", "_CP_DoPastePlain"))
+        }
         row := _CP_GetClipRow(id)
         dt := StrLower(row["dataType"] . "")
         if dt = "image" || dt = "screenshot" {
@@ -1841,6 +1868,9 @@ _CP_DoPasteWithNewline(id, keepOpen := false) {
     if !ClipboardFTS5DB || ClipboardFTS5DB = 0
         return
     try {
+        if FuncExists("Nmer_Telemetry_Record") {
+            try Nmer_Telemetry_Record("cmd", "cp_paste_newline", true, Map("source", "_CP_DoPasteWithNewline"))
+        }
         row := _CP_GetClipRow(id)
         dt := StrLower(row["dataType"] . "")
         if dt = "image" || dt = "screenshot" {
@@ -1867,6 +1897,9 @@ _CP_DoPastePath(id, keepOpen := false) {
     if !ClipboardFTS5DB || ClipboardFTS5DB = 0
         return
     try {
+        if FuncExists("Nmer_Telemetry_Record") {
+            try Nmer_Telemetry_Record("cmd", "cp_paste_path", true, Map("source", "_CP_DoPastePath"))
+        }
         row := _CP_GetClipRow(id)
         path := _CP_ResolvePastePath(row["content"] . "", row["sourcePath"] . "")
         if path = ""
@@ -1990,6 +2023,9 @@ _CP_DoOcrImage(id, keepOpen := false) {
         return
     }
     try {
+        if FuncExists("Nmer_Telemetry_Record") {
+            try Nmer_Telemetry_Record("cmd", "cp_ocr", true, Map("source", "_CP_DoOcrImage"))
+        }
         result := OCR.FromFile(imagePath)
         text := ""
         try text := result.Text
@@ -2015,6 +2051,9 @@ _CP_DoOcrImage(id, keepOpen := false) {
 _CP_DoScreenshotToOcr(keepOpen := false) {
     try {
         ; 复用现有截图智能流程（含 OCR 能力入口）
+        if FuncExists("Nmer_Telemetry_Record") {
+            try Nmer_Telemetry_Record("cmd", "cp_screenshot_ocr", true, Map("source", "_CP_DoScreenshotToOcr"))
+        }
         ExecuteScreenshotWithMenu()
         _CP_MaybeHide(keepOpen)
     } catch as err {

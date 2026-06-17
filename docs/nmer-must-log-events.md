@@ -33,6 +33,7 @@ NMER_Log(scope, event, detail := "")
 |------|--------|------|
 | `health_summary.json` | `NmerHealthSummary.ahk` | 侧车 / Surface / runtime 只读快照（读模型） |
 | `surface_registry_snapshot.json` | `SurfaceRuntimeManager.ahk` | Surface 登记簿导出 |
+| `nmer_telemetry.json` | `NmerTelemetry.ahk` | 本机埋点聚合（次数 / 最近一次成功失败 / 摘要） |
 | `studio_llm_test.log` | `ConfigWebView_LogStudioLlmTest` | 设置页 LLM 测试：`prov` / `keyLen` / `st` / `viaRoute` |
 | `searchcore_lifecycle.jsonl` | `SearchCoreLifecycle.ahk` | SearchCenterCore 启停、健康检查 |
 | `scwv_trace.log` | SearchCenter WebView 核心 | SCWV 嵌入/导航追踪 |
@@ -45,5 +46,6 @@ NMER_Log(scope, event, detail := "")
 - Settings 保存失败聚合（`saveResult` err 计数）
 - `Nmer_SecretStore` 迁移成功/失败单行
 - Wails hub `CheckOrigin` 拒绝计数（Go 侧）
+- `nmer_telemetry.json` 只做本机聚合，不做任何外发
 
 符合治理边界：**不做埋点同步**，仅文档标注空缺。

@@ -123,6 +123,27 @@ CommandPalette_PerfLog(event, extra := "") {
             row[k] := v
     }
     g_CmdPal_PerfBuf.Push(row)
+    if FuncExists("Nmer_Telemetry_Record") {
+        telemAction := ""
+        switch ev {
+            case "show_requested":
+                telemAction := "open"
+            case "visible", "show_to_visible":
+                telemAction := "visible"
+            case "query_received":
+                telemAction := "query"
+            case "submit_received":
+                telemAction := "submit"
+            case "results_sent":
+                telemAction := "results"
+        }
+        if (telemAction != "") {
+            try Nmer_Telemetry_Record("cmdpal", telemAction, true, row)
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e)
+            }
+        }
+    }
     if !g_CmdPal_PerfFlushPending {
         g_CmdPal_PerfFlushPending := true
         SetTimer(CommandPalette_PerfFlush, -50)
@@ -680,6 +701,9 @@ CommandPalette_Show() {
     global g_CmdPal_Ready, g_CmdPal_PendingShow, g_CmdPal_ShowRetryCount, g_CmdPal_ShowRequestedTick
     g_CmdPal_ShowRequestedTick := A_TickCount
     CommandPalette_PerfLog("show_requested")
+    if FuncExists("Nmer_Telemetry_MarkSurfaceOpen") {
+        try Nmer_Telemetry_MarkSurfaceOpen("command_palette", Map("source", "CommandPalette_Show"))
+    }
     skipTel := FuncExists("SurfaceIntent_ShouldSkipExecutorTelemetry") && SurfaceIntent_ShouldSkipExecutorTelemetry()
     reqId := 0
     if !skipTel {
@@ -1632,6 +1656,9 @@ CommandPalette_Hide(meta := 0) {
     if !skipTel {
         reqId := SurfaceManager_Request("command_palette", "close", "CommandPalette_Hide", Map("visibleBefore", g_CmdPal_Visible ? 1 : 0))
         try SurfaceManager_ObserveHide("command_palette", Map("entry", "CommandPalette_Hide", "requestId", reqId))
+    }
+    if FuncExists("Nmer_Telemetry_MarkSurfaceClose") {
+        try Nmer_Telemetry_MarkSurfaceClose("command_palette", Map("source", "CommandPalette_Hide"))
     }
     if (g_CmdPal_AiSession is Map) && !g_CmdPal_AiSession.Get("handoff", false) && !g_CmdPal_AiSession.Get("ended", false) {
         try CommandPalette_HandoffAiToToolbar(true)
@@ -4342,6 +4369,12 @@ CommandPalette_RecordExec(cmdId, name, query := "") {
     }
     g_CmdPal_ExecCache := newArr
     g_CmdPal_ExecDirty := true
+    if FuncExists("Nmer_Telemetry_Record") {
+        try Nmer_Telemetry_Record("cmd", id, true, Map("source", "command_palette"))
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e)
+        }
+    }
     SetTimer(CommandPalette_FlushExecHistory, 0)
     SetTimer(CommandPalette_FlushExecHistory, -1500)
 }

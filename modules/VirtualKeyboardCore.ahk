@@ -4118,32 +4118,56 @@ _OnWebMessage(sender, args) {
             cmdId := msg["commandId"]
             ahkKey := msg["ahkKey"]
             displayKey := msg.Has("displayKey") ? msg["displayKey"] : ahkKey
-            _DoBindKey(cmdId, ahkKey, displayKey)
+            okBind := _DoBindKey(cmdId, ahkKey, displayKey)
+            if FuncExists("Nmer_Telemetry_Record") {
+                try Nmer_Telemetry_Record("vk", "bind_key", !!okBind, Map("cmdId", String(cmdId)))
+            }
 
         case "startRecord":
             if msg.Has("commandId") {
                 policy := msg.Has("bindPolicy") ? String(msg["bindPolicy"]) : "scene_compatible"
                 sceneId := msg.Has("sceneId") ? String(msg["sceneId"]) : ""
+                if FuncExists("Nmer_Telemetry_Record") {
+                    try Nmer_Telemetry_Record("vk", "start_record", true, Map("cmdId", String(msg["commandId"]), "policy", policy, "sceneId", sceneId))
+                }
                 _BeginRecord(msg["commandId"], policy, sceneId)
             }
 
         case "cancelRecord":
+            if FuncExists("Nmer_Telemetry_Record") {
+                try Nmer_Telemetry_Record("vk", "cancel_record", true)
+            }
             _EndRecord()
 
         case "clearBinding":
-            if msg.Has("commandId")
+            if msg.Has("commandId") {
                 _DoClearBinding(msg["commandId"])
+                if FuncExists("Nmer_Telemetry_Record") {
+                    try Nmer_Telemetry_Record("vk", "clear_binding", true, Map("cmdId", String(msg["commandId"])))
+                }
+            }
 
         case "reset_single":
-            if msg.Has("commandId")
+            if msg.Has("commandId") {
                 _DoResetSingle(msg["commandId"])
+                if FuncExists("Nmer_Telemetry_Record") {
+                    try Nmer_Telemetry_Record("vk", "reset_single", true, Map("cmdId", String(msg["commandId"])))
+                }
+            }
 
         case "reset_all":
+            if FuncExists("Nmer_Telemetry_Record") {
+                try Nmer_Telemetry_Record("vk", "reset_all", true)
+            }
             _DoResetAll()
 
         case "executeCommand":
-            if msg.Has("commandId")
+            if msg.Has("commandId") {
+                if FuncExists("Nmer_Telemetry_Record") {
+                    try Nmer_Telemetry_Record("vk", "execute_command", true, Map("cmdId", String(msg["commandId"])))
+                }
                 _ExecuteCommand(msg["commandId"])
+            }
         case "nmDockReady":
             _VK_SendDockConfig()
         case "nmDockLeave":
@@ -5494,6 +5518,12 @@ VK_Show() {
     if FuncExists("SurfaceIntent_RouteExternalOpen") && SurfaceIntent_RouteExternalOpen("virtual_keyboard")
         return
     skipTel := FuncExists("SurfaceIntent_ShouldSkipExecutorTelemetry") && SurfaceIntent_ShouldSkipExecutorTelemetry()
+    if FuncExists("Nmer_Telemetry_Record") {
+        try Nmer_Telemetry_Record("surface", "virtual_keyboard_open", true, Map("source", "VK_Show"))
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e)
+        }
+    }
     reqId := 0
     if !skipTel {
         reqId := SurfaceManager_Request("virtual_keyboard", "open", "VK_Show", Map("readyBefore", g_VK_Ready ? 1 : 0))

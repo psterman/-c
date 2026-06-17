@@ -124,6 +124,29 @@ CommandPalette_AgentLog(event, detail := "") {
             NmerCatch(A_ThisFunc, _e) 
         }
     }
+    if FuncExists("Nmer_Telemetry_Record") {
+        telemAction := ""
+        switch ev {
+            case "dispatch_ai":
+                telemAction := "dispatch"
+            case "dispatch_ai_paths":
+                telemAction := "route_paths"
+            case "adapter_ok":
+                telemAction := "adapter_ok"
+            case "adapter_fail":
+                telemAction := "adapter_fail"
+            case "recover_ok":
+                telemAction := "recover"
+            case "poll_hit", "poll_hit_long", "poll_final_hit":
+                telemAction := "poll_hit"
+        }
+        if (telemAction != "") {
+            try Nmer_Telemetry_Record("cmdpal_agent", telemAction, (InStr(ev, "fail") = 0), Map("detail", String(detail)))
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e)
+            }
+        }
+    }
     if FuncExists("CommandPalette_AgentDebugTrace") {
         dbgLayer := "ahk"
         ev := String(event)

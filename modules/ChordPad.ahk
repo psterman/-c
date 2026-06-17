@@ -1304,6 +1304,9 @@ ChordPad_PositionAndShow() {
     }
     try WinSetExStyle("+0x08000000", g_ChordPad_Gui)
     g_ChordPad_Visible := true
+    if FuncExists("Nmer_Telemetry_Record") {
+        try Nmer_Telemetry_Record("surface", "chord_pad_open", true, Map("source", "ChordPad_PositionAndShow"))
+    }
     ChordPad_StartCapsWatch()
     if FuncExists("OnboardingHotkeys_RecordSummon") {
         obResult := OnboardingHotkeys_RecordSummon()
@@ -1336,6 +1339,9 @@ ChordPad_Hide(*) {
     ChordPad_StopCapsWatch()
     g_ChordPad_Visible := false
     g_ChordPad_Pinned := false
+    if FuncExists("Nmer_Telemetry_Record") {
+        try Nmer_Telemetry_Record("surface", "chord_pad_close", true, Map("source", "ChordPad_Hide"))
+    }
     try VKHoldVisible := false
     catch as _e {
         if FuncExists("NmerCatch")

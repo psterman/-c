@@ -372,6 +372,12 @@ InitClipboardFTS5DB() {
                "WHERE ID NOT IN (SELECT rowid FROM ClipboardHistory)"
         ClipboardFTS5DB.Exec(SQL)
         
+        if SCWV_FuncExists("_SCWV_OnClipboardDbReady") {
+            try _SCWV_OnClipboardDbReady()
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e)
+            }
+        }
         return true
         
     } catch as err {

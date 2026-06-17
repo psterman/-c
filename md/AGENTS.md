@@ -38,7 +38,10 @@
 
 ## PR / 架构纪律
 
-改 Hub、命令面板 A2UI、WebView 消息协议时，见 [docs/pr-architecture-discipline.md](../docs/pr-architecture-discipline.md)（**禁止 Go/TS 双写 Surface 状态**）。
+- 混栈治理术语与 DevMenu： [docs/stack-governance.md](../docs/stack-governance.md)（**L3 ≠ SCWV production**）。
+- SearchCenter WebView 消息契约（当前 **production**，`-Strict` 进门禁）： [docs/scwv-message-contract.md](../docs/scwv-message-contract.md)。
+- 合入自检： [docs/pull-request-checklist.md](../docs/pull-request-checklist.md)。
+- 改 Hub、命令面板 A2UI 时： [docs/pr-architecture-discipline.md](../docs/pr-architecture-discipline.md)（**禁止 Go/TS 双写 Surface 状态**）。
 
 ## 约束
 

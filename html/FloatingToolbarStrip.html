@@ -2033,11 +2033,14 @@ body.niuma-confirm-open{overflow:hidden}
     attachToolbarIconFallback($('drawerBtns'));
     bindSearchDnD();
     if (state.activeCmdId) sel(state.activeCmdId);
+    bootCmdsReady = true;
     if (FTB_MINIMAL_BOOT && ftbBootAwaitLayout) {
-      bootCmdsReady = true;
       tryPostPaintReady();
     } else {
       schedulePostPaintReady();
+    }
+    if (toolbarVisibleSynced && countToolbarButtons() === 0) {
+      requestToolbarLayoutRefresh('rebuild_empty');
     }
   }
 
@@ -2371,6 +2374,38 @@ body.niuma-confirm-open{overflow:hidden}
   var FTB_BOOT_MIN_MS = 520;
   var FTB_BOOT_EXIT_MS = 340;
 
+  function countToolbarButtons() {
+    var root = $('collapsedBtns');
+    if (!root) return 0;
+    return root.querySelectorAll('button.tb[data-cmd-id], button.tb[data-action]').length;
+  }
+
+  function requestToolbarLayoutRefresh(reason) {
+    try {
+      post({ type: 'request_toolbar_layout', reason: String(reason || '') });
+    } catch (_) {}
+  }
+
+  function scheduleToolbarLayoutGuard() {
+    setTimeout(function () {
+      if (countToolbarButtons() > 0) return;
+      requestToolbarLayoutRefresh('empty_after_reveal');
+    }, 240);
+    setTimeout(function () {
+      if (countToolbarButtons() > 0) return;
+      requestToolbarLayoutRefresh('empty_after_reveal_retry');
+    }, 900);
+  }
+
+  function handleBootPaintNudge() {
+    if (FTB_MINIMAL_BOOT && ftbBootAwaitLayout) {
+      if (!bootLogoReady) markBootLogoReady();
+      tryPostPaintReady();
+    } else {
+      schedulePostPaintReady();
+    }
+  }
+
   function markBootLogoReady() {
     bootLogoReady = true;
     tryPostPaintReady();
@@ -2518,6 +2553,7 @@ body.niuma-confirm-open{overflow:hidden}
       requestAnimationFrame(function () {
         post({ type: 'UI_PAINT_READY' });
       });
+      scheduleToolbarLayoutGuard();
       setTimeout(function () {
         scheduleLoadCfgDeferred();
       }, 800);
@@ -2527,6 +2563,7 @@ body.niuma-confirm-open{overflow:hidden}
       requestAnimationFrame(function () {
         post({ type: 'UI_PAINT_READY' });
       });
+      scheduleToolbarLayoutGuard();
     });
   }
 
@@ -24809,13 +24846,7 @@ body.niuma-confirm-open{overflow:hidden}
       var d = JSON.parse(s0);
       if (!d || !d.type) return;
       if (d.type === 'ftb_boot_paint_nudge') {
-        if (FTB_MINIMAL_BOOT && ftbBootAwaitLayout) {
-          if (!bootCmdsReady) bootCmdsReady = true;
-          if (!bootLogoReady) bootLogoReady = true;
-          tryPostPaintReady();
-        } else {
-          schedulePostPaintReady();
-        }
+        handleBootPaintNudge();
         return;
       }
       if (d.type === 'host_request_reveal') {
@@ -25794,13 +25825,7 @@ body.niuma-confirm-open{overflow:hidden}
         return;
       }
       if (d.type === 'ftb_boot_paint_nudge') {
-        if (FTB_MINIMAL_BOOT && ftbBootAwaitLayout) {
-          if (!bootCmdsReady) bootCmdsReady = true;
-          if (!bootLogoReady) bootLogoReady = true;
-          tryPostPaintReady();
-        } else {
-          schedulePostPaintReady();
-        }
+        handleBootPaintNudge();
         return;
       }
     });

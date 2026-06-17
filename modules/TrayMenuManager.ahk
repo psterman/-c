@@ -1307,15 +1307,19 @@ Nmer_ScheduleCleanRestart() {
     try {
         Run('powershell.exe -NoProfile -WindowStyle Hidden -Command "' . ps . '"', , "Hide")
         try TrayMenu_Log("restart_clean_spawn_scheduled pid=" . pid)
-        return
+        return true
     } catch as err {
         try TrayMenu_Log("restart_clean_spawn_ps_failed msg=" . err.Message)
     }
     cmd := 'cmd /c ping 127.0.0.1 -n 4 >nul & start "" "' . ahkExe . '" "' . scriptPath . '"'
-    try Run(cmd, , "Hide")
-    catch as _e {
+    try {
+        Run(cmd, , "Hide")
+        try TrayMenu_Log("restart_clean_spawn_fallback_scheduled pid=" . pid)
+        return true
+    } catch as _e {
         NmerCatch(A_ThisFunc, _e) 
     }
+    return false
 }
 
 RestartAppCleanFromTrayMenu(*) {
@@ -1393,9 +1397,13 @@ RestartAppCleanFromTrayMenu(*) {
     catch as _e {
         NmerCatch(A_ThisFunc, _e) 
     }
-    Nmer_ScheduleCleanRestart()
-    try TrayMenu_Log("restart_clean_exit")
-    ExitApp()
+    okRestart := Nmer_ScheduleCleanRestart()
+    try TrayMenu_Log("restart_clean_exit_scheduled=" . (okRestart ? "1" : "0"))
+    if okRestart {
+        ExitApp()
+    } else {
+        try TrayTip("牛马", "重启调度失败，当前进程保持运行", "Iconx 2")
+    }
 }
 
 ReloadScriptFromPopupMenu(*) {
@@ -1436,9 +1444,13 @@ ReloadScriptFromPopupMenu(*) {
         NmerCatch(A_ThisFunc, _e) 
     }
     ; 等当前进程退出后再拉起，避免与 #SingleInstance Force 抢实例导致 Run(AutoHotkey64) 失败（error -1）
-    Nmer_ScheduleCleanRestart()
-    try TrayMenu_Log("reload_clean_spawn_scheduled")
-    ExitApp()
+    okRestart := Nmer_ScheduleCleanRestart()
+    try TrayMenu_Log("reload_clean_spawn_scheduled=" . (okRestart ? "1" : "0"))
+    if okRestart {
+        ExitApp()
+    } else {
+        try TrayTip("牛马", "重载调度失败，当前进程保持运行", "Iconx 2")
+    }
 }
 
 TrayPopup_GetThemeMode() {

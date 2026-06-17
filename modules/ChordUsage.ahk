@@ -54,6 +54,13 @@ ChordUsage_Record(cmdId) {
     entry["lastAt"] := A_Now
     doc[cmdId] := entry
     ChordUsage_Save(doc)
+    if FuncExists("Nmer_Telemetry_Record") {
+        try Nmer_Telemetry_Record("cmd", cmdId, true, Map("source", "chord_usage"))
+        catch as _e {
+            if FuncExists("NmerCatch")
+                NmerCatch(A_ThisFunc, _e)
+        }
+    }
 }
 
 ChordUsage_GetScore(cmdId) {

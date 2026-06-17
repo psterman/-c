@@ -134,7 +134,14 @@ AppUpdateCheck_OpenUrl(url) {
 AppUpdateCheck_OpenReleasePage() {
     global g_AppUpdate_ReleaseUrl, NMER_RELEASES_PAGE
     u := g_AppUpdate_ReleaseUrl != "" ? g_AppUpdate_ReleaseUrl : NMER_RELEASES_PAGE
-    return AppUpdateCheck_OpenUrl(u)
+    ok := AppUpdateCheck_OpenUrl(u)
+    if FuncExists("Nmer_Telemetry_Record") {
+        try Nmer_Telemetry_Record("health", "update_open_release_page", ok, Map("trigger", "settings"))
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e)
+        }
+    }
+    return ok
 }
 
 AppUpdateCheck_RefreshTrayTip() {
@@ -180,6 +187,18 @@ AppUpdateCheck_ApplyResult(latestVer, releaseUrl, fromFallback := false) {
     try NMER_Log("update", "check_done", "local=" . cv . " remote=" . lv . " has=" . (g_AppUpdate_HasUpdate ? "1" : "0") . " fb=" . (fromFallback ? "1" : "0"))
     catch as _e {
         NmerCatch(A_ThisFunc, _e) 
+    }
+    if FuncExists("Nmer_Telemetry_Record") {
+        try Nmer_Telemetry_Record("health", "update_check_done", true, Map("trigger", fromFallback ? "fallback" : "github_api"))
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e)
+        }
+        if g_AppUpdate_HasUpdate {
+            try Nmer_Telemetry_Record("health", "update_available", true, Map("trigger", fromFallback ? "fallback" : "github_api"))
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e)
+            }
+        }
     }
     AppUpdateCheck_NotifyUi()
 }

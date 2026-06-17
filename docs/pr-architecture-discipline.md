@@ -32,11 +32,12 @@
 ## 验收命令
 
 ```powershell
-node html/run-palette-fixtures.mjs
+powershell tools/ci/Run-Phase3ContractSuite.ps1 -Required
 powershell tools/ci/Validate-WsPolicy.ps1
 ```
 
 ## 相关文档
 
+- [stack-governance.md](stack-governance.md) — 混栈治理、DevMenu Tier、术语 §0
 - [nmer-conventions.md](nmer-conventions.md)
 - [ci-minimal-gate.md](ci-minimal-gate.md)

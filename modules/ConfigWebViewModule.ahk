@@ -163,6 +163,12 @@ ShowConfigWebViewGUI() {
         return
     global GuiID_ConfigGUI, GuiID_ClipboardManager, ConfigPanelScreenIndex, g_ConfigWebView_LastShown, g_ConfigWebView_StartTabNavigated
     skipTel := FuncExists("SurfaceIntent_ShouldSkipExecutorTelemetry") && SurfaceIntent_ShouldSkipExecutorTelemetry()
+    if FuncExists("Nmer_Telemetry_Record") {
+        try Nmer_Telemetry_MarkSurfaceOpen("config_webview", Map("source", "ShowConfigWebViewGUI"))
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e)
+        }
+    }
     reqId := 0
     if !skipTel {
         reqId := SurfaceManager_Request("config_webview", "open", "ShowConfigWebViewGUI", Map("hostAliveBefore", ConfigWebView_HostAlive() ? 1 : 0))
@@ -3645,6 +3651,12 @@ ConfigWebView_OnMessage(sender, args) {
                 }
             }
             studio := ok ? ConfigWebView_UserStudioPayloadForWebAfterSave() : Map()
+            if FuncExists("Nmer_Telemetry_Record") {
+                try Nmer_Telemetry_Record("studio", "saveUserStudio", !!ok, Map("error", err))
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e)
+                }
+            }
             ConfigWebView_Send(Map("type", "saveUserStudioResult", "ok", ok, "error", err, "userStudio", studio))
         case "saveStudioLlmCards":
             ok := false
@@ -3660,6 +3672,12 @@ ConfigWebView_OnMessage(sender, args) {
                 }
             }
             studio := ok ? ConfigWebView_UserStudioPayloadForWebAfterSave() : Map()
+            if FuncExists("Nmer_Telemetry_Record") {
+                try Nmer_Telemetry_Record("studio", "saveStudioLlmCards", !!ok, Map("error", err))
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e)
+                }
+            }
             ConfigWebView_Send(Map("type", "saveUserStudioResult", "ok", ok, "error", err, "userStudio", studio))
         case "hermes_probe_token", "refreshHermesStudioStatus", "ensureHermesApiServerEnv":
             if (action = "refreshHermesStudioStatus") {
@@ -4026,10 +4044,19 @@ ConfigWebView_OnMessage(sender, args) {
             try {
                 switch op {
                     case "exportConfig":
+                        if FuncExists("Nmer_Telemetry_Record") {
+                            try Nmer_Telemetry_Record("settings", "exportConfig", true, Map("source", "invokeAction"))
+                        }
                         ExportConfig()
                     case "importConfig":
+                        if FuncExists("Nmer_Telemetry_Record") {
+                            try Nmer_Telemetry_Record("settings", "importConfig", true, Map("source", "invokeAction"))
+                        }
                         ImportConfig()
                     case "resetToDefaults":
+                        if FuncExists("Nmer_Telemetry_Record") {
+                            try Nmer_Telemetry_Record("settings", "resetToDefaults", true, Map("source", "invokeAction"))
+                        }
                         ResetToDefaults()
                     case "exportUserStudio":
                         if FuncExists("UserStudio_ExportTo") {
@@ -4056,6 +4083,9 @@ ConfigWebView_OnMessage(sender, args) {
                                 throw Error(r.Get("error", "还原失败"))
                         }
                     case "openNiumaChatTtyd":
+                        if FuncExists("Nmer_Telemetry_Record") {
+                            try Nmer_Telemetry_Record("settings", "openNiumaChatTtyd", true, Map("source", "invokeAction"))
+                        }
                         if FuncExists("UserStudio_ApplyFromWebPayload") && (payload is Map) && payload.Has("llm") {
                             try UserStudio_ApplyFromWebPayload(payload)
                             catch as _e {
@@ -4077,6 +4107,9 @@ ConfigWebView_OnMessage(sender, args) {
                         } else
                             throw Error("无法打开 Niuma Chat")
                     case "openNiumaChatAsk":
+                        if FuncExists("Nmer_Telemetry_Record") {
+                            try Nmer_Telemetry_Record("settings", "openNiumaChatAsk", true, Map("source", "invokeAction"))
+                        }
                         if FuncExists("FloatingToolbar_OpenNiumaChatAsk") {
                             try CloseConfigGUI()
                             catch as _e {
@@ -4130,10 +4163,19 @@ ConfigWebView_OnMessage(sender, args) {
                         ConfigWebView_Send(Map("type", "syncNiumaChatLlmResult", "ok", ok, "error", err, "userStudio", studio))
                         return
                     case "importPromptTemplates":
+                        if FuncExists("Nmer_Telemetry_Record") {
+                            try Nmer_Telemetry_Record("settings", "importPromptTemplates", true, Map("source", "invokeAction"))
+                        }
                         ImportPromptTemplates()
                     case "exportPromptTemplates":
+                        if FuncExists("Nmer_Telemetry_Record") {
+                            try Nmer_Telemetry_Record("settings", "exportPromptTemplates", true, Map("source", "invokeAction"))
+                        }
                         ExportPromptTemplates()
                     case "reloadPromptTemplates":
+                        if FuncExists("Nmer_Telemetry_Record") {
+                            try Nmer_Telemetry_Record("settings", "reloadPromptTemplates", true, Map("source", "invokeAction"))
+                        }
                         LoadPromptTemplates()
                     case "promptTemplateUpsert":
                         WebViewPromptTemplateUpsert(payload)
@@ -4166,11 +4208,38 @@ ConfigWebView_OnMessage(sender, args) {
                             snap := Nmer_CollectHealthSnapshot(trig)
                         else if FuncExists("Nmer_BuildHealthSnapshot")
                             snap := Nmer_BuildHealthSnapshot(trig)
+                        if FuncExists("Nmer_Telemetry_Record") {
+                            try Nmer_Telemetry_Record("health", "getHealthSnapshot", true, Map("trigger", trig))
+                            catch as _e {
+                                NmerCatch(A_ThisFunc, _e)
+                            }
+                        }
                         ConfigWebView_Send(Map("type", "healthSnapshot", "payload", FuncExists("Nmer_HealthSnapshotForWeb") ? Nmer_HealthSnapshotForWeb(snap) : snap))
                         return
+                    case "getTelemetrySnapshot":
+                        telem := Map()
+                        if FuncExists("Nmer_Telemetry_BuildSummary")
+                            telem := Nmer_Telemetry_BuildSummary(8)
+                        else if FuncExists("Nmer_Telemetry_Snapshot")
+                            telem := Nmer_Telemetry_Snapshot()
+                        ConfigWebView_Send(Map("type", "telemetrySnapshot", "payload", telem))
+                        return
                     case "exportDiagnosticsBundle":
-                        if FuncExists("Nmer_ExportDiagnosticsBundle")
-                            Nmer_ExportDiagnosticsBundle()
+                        okExp := true
+                        errExp := ""
+                        try {
+                            if FuncExists("Nmer_ExportDiagnosticsBundle")
+                                okExp := Nmer_ExportDiagnosticsBundle()
+                        } catch as eExp {
+                            okExp := false
+                            errExp := eExp.Message
+                        }
+                        if FuncExists("Nmer_Telemetry_Record") {
+                            try Nmer_Telemetry_Record("diagnostics", "exportDiagnosticsBundle", !!okExp, Map("error", errExp))
+                            catch as _e {
+                                NmerCatch(A_ThisFunc, _e)
+                            }
+                        }
                         return
                     case "getMigrationOptions":
                         migInfo := FuncExists("Nmer_MigrationOptionsForWeb") ? Nmer_MigrationOptionsForWeb() : Map("groups", [], "presets", [])
@@ -4182,6 +4251,9 @@ ConfigWebView_OnMessage(sender, args) {
                         if FuncExists("Nmer_ExportMigrationPack")
                             migR := Nmer_ExportMigrationPack(migOpts)
                         webMig := FuncExists("Nmer_MigrationPackForWeb") ? Nmer_MigrationPackForWeb(migR) : migR
+                        if FuncExists("Nmer_Telemetry_Record") {
+                            try Nmer_Telemetry_Record("migration", "exportMigrationPack", !!(migR is Map && migR.Get("ok", false)), Map("source", "ConfigWebViewModule"))
+                        }
                         ConfigWebView_Send(Map("type", "migrationPackResult", "op", "export", "payload", webMig))
                         return
                     case "importMigrationPack":
@@ -4205,6 +4277,9 @@ ConfigWebView_OnMessage(sender, args) {
                                 preview := Map("ok", false, "error", "预览失败", "zipPath", migZip)
                             else
                                 preview["zipPath"] := migZip
+                            if FuncExists("Nmer_Telemetry_Record") {
+                                try Nmer_Telemetry_Record("migration", "previewMigrationPack", !!preview.Get("ok", false), Map("source", "ConfigWebViewModule"))
+                            }
                             ConfigWebView_Send(Map("type", "migrationPreview", "payload", preview))
                             return
                         }
@@ -4212,6 +4287,9 @@ ConfigWebView_OnMessage(sender, args) {
                         if FuncExists("Nmer_ImportMigrationPack")
                             migR2 := Nmer_ImportMigrationPack(migZip, true)
                         webMig2 := FuncExists("Nmer_MigrationPackForWeb") ? Nmer_MigrationPackForWeb(migR2) : migR2
+                        if FuncExists("Nmer_Telemetry_Record") {
+                            try Nmer_Telemetry_Record("migration", "importMigrationPack", !!(migR2 is Map && migR2.Get("ok", false)), Map("source", "ConfigWebViewModule"))
+                        }
                         ConfigWebView_Send(Map("type", "migrationPackResult", "op", "import", "payload", webMig2))
                         return
                     case "openDebugLogsFolder":
@@ -4461,6 +4539,9 @@ ConfigWebView_Close() {
     if !skipTel {
         reqId := SurfaceManager_Request("config_webview", "close", "ConfigWebView_Close", Map("hostAliveBefore", ConfigWebView_HostAlive() ? 1 : 0))
         try SurfaceManager_ObserveHide("config_webview", Map("entry", "ConfigWebView_Close", "requestId", reqId))
+    }
+    if FuncExists("Nmer_Telemetry_MarkSurfaceClose") {
+        try Nmer_Telemetry_MarkSurfaceClose("config_webview", Map("source", "ConfigWebView_Close"))
     }
     g_ConfigWebView_StartTabNavigated := false
     try {
@@ -4780,6 +4861,17 @@ ConfigWebView_LogSettingsTrace(msg) {
         tab := Trim(String(msg.Get("tab", msg.Get("activeTab", ""))))
         line := Format("[{}][{}] {} tab={} detail={}`n", A_Now, src, ev, tab, detail)
         FileAppend(line, path, "UTF-8")
+        if FuncExists("Nmer_Telemetry_Record") {
+            safeEvent := ev
+            if (safeEvent = "")
+                safeEvent := "event"
+            if (safeEvent = "render_begin" || safeEvent = "render_end" || safeEvent = "initdata_end")
+                safeEvent := "ui"
+            try Nmer_Telemetry_Record("settings", safeEvent, true, Map("tab", tab, "source", src))
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e)
+            }
+        }
     } catch {
     }
 }
@@ -4851,6 +4943,19 @@ ConfigWebView_ExecuteStudioLlmTest(payload, testId := "") {
         }
     } catch as e {
         err := e.Message
+    }
+    if FuncExists("Nmer_Telemetry_Record") {
+        try Nmer_Telemetry_Record("llm", "testUserStudioLlm", !!ok, Map(
+            "provider", provTest,
+            "baseUrl", Trim(String(llm.Get("baseUrl", ""))),
+            "endpoint", epUsed,
+            "elapsedMs", elapsed,
+            "status", httpSt,
+            "error", err
+        ))
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e)
+        }
     }
     ConfigWebView_LogStudioLlmTest("done testId=" . testId . " ok=" . (ok ? 1 : 0) . " ms=" . elapsed . " st=" . httpSt . " viaRoute=" . viaRoute . " err=" . SubStr(err, 1, 120))
     return Map(

@@ -1,0 +1,94 @@
+{
+  "schemaVersion": 1,
+  "fixtures": [
+    {
+      "name": "lifecycle_ready",
+      "type": "ready",
+      "payload": { "type": "ready", "schemaVersion": 1 },
+      "required": ["type"]
+    },
+    {
+      "name": "lifecycle_ui_paint",
+      "type": "UI_PAINT_READY",
+      "payload": { "type": "UI_PAINT_READY", "schemaVersion": 1 }
+    },
+    {
+      "name": "search_keyword",
+      "type": "search",
+      "payload": { "type": "search", "keyword": "fixture", "queryId": "q1", "schemaVersion": 1 },
+      "required": ["keyword", "queryId"]
+    },
+    {
+      "name": "search_go_request",
+      "type": "searchGoRequest",
+      "payload": { "type": "searchGoRequest", "keyword": "go", "schemaVersion": 1 },
+      "required": ["keyword"]
+    },
+    {
+      "name": "mode_set_ui",
+      "type": "setUiMode",
+      "payload": { "type": "setUiMode", "mode": "local", "schemaVersion": 1 },
+      "required": ["mode"]
+    },
+    {
+      "name": "mode_set_category",
+      "type": "setCategory",
+      "payload": { "type": "setCategory", "category": "ai", "schemaVersion": 1 },
+      "required": ["category"]
+    },
+    {
+      "name": "mode_set_filter",
+      "type": "setFilter",
+      "payload": { "type": "setFilter", "filterType": "clipboard", "keyword": "", "schemaVersion": 1 }
+    },
+    {
+      "name": "fulltext_status",
+      "type": "fulltextStatusRequest",
+      "payload": { "type": "fulltextStatusRequest", "withConfig": true, "schemaVersion": 1 }
+    },
+    {
+      "name": "fulltext_control",
+      "type": "fulltextControl",
+      "payload": { "type": "fulltextControl", "control": "rebuild", "schemaVersion": 1 },
+      "required": ["control"]
+    },
+    {
+      "name": "cli_send",
+      "type": "cliSend",
+      "payload": { "type": "cliSend", "prompt": "help", "engine": "default", "schemaVersion": 1 },
+      "required": ["prompt"]
+    },
+    {
+      "name": "cli_niuma_open",
+      "type": "niuma_cli_open",
+      "payload": { "type": "niuma_cli_open", "engine": "default", "reqId": "sc_fixture", "schemaVersion": 1 }
+    },
+    {
+      "name": "preview_native",
+      "type": "NATIVE_PREVIEW",
+      "payload": { "type": "NATIVE_PREVIEW", "path": "C:\\fixture.txt", "seq": 1, "schemaVersion": 1 },
+      "required": ["path", "seq"]
+    },
+    {
+      "name": "preview_quicklook",
+      "type": "QUICKLOOK",
+      "payload": { "type": "QUICKLOOK", "path": "C:\\fixture.txt", "row": 1, "schemaVersion": 1 }
+    },
+    {
+      "name": "window_drag",
+      "type": "dragHost",
+      "payload": { "type": "dragHost", "schemaVersion": 1 }
+    },
+    {
+      "name": "hotkey_sync",
+      "type": "scHotkeyBindingsSync",
+      "payload": { "type": "scHotkeyBindingsSync", "payload": { "entries": [] }, "schemaVersion": 1 }
+    },
+    {
+      "name": "lifecycle_close",
+      "type": "lifecycle",
+      "payload": { "type": "lifecycle", "phase": "close_request", "source": "fixture", "schemaVersion": 1 },
+      "required": ["phase"]
+    }
+  ]
+}

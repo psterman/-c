@@ -35,7 +35,7 @@ The portable package includes Everything, ttyd, SearchCenterCore, WebView2Loader
 | `Data/` | Runtime user data (screenshots, chat attachments) |
 | `Cache/` | Logs and cache — safe to clear periodically |
 | `docs/` | Technical documentation (`md/docs/`) |
-| `archive/` | Deprecated prototypes — not used by the current app |
+| `archive/` | **Reserved; currently empty.** Legacy prototypes (e.g. old Wails toolbar) were removed from Git — see [`docs/wails-migration-boundary.md`](../docs/wails-migration-boundary.md). Active `Legacy*.ahk` modules live under `modules/` with CI allowlist — **not** in `archive/` |
 
 See [软件介绍.md](软件介绍.md) (Chinese) for full architecture details.
 

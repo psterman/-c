@@ -78,6 +78,12 @@ SurfaceIntent_Record(kind, surfaceId, meta := 0, requestId := 0) {
     if (requestId != 0 && String(requestId) != "")
         payload["requestId"] := String(requestId)
     SurfaceManager_RecordEvent(String(kind), String(surfaceId), payload)
+    if FuncExists("Nmer_Telemetry_Record") {
+        try Nmer_Telemetry_Record("surface", String(kind), !InStr(String(kind), "_error"), payload)
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e)
+        }
+    }
 }
 
 SurfaceIntent_ExecuteOpen(surfaceId, meta := 0) {
