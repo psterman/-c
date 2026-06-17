@@ -58,7 +58,7 @@
 - `llm`：`provider`, `baseUrl`（可选简化为标签）, `endpoint`, `elapsedMs`, `status`
 - `niuma_chat`：`source`, `status`, `elapsedMs`
 - `vk`：`cmdId`, `policy`, `sceneId`, `source`
-- `diagnostics`：`files`（文件数或短标识）、`trigger`
+- `diagnostics`：`files`（文件数或短标识）、`trigger`、`source`、`lines`
 - `migration`：`source`、`files`（同上）、`ok`
 - `health`：`trigger`
 - `settings`：`tab`, `source`
@@ -183,7 +183,7 @@ AI 侧（`scope=llm` / `cmdpal` / `niuma_chat`）：
 - 桥接：`bridge_disconnect` / `bridge_reconnect`（当前接入 Wails Bridge 健康状态切换）。  
 - Surface 重置：`surface_crash_or_reset`（如 SearchCenter FORCE_RESET）。  
 - 健康快照：`health_snapshot_result`。  
-- 迁移包与诊断导出：`migration.export` / `migration.preview` / `migration.import` / `diagnostics.export_bundle`。  
+- 迁移包与诊断导出：`migration.export` / `migration.preview` / `migration.import` / `diagnostics.export_bundle` / `diagnostics.copy_trace_clipboard`。  
 - 更新：`update_check_done` / `update_available` / `update_open_release_page`。
 
 所有这些事件同样遵守本文件的命名、字段白名单与禁记项约束。
@@ -219,6 +219,15 @@ AI 侧（`scope=llm` / `cmdpal` / `niuma_chat`）：
 - `command_palette`：打开后输入或提交一次查询
 - `floating_toolbar`：打开后切换一次模式或发送一次 Niuma Chat
 - `prompt_quick_pad`：打开后执行一次 `search` 或 `nmDockCmd`
+- `chord_pad`：长按 CapsLock 打开后点击一个键帽（如 C），或 CapsLock+C 直达
+
+自动化触发（牛马主进程已运行时）：
+
+`powershell -NoProfile -File tools/dev/Run-TelemetryAutoTrigger.ps1 -Root .`
+
+新增 vkExec 探针：`qa_chord_pad_open` / `qa_chord_pad_close`、`telemetry_chord_cmd_probe`（`cmd.ch_c`）、`telemetry_copy_trace_probe`（`diagnostics.copy_trace_clipboard`）。
+
+`SendVkExec` 在 `WM_COPYDATA` 超时时会写入 `Cache/ci/vkexec_queue.jsonl`；主脚本重载后由 `VkExecQueue` 每 250ms 消费队列。
 
 验收观察点（设置页本机统计）：
 

@@ -2354,10 +2354,13 @@ class WebView2 {
 
 ; 将输入焦点移入 WebView2（配合宿主 WinActivate / 页内 focus 使用）
 WebView2_MoveFocusProgrammatic(ctrl) {
-	if !ctrl
+	if !IsObject(ctrl)
 		return
-	try ctrl.MoveFocus(WebView2.MOVE_FOCUS_REASON.PROGRAMMATIC)
-	catch as e {
+	try {
+		if !ctrl.HasProp("MoveFocus")
+			return
+		ctrl.MoveFocus(WebView2.MOVE_FOCUS_REASON.PROGRAMMATIC)
+	} catch as e {
 		OutputDebug("[WebView2] MoveFocus programmatic: " . e.Message)
 	}
 }

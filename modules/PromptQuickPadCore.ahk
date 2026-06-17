@@ -380,6 +380,9 @@ _PQP_ExecuteSearch(*) {
 
 ; ===================== 显示 / 隐藏 =====================
 PQP_Show() {
+    if FuncExists("Nmer_Telemetry_MarkSurfaceOpen") {
+        try Nmer_Telemetry_MarkSurfaceOpen("prompt_quick_pad", Map("source", "PQP_Show"))
+    }
     if FuncExists("SurfaceIntent_RouteExternalOpen") && SurfaceIntent_RouteExternalOpen("prompt_quick_pad")
         return
     global g_PQP_Gui, g_PQP_Visible, g_PQP_Ready, g_PQP_Ctrl, g_PQP_LastShown
@@ -390,9 +393,6 @@ PQP_Show() {
         reqId := SurfaceManager_Request("prompt_quick_pad", "open", "PQP_Show", Map("visibleBefore", g_PQP_Visible ? 1 : 0))
         try SurfaceManager_BeforeOpen("prompt_quick_pad", "PQP_Show", Map("requestId", reqId, "visibleBefore", g_PQP_Visible ? 1 : 0))
         try SurfaceManager_RegisterSurface("prompt_quick_pad")
-        if FuncExists("Nmer_Telemetry_MarkSurfaceOpen") {
-            try Nmer_Telemetry_MarkSurfaceOpen("prompt_quick_pad", Map("source", "PQP_Show"))
-        }
     }
     try FloatingToolbar_PageDockEnter("prompts")
 
@@ -522,6 +522,9 @@ PQP_Minimize(*) {
 }
 
 PQP_Hide() {
+    if FuncExists("Nmer_Telemetry_MarkSurfaceClose") {
+        try Nmer_Telemetry_MarkSurfaceClose("prompt_quick_pad", Map("source", "PQP_Hide"))
+    }
     if FuncExists("SurfaceIntent_RouteExternalClose") && SurfaceIntent_RouteExternalClose("prompt_quick_pad")
         return
     global g_PQP_Gui, g_PQP_Visible, g_PQP_SearchTimer
@@ -550,9 +553,6 @@ PQP_Hide() {
     }
     if !skipTel
         try SurfaceManager_ObserveHide("prompt_quick_pad", Map("entry", "PQP_Hide", "requestId", reqId))
-    if FuncExists("Nmer_Telemetry_MarkSurfaceClose") {
-        try Nmer_Telemetry_MarkSurfaceClose("prompt_quick_pad", Map("source", "PQP_Hide"))
-    }
 }
 
 PQP_Dispose(reason := "") {

@@ -48,6 +48,9 @@ CommandPaletteRouter_Show(*) {
     host := Nmer_CommandPaletteHost()
     CommandPaletteRouter_Log("show host=" . host)
     if (host = "wails" && FuncExists("CommandPaletteWails_Show")) {
+        if FuncExists("Nmer_Telemetry_MarkSurfaceOpen") {
+            try Nmer_Telemetry_MarkSurfaceOpen("command_palette", Map("source", "CommandPaletteRouter_Show", "host", "wails"))
+        }
         try return !!CommandPaletteWails_Show()
         catch as err {
             CommandPaletteRouter_Log("wails_show_err " . err.Message)
@@ -61,6 +64,9 @@ CommandPaletteRouter_Show(*) {
 CommandPaletteRouter_Hide(meta := 0) {
     host := Nmer_CommandPaletteHost()
     if (host = "wails" && FuncExists("CommandPaletteWails_Hide")) {
+        if FuncExists("Nmer_Telemetry_MarkSurfaceClose") {
+            try Nmer_Telemetry_MarkSurfaceClose("command_palette", Map("source", "CommandPaletteRouter_Hide", "host", "wails"))
+        }
         try return CommandPaletteWails_Hide()
         catch as _e {
             NmerCatch(A_ThisFunc, _e) 

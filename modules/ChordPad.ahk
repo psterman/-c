@@ -2,6 +2,53 @@
 
 #Requires AutoHotkey v2.0
 #Include FuncExists.ahk
+
+ChordPad_Catch(err) {
+    fn := "NmerCatch"
+    if !FuncExists(fn)
+        return
+    try {
+        %fn%(A_ThisFunc, err)
+    } catch {
+    }
+}
+
+ChordPad_CallOptional(funcName, args*) {
+    name := Trim(String(funcName))
+    if (name = "" || !FuncExists(name))
+        return ""
+    try {
+        return (%name%)(args*)
+    } catch as err {
+        ChordPad_Catch(err)
+        return ""
+    }
+}
+
+ChordPad_TryBool(funcName) {
+    name := Trim(String(funcName))
+    if (name = "" || !FuncExists(name))
+        return false
+    try {
+        return !!(%name%())
+    } catch as err {
+        ChordPad_Catch(err)
+        return false
+    }
+}
+
+ChordPad_CallOptionalBool(funcName, args*) {
+    name := Trim(String(funcName))
+    if (name = "" || !FuncExists(name))
+        return false
+    try {
+        return !!(%name%)(args*)
+    } catch as err {
+        ChordPad_Catch(err)
+        return false
+    }
+}
+
 global g_ChordPad_Gui := 0
 global g_ChordPad_WV2 := 0
 global g_ChordPad_Ctrl := 0
@@ -128,40 +175,22 @@ ChordPad_IconLucideFor(action := "", cmdId := "") {
 }
 
 ChordPad_EnsureVkData() {
-    if FuncExists("_LoadCommands")
-        try _LoadCommands()
-    if FuncExists("LoadCommandsConfig")
-        try LoadCommandsConfig()
+    for fnName in ["_LoadCommands", "LoadCommandsConfig"] {
+        if FuncExists(fnName) {
+            try %fnName%()
+            catch as _e
+                ChordPad_Catch(_e)
+        }
+    }
 }
 
 ChordPad_ResolveActiveScenarioId() {
-    if FuncExists("IsSearchCenterActive") {
-        try {
-            if IsSearchCenterActive()
-                return "search"
-        } catch as _e {
-            if FuncExists("NmerCatch")
-                NmerCatch(A_ThisFunc, _e)
-        }
-    }
-    if FuncExists("VK_IsClipboardPanelActive") {
-        try {
-            if VK_IsClipboardPanelActive()
-                return "clipboard"
-        } catch as _e {
-            if FuncExists("NmerCatch")
-                NmerCatch(A_ThisFunc, _e)
-        }
-    }
-    if FuncExists("IsScreenshotEditorActive") {
-        try {
-            if IsScreenshotEditorActive()
-                return "screenshot"
-        } catch as _e {
-            if FuncExists("NmerCatch")
-                NmerCatch(A_ThisFunc, _e)
-        }
-    }
+    if ChordPad_TryBool("IsSearchCenterActive")
+        return "search"
+    if ChordPad_TryBool("VK_IsClipboardPanelActive")
+        return "clipboard"
+    if ChordPad_TryBool("IsScreenshotEditorActive")
+        return "screenshot"
     return "hotkeys"
 }
 
@@ -403,21 +432,12 @@ ChordPad_ResolveCmdForPhysKey(physKey, scenarioId := "") {
     scenarioId := Trim(String(scenarioId))
     if (scenarioId = "" && FuncExists("ChordPad_ResolveActiveScenarioId"))
         scenarioId := ChordPad_ResolveActiveScenarioId()
-    if (scenarioId = "search") && FuncExists("IsSearchCenterActive") {
-        try {
-            if IsSearchCenterActive() && FuncExists("VK_SearchCenterResolveCapsChordCmd") {
-                scCmd := VK_SearchCenterResolveCapsChordCmd(k)
-                if (scCmd != "")
-                    return scCmd
-            }
-        } catch as _e {
-            if FuncExists("NmerCatch")
-                NmerCatch(A_ThisFunc, _e)
-        }
+    if (scenarioId = "search") && ChordPad_TryBool("IsSearchCenterActive") {
+        scCmd := ChordPad_CallOptional("VK_SearchCenterResolveCapsChordCmd", k)
+        if (scCmd != "")
+            return scCmd
     }
-    if FuncExists("VK_LookupBindingCmdForPhys")
-        return VK_LookupBindingCmdForPhys(k)
-    return ""
+    return ChordPad_CallOptional("VK_LookupBindingCmdForPhys", k)
 }
 
 ChordPad_CmdLabel(cmdId) {
@@ -454,7 +474,7 @@ ChordPad_IsBareChordKey(ahkKey) {
     if (InStr(k, "^") || InStr(k, "!") || InStr(k, "+") || InStr(k, "#"))
         return false
     if FuncExists("_VK_IsBareSingleKey")
-        return _VK_IsBareSingleKey(k)
+        return ChordPad_CallOptionalBool("_VK_IsBareSingleKey", k)
     return (StrLen(k) = 1)
 }
 
@@ -507,19 +527,12 @@ ChordPad_BuildSlots() {
 
     ChordPad_FillSlotsFromScenarioPresets(&slotsByKey, &slotsByCmd, scenarioCmds)
 
-    if (scenarioId = "search") && FuncExists("IsSearchCenterActive") {
-        try {
-            if IsSearchCenterActive() {
-                loop 26 {
-                    k := Chr(96 + A_Index)
-                    cmdId := ChordPad_ResolveCmdForPhysKey(k, scenarioId)
-                    if (cmdId != "")
-                        ChordPad_TryAddSlot(&slotsByKey, &slotsByCmd, scenarioCmds, cmdId, k)
-                }
-            }
-        } catch as _e {
-            if FuncExists("NmerCatch")
-                NmerCatch(A_ThisFunc, _e)
+    if (scenarioId = "search") && ChordPad_TryBool("IsSearchCenterActive") {
+        loop 26 {
+            k := Chr(96 + A_Index)
+            cmdId := ChordPad_ResolveCmdForPhysKey(k, scenarioId)
+            if (cmdId != "")
+                ChordPad_TryAddSlot(&slotsByKey, &slotsByCmd, scenarioCmds, cmdId, k)
         }
     }
 
@@ -623,8 +636,7 @@ ChordPad_SaveCompactPref() {
                     doc := loaded
             }
         } catch as _e {
-            if FuncExists("NmerCatch")
-                NmerCatch(A_ThisFunc, _e)
+            ChordPad_Catch(_e)
         }
     }
     doc["compact"] := !!g_ChordPad_Compact
@@ -641,8 +653,7 @@ ChordPad_SaveCompactPref() {
         f.Close()
         return true
     } catch as e {
-        if FuncExists("NmerCatch")
-            NmerCatch(A_ThisFunc, e)
+        ChordPad_Catch(e)
         return false
     }
 }
@@ -675,8 +686,7 @@ ChordPad_CapsWatchTick(*) {
     physDown := false
     try physDown := GetKeyState("CapsLock", "P")
     catch as _e {
-        if FuncExists("NmerCatch")
-            NmerCatch(A_ThisFunc, _e)
+        ChordPad_Catch(_e)
     }
     if physDown
         return
@@ -735,8 +745,7 @@ ChordPad_LoadPosConfig() {
         g_ChordPad_Compact := doc.Get("compact", false) ? true : false
         g_ChordPad_UseSavedPos := true
     } catch as _e {
-        if FuncExists("NmerCatch")
-            NmerCatch(A_ThisFunc, _e)
+        ChordPad_Catch(_e)
     }
 }
 
@@ -765,8 +774,7 @@ ChordPad_SavePosFromGui() {
         f.Close()
         return true
     } catch as _e {
-        if FuncExists("NmerCatch")
-            NmerCatch(A_ThisFunc, _e)
+        ChordPad_Catch(_e)
         return false
     }
 }
@@ -833,8 +841,7 @@ ChordPad_ResizeToContent(w, h, anchorBottom := true) {
     g_ChordPad_Y := clamped[2]
     try WinMove(g_ChordPad_X, g_ChordPad_Y, g_ChordPad_W, g_ChordPad_H, g_ChordPad_Gui)
     catch as _e {
-        if FuncExists("NmerCatch")
-            NmerCatch(A_ThisFunc, _e)
+        ChordPad_Catch(_e)
         return false
     }
     ChordPad_ApplyBounds()
@@ -861,8 +868,7 @@ ChordPad_ApplyScaleLayout(anchorBottom := true) {
     g_ChordPad_Y := clamped[2]
     try WinMove(g_ChordPad_X, g_ChordPad_Y, g_ChordPad_W, g_ChordPad_H, g_ChordPad_Gui)
     catch as _e {
-        if FuncExists("NmerCatch")
-            NmerCatch(A_ThisFunc, _e)
+        ChordPad_Catch(_e)
         return false
     }
     ChordPad_ApplyBounds()
@@ -952,8 +958,7 @@ ChordPad_DragTick(*) {
     g_ChordPad_UseSavedPos := true
     try WinMove(nx, ny, w, h, g_ChordPad_Gui)
     catch as _e {
-        if FuncExists("NmerCatch")
-            NmerCatch(A_ThisFunc, _e)
+        ChordPad_Catch(_e)
     }
 }
 
@@ -981,8 +986,7 @@ ChordPad_SyncPosAfterMove() {
     if (nx != x || ny != y) {
         try WinMove(nx, ny, w, h, g_ChordPad_Gui)
         catch as _e {
-            if FuncExists("NmerCatch")
-                NmerCatch(A_ThisFunc, _e)
+            ChordPad_Catch(_e)
         }
     }
     g_ChordPad_X := nx
@@ -1000,6 +1004,27 @@ ChordPad_OnExitSizeMove(wParam, lParam, msg, hwnd) {
     if (hwnd != g_ChordPad_Gui.Hwnd)
         return
     ChordPad_SyncPosAfterMove()
+}
+
+ChordPad_NoteCmdTelemetry(cmdId, action, source, ok := true) {
+    cmdId := Trim(String(cmdId))
+    action := StrUpper(Trim(String(action)))
+    if (cmdId = "" && action != "")
+        cmdId := "ch_" . StrLower(action)
+    if (cmdId = "")
+        return
+    if FuncExists("Nmer_Telemetry_Record") {
+        try Nmer_Telemetry_Record("cmd", cmdId, !!ok, Map("source", source))
+        catch as _e {
+            ChordPad_Catch(_e)
+        }
+    }
+    if ok && FuncExists("Nmer_Telemetry_MarkSurfaceAction") {
+        try Nmer_Telemetry_MarkSurfaceAction("chord_pad", cmdId, Map("source", source))
+        catch as _e {
+            ChordPad_Catch(_e)
+        }
+    }
 }
 
 ChordPad_RunSlot(action, cmdId := "", key := "") {
@@ -1027,8 +1052,7 @@ ChordPad_RunSlot(action, cmdId := "", key := "") {
                 return true
             }
         } catch as _e {
-            if FuncExists("NmerCatch")
-                NmerCatch(A_ThisFunc, _e)
+            ChordPad_Catch(_e)
         }
     }
 
@@ -1038,16 +1062,19 @@ ChordPad_RunSlot(action, cmdId := "", key := "") {
                 CursorPanel_RunQuickAction("Explain")
                 if FuncExists("ChordUsage_Record")
                     ChordUsage_Record(cmdId != "" ? cmdId : "ch_e")
+                ChordPad_NoteCmdTelemetry(cmdId != "" ? cmdId : "ch_e", action, "ChordPad_RunSlot", true)
                 return true
             case "R":
                 CursorPanel_RunQuickAction("Refactor")
                 if FuncExists("ChordUsage_Record")
                     ChordUsage_Record(cmdId != "" ? cmdId : "ch_r")
+                ChordPad_NoteCmdTelemetry(cmdId != "" ? cmdId : "ch_r", action, "ChordPad_RunSlot", true)
                 return true
             case "O":
                 CursorPanel_RunQuickAction("Optimize")
                 if FuncExists("ChordUsage_Record")
                     ChordUsage_Record(cmdId != "" ? cmdId : "ch_o")
+                ChordPad_NoteCmdTelemetry(cmdId != "" ? cmdId : "ch_o", action, "ChordPad_RunSlot", true)
                 return true
         }
     }
@@ -1061,8 +1088,7 @@ ChordPad_RunSlot(action, cmdId := "", key := "") {
                 return true
             }
         } catch as _e {
-            if FuncExists("NmerCatch")
-                NmerCatch(A_ThisFunc, _e)
+            ChordPad_Catch(_e)
         }
     }
     return false
@@ -1137,8 +1163,7 @@ ChordPad_ApplyBounds() {
         rc.bottom := g_ChordPad_H
         g_ChordPad_Ctrl.Bounds := rc
     } catch as _e {
-        if FuncExists("NmerCatch")
-            NmerCatch(A_ThisFunc, _e)
+        ChordPad_Catch(_e)
     }
 }
 
@@ -1179,8 +1204,7 @@ ChordPad_OnWebMessage(sender, args) {
                 ChordPad_ResizeFromMeasure(msg.Get("height", 0))
         }
     } catch as _e {
-        if FuncExists("NmerCatch")
-            NmerCatch(A_ThisFunc, _e)
+        ChordPad_Catch(_e)
     }
 }
 
@@ -1275,8 +1299,7 @@ ChordPad_PushInit() {
         . ',"slots":' . arr . '}'
     try g_ChordPad_WV2.PostWebMessageAsJson(payload)
     catch as _e {
-        if FuncExists("NmerCatch")
-            NmerCatch(A_ThisFunc, _e)
+        ChordPad_Catch(_e)
     }
 }
 
@@ -1298,13 +1321,14 @@ ChordPad_PositionAndShow() {
     ChordPad_ApplyTransparency()
     try g_ChordPad_Gui.Show("x" . g_ChordPad_X . " y" . g_ChordPad_Y . " w" . g_ChordPad_W . " h" . g_ChordPad_H . " NoActivate")
     catch as _e {
-        if FuncExists("NmerCatch")
-            NmerCatch(A_ThisFunc, _e)
+        ChordPad_Catch(_e)
         return false
     }
     try WinSetExStyle("+0x08000000", g_ChordPad_Gui)
     g_ChordPad_Visible := true
-    if FuncExists("Nmer_Telemetry_Record") {
+    if FuncExists("Nmer_Telemetry_MarkSurfaceOpen") {
+        try Nmer_Telemetry_MarkSurfaceOpen("chord_pad", Map("source", "ChordPad_PositionAndShow"))
+    } else if FuncExists("Nmer_Telemetry_Record") {
         try Nmer_Telemetry_Record("surface", "chord_pad_open", true, Map("source", "ChordPad_PositionAndShow"))
     }
     ChordPad_StartCapsWatch()
@@ -1315,8 +1339,7 @@ ChordPad_PositionAndShow() {
             if (newTier = 2) && FuncExists("Nmer_ShowAppToast") {
                 try Nmer_ShowAppToast("快捷键解锁", "已解锁 X 历史、E 解释", "ok")
                 catch as _e {
-                    if FuncExists("NmerCatch")
-                        NmerCatch(A_ThisFunc, _e)
+                ChordPad_Catch(_e)
                 }
             }
         }
@@ -1339,26 +1362,25 @@ ChordPad_Hide(*) {
     ChordPad_StopCapsWatch()
     g_ChordPad_Visible := false
     g_ChordPad_Pinned := false
-    if FuncExists("Nmer_Telemetry_Record") {
+    if FuncExists("Nmer_Telemetry_MarkSurfaceClose") {
+        try Nmer_Telemetry_MarkSurfaceClose("chord_pad", Map("source", "ChordPad_Hide"))
+    } else if FuncExists("Nmer_Telemetry_Record") {
         try Nmer_Telemetry_Record("surface", "chord_pad_close", true, Map("source", "ChordPad_Hide"))
     }
     try VKHoldVisible := false
     catch as _e {
-        if FuncExists("NmerCatch")
-            NmerCatch(A_ThisFunc, _e)
+        ChordPad_Catch(_e)
     }
     if g_ChordPad_WV2 {
         try g_ChordPad_WV2.PostWebMessageAsJson('{"type":"chordPadHide"}')
         catch as _e {
-            if FuncExists("NmerCatch")
-                NmerCatch(A_ThisFunc, _e)
+            ChordPad_Catch(_e)
         }
     }
     if ChordPad_HasGui() {
         try g_ChordPad_Gui.Hide()
         catch as _e {
-            if FuncExists("NmerCatch")
-                NmerCatch(A_ThisFunc, _e)
+            ChordPad_Catch(_e)
         }
     }
 }
@@ -1375,7 +1397,6 @@ ChordPad_FlashKey(key) {
         k := "esc"
     try g_ChordPad_WV2.PostWebMessageAsJson('{"type":"keyPreview","key":' . ChordPad_JsonStr(k) . '}')
     catch as _e {
-        if FuncExists("NmerCatch")
-            NmerCatch(A_ThisFunc, _e)
+        ChordPad_Catch(_e)
     }
 }

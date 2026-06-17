@@ -4122,7 +4122,7 @@ body.niuma-confirm-open{overflow:hidden}
     paletteDedupeCpSessions();
     paletteRemovePollutedBucketSessions();
     try {
-      post({ type: 'palette_agent_bootstrap_niuma' });
+      post({ type: 'palette_agent_bootstrap_niuma', force: true });
     } catch (_) {}
     renderContactNav();
     rebuildMsgList();
@@ -13351,30 +13351,21 @@ body.niuma-confirm-open{overflow:hidden}
       refreshOllamaSetupBanner();
     }
     var sAct = activeSession();
-    if (sAct && normalizeProviderId(sAct.provider) === 'openclaw') hydrateOpenClawHistoryForSession(sAct, false);
-    try {
-      post({ type: 'palette_agent_bootstrap_niuma' });
-    } catch (_) {}
-    state.sessions.forEach(function (sx, idx) {
-      if (!sx || normalizeProviderId(sx.provider) !== 'openclaw') return;
-      setTimeout(function () {
-        var sOc = sessionById(sx.id) || sx;
-        if (!sOc) return;
-        pullStoreHistoryToSession(sOc);
-        paletteDedupeSessionUserMessages(sOc);
-        paletteSanitizeSessionHistory(sOc);
-        if (!paletteSessionNeedsAssistantHydrate(sOc)) return;
-        if (isPaletteAgentChatSession(sOc)) {
-          paletteHydrateCpSessionFromGateway(sOc, true).catch(function () {});
-        } else if (paletteHistoryUserCount(sOc.history) > 1) {
-          paletteRepairSessionUsersFromGateway(sOc).catch(function () {});
-        } else {
-          hydrateOpenClawHistoryForSession(sOc, true).catch(function () {});
-        }
-      }, 800 + idx * 600);
-    });
+    if (sAct && normalizeProviderId(sAct.provider) === 'openclaw') {
+      hydrateOpenClawHistoryForSession(sAct, false);
+    }
+    ensureColdBootDrawerCollapsed();
     ensureDynamicModelsForActiveProvider();
     renderChatModelBar();
+  }
+
+  var niumaColdBootDrawerCollapsed = false;
+  function ensureColdBootDrawerCollapsed() {
+    if (niumaColdBootDrawerCollapsed) return;
+    niumaColdBootDrawerCollapsed = true;
+    try {
+      syncHostDrawerCollapsed();
+    } catch (_) {}
   }
 
   function loadCfg() {
@@ -25145,7 +25136,7 @@ body.niuma-confirm-open{overflow:hidden}
       if (d.type === 'host_apply_studio_llm') {
         if (d.llm) state.pendingStudioLlm = d.llm;
         cacheStudioLlmBundle(d);
-        if (d.openDrawer !== false && !state.drawer) setDrawer(true);
+        if (d.openDrawer === true && !state.drawer) setDrawer(true);
         setTtydCustomize(false);
         applyStudioLlmFromPayload(d.llm || {}, d.prompt || '', !!d.autoSend, {
           autoInjectContext: d.autoInjectContext,

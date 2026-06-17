@@ -159,16 +159,16 @@ ConfigWebView_SendInitDataIfReady(*) {
 }
 
 ShowConfigWebViewGUI() {
-    if FuncExists("SurfaceIntent_RouteExternalOpen") && SurfaceIntent_RouteExternalOpen("config_webview")
-        return
-    global GuiID_ConfigGUI, GuiID_ClipboardManager, ConfigPanelScreenIndex, g_ConfigWebView_LastShown, g_ConfigWebView_StartTabNavigated
-    skipTel := FuncExists("SurfaceIntent_ShouldSkipExecutorTelemetry") && SurfaceIntent_ShouldSkipExecutorTelemetry()
     if FuncExists("Nmer_Telemetry_Record") {
         try Nmer_Telemetry_MarkSurfaceOpen("config_webview", Map("source", "ShowConfigWebViewGUI"))
         catch as _e {
             NmerCatch(A_ThisFunc, _e)
         }
     }
+    if FuncExists("SurfaceIntent_RouteExternalOpen") && SurfaceIntent_RouteExternalOpen("config_webview")
+        return
+    global GuiID_ConfigGUI, GuiID_ClipboardManager, ConfigPanelScreenIndex, g_ConfigWebView_LastShown, g_ConfigWebView_StartTabNavigated
+    skipTel := FuncExists("SurfaceIntent_ShouldSkipExecutorTelemetry") && SurfaceIntent_ShouldSkipExecutorTelemetry()
     reqId := 0
     if !skipTel {
         reqId := SurfaceManager_Request("config_webview", "open", "ShowConfigWebViewGUI", Map("hostAliveBefore", ConfigWebView_HostAlive() ? 1 : 0))
@@ -389,10 +389,20 @@ ConfigWebView_HostWindowVisible() {
 }
 
 ConfigWebView_FocusDeferred(*) {
-    global GuiID_ConfigGUI, ConfigWV2Ctrl
-    if GuiID_ConfigGUI {
-        try LegacyGuard_RequestFocus("ConfigWebView", GuiID_ConfigGUI.Hwnd, 20, "focus_deferred", 180)
-        WebView2_MoveFocusProgrammatic(ConfigWV2Ctrl)
+    global GuiID_ConfigGUI, ConfigWV2Ctrl, ConfigWV2Ready
+    if !ConfigWebView_HostAlive() || !ConfigWV2Ctrl
+        return
+    if IsSet(ConfigWV2Ready) && !ConfigWV2Ready
+        return
+    try {
+        if GuiID_ConfigGUI
+            LegacyGuard_RequestFocus("ConfigWebView", GuiID_ConfigGUI.Hwnd, 20, "focus_deferred", 180)
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e)
+    }
+    try WebView2_MoveFocusProgrammatic(ConfigWV2Ctrl)
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e)
     }
 }
 
@@ -503,6 +513,8 @@ ConfigWebView_SendLlmTestResult(msgMap) {
 
 ConfigWebView_FlushPendingLlmTestResult(*) {
     global ConfigWV2, ConfigWV2Ready, g_ConfigWebView_PendingLlmTestResult
+    if !IsSet(g_ConfigWebView_PendingLlmTestResult)
+        return
     if !(g_ConfigWebView_PendingLlmTestResult is Map) || g_ConfigWebView_PendingLlmTestResult.Count = 0
         return
     if !ConfigWV2 || !ConfigWV2Ready
@@ -4236,6 +4248,8 @@ ConfigWebView_OnMessage(sender, args) {
                         }
                         if FuncExists("Nmer_Telemetry_Record") {
                             try Nmer_Telemetry_Record("diagnostics", "exportDiagnosticsBundle", !!okExp, Map("error", errExp))
+                            ; P0 canonical action for selftest gates.
+                            try Nmer_Telemetry_Record("diagnostics", "export_bundle", !!okExp, Map("error", errExp))
                             catch as _e {
                                 NmerCatch(A_ThisFunc, _e)
                             }
@@ -4252,7 +4266,10 @@ ConfigWebView_OnMessage(sender, args) {
                             migR := Nmer_ExportMigrationPack(migOpts)
                         webMig := FuncExists("Nmer_MigrationPackForWeb") ? Nmer_MigrationPackForWeb(migR) : migR
                         if FuncExists("Nmer_Telemetry_Record") {
-                            try Nmer_Telemetry_Record("migration", "exportMigrationPack", !!(migR is Map && migR.Get("ok", false)), Map("source", "ConfigWebViewModule"))
+                            migOk := !!(migR is Map && migR.Get("ok", false))
+                            try Nmer_Telemetry_Record("migration", "exportMigrationPack", migOk, Map("source", "ConfigWebViewModule"))
+                            ; Keep legacy action for existing dashboards, and emit P0 canonical action for selftest gates.
+                            try Nmer_Telemetry_Record("migration", "export", migOk, Map("source", "ConfigWebViewModule"))
                         }
                         ConfigWebView_Send(Map("type", "migrationPackResult", "op", "export", "payload", webMig))
                         return
@@ -4266,6 +4283,10 @@ ConfigWebView_OnMessage(sender, args) {
                         if (migZip = "")
                             migZip := FileSelect(1, Nmer_RepoRoot(), "导入迁移包", "ZIP 压缩包 (*.zip)")
                         if (migZip = "") {
+                            if FuncExists("Nmer_Telemetry_Record") {
+                                try Nmer_Telemetry_Record("migration", "preview", false, Map("source", "ConfigWebViewModule", "reason", "cancel_select_zip"))
+                                try Nmer_Telemetry_Record("migration", "import", false, Map("source", "ConfigWebViewModule", "reason", "cancel_select_zip"))
+                            }
                             ConfigWebView_Send(Map("type", "migrationPackResult", "op", "import", "payload", Map("ok", false, "error", "已取消")))
                             return
                         }
@@ -4278,7 +4299,10 @@ ConfigWebView_OnMessage(sender, args) {
                             else
                                 preview["zipPath"] := migZip
                             if FuncExists("Nmer_Telemetry_Record") {
-                                try Nmer_Telemetry_Record("migration", "previewMigrationPack", !!preview.Get("ok", false), Map("source", "ConfigWebViewModule"))
+                                previewOk := !!preview.Get("ok", false)
+                                try Nmer_Telemetry_Record("migration", "previewMigrationPack", previewOk, Map("source", "ConfigWebViewModule"))
+                                ; Keep legacy action for existing dashboards, and emit P0 canonical action for selftest gates.
+                                try Nmer_Telemetry_Record("migration", "preview", previewOk, Map("source", "ConfigWebViewModule"))
                             }
                             ConfigWebView_Send(Map("type", "migrationPreview", "payload", preview))
                             return
@@ -4288,7 +4312,10 @@ ConfigWebView_OnMessage(sender, args) {
                             migR2 := Nmer_ImportMigrationPack(migZip, true)
                         webMig2 := FuncExists("Nmer_MigrationPackForWeb") ? Nmer_MigrationPackForWeb(migR2) : migR2
                         if FuncExists("Nmer_Telemetry_Record") {
-                            try Nmer_Telemetry_Record("migration", "importMigrationPack", !!(migR2 is Map && migR2.Get("ok", false)), Map("source", "ConfigWebViewModule"))
+                            importOk := !!(migR2 is Map && migR2.Get("ok", false))
+                            try Nmer_Telemetry_Record("migration", "importMigrationPack", importOk, Map("source", "ConfigWebViewModule"))
+                            ; Keep legacy action for existing dashboards, and emit P0 canonical action for selftest gates.
+                            try Nmer_Telemetry_Record("migration", "import", importOk, Map("source", "ConfigWebViewModule"))
                         }
                         ConfigWebView_Send(Map("type", "migrationPackResult", "op", "import", "payload", webMig2))
                         return
@@ -4304,6 +4331,12 @@ ConfigWebView_OnMessage(sender, args) {
                             ok := (clip != "")
                             if ok
                                 err := ""
+                        }
+                        if FuncExists("Nmer_Telemetry_Record") {
+                            try Nmer_Telemetry_Record("diagnostics", "copy_trace_clipboard", !!ok, Map("source", "ConfigWebViewModule", "lines", 80))
+                            catch as _e {
+                                NmerCatch(A_ThisFunc, _e)
+                            }
                         }
                         if ok {
                             try TrayTip("牛马", "最近运行日志已复制到剪贴板", "Iconi 2")
@@ -4532,6 +4565,9 @@ SaveConfigGUIPosition(ConfigGUI) {
 
 ; WebView 设置页关闭（由 CloseConfigGUI 在 ConfigWebViewMode 下调用）
 ConfigWebView_Close() {
+    if FuncExists("Nmer_Telemetry_MarkSurfaceClose") {
+        try Nmer_Telemetry_MarkSurfaceClose("config_webview", Map("source", "ConfigWebView_Close"))
+    }
     if FuncExists("SurfaceIntent_RouteExternalClose") && SurfaceIntent_RouteExternalClose("config_webview")
         return
     global GuiID_ConfigGUI, ConfigWV2Ctrl, ConfigWV2, g_ConfigWebView_StartTabNavigated
@@ -4539,9 +4575,6 @@ ConfigWebView_Close() {
     if !skipTel {
         reqId := SurfaceManager_Request("config_webview", "close", "ConfigWebView_Close", Map("hostAliveBefore", ConfigWebView_HostAlive() ? 1 : 0))
         try SurfaceManager_ObserveHide("config_webview", Map("entry", "ConfigWebView_Close", "requestId", reqId))
-    }
-    if FuncExists("Nmer_Telemetry_MarkSurfaceClose") {
-        try Nmer_Telemetry_MarkSurfaceClose("config_webview", Map("source", "ConfigWebView_Close"))
     }
     g_ConfigWebView_StartTabNavigated := false
     try {

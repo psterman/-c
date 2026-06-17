@@ -256,11 +256,18 @@ AppUpdateCheck_OnGithubApiDone(ret) {
 AppUpdateCheck_OnRemoteVersionFileDone(ret) {
     global g_AppUpdate_CheckInFlight
     g_AppUpdate_CheckInFlight := false
-    if !(ret is Map) || !ret.Get("ok", false) || ret.Get("status", 0) != 200
+    if !(ret is Map) || !ret.Get("ok", false) || ret.Get("status", 0) != 200 {
+        if FuncExists("Nmer_Telemetry_Record") {
+            try Nmer_Telemetry_Record("health", "update_check_done", false, Map("trigger", "fallback_http_fail"))
+        }
         return
+    }
     parsed := AppUpdateCheck_ParseRemoteVersionJson(ret.Get("text", ""))
     if parsed.Get("ok", false)
         AppUpdateCheck_ApplyResult(parsed["version"], parsed["url"], true)
+    else if FuncExists("Nmer_Telemetry_Record") {
+        try Nmer_Telemetry_Record("health", "update_check_done", false, Map("trigger", "fallback_parse_fail"))
+    }
 }
 
 AppUpdateCheck_FetchRemoteVersionFile() {
@@ -271,6 +278,9 @@ AppUpdateCheck_FetchRemoteVersionFile() {
     url := "https://raw.githubusercontent.com/" . NMER_GITHUB_REPO . "/main/config/app_version.json"
     if !FuncExists("HttpGetAsync") {
         g_AppUpdate_CheckInFlight := false
+        if FuncExists("Nmer_Telemetry_Record") {
+            try Nmer_Telemetry_Record("health", "update_check_done", false, Map("trigger", "fallback_http_unavailable"))
+        }
         return
     }
     HttpGetAsync(url, AppUpdateCheck_OnRemoteVersionFileDone, Map("timeoutMs", 8000, "receiveTimeoutMs", 8000, "tag", "app_update_raw"))

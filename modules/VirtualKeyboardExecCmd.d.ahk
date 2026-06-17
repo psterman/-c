@@ -120,3 +120,55 @@ ScreenshotEditorSearchText() {
 }
 CloseScreenshotEditor() {
 }
+
+; --- 埋点 / Surface Intent / ChordPad（telemetry auto-trigger）---
+FuncExists(fnName) {
+}
+
+NmerCatch(funcName, err) {
+}
+
+Nmer_Telemetry_MarkSurfaceOpen(surfaceName, meta := 0) {
+}
+
+Nmer_Telemetry_MarkSurfaceClose(surfaceName, meta := 0) {
+}
+
+Nmer_Telemetry_Record(scope, action, ok := true, meta := 0) {
+}
+
+SurfaceIntent_OpenClipboardUnified(keyword := "", triggerSource := "") {
+}
+
+SurfaceIntent_Open(surfaceId, meta := 0) {
+}
+
+SurfaceIntent_Close(surfaceId, meta := 0) {
+}
+
+ChordPad_Show(*) {
+}
+
+ChordPad_Hide(*) {
+}
+
+ChordUsage_Record(cmdId) {
+}
+
+Nmer_PreviewMigrationPack(zip) {
+}
+
+Nmer_ImportMigrationPack(zip, whatIf := false) {
+}
+
+Nmer_ExportMigrationPack(opts := 0) {
+}
+
+Nmer_DiagnosticsDir() {
+}
+
+Nmer_ExportDiagnosticsBundle(*) {
+}
+
+Nmer_CollectHealthSnapshot(trigger := "") {
+}

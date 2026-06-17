@@ -696,14 +696,14 @@ CommandPalette_Show() {
             return !!CommandPaletteRouter_Show()
         return false
     }
+    if FuncExists("Nmer_Telemetry_MarkSurfaceOpen") {
+        try Nmer_Telemetry_MarkSurfaceOpen("command_palette", Map("source", "CommandPalette_Show"))
+    }
     if FuncExists("SurfaceIntent_RouteExternalOpen") && SurfaceIntent_RouteExternalOpen("command_palette")
         return true
     global g_CmdPal_Ready, g_CmdPal_PendingShow, g_CmdPal_ShowRetryCount, g_CmdPal_ShowRequestedTick
     g_CmdPal_ShowRequestedTick := A_TickCount
     CommandPalette_PerfLog("show_requested")
-    if FuncExists("Nmer_Telemetry_MarkSurfaceOpen") {
-        try Nmer_Telemetry_MarkSurfaceOpen("command_palette", Map("source", "CommandPalette_Show"))
-    }
     skipTel := FuncExists("SurfaceIntent_ShouldSkipExecutorTelemetry") && SurfaceIntent_ShouldSkipExecutorTelemetry()
     reqId := 0
     if !skipTel {
@@ -1645,6 +1645,9 @@ CommandPalette_Hide(meta := 0) {
     CommandPalette_PerfFlush()
     if FuncExists("CommandPalette_AgentFlushPersist")
         CommandPalette_AgentFlushPersist()
+    if FuncExists("Nmer_Telemetry_MarkSurfaceClose") {
+        try Nmer_Telemetry_MarkSurfaceClose("command_palette", Map("source", "CommandPalette_Hide"))
+    }
     if FuncExists("SurfaceIntent_RouteExternalClose") && SurfaceIntent_RouteExternalClose("command_palette", meta)
         return
     global g_CmdPal_Gui, g_CmdPal_Visible, g_CmdPal_Revealed, g_CmdPal_AiSession, g_CmdPal_WV2
@@ -1656,9 +1659,6 @@ CommandPalette_Hide(meta := 0) {
     if !skipTel {
         reqId := SurfaceManager_Request("command_palette", "close", "CommandPalette_Hide", Map("visibleBefore", g_CmdPal_Visible ? 1 : 0))
         try SurfaceManager_ObserveHide("command_palette", Map("entry", "CommandPalette_Hide", "requestId", reqId))
-    }
-    if FuncExists("Nmer_Telemetry_MarkSurfaceClose") {
-        try Nmer_Telemetry_MarkSurfaceClose("command_palette", Map("source", "CommandPalette_Hide"))
     }
     if (g_CmdPal_AiSession is Map) && !g_CmdPal_AiSession.Get("handoff", false) && !g_CmdPal_AiSession.Get("ended", false) {
         try CommandPalette_HandoffAiToToolbar(true)

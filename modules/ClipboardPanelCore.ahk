@@ -397,6 +397,9 @@ CP_IsForeground() {
 }
 
 CP_Show() {
+    if FuncExists("Nmer_Telemetry_MarkSurfaceOpen") {
+        try Nmer_Telemetry_MarkSurfaceOpen("clipboard_panel", Map("source", "CP_Show"))
+    }
     if FuncExists("SurfaceIntent_RouteExternalOpen") && SurfaceIntent_RouteExternalOpen("clipboard_panel")
         return
     global g_CP_UnifiedRedirectEnabled, g_CP_LastKeyword
@@ -406,9 +409,6 @@ CP_Show() {
         reqId := SurfaceManager_Request("clipboard_panel", "open", "CP_Show", Map("redirect", g_CP_UnifiedRedirectEnabled ? 1 : 0))
         try SurfaceManager_BeforeOpen("clipboard_panel", "CP_Show", Map("requestId", reqId, "redirect", g_CP_UnifiedRedirectEnabled ? 1 : 0))
         try SurfaceManager_RegisterSurface("clipboard_panel")
-        if FuncExists("Nmer_Telemetry_MarkSurfaceOpen") {
-            try Nmer_Telemetry_MarkSurfaceOpen("clipboard_panel", Map("source", "CP_Show"))
-        }
     }
     if g_CP_UnifiedRedirectEnabled {
         try FloatingToolbar_PageDockEnter("clipboard")
@@ -488,6 +488,9 @@ _CP_FocusDeferred() {
 }
 
 CP_Hide() {
+    if FuncExists("Nmer_Telemetry_MarkSurfaceClose") {
+        try Nmer_Telemetry_MarkSurfaceClose("clipboard_panel", Map("source", "CP_Hide", "mode", "legacy"))
+    }
     if FuncExists("SurfaceIntent_RouteExternalClose") && SurfaceIntent_RouteExternalClose("clipboard_panel")
         return
     global g_CP_UnifiedRedirectEnabled
@@ -531,9 +534,6 @@ CP_Hide() {
         g_CP_Gui.Hide()
     if !skipTel
         try SurfaceManager_ObserveHide("clipboard_panel", Map("entry", "CP_Hide", "requestId", reqId))
-    if FuncExists("Nmer_Telemetry_MarkSurfaceClose") {
-        try Nmer_Telemetry_MarkSurfaceClose("clipboard_panel", Map("source", "CP_Hide", "mode", "legacy"))
-    }
 }
 
 CP_Dispose(reason := "") {

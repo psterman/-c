@@ -4189,6 +4189,12 @@ SCWV_RequestFocusInput() {
 }
 
 SCWV_Hide(PersistSelection := true) {
+    if SCWV_FuncExists("Nmer_Telemetry_MarkSurfaceClose") {
+        try Nmer_Telemetry_MarkSurfaceClose("search_center", Map("source", "SCWV_Hide"))
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e)
+        }
+    }
     if SCWV_FuncExists("SurfaceIntent_RouteExternalClose") && SurfaceIntent_RouteExternalClose("search_center", Map("persistSelection", PersistSelection ? 1 : 0))
         return
     if SCWV_FuncExists("SurfaceTransaction_OnTargetClose")
@@ -4198,12 +4204,6 @@ SCWV_Hide(PersistSelection := true) {
     if !skipTel {
         reqId := SurfaceManager_Request("search_center", "close", "SCWV_Hide", Map("persistSelection", PersistSelection ? 1 : 0))
         try SurfaceManager_ObserveHide("search_center", Map("entry", "SCWV_Hide", "persistSelection", PersistSelection ? 1 : 0, "requestId", reqId))
-    }
-    if SCWV_FuncExists("Nmer_Telemetry_MarkSurfaceClose") {
-        try Nmer_Telemetry_MarkSurfaceClose("search_center", Map("source", "SCWV_Hide"))
-        catch as _e {
-            NmerCatch(A_ThisFunc, _e)
-        }
     }
     global g_SCWV_Gui, g_SCWV_Visible, g_SCWV_WaitingUiFinishedReveal, g_SCWV_SearchTimer, GuiID_SearchCenter, g_SCWV_PendingJsonQueue
     global g_SCWV_DeactivateBlockUntil, g_SCWV_DeactivateBlockReason, g_SCWV_ShowWaitStartTick, g_SCWV_ShowRecoveryAttempts

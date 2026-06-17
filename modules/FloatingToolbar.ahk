@@ -1244,8 +1244,27 @@ FloatingToolbar_FinishReveal() {
         catch as _e {
             NmerCatch(A_ThisFunc, _e) 
         }
+    } else {
+        ; 冷启动：清理遗留 handoff 标记，强制 Web 回到折叠工具条（勿自动展开 NiuMa Chat）。
+        global g_FTB_PendingOpenNiumaDrawer, g_FTB_NiumaHandoffOpening, FloatingToolbarChatDrawerOpen
+        g_FTB_PendingOpenNiumaDrawer := false
+        g_FTB_NiumaHandoffOpening := false
+        try FloatingToolbarChatDrawerOpen := false
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
+        }
+        try FloatingToolbar_CancelToolbarRecoveryTimers()
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e) 
+        }
+        if IsObject(g_FTB_WV2) {
+            try WebView_QueuePayload(g_FTB_WV2, Map("type", "host_force_toolbar_home"))
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e) 
+            }
+        }
     }
-    if g_FTB_PendingOpenNiumaDrawer
+    if !wasBoot && g_FTB_PendingOpenNiumaDrawer
         FloatingToolbar_ScheduleNiumaDrawerOpen(100)
 }
 
@@ -1261,6 +1280,7 @@ FloatingToolbar_SendHostFirstShow() {
 
 FloatingToolbar_ForceRevealIfStuck() {
     global g_FTB_WaitingUiFinishedReveal, g_FTB_UI_Ready, g_FTB_RevealWaitStartTick, g_FTB_PaintReady
+    global g_FTB_PendingOpenNiumaDrawer, g_FTB_NiumaHandoffOpening
     if !g_FTB_WaitingUiFinishedReveal
         return
     if (!g_FTB_RevealWaitStartTick)
@@ -1268,6 +1288,9 @@ FloatingToolbar_ForceRevealIfStuck() {
     elapsed := A_TickCount - g_FTB_RevealWaitStartTick
     if !g_FTB_UI_Ready && !g_FTB_PaintReady {
         if (elapsed > 10000) {
+            ; Avoid startup deadlock when chat handoff flags are stale.
+            g_FTB_PendingOpenNiumaDrawer := false
+            g_FTB_NiumaHandoffOpening := false
             try FloatingToolbar_BootPaintFallbackForce()
             catch as _e {
                 NmerCatch(A_ThisFunc, _e) 
@@ -1275,6 +1298,9 @@ FloatingToolbar_ForceRevealIfStuck() {
             return
         }
         if (elapsed > 7000) {
+            ; Avoid startup deadlock when chat handoff flags are stale.
+            g_FTB_PendingOpenNiumaDrawer := false
+            g_FTB_NiumaHandoffOpening := false
             try {
                 FloatingToolbar_RetryCreateWebView()
             } catch as _e {
@@ -1443,6 +1469,9 @@ HideFloatingToolbar() {
             return !!FloatingToolbarRouter_Hide()
         return false
     }
+    if FuncExists("Nmer_Telemetry_MarkSurfaceClose") {
+        try Nmer_Telemetry_MarkSurfaceClose("floating_toolbar", Map("source", "HideFloatingToolbar"))
+    }
     if FuncExists("SurfaceIntent_RouteExternalClose") && SurfaceIntent_RouteExternalClose("floating_toolbar")
         return
     global FloatingToolbarGUI, FloatingToolbarIsVisible, g_FTB_WaitingUiFinishedReveal, g_FTB_WV2, g_FTB_LastRequestId
@@ -1453,9 +1482,6 @@ HideFloatingToolbar() {
         if reqId
             g_FTB_LastRequestId := reqId
         try SurfaceManager_ObserveHide("floating_toolbar", Map("entry", "HideFloatingToolbar", "requestId", reqId))
-        if FuncExists("Nmer_Telemetry_Record") {
-            try Nmer_Telemetry_MarkSurfaceClose("floating_toolbar", Map("source", "HideFloatingToolbar"))
-        }
     }
 
     try NiumaMobileBrowser_Close()
@@ -1741,10 +1767,8 @@ FloatingToolbar_OnNavigationCompleted(sender, args) {
     }
     FloatingToolbar_FlushPendingSelectionIfReady()
     FloatingToolbar_FlushPendingNiumaComposeIfReady()
-    if ok {
-        if FuncExists("CommandPalette_AgentBootstrapNiumaSessions")
-            SetTimer(CommandPalette_AgentBootstrapNiumaSessions, -2500)
-    }
+    ; Do NOT auto-bootstrap Niuma/OpenClaw sessions on toolbar startup.
+    ; It can duplicate session badges and force-open chat drawer during boot.
 }
 
 ; ===================== 閸﹀棜顫楁潏瑙勵攱婢跺嫮鎮?=====================
@@ -3371,6 +3395,10 @@ FloatingToolbar_DispatchWebMessage(msg) {
     if (typ = "palette_agent_bootstrap_niuma") {
         if FuncExists("CommandPalette_AgentBootstrapNiumaSessions") {
             global g_Agent_BootstrapForce
+            ; 仅响应显式 force 或用户触发的同步，忽略 Web 冷启动阶段的隐式 bootstrap。
+            force := msg.Has("force") && !!msg["force"]
+            if !force
+                return
             g_Agent_BootstrapForce := true
             SetTimer(CommandPalette_AgentBootstrapNiumaSessions, -80)
         }
@@ -5624,7 +5652,13 @@ FloatingToolbar_ForwardShellEgressMessage(msg) {
             llm := FloatingToolbar_GetStudioLlm()
             keys := FloatingToolbar_GetStudioApiKeys()
             if FuncExists("CommandPalette_DeliverFtbPayload") {
-                CommandPalette_DeliverFtbPayload(Map("type", "host_apply_studio_llm", "llm", llm, "apiKeys", keys))
+                CommandPalette_DeliverFtbPayload(Map(
+                    "type", "host_apply_studio_llm",
+                    "llm", llm,
+                    "apiKeys", keys,
+                    "openDrawer", false,
+                    "backgroundSync", true
+                ))
             }
         } catch as _e {
             NmerCatch(A_ThisFunc, _e) 

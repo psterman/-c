@@ -3492,13 +3492,20 @@ NativeDropBridge_InitCopyDataReceiver() {
 
 NativeDropBridge_OnCopyData(wParam, lParam, msg, hwnd) {
     global NativeDropBridgeCopyDataGui, NativeDropBridgeLastEvent, NativeDropLastEventTick, NativeDropBridgeCopyDataLastTick, NativeDropBridgeSilentMode
+    try {
+        if !IsObject(NativeDropBridgeCopyDataGui) || hwnd != NativeDropBridgeCopyDataGui.Hwnd {
+            if FuncExists("_VkInteropCopyData")
+                return _VkInteropCopyData(wParam, lParam, msg, hwnd) ? 1 : 0
+            return 0
+        }
+    } catch {
+        if FuncExists("_VkInteropCopyData")
+            return _VkInteropCopyData(wParam, lParam, msg, hwnd) ? 1 : 0
+        return 0
+    }
     if NativeDropBridgeSilentMode
         return 1
     try {
-        if !IsObject(NativeDropBridgeCopyDataGui)
-            return 0
-        if (hwnd != NativeDropBridgeCopyDataGui.Hwnd)
-            return 0
         cbData := NumGet(lParam + A_PtrSize, "UInt")
         lpData := NumGet(lParam + A_PtrSize + 4, "Ptr")
         if (cbData <= 0 || lpData = 0)
@@ -7433,6 +7440,7 @@ ExitFunc(ExitReason, ExitCode) {
 #Include modules\VirtualKeyboardExecCmd.ahk
 #Include modules\VirtualKeyboardCore.ahk
 #Include modules\VirtualKeyboardInterop.ahk
+#Include modules\VkExecQueue.ahk
 #Include "modules\ConfigWebViewModule.ahk"
 
 ; 命令面板可见时 Ctrl+Shift+O：OC-5 协议闭合探针（结果写入 Cache\debug\oc5_probe_last.json）

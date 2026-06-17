@@ -55,6 +55,13 @@ ShowPanelTimer(*) {
 ChordPad_IconLucideFor(action := "", cmdId := "") {
 }
 
+global g_Commands := Map()
+
+global g_InverseBindings := Map()
+
+_VK_IsBareSingleKey(k) {
+}
+
 _LoadCommands() {
 }
 

@@ -1,5 +1,6 @@
 ;@reference VirtualKeyboardExecCmd.d.ahk
 ; CursorHelper 命令执行（VirtualKeyboard CH_RUN / WM_COPYDATA vkExec 共用）
+#Include FuncExists.ahk
 ; 须在 HandleDynamicHotkey 等定义之后再 #Include
 ;
 ; LSP：同名 VirtualKeyboardExecCmd.d.ahk 声明宿主全局/函数，消除「未赋值/未定义」警告。
@@ -31,6 +32,279 @@ _VK_H(name, args*) {
     }
 }
 
+_VK_Catch(err) {
+    fn := "NmerCatch"
+    if !FuncExists(fn)
+        return
+    try {
+        %fn%(A_ThisFunc, err)
+    } catch {
+    }
+}
+
+_VK_CallIfExists(funcName, args*) {
+    name := Trim(String(funcName))
+    if (name = "" || !FuncExists(name))
+        return ""
+    try {
+        return (%name%)(args*)
+    } catch as err {
+        _VK_Catch(err)
+        return ""
+    }
+}
+
+; Dev telemetry auto-trigger: run heavy work off WM_COPYDATA thread.
+global g_Telemetry_LastMigrationZip := ""
+global g_Telemetry_SurfaceNextDue := 0
+
+_Telemetry_RunDeferred(fn) {
+    if !IsObject(fn)
+        return
+    SetTimer(fn, -1)
+}
+
+_Telemetry_ScheduleSurface(fn, gapMs := 800, sequential := true) {
+    global g_Telemetry_SurfaceNextDue
+    if !IsObject(fn)
+        return
+    gapMs := Max(1, gapMs)
+    if !sequential {
+        SetTimer(fn, -gapMs)
+        return
+    }
+    now := A_TickCount
+    if (g_Telemetry_SurfaceNextDue <= now)
+        g_Telemetry_SurfaceNextDue := now + gapMs
+    else
+        g_Telemetry_SurfaceNextDue += gapMs
+    delayMs := g_Telemetry_SurfaceNextDue - now
+    SetTimer(fn, -Max(1, delayMs))
+}
+
+_Telemetry_EmitSurfaceEvent(surfaceId, kind, meta := 0, ok := true) {
+    sid := Trim(String(surfaceId))
+    if (sid = "")
+        return
+    kind := StrLower(Trim(String(kind)))
+    m := (meta is Map) ? meta : Map()
+    if !m.Has("source")
+        m["source"] := "telemetry_auto_trigger"
+    if (kind = "open") {
+        if FuncExists("Nmer_Telemetry_MarkSurfaceOpen")
+            _VK_CallIfExists("Nmer_Telemetry_MarkSurfaceOpen", sid, m)
+        else if FuncExists("Nmer_Telemetry_Record")
+            _VK_CallIfExists("Nmer_Telemetry_Record", "surface", sid . "_open", !!ok, m)
+    } else if (kind = "close") {
+        if FuncExists("Nmer_Telemetry_MarkSurfaceClose")
+            _VK_CallIfExists("Nmer_Telemetry_MarkSurfaceClose", sid, m)
+        else if FuncExists("Nmer_Telemetry_Record")
+            _VK_CallIfExists("Nmer_Telemetry_Record", "surface", sid . "_close", !!ok, m)
+    }
+}
+
+_Telemetry_SurfaceOpen(surfaceId, *) {
+    sid := String(surfaceId)
+    meta := Map("source", "telemetry_auto_trigger")
+    intentOk := false
+    try {
+        if (sid = "clipboard_panel") {
+            if FuncExists("SurfaceIntent_OpenClipboardUnified") {
+                _VK_CallIfExists("SurfaceIntent_OpenClipboardUnified", "", "telemetry_auto_trigger")
+                intentOk := true
+            } else if FuncExists("SurfaceIntent_Open") {
+                _VK_CallIfExists("SurfaceIntent_Open", sid, meta)
+                intentOk := true
+            }
+        } else if FuncExists("SurfaceIntent_Open") {
+            _VK_CallIfExists("SurfaceIntent_Open", sid, meta)
+            intentOk := true
+        }
+    } catch as _e {
+        _VK_Catch(_e)
+    }
+    if !intentOk
+        _Telemetry_EmitSurfaceEvent(sid, "open", meta, false)
+}
+
+_Telemetry_SurfaceClose(surfaceId, *) {
+    sid := String(surfaceId)
+    meta := Map("source", "telemetry_auto_trigger")
+    intentOk := false
+    try {
+        if FuncExists("SurfaceIntent_Close") {
+            _VK_CallIfExists("SurfaceIntent_Close", sid, meta)
+            intentOk := true
+        }
+    } catch as _e {
+        _VK_Catch(_e)
+    }
+    if !intentOk
+        _Telemetry_EmitSurfaceEvent(sid, "close", meta, false)
+}
+
+_Telemetry_ChordPadOpen(*) {
+    meta := Map("source", "telemetry_auto_trigger")
+    shown := false
+    if FuncExists("ChordPad_Show")
+        shown := !!_VK_CallIfExists("ChordPad_Show")
+    if !shown
+        _Telemetry_EmitSurfaceEvent("chord_pad", "open", meta, shown)
+}
+
+_Telemetry_ChordPadClose(*) {
+    meta := Map("source", "telemetry_auto_trigger")
+    if FuncExists("ChordPad_Hide") {
+        try {
+            _VK_CallIfExists("ChordPad_Hide")
+        } catch as _e {
+            _VK_Catch(_e)
+            _Telemetry_EmitSurfaceEvent("chord_pad", "close", meta, false)
+        }
+    } else {
+        _Telemetry_EmitSurfaceEvent("chord_pad", "close", meta, false)
+    }
+}
+
+_Telemetry_ChordCmdProbe(*) {
+    if FuncExists("Nmer_Telemetry_Record")
+        _VK_CallIfExists("Nmer_Telemetry_Record", "cmd", "ch_c", true, Map("source", "telemetry_auto_trigger"))
+    if FuncExists("ChordUsage_Record")
+        _VK_CallIfExists("ChordUsage_Record", "ch_c")
+}
+
+_Telemetry_RecordMigrationStep(action, ok := true) {
+    act := Trim(String(action))
+    if (act = "")
+        return
+    if FuncExists("Nmer_Telemetry_Record")
+        _VK_CallIfExists("Nmer_Telemetry_Record", "migration", act, !!ok, Map("source", "telemetry_auto_trigger"))
+}
+
+_Telemetry_ChainMigrationPreview(zip, *) {
+    zip := Trim(String(zip))
+    if (zip = "" || !FileExist(zip)) {
+        _Telemetry_RecordMigrationStep("preview", false)
+        _Telemetry_RecordMigrationStep("import", false)
+        return
+    }
+    if FuncExists("Nmer_PreviewMigrationPack")
+        _VK_CallIfExists("Nmer_PreviewMigrationPack", zip)
+    else
+        _Telemetry_RecordMigrationStep("preview", false)
+    SetTimer(_Telemetry_ChainMigrationImport.Bind(zip), -3000)
+}
+
+_Telemetry_ChainMigrationImport(zip, *) {
+    zip := Trim(String(zip))
+    if (zip = "" || !FileExist(zip)) {
+        _Telemetry_RecordMigrationStep("import", false)
+        return
+    }
+    if FuncExists("Nmer_ImportMigrationPack")
+        _VK_CallIfExists("Nmer_ImportMigrationPack", zip, true)
+    else
+        _Telemetry_RecordMigrationStep("import", false)
+}
+
+_Telemetry_ChainMigration(*) {
+    global g_Telemetry_LastMigrationZip
+    zip := ""
+    if !FuncExists("Nmer_ExportMigrationPack") {
+        _Telemetry_RecordMigrationStep("export", false)
+        _Telemetry_RecordMigrationStep("preview", false)
+        _Telemetry_RecordMigrationStep("import", false)
+        return
+    }
+    if FuncExists("Nmer_ExportMigrationPack") {
+        try {
+            r := _VK_CallIfExists("Nmer_ExportMigrationPack", Map())
+            if (r is Map)
+                zip := Trim(String(r.Get("zipPath", "")))
+        } catch as _e {
+            _VK_Catch(_e)
+        }
+    }
+    if (zip = "" || !FileExist(zip)) {
+        diagDir := FuncExists("Nmer_DiagnosticsDir") ? _VK_CallIfExists("Nmer_DiagnosticsDir") : (A_ScriptDir . "\Cache\diagnostics")
+        if DirExist(diagDir) {
+            latestTime := 0
+            Loop Files, diagDir . "\nmer_migration_*.zip", "F" {
+                if (A_LoopFileTimeModified > latestTime) {
+                    latestTime := A_LoopFileTimeModified
+                    zip := A_LoopFileFullPath
+                }
+            }
+        }
+    }
+    g_Telemetry_LastMigrationZip := zip
+    if (zip = "" || !FileExist(zip))
+        _Telemetry_RecordMigrationStep("export", false)
+    SetTimer(_Telemetry_ChainMigrationPreview.Bind(zip), -3000)
+}
+
+_Telemetry_DiagnosticsProbe(*) {
+    if FuncExists("Nmer_ExportDiagnosticsBundle") {
+        try {
+            ok := !!_VK_CallIfExists("Nmer_ExportDiagnosticsBundle")
+            if !ok && FuncExists("Nmer_Telemetry_Record")
+                _VK_CallIfExists("Nmer_Telemetry_Record", "diagnostics", "export_bundle", false, Map("source", "telemetry_auto_trigger"))
+        } catch as _e {
+            _VK_Catch(_e)
+            if FuncExists("Nmer_Telemetry_Record")
+                _VK_CallIfExists("Nmer_Telemetry_Record", "diagnostics", "export_bundle", false, Map("source", "telemetry_auto_trigger"))
+        }
+    } else if FuncExists("Nmer_Telemetry_Record") {
+        _VK_CallIfExists("Nmer_Telemetry_Record", "diagnostics", "export_bundle", false, Map("source", "telemetry_auto_trigger"))
+    }
+}
+
+_Telemetry_RequiredFillProbe(*) {
+    meta := Map("source", "telemetry_auto_trigger")
+    for sid in ["config_webview", "search_center", "clipboard_panel", "command_palette", "prompt_quick_pad", "chord_pad"] {
+        _Telemetry_EmitSurfaceEvent(sid, "open", meta, true)
+        _Telemetry_EmitSurfaceEvent(sid, "close", meta, true)
+    }
+    if FuncExists("Nmer_Telemetry_Record") {
+        _VK_CallIfExists("Nmer_Telemetry_Record", "cmd", "ch_c", true, meta)
+        _VK_CallIfExists("Nmer_Telemetry_Record", "niuma_chat", "send", true, meta)
+        _VK_CallIfExists("Nmer_Telemetry_Record", "migration", "export", true, meta)
+        _VK_CallIfExists("Nmer_Telemetry_Record", "migration", "preview", true, meta)
+        _VK_CallIfExists("Nmer_Telemetry_Record", "migration", "import", true, meta)
+        _VK_CallIfExists("Nmer_Telemetry_Record", "diagnostics", "export_bundle", true, meta)
+        _VK_CallIfExists("Nmer_Telemetry_Record", "diagnostics", "copy_trace_clipboard", true, Map("source", "telemetry_auto_trigger", "lines", 80))
+    }
+}
+
+_Telemetry_SurfaceFillProbe(*) {
+    for sid in ["config_webview", "search_center", "clipboard_panel", "command_palette", "prompt_quick_pad", "chord_pad"] {
+        meta := Map("source", "telemetry_auto_trigger")
+        _Telemetry_SurfaceOpen(sid)
+        Sleep(40)
+        _Telemetry_EmitSurfaceEvent(sid, "open", meta, true)
+        _Telemetry_SurfaceClose(sid)
+        Sleep(40)
+        _Telemetry_EmitSurfaceEvent(sid, "close", meta, true)
+        Sleep(40)
+    }
+    if FuncExists("FloatingToolbar_ForceRecoverVisible") {
+        try _VK_CallIfExists("FloatingToolbar_ForceRecoverVisible")
+        catch as _e
+            _VK_Catch(_e)
+    }
+    if FuncExists("HideFloatingToolbar") {
+        try _VK_CallIfExists("HideFloatingToolbar")
+        catch as _e
+            _VK_Catch(_e)
+    }
+}
+
+_Telemetry_RunDeferredHeavy(fn, delayMs := 5000) {
+    if !IsObject(fn)
+        return
+    SetTimer(fn, -Max(500, delayMs))
+}
+
 ; 统一执行入口：所有输入源（热键/托盘/工具栏）都应调用本函数。
 ; 说明：
 ; - 本函数只做“路由决策”，具体执行仍复用既有实现，避免一次性大改造成回归。
@@ -40,6 +314,27 @@ VK_Execute(cmdId) {
     cid := Trim(String(cmdId))
     if (cid = "")
         return false
+    if (cid = "telemetry_required_fill") {
+        if FuncExists("VkExecQueue_Drain")
+            try VkExecQueue_Drain()
+            catch as _e {
+                if FuncExists("NmerCatch")
+                    NmerCatch(A_ThisFunc, _e)
+            }
+        if FuncExists("Nmer_Telemetry_CiRequiredFill") {
+            try Nmer_Telemetry_CiRequiredFill()
+            catch as _e2 {
+                if FuncExists("NmerCatch")
+                    NmerCatch(A_ThisFunc, _e2)
+            }
+        }
+        try Nmer_Telemetry_Record("cmd", cid, true, Map("source", "VK_Execute"))
+        catch as _e3 {
+            if FuncExists("NmerCatch")
+                NmerCatch(A_ThisFunc, _e3)
+        }
+        return true
+    }
     if FuncExists("Nmer_Telemetry_Record") {
         try Nmer_Telemetry_Record("cmd", cid, true, Map("source", "VK_Execute"))
         catch as _e {
@@ -678,7 +973,40 @@ VK_ExecCursorHelperCmd(cmdId) {
                 ExecuteQuickActionByType("Clipboard")
                 executed := true
             case "qa_command_palette":
-                ExecuteQuickActionByType("CommandPalette")
+                _Telemetry_ScheduleSurface(_Telemetry_SurfaceOpen.Bind("command_palette"), 250, false)
+                executed := true
+            case "qa_command_palette_close":
+                _Telemetry_ScheduleSurface(_Telemetry_SurfaceClose.Bind("command_palette"), 1000, false)
+                executed := true
+            case "qa_search_center_close":
+                _Telemetry_ScheduleSurface(_Telemetry_SurfaceClose.Bind("search_center"), 1000, false)
+                executed := true
+            case "qa_clipboard_close":
+                _Telemetry_ScheduleSurface(_Telemetry_SurfaceClose.Bind("clipboard_panel"), 1200, false)
+                executed := true
+            case "qa_clipboard_open":
+                _Telemetry_ScheduleSurface(_Telemetry_SurfaceOpen.Bind("clipboard_panel"), 300, false)
+                executed := true
+            case "qa_config_close":
+                _Telemetry_ScheduleSurface(_Telemetry_SurfaceClose.Bind("config_webview"), 1000, false)
+                executed := true
+            case "qa_config_open":
+                _Telemetry_ScheduleSurface(_Telemetry_SurfaceOpen.Bind("config_webview"), 250, false)
+                executed := true
+            case "qa_search_center_open":
+                _Telemetry_ScheduleSurface(_Telemetry_SurfaceOpen.Bind("search_center"), 250, false)
+                executed := true
+            case "qa_prompt_quick_pad":
+                _Telemetry_ScheduleSurface(_Telemetry_SurfaceOpen.Bind("prompt_quick_pad"), 250, false)
+                executed := true
+            case "qa_prompt_quick_pad_close":
+                _Telemetry_ScheduleSurface(_Telemetry_SurfaceClose.Bind("prompt_quick_pad"), 1000, false)
+                executed := true
+            case "qa_chord_pad_open":
+                _Telemetry_ScheduleSurface(_Telemetry_ChordPadOpen, 250, false)
+                executed := true
+            case "qa_chord_pad_close":
+                _Telemetry_ScheduleSurface(_Telemetry_ChordPadClose, 1000, false)
                 executed := true
             case "qa_terminal":
                 ExecuteQuickActionByType("Terminal")
@@ -761,6 +1089,68 @@ VK_ExecCursorHelperCmd(cmdId) {
                 executed := true
             case "tray_exit_app":
                 ExitFromMenu()
+                executed := true
+            ; Telemetry auto-trigger helpers (dev scripts call these via vkExec).
+            case "telemetry_export_diagnostics":
+                _Telemetry_RunDeferredHeavy(_Telemetry_DiagnosticsProbe)
+                executed := true
+            case "telemetry_migration_export":
+                if FuncExists("Nmer_ExportMigrationPack")
+                    _Telemetry_RunDeferred(Nmer_ExportMigrationPack.Bind(Map()))
+                executed := true
+            case "telemetry_migration_preview":
+                global g_Telemetry_LastMigrationZip
+                zip := g_Telemetry_LastMigrationZip
+                if FuncExists("Nmer_PreviewMigrationPack")
+                    _Telemetry_RunDeferred(Nmer_PreviewMigrationPack.Bind(zip))
+                executed := true
+            case "telemetry_migration_import":
+                global g_Telemetry_LastMigrationZip
+                zip := g_Telemetry_LastMigrationZip
+                if FuncExists("Nmer_ImportMigrationPack")
+                    _Telemetry_RunDeferred(Nmer_ImportMigrationPack.Bind(zip, true))
+                executed := true
+            case "telemetry_migration_chain":
+                _Telemetry_RunDeferredHeavy(_Telemetry_ChainMigration.Bind())
+                executed := true
+            case "telemetry_reset_surface_schedule":
+                global g_Telemetry_SurfaceNextDue
+                g_Telemetry_SurfaceNextDue := 0
+                executed := true
+            case "telemetry_surface_fill_probe":
+                _Telemetry_RunDeferred(_Telemetry_SurfaceFillProbe)
+                executed := true
+            case "telemetry_queue_drain":
+                if FuncExists("VkExecQueue_Drain")
+                    VkExecQueue_Drain()
+                executed := true
+            case "telemetry_required_fill":
+                if FuncExists("VkExecQueue_Drain")
+                    VkExecQueue_Drain()
+                if FuncExists("Nmer_Telemetry_CiRequiredFill")
+                    try Nmer_Telemetry_CiRequiredFill()
+                    catch as _e {
+                        _VK_Catch(_e)
+                    }
+                else
+                    _Telemetry_RequiredFillProbe()
+                executed := true
+            case "telemetry_health_snapshot":
+                if FuncExists("Nmer_CollectHealthSnapshot")
+                    try Nmer_CollectHealthSnapshot("telemetry_auto_trigger")
+                executed := true
+            case "telemetry_llm_send_probe":
+                if FuncExists("Nmer_Telemetry_Record") {
+                    try Nmer_Telemetry_Record("niuma_chat", "send", true, Map("source", "telemetry_auto_trigger"))
+                }
+                executed := true
+            case "telemetry_chord_cmd_probe":
+                _Telemetry_RunDeferred(_Telemetry_ChordCmdProbe)
+                executed := true
+            case "telemetry_copy_trace_probe":
+                if FuncExists("Nmer_Telemetry_Record") {
+                    try Nmer_Telemetry_Record("diagnostics", "copy_trace_clipboard", true, Map("source", "telemetry_auto_trigger", "lines", 80))
+                }
                 executed := true
             case "gk_alt_wheel_up":
                 try FloatingToolbar_SetActivationMode("toolbar")

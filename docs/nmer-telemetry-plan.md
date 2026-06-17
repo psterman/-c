@@ -4,13 +4,15 @@
 
 ## P0
 
-- `cmd:<cmdId>`: `ChordUsage_Record` 和弦/命令执行
+- `cmd:<cmdId>`: `ChordUsage_Record` 和弦/命令执行（含 `ch_*`、ChordPad 点击）
+- `surface:chord_pad_open|chord_pad_close`
 - `surface:config_webview_open`
 - `cmdpal:open|visible|query|submit|results`
 - `surface:intent_open|intent_close|intent_dispose`
 - `action:llm_test`
 - `action:studio_save`
 - `action:diagnostics_export`
+- `action:diagnostics_copy_trace`
 - `action:health_snapshot`
 
 原则：

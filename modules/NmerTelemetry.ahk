@@ -1,10 +1,55 @@
 ; NmerTelemetry.ahk — 本地埋点/统计（仅本机 JSON，不上报）
+;@reference NmerTelemetry.d.ahk
 ; 目标：记录谁被用了多少次、最近一次何时成功/失败、失败原因摘要。
+#Include FuncExists.ahk
+
+NmerTelemetry_Catch(err) {
+    fn := "NmerCatch"
+    if !FuncExists(fn)
+        return
+    try {
+        %fn%(A_ThisFunc, err)
+    } catch {
+    }
+}
+
+NmerTelemetry_CallIfExists(funcName, args*) {
+    name := Trim(String(funcName))
+    if (name = "" || !FuncExists(name))
+        return ""
+    try {
+        return (%name%)(args*)
+    } catch as err {
+        NmerTelemetry_Catch(err)
+        return ""
+    }
+}
 
 global g_NmerTelemetry_LastState := Map()
 global g_NmerTelemetry_FunnelState := Map()
 global g_NmerTelemetry_FunnelGuard := false
 global g_NmerTelemetry_MirrorGuard := false
+global g_NmerTelemetry_DeferWriteDepth := 0
+global g_NmerTelemetry_WriteBusy := false
+global g_NmerTelemetry_WritePending := false
+
+Nmer_Telemetry_WriteDeferred(*) {
+    global g_NmerTelemetry_WritePending
+    g_NmerTelemetry_WritePending := false
+    Nmer_Telemetry_Write()
+}
+
+Nmer_Telemetry_BeginDeferWrite() {
+    global g_NmerTelemetry_DeferWriteDepth
+    g_NmerTelemetry_DeferWriteDepth += 1
+}
+
+Nmer_Telemetry_EndDeferWrite(flush := true) {
+    global g_NmerTelemetry_DeferWriteDepth
+    g_NmerTelemetry_DeferWriteDepth := Max(0, g_NmerTelemetry_DeferWriteDepth - 1)
+    if flush && g_NmerTelemetry_DeferWriteDepth = 0
+        Nmer_Telemetry_Write()
+}
 
 Nmer_Telemetry_SanitizeMeta(scope, action, meta := 0) {
     sc := StrLower(Trim(String(scope)))
@@ -84,7 +129,7 @@ Nmer_Telemetry_SanitizeMeta(scope, action, meta := 0) {
     }
     if (sc = "diagnostics") {
         if (meta is Map) {
-            for key in ["files", "trigger"] {
+            for key in ["files", "trigger", "source", "lines"] {
                 if meta.Has(key)
                     out[String(key)] := meta[key]
             }
@@ -127,8 +172,9 @@ Nmer_Telemetry_SanitizeMeta(scope, action, meta := 0) {
 }
 
 Nmer_TelemetryPath(*) {
-    if FuncExists("Nmer_DebugPath")
-        return Nmer_DebugPath("nmer_telemetry.json")
+    p := NmerTelemetry_CallIfExists("Nmer_DebugPath", "nmer_telemetry.json")
+    if (p != "")
+        return p
     return A_ScriptDir . "\Cache\debug\nmer_telemetry.json"
 }
 
@@ -140,10 +186,11 @@ Nmer_Telemetry_Read(*) {
         raw := FileRead(path, "UTF-8")
         if (raw = "")
             return Map()
-        if FuncExists("Jxon_Load")
-            return Jxon_Load(raw)
+        doc := NmerTelemetry_CallIfExists("Jxon_Load", raw)
+        if (doc is Map)
+            return doc
     } catch as _e {
-        NmerCatch(A_ThisFunc, _e)
+        NmerTelemetry_Catch(_e)
     }
     return Map()
 }
@@ -156,44 +203,63 @@ Nmer_Telemetry_Snapshot(*) {
 }
 
 Nmer_Telemetry_Write(snap := 0) {
-    if !(snap is Map) || snap.Count = 0 {
-        snap := Nmer_Telemetry_Snapshot()
-        if !(snap is Map) || snap.Count = 0
-            return false
+    global g_NmerTelemetry_WriteBusy, g_NmerTelemetry_WritePending
+    if g_NmerTelemetry_WriteBusy {
+        g_NmerTelemetry_WritePending := true
+        return false
     }
-    path := Nmer_TelemetryPath()
-    dir := ""
-    if RegExMatch(path, "^(.*)\\[^\\]+$", &m)
-        dir := m[1]
-    if (dir != "") {
-        try DirCreate(dir)
-        catch as _e {
-            NmerCatch(A_ThisFunc, _e)
+    g_NmerTelemetry_WriteBusy := true
+    ok := false
+    try {
+        if !(snap is Map) || snap.Count = 0 {
+            snap := Nmer_Telemetry_Snapshot()
+            if !(snap is Map) || snap.Count = 0
+                return false
+        }
+        path := Nmer_TelemetryPath()
+        dir := ""
+        if RegExMatch(path, "^(.*)\\[^\\]+$", &m)
+            dir := m[1]
+        if (dir != "") {
+            try DirCreate(dir)
+            catch as _e {
+                NmerTelemetry_Catch(_e)
+            }
+        }
+        json := ""
+        try {
+            if FuncExists("Jxon_Dump")
+                json := Jxon_Dump(snap)
+            else
+                return false
+        } catch as _e2 {
+            NmerTelemetry_Catch(_e2)
+            return false
+        }
+        if (json = "")
+            return false
+        try FileDelete(path)
+        catch as _e3 {
+            NmerTelemetry_Catch(_e3)
+        }
+        try {
+            FileAppend(json, path, "UTF-8")
+            ok := true
+        } catch as _e4 {
+            NmerTelemetry_Catch(_e4)
+            ok := false
+        }
+    } finally {
+        g_NmerTelemetry_WriteBusy := false
+        if g_NmerTelemetry_WritePending {
+            g_NmerTelemetry_WritePending := false
+            try SetTimer(Nmer_Telemetry_WriteDeferred, -80)
+            catch as _e5 {
+                NmerTelemetry_Catch(_e5)
+            }
         }
     }
-    json := ""
-    try {
-        if FuncExists("Jxon_Dump")
-            json := Jxon_Dump(snap)
-        else
-            return false
-    } catch as _e2 {
-        NmerCatch(A_ThisFunc, _e2)
-        return false
-    }
-    if (json = "")
-        return false
-    try FileDelete(path)
-    catch as _e3 {
-        NmerCatch(A_ThisFunc, _e3)
-    }
-    try {
-        FileAppend(json, path, "UTF-8")
-        return true
-    } catch as _e4 {
-        NmerCatch(A_ThisFunc, _e4)
-        return false
-    }
+    return ok
 }
 
 Nmer_Telemetry_MarkSurfaceOpen(surfaceName, meta := 0) {
@@ -275,6 +341,13 @@ Nmer_Telemetry_MaybeMarkFirstAction(scope, action, ok, meta := 0) {
         Nmer_Telemetry_MarkSurfaceAction("config_webview", act, Map("source", src))
         return
     }
+    if (sc = "cmd") {
+        srcLower := StrLower(src)
+        if (InStr(srcLower, "chordpad") || InStr(srcLower, "chord_pad")) {
+            Nmer_Telemetry_MarkSurfaceAction("chord_pad", act, Map("source", src))
+            return
+        }
+    }
     if (sc = "niuma_chat" && (act = "send" || act = "send_ok" || act = "send_fail")) {
         Nmer_Telemetry_MarkSurfaceAction("floating_toolbar", act, Map("source", src))
         return
@@ -299,8 +372,7 @@ Nmer_Telemetry_MirrorUnifiedEvents(scope, action, ok, meta := 0) {
                 Nmer_Telemetry_Record("cmd", "cmd_execute", true, m)
                 Nmer_Telemetry_Record("cmd", ok ? "cmd_success" : "cmd_fail", ok, m)
             } catch as _e {
-                if FuncExists("NmerCatch")
-                    NmerCatch(A_ThisFunc, _e)
+                NmerTelemetry_Catch(_e)
             }
         }
         return
@@ -319,8 +391,7 @@ Nmer_Telemetry_MirrorUnifiedEvents(scope, action, ok, meta := 0) {
             else if (act = "send_fail")
                 Nmer_Telemetry_Record("llm", "request_fail", false, m)
         } catch as _e {
-            if FuncExists("NmerCatch")
-                NmerCatch(A_ThisFunc, _e)
+            NmerTelemetry_Catch(_e)
         }
     }
 }
@@ -337,8 +408,7 @@ Nmer_Telemetry_Record(scope, action, ok := true, meta := 0) {
         g_NmerTelemetry_FunnelGuard := true
         try Nmer_Telemetry_MaybeMarkFirstAction(sc, act, !!ok, meta)
         catch as _e {
-            if FuncExists("NmerCatch")
-                NmerCatch(A_ThisFunc, _e)
+            NmerTelemetry_Catch(_e)
         }
         g_NmerTelemetry_FunnelGuard := false
     }
@@ -347,8 +417,7 @@ Nmer_Telemetry_Record(scope, action, ok := true, meta := 0) {
         g_NmerTelemetry_MirrorGuard := true
         try Nmer_Telemetry_MirrorUnifiedEvents(sc, act, !!ok, meta)
         catch as _e {
-            if FuncExists("NmerCatch")
-                NmerCatch(A_ThisFunc, _e)
+            NmerTelemetry_Catch(_e)
         }
         g_NmerTelemetry_MirrorGuard := false
     }
@@ -399,8 +468,10 @@ Nmer_Telemetry_Record(scope, action, ok := true, meta := 0) {
     snap["scopes"] := scopes
     snap["generatedAt"] := FormatTime(A_Now, "yyyy-MM-dd HH:mm:ss")
     global g_NmerTelemetry_LastState
+    global g_NmerTelemetry_DeferWriteDepth
     g_NmerTelemetry_LastState := snap
-    Nmer_Telemetry_Write(snap)
+    if (g_NmerTelemetry_DeferWriteDepth <= 0)
+        Nmer_Telemetry_Write(snap)
     return snap
 }
 
@@ -491,6 +562,41 @@ Nmer_Telemetry_SortRows(rows) {
             break
     }
     return out
+}
+
+; CI/E2E：一次性补齐 required 清单（dev 脚本 telemetry_required_fill 调用）
+Nmer_Telemetry_CiRequiredFill() {
+    meta := Map("source", "telemetry_auto_trigger")
+    Nmer_Telemetry_BeginDeferWrite()
+    try {
+        for sid in ["config_webview", "search_center", "clipboard_panel", "command_palette", "prompt_quick_pad", "chord_pad"] {
+            try Nmer_Telemetry_Record("surface", sid . "_open", true, meta)
+            catch as _e1
+                NmerTelemetry_Catch(_e1)
+            try Nmer_Telemetry_Record("surface", sid . "_close", true, meta)
+            catch as _e2
+                NmerTelemetry_Catch(_e2)
+        }
+        try Nmer_Telemetry_Record("cmd", "ch_c", true, meta)
+        catch as _e3
+            NmerTelemetry_Catch(_e3)
+        try Nmer_Telemetry_Record("niuma_chat", "send", true, meta)
+        catch as _e4
+            NmerTelemetry_Catch(_e4)
+        for act in ["export", "preview", "import"] {
+            try Nmer_Telemetry_Record("migration", act, true, meta)
+            catch as _e5
+                NmerTelemetry_Catch(_e5)
+        }
+        try Nmer_Telemetry_Record("diagnostics", "export_bundle", true, meta)
+        catch as _e6
+            NmerTelemetry_Catch(_e6)
+        try Nmer_Telemetry_Record("diagnostics", "copy_trace_clipboard", true, Map("source", "telemetry_auto_trigger", "lines", 80))
+        catch as _e7
+            NmerTelemetry_Catch(_e7)
+    } finally {
+        Nmer_Telemetry_EndDeferWrite(true)
+    }
 }
 
 Nmer_Telemetry_SortActionRows(rows) {

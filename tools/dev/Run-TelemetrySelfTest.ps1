@@ -19,6 +19,8 @@ if (-not $TelemetryPath) {
     $TelemetryPath = Join-Path $Root "Cache\debug\nmer_telemetry.json"
 }
 
+. (Join-Path $PSScriptRoot "_TelemetryRequiredChecks.ps1")
+
 $reportDir = Join-Path $Root "Cache\ci"
 if (-not (Test-Path -LiteralPath $reportDir)) {
     New-Item -ItemType Directory -Path $reportDir -Force | Out-Null
@@ -91,29 +93,7 @@ if ($null -eq $doc.scopes) {
     exit 1
 }
 
-$requiredChecks = @(
-    @{ Scope = "surface"; Action = "config_webview_open" },
-    @{ Scope = "surface"; Action = "config_webview_close" },
-    @{ Scope = "surface"; Action = "search_center_open" },
-    @{ Scope = "surface"; Action = "search_center_close" },
-    @{ Scope = "surface"; Action = "clipboard_panel_open" },
-    @{ Scope = "surface"; Action = "clipboard_panel_close" },
-    @{ Scope = "surface"; Action = "command_palette_open" },
-    @{ Scope = "surface"; Action = "command_palette_close" },
-    @{ Scope = "surface"; Action = "floating_toolbar_open" },
-    @{ Scope = "surface"; Action = "floating_toolbar_close" },
-    @{ Scope = "surface"; Action = "prompt_quick_pad_open" },
-    @{ Scope = "surface"; Action = "prompt_quick_pad_close" },
-    @{ Scope = "cmd"; Action = "cmd_execute" },
-    @{ Scope = "cmd"; Action = "cmd_success" },
-    @{ Scope = "llm"; Action = "request_start" },
-    @{ Scope = "health"; Action = "health_snapshot_result" },
-    @{ Scope = "migration"; Action = "export" },
-    @{ Scope = "migration"; Action = "preview" },
-    @{ Scope = "migration"; Action = "import" },
-    @{ Scope = "diagnostics"; Action = "export_bundle" },
-    @{ Scope = "health"; Action = "update_check_done" }
-)
+$requiredChecks = $script:TelemetryRequiredChecks
 
 $advisoryAnyGroups = @(
     @{ Name = "surface_funnel_first_action"; Items = @(
@@ -122,7 +102,8 @@ $advisoryAnyGroups = @(
             @{ Scope = "surface"; Action = "clipboard_panel_first_action" },
             @{ Scope = "surface"; Action = "command_palette_first_action" },
             @{ Scope = "surface"; Action = "floating_toolbar_first_action" },
-            @{ Scope = "surface"; Action = "prompt_quick_pad_first_action" }
+            @{ Scope = "surface"; Action = "prompt_quick_pad_first_action" },
+            @{ Scope = "surface"; Action = "chord_pad_first_action" }
         )
     },
     @{ Name = "surface_funnel_open_without_action"; Items = @(
@@ -131,7 +112,8 @@ $advisoryAnyGroups = @(
             @{ Scope = "surface"; Action = "clipboard_panel_open_without_action" },
             @{ Scope = "surface"; Action = "command_palette_open_without_action" },
             @{ Scope = "surface"; Action = "floating_toolbar_open_without_action" },
-            @{ Scope = "surface"; Action = "prompt_quick_pad_open_without_action" }
+            @{ Scope = "surface"; Action = "prompt_quick_pad_open_without_action" },
+            @{ Scope = "surface"; Action = "chord_pad_open_without_action" }
         )
     },
     @{ Name = "bridge_state_change"; Items = @(

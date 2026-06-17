@@ -113,6 +113,7 @@ CommandPalette_AgentWireLog(tag, detail := "") {
 }
 
 CommandPalette_AgentLog(event, detail := "") {
+    ev := String(event)
     line := "[" . A_Now . "][agent][" . event . "] " . String(detail)
     try OutputDebug(line . "`n")
     catch as _e {
@@ -149,7 +150,6 @@ CommandPalette_AgentLog(event, detail := "") {
     }
     if FuncExists("CommandPalette_AgentDebugTrace") {
         dbgLayer := "ahk"
-        ev := String(event)
         if (ev = "dispatch_ai" || ev = "dispatch_ai_paths")
             dbgLayer := "dispatch"
         else if (InStr(ev, "poll") || InStr(ev, "compose") || InStr(ev, "agent_dispatch"))
@@ -3835,5 +3835,5 @@ global g_CmdPal_AgentWireLogDispatch := CommandPalette_AgentWireLog
 ; 启动时从磁盘恢复历史任务卡；若曾持久化失败则从 trace 日志一次性重建
 try CommandPalette_AgentLoadCards()
 try CommandPalette_AgentRecoverCardsIfEmpty()
-if FuncExists("CommandPalette_AgentBootstrapNiumaSessions")
-    SetTimer(CommandPalette_AgentBootstrapNiumaSessions, -12000)
+; 不在冷启动定时 bootstrap OpenClaw/Niuma 会话（会重复建会话并拉起 Chat 抽屉）。
+; 需要时由 Web 显式 post palette_agent_bootstrap_niuma 或 host 下发 palette_agent_cards_sync。
