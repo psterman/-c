@@ -4035,13 +4035,16 @@ NiumaMobileBrowser_EscapeJsonStr(s) {
     esc := StrReplace(esc, "`r", "\r")
     esc := StrReplace(esc, "`n", "\n")
     esc := StrReplace(esc, "`t", "\t")
-    ; JSON 字符串禁止未转义的控制字符（0x00-0x1F）
-    try {
-        esc := RegExReplace(esc, "[\x00-\x1F]", NiumaMobileBrowser_JsonEscapeCtl)
-    } catch as _e {
-        NmerCatch(A_ThisFunc, _e) 
+  ; JSON 字符串禁止未转义的控制字符（0x00-0x1F）
+    out := ""
+    for , ch in StrSplit(esc, "") {
+        o := Ord(ch)
+        if (o >= 0 && o <= 31)
+            out .= "\u" . Format("{:04X}", o)
+        else
+            out .= ch
     }
-    return esc
+    return out
 }
 
 NiumaMobileBrowser_JsonEscapeCtl(m) {

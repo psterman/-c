@@ -57,6 +57,27 @@ SearchCenterWebLlm_NavigateEngine(engine, keyword := "") {
 SearchCenterWebLlm_Show(parentHwnd) {
 }
 
+SearchCenterWebLlm_MarkEmbedRequested() {
+}
+
+SearchCenterWebLlm_StartEmbedWatchdog() {
+}
+
+SearchCenterWebLlm_EnsureEmbedSitesLoaded(forceNavigateHome := false, parentHwnd := 0) {
+}
+
+ScWebLlm_GetEmbedParentHwnd() {
+}
+
+ScWebLlm_ResolveEmbedHostHwnd() {
+}
+
+ScWebLlm_ScheduleEmbedBootstrap() {
+}
+
+SearchCenterWebLlm_CanBootstrapEmbed() {
+}
+
 SearchCenterWebLlm_Hide() {
 }
 
@@ -70,6 +91,18 @@ SearchCenterWebLlm_SetContentRect(rect) {
 }
 
 SearchCenterWebLlm_SelectSite(siteId) {
+}
+
+SearchCenterWebLlm_FocusSite(siteId) {
+}
+
+ScWebLlm_ResolveTargetSites(engines := 0) {
+}
+
+SearchCenterWebLlm_BroadcastSearch(keyword, engines := 0) {
+}
+
+SearchCenterWebLlm_ReloadSites(engines := 0) {
 }
 
 SearchCenterWebLlm_HandleNav(action) {

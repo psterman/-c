@@ -18,10 +18,11 @@ _CSM_GetCompiledPath() {
     global g_CSM_CompiledPath
     if (g_CSM_CompiledPath != "")
         return g_CSM_CompiledPath
-    if FuncExists("Nmer_VkCursorKeymapCompiledPath")
-        g_CSM_CompiledPath := Nmer_VkCursorKeymapCompiledPath()
-    else
+    try {
+        g_CSM_CompiledPath := Func("Nmer_VkCursorKeymapCompiledPath").Call()
+    } catch {
         g_CSM_CompiledPath := A_ScriptDir . "\Data\state\vk_cursor_keymap_compiled.json"
+    }
     return g_CSM_CompiledPath
 }
 

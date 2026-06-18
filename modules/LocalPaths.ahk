@@ -133,6 +133,13 @@ Nmer_ScWebLlmStatePath(*) {
     return dir . "\search_center_web_llm_state.json"
 }
 
+Nmer_SearchCenterSessionPath(*) {
+    dir := Nmer_DataRuntimeDir() . "\app"
+    if !DirExist(dir)
+        try DirCreate(dir)
+    return dir . "\search_center_session.json"
+}
+
 Nmer_FullTextSettingsPath(*) {
     return Nmer_DataSearchDir() . "\fulltext_settings.json"
 }

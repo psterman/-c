@@ -324,8 +324,28 @@ Nmer_GetPopupScreenIndex() {
 
 ; 将 GUI 移到弹窗显示器工作区。
 ; forMaximize=true：锚定到目标屏工作区，不锁死 1180x760，便于后续 WinMaximize/Show(Maximize) 铺满该屏。
-Nmer_MoveGuiToPopupScreen(gui, forMaximize := false) {
+Nmer_IsLiveGuiWindow(gui) {
     if !IsObject(gui) || !gui.HasProp("Hwnd")
+        return false
+    try hwnd := Integer(gui.Hwnd)
+    catch {
+        return false
+    }
+    if (hwnd <= 0)
+        return false
+    try {
+        if !DllCall("IsWindow", "Ptr", hwnd, "Int")
+            return false
+        if !WinExist("ahk_id " . hwnd)
+            return false
+    } catch {
+        return false
+    }
+    return true
+}
+
+Nmer_MoveGuiToPopupScreen(gui, forMaximize := false) {
+    if !Nmer_IsLiveGuiWindow(gui)
         return
     idx := Nmer_GetPopupScreenIndex()
     try MonitorGetWorkArea(idx, &l, &t, &r, &b)
@@ -364,24 +384,27 @@ Nmer_MoveGuiToPopupScreen(gui, forMaximize := false) {
 
 ; 在弹窗显示器上最大化；失败时回退为铺满工作区（避免 1180x760 半屏）
 Nmer_EnsureGuiMaximizedOnPopupScreen(gui) {
-    if !IsObject(gui) || !gui.HasProp("Hwnd")
+    if !Nmer_IsLiveGuiWindow(gui)
         return false
-    hwnd := gui.Hwnd
-    if !hwnd
-        return false
-    expr := "ahk_id " . hwnd
     Nmer_MoveGuiToPopupScreen(gui, true)
     try gui.Show()
     catch as _e {
-        NmerCatch(A_ThisFunc, _e) 
+        NmerCatch(A_ThisFunc, _e)
     }
+    if !Nmer_IsLiveGuiWindow(gui)
+        return false
+    hwnd := Integer(gui.Hwnd)
+    expr := "ahk_id " . hwnd
     maximized := false
     try {
-        if (WinGetMinMax(expr) != 1)
-            WinMaximize(expr)
-        maximized := (WinGetMinMax(expr) = 1)
+        if WinExist(expr) {
+            if (WinGetMinMax(expr) != 1)
+                WinMaximize(expr)
+            if WinExist(expr)
+                maximized := (WinGetMinMax(expr) = 1)
+        }
     } catch as _e {
-        NmerCatch(A_ThisFunc, _e) 
+        NmerCatch(A_ThisFunc, _e)
     }
     if !maximized {
         idx := Nmer_GetPopupScreenIndex()

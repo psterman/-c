@@ -538,13 +538,36 @@ _LoadCommands() {
     g_Bindings := Map()
     g_InverseBindings := Map()
 
-    if !FileExist(g_JsonPath) {
-        OutputDebug("[VK] Commands.json not found: " . g_JsonPath)
+    ; Timer/ExitApp 阶段可能出现全局变量被写成非字符串或处于不稳定状态：
+    ; 这里先把路径归一化为字符串并做容错，避免 FileExist/FileRead 触发 Invalid memory read/write。
+    p := ""
+    try p := Trim(String(g_JsonPath))
+    catch
+        p := ""
+    if (p = "") {
+        try {
+            if FuncExists("Nmer_CommandsJsonPath")
+                p := Trim(String(Nmer_CommandsJsonPath()))
+        } catch {
+            p := ""
+        }
+    }
+    if (p = "") {
+        OutputDebug("[VK] Commands.json path empty, skip load")
+        return
+    }
+    try {
+        if !FileExist(p) {
+            OutputDebug("[VK] Commands.json not found: " . p)
+            return
+        }
+    } catch {
+        OutputDebug("[VK] Commands.json path invalid, skip load: " . p)
         return
     }
 
     try {
-        raw := FileRead(g_JsonPath, "UTF-8")
+        raw := FileRead(p, "UTF-8")
         if (SubStr(raw, 1, 1) == Chr(0xFEFF))
             raw := SubStr(raw, 2)
         parsed := Jxon_Load(raw)

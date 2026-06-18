@@ -2490,48 +2490,149 @@ body.sc-cli-layout #app {
   text-overflow: ellipsis;
   max-width: 100%;
 }
-.webllm-toolbar {
+.webllm-toolbar,
+.web-embed-chrome {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 0 0 8px;
+  gap: 4px;
+  padding: 0 0 6px;
   flex-shrink: 0;
 }
-.webllm-site-chips {
+.web-omnibar-row {
   display: flex;
-  flex-wrap: wrap;
+  align-items: center;
   gap: 6px;
+  min-width: 0;
+}
+.web-embed-search-slot {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.web-omnibar-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+.web-chrome-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: .88;
+  transition: background .14s ease, opacity .14s ease;
+}
+.web-chrome-btn:hover:not(:disabled) {
+  background: rgba(255,255,255,.08);
+  opacity: 1;
+}
+.web-chrome-btn:disabled {
+  opacity: .35;
+  cursor: not-allowed;
+}
+.web-bookmarks-bar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  padding: 2px 0 0;
+  border-top: 1px solid rgba(255,255,255,.06);
+}
+.webllm-site-chips,
+.web-bookmark-chips {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 2px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 2px 0;
+  scrollbar-width: thin;
 }
 .webllm-site-chip {
-  border: 1px solid var(--border-subtle);
-  background: rgba(255,255,255,.04);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: none;
+  background: transparent;
   color: var(--text);
-  border-radius: 999px;
-  padding: 4px 10px;
+  border-radius: 8px;
+  padding: 4px 8px;
   font-size: 12px;
   cursor: pointer;
+  flex-shrink: 0;
+  max-width: 140px;
+  transition: background .14s ease;
+}
+.webllm-site-chip:hover {
+  background: rgba(255,255,255,.07);
 }
 .webllm-site-chip.active {
-  border-color: rgba(99, 179, 237, .65);
-  background: rgba(99, 179, 237, .14);
+  background: rgba(99, 179, 237, .18);
+  box-shadow: inset 0 0 0 1px rgba(99, 179, 237, .35);
+}
+.webllm-site-chip.broadcast-on:not(.active) {
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .14);
+}
+.webllm-site-chip.broadcast-off {
+  opacity: 0.38;
 }
 .webllm-site-chip:disabled {
   opacity: 0.45;
   cursor: not-allowed;
 }
-.webllm-nav-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  align-items: center;
+.webllm-site-chip .web-chip-icon {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  object-fit: contain;
+  flex-shrink: 0;
 }
-.webllm-status {
-  font-size: 11px;
-  opacity: 0.75;
-  max-width: 100%;
+.webllm-site-chip .web-chip-fallback {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  background: rgba(255,255,255,.1);
+  flex-shrink: 0;
+}
+.webllm-site-chip .web-chip-label {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.web-bookmark-label-toggle {
+  flex-shrink: 0;
+  font-size: 11px;
+  letter-spacing: .02em;
+}
+body.web-bookmarks-hide-labels .webllm-site-chip .web-chip-label {
+  display: none;
+}
+body.web-bookmarks-hide-labels .webllm-site-chip {
+  padding: 4px 6px;
+  max-width: 32px;
+}
+.web-omnibar-status {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0,0,0,0);
 }
 .web-embed-workspace {
   display: flex;
@@ -2539,6 +2640,8 @@ body.sc-cli-layout #app {
   gap: 8px;
   min-height: 0;
   width: 100%;
+  position: relative;
+  z-index: 3;
 }
 .web-embed-frame {
   flex: 1 1 auto;
@@ -2547,9 +2650,13 @@ body.sc-cli-layout #app {
   border: 1px solid var(--border-subtle);
   background: #f8fafc;
   box-shadow: inset 0 0 0 1px rgba(255,255,255,.04);
+  overflow: hidden;
 }
-html[data-theme="light"] .web-embed-frame {
-  background: #fff;
+body.sc-web-embed-layout .web-embed-frame {
+  background: #0b1220;
+  border-color: transparent;
+  box-shadow: none;
+  border-radius: 8px;
 }
 .web-embed-setup {
   border: 1px solid var(--border-subtle);
@@ -2598,39 +2705,53 @@ body.sc-web-embed-layout .compose-hint-strip {
   min-width: 0;
 }
 .web-embed-search-compact.search-box-inner {
-  grid-template-columns: 1fr auto;
+  display: flex;
   align-items: center;
   gap: 8px;
-  padding: 4px 10px;
-  border-radius: 10px;
+  padding: 0 12px;
+  height: 36px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.08);
+  background: rgba(0,0,0,.22);
+  box-shadow: inset 0 1px 2px rgba(0,0,0,.18);
 }
-.web-embed-search-compact .search-icon-left,
+html[data-theme="light"] .web-embed-search-compact.search-box-inner {
+  background: rgba(255,255,255,.92);
+  border-color: rgba(0,0,0,.1);
+  box-shadow: inset 0 1px 2px rgba(0,0,0,.04);
+}
+.web-embed-search-compact .search-icon-left {
+  display: inline-flex !important;
+  color: var(--muted);
+  font-size: 14px;
+  opacity: .75;
+}
 .web-embed-search-compact .search-more-menu,
 .web-embed-search-compact .engine-switch-capsule,
-.web-embed-search-compact .sc-compose-hints {
+.web-embed-search-compact .sc-compose-hints,
+.web-embed-search-compact #btn-run {
   display: none !important;
 }
 .web-embed-search-compact .search-input-wrap {
+  flex: 1 1 auto;
   min-width: 0;
 }
 .web-embed-search-compact #search {
-  height: 32px;
-  min-height: 32px;
-  max-height: 32px;
-  line-height: 32px;
+  height: 34px;
+  min-height: 34px;
+  max-height: 34px;
+  line-height: 34px;
   padding: 0;
   resize: none;
   overflow: hidden;
   white-space: nowrap;
-}
-.web-embed-search-compact #btn-run {
-  height: 30px;
-  min-width: 56px;
-  padding: 0 12px;
-  font-size: 12px;
+  font-size: 13px;
+  background: transparent;
+  border: none;
+  box-shadow: none;
 }
 .web-embed-toolbar.web-embed-toolbar-with-search {
-  gap: 8px;
+  gap: 4px;
 }
 body.sc-web-embed-layout .web-embed-setup:not([open]) {
   border-color: transparent;
@@ -2658,6 +2779,12 @@ body.sc-web-embed-layout #compose-context-web #engines {
   width: 100%;
   max-width: none;
   gap: 0;
+  position: relative;
+  z-index: 2;
+}
+#layout.sc-web-embed-active #results-card,
+#layout.sc-web-embed-active #local-preview-column {
+  display: none !important;
 }
 #layout.sc-web-embed-active .web-embed-workspace {
   flex: 1 1 auto;
@@ -2673,6 +2800,18 @@ body.sc-web-mode-layout #layout.sc-list-layout {
 }
 body.sc-web-mode-layout .sc-main-content {
   min-height: 0;
+}
+body.sc-web-mode-layout #footer.sc-footer-stack {
+  display: none !important;
+}
+body.sc-web-mode-layout #app.sc-container,
+body.sc-web-mode-layout #app {
+  grid-template-rows: auto minmax(0, 1fr);
+  padding-bottom: 8px;
+  gap: 8px;
+}
+html[data-theme="light"] .web-embed-frame {
+  background: #fff;
 }
 .web-mode-hint {
   padding: 28px 20px;
@@ -3540,19 +3679,23 @@ html[data-theme="light"] .search-wrapper.has-content .search-box-inner {
       </section>
     </div>
     <div id="web-embed-workspace" class="web-embed-workspace hidden" aria-label="内嵌浏览器">
-      <div id="web-embed-toolbar" class="webllm-toolbar hidden" aria-label="内嵌浏览器控制">
-        <div id="web-embed-search-slot" class="web-embed-search-slot hidden" aria-label="内嵌搜索"></div>
-        <div class="web-embed-toolbar-main">
-          <div id="webllm-site-chips" class="webllm-site-chips" role="tablist" aria-label="AI 站点"></div>
-          <div class="webllm-nav-row">
-          <button type="button" class="btn ghost" id="webllm-btn-back" title="后退">后退</button>
-          <button type="button" class="btn ghost" id="webllm-btn-forward" title="前进">前进</button>
-          <button type="button" class="btn ghost" id="webllm-btn-reload" title="刷新">刷新</button>
-          <button type="button" class="btn ghost" id="webllm-btn-home" title="站点首页">首页</button>
-          <button type="button" class="btn ghost" id="webllm-btn-copyurl" title="复制当前链接">复制链接</button>
-          <span id="webllm-status" class="webllm-status" aria-live="polite"></span>
+      <div id="web-embed-toolbar" class="web-embed-chrome hidden" aria-label="内嵌浏览器控制">
+        <div class="web-omnibar-row">
+          <div id="web-embed-search-slot" class="web-embed-search-slot" aria-label="地址栏"></div>
+          <div class="web-omnibar-actions" aria-label="浏览器操作">
+            <button type="button" class="web-chrome-btn" id="webllm-btn-back" title="后退" aria-label="后退">&#8592;</button>
+            <button type="button" class="web-chrome-btn" id="webllm-btn-forward" title="前进" aria-label="前进">&#8594;</button>
+            <button type="button" class="web-chrome-btn" id="webllm-btn-reload" title="刷新当前 AI" aria-label="刷新">&#8635;</button>
+            <button type="button" class="web-chrome-btn" id="webllm-btn-reload-all" title="刷新全部已选 AI" aria-label="刷新全部">&#10227;</button>
+            <button type="button" class="web-chrome-btn" id="webllm-btn-home" title="首页" aria-label="首页">&#8962;</button>
+            <button type="button" class="web-chrome-btn" id="webllm-btn-copyurl" title="复制链接" aria-label="复制链接">&#128279;</button>
           </div>
         </div>
+        <div class="web-bookmarks-bar">
+          <div id="webllm-site-chips" class="web-bookmark-chips" role="tablist" aria-label="AI 站点"></div>
+          <button type="button" id="web-bookmark-label-toggle" class="web-chrome-btn web-bookmark-label-toggle" title="显示/隐藏站点名称" aria-pressed="false" aria-label="切换站点名称">Aa</button>
+        </div>
+        <span id="webllm-status" class="web-omnibar-status" aria-live="polite"></span>
       </div>
       <div id="web-embed-frame" class="web-embed-frame" aria-hidden="true"></div>
     </div>
@@ -3871,6 +4014,8 @@ const state = {
   engines: [],
   selectedEngines: [],
   webEmbedSiteId: "",
+  webEmbedBroadcastSites: [],
+  webBookmarkShowLabels: null,
   filters: [],
   filterType: "",
   resultsRaw: [],
@@ -4910,9 +5055,12 @@ const COMPOSE_MODE_CHROME = Object.freeze({
   local: { icon: "&#128269;", btnRun: "搜索", hint: "搜索本机文件、配置与提示词库" },
   clipboard: { icon: "&#128203;", btnRun: "筛选", hint: "查看复制历史，输入关键词筛选时间线" },
   fulltext: { icon: "&#128196;", btnRun: "搜索", hint: "输入关键词搜索全文索引" },
-  web: { icon: "&#127760;", btnRun: "搜索", hint: "选 AI 引擎后在下方内嵌页搜索" },
+  web: { icon: "&#127760;", btnRun: "同问", hint: "Enter 同时向已选 AI 提问；Ctrl+点击书签切换参与站点" },
   cli: { icon: "&#9000;", btnRun: "发送", hint: "输入内容发送到下方终端" }
 });
+
+const SC_WEB_BOOKMARK_LABELS_KEY = "sc_web_bookmark_labels_v1";
+const SC_WEB_BROADCAST_SITES_KEY = "sc_web_broadcast_sites_v1";
 
 const SC_WEB_EMBED_SITES = Object.freeze([
   { id: "deepseek", label: "DeepSeek", enabled: true },
@@ -4921,6 +5069,68 @@ const SC_WEB_EMBED_SITES = Object.freeze([
   { id: "grok", label: "Grok", enabled: true },
   { id: "perplexity", label: "Perplexity", enabled: true }
 ]);
+
+function webEmbedAssetUrl(relPath) {
+  const p = String(relPath || "").replace(/^\/+/, "");
+  return "https://app.local/assets/" + p;
+}
+
+function webEmbedSiteIconCandidates(siteId) {
+  const id = String(siteId || "").toLowerCase();
+  const urls = [];
+  const fromEngine = (state.engines || []).find((e) => String(e && e.value || "").toLowerCase() === id);
+  if (fromEngine && fromEngine.iconUrl) urls.push(String(fromEngine.iconUrl));
+  const aliasNames = {
+    deepseek: ["deepseek", "DeepSeek"],
+    doubao: ["doubao", "Doubao"],
+    gemini: ["gemini", "Gemini"],
+    grok: ["grok", "Grok"],
+    perplexity: ["perplexity", "Perplexity"]
+  };
+  const names = aliasNames[id] || [id];
+  const exts = [".svg", ".png", ".webp", ".jpg", ".jpeg"];
+  for (const name of names) {
+    for (const ext of exts) {
+      urls.push(webEmbedAssetUrl("icons/app/" + name + ext));
+      urls.push(webEmbedAssetUrl("icons/ai/" + name + ext));
+    }
+  }
+  urls.push(webEmbedAssetUrl("icons/app/chat-ai-fallback.svg"));
+  const seen = new Set();
+  return urls.filter((u) => {
+    if (!u || seen.has(u)) return false;
+    seen.add(u);
+    return true;
+  });
+}
+
+function mountWebChipIcon(btn, site) {
+  const urls = webEmbedSiteIconCandidates(site.id);
+  let idx = 0;
+  const showFallback = () => {
+    if (btn.querySelector(".web-chip-fallback")) return;
+    const fb = document.createElement("span");
+    fb.className = "web-chip-fallback";
+    fb.textContent = String(site.label || site.id || "?").slice(0, 1).toUpperCase();
+    btn.insertBefore(fb, btn.firstChild);
+  };
+  const tryNext = () => {
+    if (idx >= urls.length) {
+      showFallback();
+      return;
+    }
+    const img = document.createElement("img");
+    img.className = "web-chip-icon";
+    img.alt = "";
+    img.src = urls[idx++];
+    img.addEventListener("error", () => {
+      img.remove();
+      tryNext();
+    });
+    btn.insertBefore(img, btn.firstChild);
+  };
+  tryNext();
+}
 
 function isWebEmbedCategory() {
   return String(state.currentCategoryKey || "").toLowerCase() === "ai";
@@ -4931,34 +5141,122 @@ function isWebEmbedActive() {
 }
 
 function getWebEmbedActiveEngine() {
+  const sid = String(state.webEmbedSiteId || "").trim();
+  if (sid) return sid;
   const chip = document.querySelector(".webllm-site-chip.active");
   const fromChip = chip ? String(chip.getAttribute("data-site") || "").trim() : "";
   if (fromChip) return fromChip;
-  const sid = String(state.webEmbedSiteId || "").trim();
-  if (sid) return sid;
-  const list = Array.isArray(state.selectedEngines) ? state.selectedEngines : [];
-  for (const eng of list) {
-    const v = String(eng || "").trim();
-    if (v && SC_WEB_EMBED_SITES.some((s) => s.id === v)) return v;
-  }
+  const list = getWebEmbedBroadcastSites();
+  if (list.length) return list[0];
   return "deepseek";
 }
 
-function syncWebEmbedSelectedEngine(engineId, postHost = true) {
-  const eng = String(engineId || "").trim();
+function defaultWebEmbedBroadcastSites() {
+  return SC_WEB_EMBED_SITES.filter((s) => s.enabled).map((s) => s.id);
+}
+
+function loadWebEmbedBroadcastSitesPref() {
+  try {
+    const raw = localStorage.getItem(SC_WEB_BROADCAST_SITES_KEY);
+    if (!raw) return defaultWebEmbedBroadcastSites();
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return defaultWebEmbedBroadcastSites();
+    const allowed = new Set(defaultWebEmbedBroadcastSites());
+    const out = parsed.map((v) => String(v || "").trim()).filter((v) => v && allowed.has(v));
+    return out.length ? out : defaultWebEmbedBroadcastSites();
+  } catch (_) {}
+  return defaultWebEmbedBroadcastSites();
+}
+
+function saveWebEmbedBroadcastSitesPref(list) {
+  try {
+    localStorage.setItem(SC_WEB_BROADCAST_SITES_KEY, JSON.stringify(Array.isArray(list) ? list : []));
+  } catch (_) {}
+}
+
+function getWebEmbedBroadcastSites() {
+  if (Array.isArray(state.webEmbedBroadcastSites) && state.webEmbedBroadcastSites.length)
+    return state.webEmbedBroadcastSites.filter(Boolean).map((v) => String(v));
+  return loadWebEmbedBroadcastSitesPref();
+}
+
+function syncWebEmbedBroadcastUi(postHost = false) {
+  const focus = getWebEmbedActiveEngine();
+  const broadcast = new Set(getWebEmbedBroadcastSites());
+  state.webEmbedBroadcastSites = Array.from(broadcast);
+  document.querySelectorAll(".webllm-site-chip").forEach((btn) => {
+    const sid = String(btn.getAttribute("data-site") || "");
+    btn.classList.toggle("active", sid === focus);
+    btn.classList.toggle("broadcast-on", broadcast.has(sid));
+    btn.classList.toggle("broadcast-off", !broadcast.has(sid));
+    const on = broadcast.has(sid);
+    btn.title = (on ? "已参与同问" : "未参与同问") + " · " + (SC_WEB_EMBED_SITES.find((s) => s.id === sid)?.label || sid)
+      + "（点击切换焦点，Ctrl+点击切换参与）";
+  });
+  state.selectedEngines = state.webEmbedBroadcastSites.slice();
+  if (postHost) {
+    postToAhk({ type: "syncSelectedEngines", selectedEngines: state.selectedEngines.slice() });
+  }
+}
+
+function setWebEmbedFocusSite(siteId, postHost = true) {
+  const eng = String(siteId || "").trim();
   if (!eng) return;
   state.webEmbedSiteId = eng;
-  state.selectedEngines = [eng];
-  document.querySelectorAll(".webllm-site-chip").forEach((btn) => {
-    btn.classList.toggle("active", String(btn.getAttribute("data-site") || "") === eng);
-  });
-  document.querySelectorAll(".engine-chip").forEach((btn) => {
-    const v = String(btn.dataset.hotkeyValue || "");
-    btn.classList.toggle("active", v === eng);
-  });
-  if (postHost) {
-    postToAhk({ type: "syncSelectedEngines", selectedEngines: [eng] });
+  syncWebEmbedBroadcastUi(false);
+  if (postHost) postToAhk({ type: "webLlmFocusSite", siteId: eng });
+  scheduleWebEmbedContentRect();
+}
+
+function toggleWebEmbedBroadcastSite(siteId) {
+  const id = String(siteId || "").trim();
+  if (!id) return;
+  let list = getWebEmbedBroadcastSites();
+  const i = list.indexOf(id);
+  if (i >= 0) {
+    if (list.length <= 1) return;
+    list = list.filter((v) => v !== id);
+  } else {
+    list = list.concat([id]);
   }
+  state.webEmbedBroadcastSites = list;
+  saveWebEmbedBroadcastSitesPref(list);
+  syncWebEmbedBroadcastUi(true);
+}
+
+function syncWebEmbedSelectedEngine(engineId, postHost = true) {
+  setWebEmbedFocusSite(engineId, postHost);
+}
+
+function loadWebBookmarkLabelsPref() {
+  try {
+    const v = localStorage.getItem(SC_WEB_BOOKMARK_LABELS_KEY);
+    if (v === "1") return true;
+    if (v === "0") return false;
+  } catch (_) {}
+  return false;
+}
+
+function saveWebBookmarkLabelsPref(show) {
+  try {
+    localStorage.setItem(SC_WEB_BOOKMARK_LABELS_KEY, show ? "1" : "0");
+  } catch (_) {}
+}
+
+function syncWebBookmarkLabelsUi() {
+  const show = !!state.webBookmarkShowLabels;
+  document.body.classList.toggle("web-bookmarks-hide-labels", !show);
+  const btn = document.getElementById("web-bookmark-label-toggle");
+  if (btn) {
+    btn.setAttribute("aria-pressed", show ? "true" : "false");
+    btn.title = show ? "隐藏站点名称" : "显示站点名称";
+  }
+}
+
+function dismissWebEmbedHost() {
+  _scWebEmbedRectRetries = 0;
+  _scWebEmbedLastRectKey = "";
+  try { postToAhk({ type: "webLlmDismiss" }); } catch (_) {}
 }
 
 function syncWebEmbedSearchDock(embed) {
@@ -4967,34 +5265,63 @@ function syncWebEmbedSearchDock(embed) {
   const slot = document.getElementById("web-embed-search-slot");
   const toolbar = document.getElementById("web-embed-toolbar");
   const workspace = document.getElementById("web-embed-workspace");
+  const icon = document.getElementById("search-icon-inline");
   if (!box || !anchor || !slot) return;
   if (workspace && embed) workspace.classList.remove("hidden");
   const target = embed ? slot : anchor;
   if (box.parentElement !== target) target.appendChild(box);
-  slot.classList.toggle("hidden", !embed);
   box.classList.toggle("web-embed-search-compact", embed);
   if (toolbar) toolbar.classList.toggle("web-embed-toolbar-with-search", embed);
+  if (icon) icon.innerHTML = embed ? "&#127760;" : "&#128269;";
   const input = document.getElementById("search");
   if (input) {
     if (embed) {
       input.setAttribute("rows", "1");
-      input.setAttribute("aria-label", "内嵌页搜索关键词");
+      input.setAttribute("aria-label", "地址栏");
     } else {
       input.removeAttribute("aria-label");
     }
   }
   if (embed) {
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => postWebEmbedContentRect());
-    });
+    scheduleWebEmbedContentRect();
+  } else {
+    dismissWebEmbedHost();
   }
 }
 
+function measureWebEmbedHostRect() {
+  const frame = document.getElementById("web-embed-frame");
+  const ws = document.getElementById("web-embed-workspace");
+  if (!frame || !ws || ws.classList.contains("hidden")) return null;
+  const fr = frame.getBoundingClientRect();
+  if (fr.width < 140 || fr.height < 100) return null;
+  return fr;
+}
+
+let _scWebEmbedLayoutRo = null;
+function ensureWebEmbedLayoutObserver() {
+  if (_scWebEmbedLayoutRo) return;
+  const ws = document.getElementById("web-embed-workspace");
+  if (!ws || typeof ResizeObserver !== "function") return;
+  _scWebEmbedLayoutRo = new ResizeObserver(() => scheduleWebEmbedContentRect());
+  _scWebEmbedLayoutRo.observe(ws);
+  const frame = document.getElementById("web-embed-frame");
+  if (frame) _scWebEmbedLayoutRo.observe(frame);
+  const bar = document.getElementById("web-embed-toolbar");
+  if (bar) _scWebEmbedLayoutRo.observe(bar);
+}
+
+let _scWebEmbedRectRetries = 0;
+let _scWebEmbedRectDebounce = 0;
+let _scWebEmbedLastRectKey = "";
+
 function scheduleWebEmbedContentRect() {
   if (!isWebEmbedActive()) return;
-  requestAnimationFrame(() => {
+  if (_scWebEmbedRectDebounce) return;
+  _scWebEmbedRectDebounce = setTimeout(() => {
+    _scWebEmbedRectDebounce = 0;
     requestAnimationFrame(() => postWebEmbedContentRect());
-  });
+  }, 150);
 }
 
 function syncWebEmbedToolbarVisibility() {
@@ -5022,8 +5349,17 @@ function syncWebEmbedLayout() {
   }
   syncWebEmbedSearchDock(embed);
   syncWebEmbedToolbarVisibility();
+  syncWebBookmarkLabelsUi();
+  if (embed) {
+    ensureWebEmbedLayoutObserver();
+    scheduleWebEmbedContentRect();
+    setTimeout(scheduleWebEmbedContentRect, 300);
+    setTimeout(scheduleWebEmbedContentRect, 800);
+  }
   if (embed && !String(state.webEmbedSiteId || "").trim()) {
-    syncWebEmbedSelectedEngine(getWebEmbedActiveEngine(), true);
+    if (!Array.isArray(state.webEmbedBroadcastSites) || !state.webEmbedBroadcastSites.length)
+      state.webEmbedBroadcastSites = loadWebEmbedBroadcastSitesPref();
+    setWebEmbedFocusSite(getWebEmbedActiveEngine(), true);
   }
   if (mode === "web" && !embed) renderWebExternalHint();
 }
@@ -5052,15 +5388,28 @@ function renderWebExternalHint() {
 
 function postWebEmbedContentRect() {
   if (!isWebEmbedActive()) return;
-  const el = document.getElementById("web-embed-frame") || document.querySelector(".sc-main-content");
-  if (!el) return;
-  const r = el.getBoundingClientRect();
+  const measured = measureWebEmbedHostRect();
+  const el = document.getElementById("web-embed-frame");
+  const r = measured || (el ? el.getBoundingClientRect() : null);
+  if (!r || r.width < 80 || r.height < 60) {
+    if (_scWebEmbedRectRetries < 20) {
+      _scWebEmbedRectRetries += 1;
+      setTimeout(scheduleWebEmbedContentRect, _scWebEmbedRectRetries < 6 ? 80 : 200);
+    }
+    return;
+  }
+  _scWebEmbedRectRetries = 0;
+  const key = [Math.round(r.left), Math.round(r.top), Math.round(r.width), Math.round(r.height)].join("x");
+  if (key === _scWebEmbedLastRectKey) return;
+  _scWebEmbedLastRectKey = key;
   postToAhk({
-    type: "webLlmContentRect",
-    left: Math.round(r.left),
-    top: Math.round(r.top),
-    width: Math.max(200, Math.round(r.width)),
-    height: Math.max(160, Math.round(r.height))
+    type: "webLlmBootstrap",
+    rect: {
+      left: Math.round(r.left),
+      top: Math.round(r.top),
+      width: Math.max(200, Math.round(r.width)),
+      height: Math.max(140, Math.round(r.height))
+    }
   });
 }
 
@@ -5071,14 +5420,18 @@ function applyWebLlmChromeState(payload) {
   const status = document.getElementById("webllm-status");
   if (back) back.disabled = !payload.canGoBack;
   if (fwd) fwd.disabled = !payload.canGoForward;
-  if (status) {
-    const title = String(payload.title || "").trim();
-    const url = String(payload.url || "").trim();
-    const loading = !!payload.loading;
-    status.textContent = loading ? "加载中…" : (title || url || "");
+  const title = String(payload.title || "").trim();
+  const url = String(payload.url || "").trim();
+  const loading = !!payload.loading;
+  if (status) status.textContent = loading ? "加载中…" : (title || url || "多栏移动版 · 点击书签切换焦点");
+  const input = document.getElementById("search");
+  if (input && isWebEmbedActive() && !String(input.value || "").trim() && (title || url)) {
+    input.placeholder = title || url;
+  } else if (input && isWebEmbedActive()) {
+    input.placeholder = "输入问题，Enter 同时问所有已选 AI";
   }
   const sid = String(payload.siteId || "");
-  if (sid) syncWebEmbedSelectedEngine(sid, false);
+  if (sid) setWebEmbedFocusSite(sid, false);
 }
 
 function renderWebLlmToolbar() {
@@ -5091,15 +5444,31 @@ function renderWebLlmToolbar() {
     btn.className = "webllm-site-chip";
     btn.setAttribute("data-site", site.id);
     btn.setAttribute("role", "tab");
-    btn.textContent = site.label;
+    btn.title = site.label;
     btn.disabled = !site.enabled;
-    btn.addEventListener("click", () => {
+    mountWebChipIcon(btn, site);
+    const label = document.createElement("span");
+    label.className = "web-chip-label";
+    label.textContent = site.label;
+    btn.appendChild(label);
+    btn.addEventListener("click", (e) => {
       if (!site.enabled) return;
-      syncWebEmbedSelectedEngine(site.id, true);
-      postToAhk({ type: "webLlmSelectSite", siteId: site.id });
+      e.preventDefault();
+      e.stopPropagation();
+      if (e.ctrlKey || e.metaKey) {
+        toggleWebEmbedBroadcastSite(site.id);
+        return;
+      }
+      setWebEmbedFocusSite(site.id, false);
+      scheduleWebEmbedContentRect();
+      postToAhk({ type: "webLlmFocusSite", siteId: site.id });
     });
     host.appendChild(btn);
   });
+  if (!Array.isArray(state.webEmbedBroadcastSites) || !state.webEmbedBroadcastSites.length) {
+    state.webEmbedBroadcastSites = loadWebEmbedBroadcastSitesPref();
+  }
+  syncWebEmbedBroadcastUi(false);
 }
 
 function initWebLlmToolbar() {
@@ -5109,6 +5478,7 @@ function initWebLlmToolbar() {
     "webllm-btn-back": "back",
     "webllm-btn-forward": "forward",
     "webllm-btn-reload": "reload",
+    "webllm-btn-reload-all": "reload_all",
     "webllm-btn-home": "home",
     "webllm-btn-copyurl": "copyurl"
   };
@@ -5121,9 +5491,20 @@ function initWebLlmToolbar() {
   if (setup) {
     setup.addEventListener("toggle", () => {
       setup.setAttribute("data-user-toggled", "1");
-      if (isWebEmbedActive()) requestAnimationFrame(() => postWebEmbedContentRect());
+      if (isWebEmbedActive()) scheduleWebEmbedContentRect();
     });
   }
+  const labelToggle = document.getElementById("web-bookmark-label-toggle");
+  if (labelToggle) {
+    labelToggle.addEventListener("click", () => {
+      state.webBookmarkShowLabels = !state.webBookmarkShowLabels;
+      saveWebBookmarkLabelsPref(state.webBookmarkShowLabels);
+      syncWebBookmarkLabelsUi();
+      scheduleWebEmbedContentRect();
+    });
+  }
+  if (state.webBookmarkShowLabels == null) state.webBookmarkShowLabels = loadWebBookmarkLabelsPref();
+  syncWebBookmarkLabelsUi();
   syncWebEmbedLayout();
 }
 
@@ -5555,8 +5936,8 @@ function syncComposeChrome() {
       searchInput.placeholder = "输入提示词，" + formatComposeChordLabel(b.cli_send) + " 发送到下方终端";
     } else if (mode === "web") {
       searchInput.placeholder = isWebEmbedActive()
-        ? "输入关键词，Enter 在内嵌页搜索"
-        : "输入关键词，在下方内嵌页或外开搜索";
+        ? "输入问题，Enter 同时问所有已选 AI"
+        : "输入关键词，在系统浏览器打开";
     } else if (mode === "clipboard") {
       searchInput.placeholder = "筛选剪贴板历史…";
     } else if (mode === "fulltext") {
@@ -5620,6 +6001,17 @@ function loadUIModePref() {
   } catch (_) {}
 }
 
+function resolveInitUiMode(hostUiMode, msgType) {
+  let um = String(hostUiMode || "").toLowerCase();
+  if (msgType !== "init" || state.clipboardHomeLock) return um;
+  let saved = "";
+  try { saved = String(localStorage.getItem(SC_UI_MODE_KEY) || "").toLowerCase(); } catch (_) {}
+  const fallback = loadLastNonClipboardUiMode();
+  const prefer = (saved === "web" || saved === "cli") ? saved : fallback;
+  if (um === "local" && (prefer === "web" || prefer === "cli")) return prefer;
+  return um;
+}
+
 function inferUIModeFromCategory(key) {
   const k = String(key || "");
   if (k === "cli") return "cli";
@@ -5631,7 +6023,11 @@ function getUIMode() {
   if (m === "clipboard" || m === "fulltext") return m;
   if (m === "cli") return "cli";
   if (m === "web" && !SC_WEB_SEARCH_HIDDEN) return "web";
-  if (m === "local") return "local";
+  if (m === "local") {
+    if (!SC_WEB_SEARCH_HIDDEN && String(state.currentCategoryKey || "").toLowerCase() === "ai")
+      return "web";
+    return "local";
+  }
   const ft = String(state.filterType || "");
   if (ft === "clipboard") return "clipboard";
   if (ft === "fulltext") return "fulltext";
@@ -5684,6 +6080,7 @@ function syncModeSections() {
   if (mode === "cli") unmountInlinePreview();
   else if (isSearchResults) mountInlinePreview();
   else unmountInlinePreview();
+  if (!embed) dismissWebEmbedHost();
   if (mode === "web" && !embed) renderWebExternalHint();
   if (embed) scheduleWebEmbedContentRect();
 }
@@ -7718,7 +8115,7 @@ function applyHostShow(payload) {
   const input = document.getElementById("search");
   if (input) input.value = "";
   const skipHost = src !== "search_hotkey";
-  setUIMode(targetMode, false, skipHost, true);
+  setUIMode(targetMode, targetMode !== "clipboard", skipHost, true);
   if (targetMode === "local") {
     postToAhk({ type: "reloadBlankHome" });
   } else if (targetMode === "fulltext") {
@@ -8327,6 +8724,15 @@ function ensureWebEnginesSelected() {
   if (getUIMode() !== "web") return false;
   const list = Array.isArray(state.selectedEngines) ? state.selectedEngines.filter(Boolean) : [];
   if (list.length) return false;
+  if (isWebEmbedCategory()) {
+    const all = defaultWebEmbedBroadcastSites();
+    state.selectedEngines = all.slice();
+    state.webEmbedBroadcastSites = all.slice();
+    saveWebEmbedBroadcastSitesPref(all);
+    renderEngines();
+    syncFilterDrawerSummary();
+    return true;
+  }
   const engines = Array.isArray(state.engines) ? state.engines : [];
   if (!engines.length) return false;
   const pick = engines.find((e) => String(e && e.value || "") === "deepseek") || engines[0];
@@ -8351,8 +8757,12 @@ function toggleEngineLocal(engineValue) {
   }
   state.selectedEngines = list;
   if (isWebEmbedActive()) {
-    const embedEng = list.find((e) => SC_WEB_EMBED_SITES.some((s) => s.id === String(e || "")));
-    if (embedEng) syncWebEmbedSelectedEngine(embedEng, true);
+    const embedIds = list.filter((e) => SC_WEB_EMBED_SITES.some((s) => s.id === String(e || "")));
+    if (embedIds.length) {
+      state.webEmbedBroadcastSites = embedIds;
+      saveWebEmbedBroadcastSitesPref(embedIds);
+      syncWebEmbedBroadcastUi(true);
+    }
   } else if (getUIMode() === "web") {
     renderWebExternalHint();
   }
@@ -10365,6 +10775,15 @@ function applyStateNow(payload) {
     payload.uiMode = activeUiMode;
     payload.filterType = activeUiMode === "fulltext" ? "fulltext" : "";
   }
+  const staleLocalHostWhileWeb =
+    !state.clipboardHomeLock
+    && activeUiMode === "web"
+    && incomingHostMode === "local"
+    && String(state.filterType || "") !== "clipboard"
+    && String(state.filterType || "") !== "fulltext";
+  if (staleLocalHostWhileWeb) {
+    payload.uiMode = "web";
+  }
   const lockBlocksFilter =
     state.clipboardHomeLock
     && activeUiMode === "clipboard"
@@ -10378,9 +10797,10 @@ function applyStateNow(payload) {
   }
   applied = true;
   if (payload.uiMode != null) {
-    const um = String(payload.uiMode || "").toLowerCase();
+    let um = resolveInitUiMode(payload.uiMode, msgType);
     if (um === "local" || um === "cli" || um === "clipboard" || um === "fulltext") state.uiMode = um;
     else if (um === "web" && !SC_WEB_SEARCH_HIDDEN) state.uiMode = "web";
+    if (um === "web" || um === "cli") rememberUiModePref(um, true);
     state.unifiedMode = (um === "clipboard") ? "clipboard" : "search";
     if (um !== "clipboard") state.clipboardHomeLock = false;
   }
@@ -10554,8 +10974,14 @@ function applyStateNow(payload) {
   syncModeSections();
   renderCategories();
   renderEngines();
-  if (isWebEmbedActive()) {
-    syncWebEmbedSelectedEngine(getWebEmbedActiveEngine(), false);
+  if (getUIMode() === "web" && isWebEmbedCategory()) {
+    if (!Array.isArray(state.webEmbedBroadcastSites) || !state.webEmbedBroadcastSites.length)
+      state.webEmbedBroadcastSites = loadWebEmbedBroadcastSitesPref();
+    renderWebLlmToolbar();
+    scheduleWebEmbedContentRect();
+    setTimeout(scheduleWebEmbedContentRect, 80);
+    setTimeout(scheduleWebEmbedContentRect, 360);
+    setTimeout(scheduleWebEmbedContentRect, 900);
   }
   renderCliEngineTabs();
   renderFilters();
@@ -10614,6 +11040,21 @@ function cancelPendingSearchDebounce() {
   }
 }
 
+function looksLikeWebUrl(text) {
+  const t = String(text || "").trim();
+  if (!t) return false;
+  if (/^https?:\/\//i.test(t)) return true;
+  if (/^[\w-]+(\.[\w.-]+)+(\/.*)?$/i.test(t)) return true;
+  return false;
+}
+
+function normalizeWebUrlInput(text) {
+  const t = String(text || "").trim();
+  if (!t) return "";
+  if (/^https?:\/\//i.test(t)) return t;
+  return "https://" + t;
+}
+
 function runSearchNow() {
   const input = document.getElementById("search");
   const keyword = input ? String(input.value || "") : "";
@@ -10632,19 +11073,43 @@ function runSearchNow() {
   }
   if (getUIMode() === "web") {
     const kw = keyword.trim();
+    if (isWebEmbedActive()) {
+      const eng = getWebEmbedActiveEngine();
+      const broadcast = getWebEmbedBroadcastSites();
+      if (!kw) {
+        postToAhk({ type: "webLlmFocusSite", siteId: eng });
+        return;
+      }
+      if (looksLikeWebUrl(kw)) {
+        setWebEmbedFocusSite(eng, false);
+        postToAhk({ type: "webLlmNavigate", url: normalizeWebUrlInput(kw), siteId: eng });
+        return;
+      }
+      const targets = broadcast.length ? broadcast.slice() : [eng];
+      state.selectedEngines = targets.slice();
+      postToAhk({ type: "syncSelectedEngines", selectedEngines: targets.slice() });
+      postToAhk({ type: "webSearch", keyword: kw, selectedEngines: targets.slice() });
+      return;
+    }
+    ensureWebEnginesSelected();
+    const engines = Array.isArray(state.selectedEngines) ? state.selectedEngines.slice() : [];
     if (!kw) {
       const statusEl = document.getElementById("status");
       if (statusEl) statusEl.textContent = "请输入搜索关键词";
       return;
     }
-    if (isWebEmbedActive()) {
-      const eng = getWebEmbedActiveEngine();
-      syncWebEmbedSelectedEngine(eng, true);
-      postToAhk({ type: "webSearch", keyword: kw, selectedEngines: [eng] });
+    const embedOnly = engines.length > 0 && engines.every((e) =>
+      SC_WEB_EMBED_SITES.some((s) => s.id === String(e || "")));
+    if (embedOnly) {
+      if (!isWebEmbedCategory()) selectCategoryLocal("ai", false);
+      scheduleWebEmbedContentRect();
+      const broadcast = getWebEmbedBroadcastSites();
+      const targets = broadcast.length ? broadcast.slice() : engines.slice();
+      state.selectedEngines = targets.slice();
+      postToAhk({ type: "syncSelectedEngines", selectedEngines: targets.slice() });
+      postToAhk({ type: "webSearch", keyword: kw, selectedEngines: targets.slice() });
       return;
     }
-    ensureWebEnginesSelected();
-    const engines = Array.isArray(state.selectedEngines) ? state.selectedEngines.slice() : [];
     if (!engines.length) {
       const statusEl = document.getElementById("status");
       if (statusEl) statusEl.textContent = "请至少选择一个搜索引擎";
@@ -11139,7 +11604,8 @@ if (window.chrome && window.chrome.webview) {
       _scHostLayoutRaf = requestAnimationFrame(function () {
         _scHostLayoutRaf = 0;
         try { window.dispatchEvent(new Event("resize")); } catch (_) {}
-        postWebEmbedContentRect();
+        if (isWebEmbedActive()) postWebEmbedContentRect();
+        else dismissWebEmbedHost();
       });
       return;
     }

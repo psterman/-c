@@ -11,7 +11,10 @@ VoiceInput_HideCursorPanelIfNeeded() {
         if fn
             fn.Call()
     } catch as _e {
-        NmerCatch(A_ThisFunc, _e) 
+        try {
+            Func("NmerCatch").Call(A_ThisFunc, _e)
+        } catch {
+        }
     }
 }
 
@@ -965,6 +968,18 @@ GetSearchEngineIcon(EngineValue) {
             IconPath := DirPath . "\" . IconName
             if (FileExist(IconPath)) {
                 return IconPath
+            }
+        }
+    }
+    eng := StrLower(Trim(String(EngineValue)))
+    if (eng != "") {
+        for _, DirPath in [Nmer_AssetsIconsAppDir(), Nmer_AssetsIconsAiDir()] {
+            for _, name in [eng, EngineValue] {
+                for _, ext in [".svg", ".png", ".webp", ".jpg", ".jpeg"] {
+                    IconPath := DirPath . "\" . name . ext
+                    if FileExist(IconPath)
+                        return IconPath
+                }
             }
         }
     }
