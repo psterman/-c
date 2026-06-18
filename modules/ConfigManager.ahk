@@ -331,14 +331,57 @@ Nmer_IsLiveGuiWindow(gui) {
     catch {
         return false
     }
-    if (hwnd <= 0)
+    return Nmer_IsHwndUsable(hwnd)
+}
+
+Nmer_HwndFromGui(gui) {
+    if !IsObject(gui) || !gui.HasProp("Hwnd")
+        return 0
+    try hwnd := Integer(gui.Hwnd)
+    catch {
+        return 0
+    }
+    return Nmer_IsHwndUsable(hwnd) ? hwnd : 0
+}
+
+Nmer_IsHwndUsable(hwnd) {
+    h := Integer(hwnd)
+    if (h <= 0)
         return false
     try {
-        if !DllCall("IsWindow", "Ptr", hwnd, "Int")
-            return false
-        if !WinExist("ahk_id " . hwnd)
+        if !DllCall("IsWindow", "Ptr", h, "Int")
             return false
     } catch {
+        return false
+    }
+    return true
+}
+
+Nmer_SafeShowWindow(hwnd) {
+    h := Integer(hwnd)
+    if !Nmer_IsHwndUsable(h)
+        return false
+    try {
+        if !DllCall("IsWindow", "Ptr", h, "Int")
+            return false
+        DllCall("ShowWindow", "Ptr", h, "Int", 5, "Int") ; SW_SHOW
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e)
+        return false
+    }
+    return Nmer_IsHwndUsable(h)
+}
+
+Nmer_SafeMaximizeWindow(hwnd) {
+    h := Integer(hwnd)
+    if !Nmer_IsHwndUsable(h)
+        return false
+    try {
+        if !DllCall("IsWindow", "Ptr", h, "Int")
+            return false
+        DllCall("ShowWindow", "Ptr", h, "Int", 3, "Int") ; SW_MAXIMIZE
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e)
         return false
     }
     return true
@@ -386,42 +429,44 @@ Nmer_MoveGuiToPopupScreen(gui, forMaximize := false) {
 Nmer_EnsureGuiMaximizedOnPopupScreen(gui) {
     if !Nmer_IsLiveGuiWindow(gui)
         return false
+    hwnd := Nmer_HwndFromGui(gui)
+    if !hwnd
+        return false
     Nmer_MoveGuiToPopupScreen(gui, true)
-    try gui.Show()
+    hwnd := Nmer_HwndFromGui(gui)
+    if !hwnd
+        return false
+    if !Nmer_SafeShowWindow(hwnd)
+        return false
+    maximized := false
+    try maximized := !!DllCall("IsZoomed", "Ptr", hwnd, "Int")
     catch as _e {
         NmerCatch(A_ThisFunc, _e)
     }
-    if !Nmer_IsLiveGuiWindow(gui)
-        return false
-    hwnd := Integer(gui.Hwnd)
-    expr := "ahk_id " . hwnd
-    maximized := false
-    try {
-        if WinExist(expr) {
-            if (WinGetMinMax(expr) != 1)
-                WinMaximize(expr)
-            if WinExist(expr)
-                maximized := (WinGetMinMax(expr) = 1)
-        }
-    } catch as _e {
-        NmerCatch(A_ThisFunc, _e)
-    }
     if !maximized {
-        idx := Nmer_GetPopupScreenIndex()
-        try MonitorGetWorkArea(idx, &l, &t, &r, &b)
-        catch {
-            try MonitorGetWorkArea(1, &l, &t, &r, &b)
-            catch
+        if !Nmer_SafeMaximizeWindow(hwnd) {
+            idx := Nmer_GetPopupScreenIndex()
+            try MonitorGetWorkArea(idx, &l, &t, &r, &b)
+            catch {
+                try MonitorGetWorkArea(1, &l, &t, &r, &b)
+                catch
+                    return false
+            }
+            workW := Max(200, r - l)
+            workH := Max(160, b - t)
+            if !Nmer_IsLiveGuiWindow(gui)
                 return false
-        }
-        workW := Max(200, r - l)
-        workH := Max(160, b - t)
-        try gui.Move(l, t, workW, workH)
-        catch {
-            return false
+            try gui.Move(l, t, workW, workH)
+            catch {
+                return false
+            }
+        } else {
+            try maximized := !!DllCall("IsZoomed", "Ptr", hwnd, "Int")
+            catch {
+            }
         }
     }
-    return true
+    return maximized || Nmer_IsHwndUsable(hwnd)
 }
 
 ; 弹窗显示器上的默认窗口左上角（草稿本等，靠右居中）

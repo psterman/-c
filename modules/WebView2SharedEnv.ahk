@@ -47,20 +47,11 @@ WebView2_IsUsableHwnd(hwnd) {
     if (h <= 0)
         return false
     try {
-        if !DllCall("IsWindow", "Ptr", h, "Int")
-            return false
+        return !!DllCall("IsWindow", "Ptr", h, "Int")
     } catch as _e {
         NmerCatch(A_ThisFunc, _e)
         return false
     }
-    try {
-        if !WinExist("ahk_id " . h)
-            return false
-    } catch as _e {
-        NmerCatch(A_ThisFunc, _e)
-        return false
-    }
-    return true
 }
 
 WebView2_GetSharedUserDataPath() {
@@ -378,23 +369,27 @@ WebView2_GetCreateQueueDepth() {
 
 ; 强制宿主 HWND 走一遍 DWM 合成（截图/截屏会隐式触发同类刷新，首屏未合成时可主动调用）
 WebView2_ForceHostRedraw(hwnd) {
-    if !hwnd
+    h := Integer(hwnd)
+    if (h <= 0)
         return
-    try DllCall("InvalidateRect", "Ptr", hwnd, "Ptr", 0, "Int", 1)
-    catch as _e {
-        NmerCatch(A_ThisFunc, _e) 
+    if !WebView2_IsUsableHwnd(h)
+        return
+    ; UpdateWindow 在 HWND 销毁竞态时会触发 Invalid memory read/write，try 无法捕获
+    redrawFlags := 0x105 ; RDW_INVALIDATE | RDW_UPDATENOW | RDW_ERASE
+    try {
+        if !DllCall("IsWindow", "Ptr", h, "Int")
+            return
+        DllCall("RedrawWindow", "Ptr", h, "Ptr", 0, "Ptr", 0, "UInt", redrawFlags)
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e)
+        return
     }
-    try DllCall("UpdateWindow", "Ptr", hwnd)
-    catch as _e {
-        NmerCatch(A_ThisFunc, _e) 
-    }
-    try DllCall("RedrawWindow", "Ptr", hwnd, "Ptr", 0, "Ptr", 0, "UInt", 0x105)
-    catch as _e {
-        NmerCatch(A_ThisFunc, _e) 
-    }
-    try DllCall("SetWindowPos", "Ptr", hwnd, "Ptr", 0, "Int", 0, "Int", 0, "Int", 0, "Int", 0, "UInt", 0x0037)
-    catch as _e {
-        NmerCatch(A_ThisFunc, _e) 
+    try {
+        if !DllCall("IsWindow", "Ptr", h, "Int")
+            return
+        DllCall("SetWindowPos", "Ptr", h, "Ptr", 0, "Int", 0, "Int", 0, "Int", 0, "Int", 0, "UInt", 0x0037)
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e)
     }
 }
 

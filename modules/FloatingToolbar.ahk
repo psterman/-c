@@ -1973,7 +1973,17 @@ FloatingToolbar_OnGuiResize(GuiObj, MinMax, Width, Height) {
 
 FloatingToolbar_CompositionPump(reason := "") {
     global FloatingToolbarGUI, g_FTB_WV2_Ctrl, g_FTB_WV2
-    if !(FloatingToolbarGUI && g_FTB_WV2_Ctrl)
+    global FloatingToolbarIsVisible, g_FTB_WaitingUiFinishedReveal
+    if !(FloatingToolbarIsVisible || g_FTB_WaitingUiFinishedReveal)
+        return
+    if !(IsObject(FloatingToolbarGUI) && FloatingToolbarGUI && IsObject(g_FTB_WV2_Ctrl))
+        return
+    hwnd := 0
+    try hwnd := Integer(FloatingToolbarGUI.Hwnd)
+    catch {
+        return
+    }
+    if !hwnd || !FuncExists("WebView2_IsUsableHwnd") || !WebView2_IsUsableHwnd(hwnd)
         return
     FloatingToolbar_ApplyWebViewBounds()
     try g_FTB_WV2_Ctrl.IsVisible := true
@@ -1984,18 +1994,8 @@ FloatingToolbar_CompositionPump(reason := "") {
     catch as _e {
         NmerCatch(A_ThisFunc, _e) 
     }
-    try {
-        hwnd := FloatingToolbarGUI.Hwnd
-        if hwnd {
-            if FuncExists("WebView2_ForceHostRedraw")
-                try WebView2_ForceHostRedraw(hwnd)
-                catch as _e {
-                    NmerCatch(A_ThisFunc, _e) 
-                }
-        }
-    } catch as _e {
-        NmerCatch(A_ThisFunc, _e) 
-    }
+    if FuncExists("WebView2_ForceHostRedraw")
+        WebView2_ForceHostRedraw(hwnd)
     if IsObject(g_FTB_WV2) {
         try WebView_QueuePayload(g_FTB_WV2, Map("type", "ftb_boot_paint_nudge", "reason", String(reason)))
         catch as _e {
@@ -2331,8 +2331,14 @@ FloatingToolbar_ApplyHostThemeColorsForMode(tm) {
         NmerCatch(A_ThisFunc, _e) 
     }
     try {
-        if IsObject(g_FTB_WV2_Ctrl)
-            g_FTB_WV2_Ctrl.DefaultBackgroundColor := argb
+        if IsObject(g_FTB_WV2_Ctrl) {
+            parentHwnd := 0
+            try parentHwnd := Integer(g_FTB_WV2_Ctrl.ParentWindow)
+            catch {
+            }
+            if parentHwnd && FuncExists("WebView2_IsUsableHwnd") && WebView2_IsUsableHwnd(parentHwnd)
+                g_FTB_WV2_Ctrl.DefaultBackgroundColor := argb
+        }
     } catch as _e {
         NmerCatch(A_ThisFunc, _e) 
     }

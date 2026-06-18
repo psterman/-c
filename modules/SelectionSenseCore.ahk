@@ -1780,12 +1780,17 @@ SelectionSense_IsKnownGuiRoot(hwnd) {
 }
 
 SelectionSense_IsDropBridgeHwnd(hwnd) {
-    if !hwnd
+    try h := Integer(hwnd)
+    catch {
+        return false
+    }
+    if (h <= 0)
+        return false
+    if !DllCall("IsWindow", "Ptr", h, "Int")
         return false
     try {
-        exe := ""
-        cls := WinGetClass("ahk_id " . hwnd)
-        WinGetProcessName(&exe, "ahk_id " . hwnd)
+        cls := WinGetClass("ahk_id " . h)
+        exe := WinGetProcessName("ahk_id " . h)
         if (StrLower(exe) = "native-drop-bridge.exe")
             return true
         if (cls = "NMER_NativeDropBridge" || cls = "NMERNativeDropBridge")
@@ -1798,15 +1803,20 @@ SelectionSense_IsDropBridgeHwnd(hwnd) {
 
 SelectionSense_CursorOverOurUi() {
     MouseGetPos(&mx, &my, &hWin)
-    cur := hWin
+    try cur := Integer(hWin)
+    catch {
+        cur := 0
+    }
     loop 14 {
+        if !cur
+            break
         if SelectionSense_IsDropBridgeHwnd(cur)
             return true
         if (name := SelectionSense_DetectKnownGuiName(cur)) {
             SelectionSense_Diag_Log("cursor_over_ui hit=" . name . " " . SelectionSense_WindowDescribe(cur) . " mouse_x=" . mx . " mouse_y=" . my)
             return true
         }
-        cur := DllCall("GetParent", "ptr", cur, "ptr")
+        cur := Integer(DllCall("GetParent", "ptr", cur, "ptr"))
         if !cur
             break
     }

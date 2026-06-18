@@ -12,6 +12,7 @@ global gShellIcon_DiskDir := ""
 global gShellIcon_DiskEnabled := false
 ; 进程名 → 已解析的 .exe 完整路径（空字符串表示已尝试但失败）
 global AppPathCache := Map()
+global gShellIcon_WmiMissCache := Map()
 
 ShellIcon_GetCtx(ctxName := "cfg") {
     global gShellIcon_Ctx
@@ -581,28 +582,42 @@ ShellIcon_TryRegAppPaths(exeName) {
 }
 
 ShellIcon_QueryWmiExecutablePath(normExe) {
+    global AppPathCache, gShellIcon_WmiMissCache
+    key := StrLower(Trim(String(normExe)))
+    if (key = "")
+        return ""
+    if AppPathCache.Has(key)
+        return AppPathCache[key]
+    if gShellIcon_WmiMissCache.Has(key)
+        return ""
+    result := ""
     try {
         wsvc := ComObjGet("winmgmts:\\.\\root\\cimv2")
-        q := "SELECT ExecutablePath FROM Win32_Process WHERE Name='" . StrReplace(normExe, "'", "''") . "'"
+        q := "SELECT ExecutablePath FROM Win32_Process WHERE Name='" . StrReplace(key, "'", "''") . "'"
         col := wsvc.ExecQuery(q)
-        if !IsObject(col)
-            return ""
-        for obj in col {
-            try {
-                ep := obj.ExecutablePath
-                if (ep = "")
-                    continue
-                ep := ShellIcon_NormalizePath(String(ep))
-                if (ep != "" && ShellIcon_IsExecutablePathLike(ep))
-                    return ep
-            } catch as _e {
-                NmerCatch(A_ThisFunc, _e) 
+        if IsObject(col) {
+            for obj in col {
+                try {
+                    ep := obj.ExecutablePath
+                    if (ep = "")
+                        continue
+                    ep := ShellIcon_NormalizePath(String(ep))
+                    if (ep != "" && ShellIcon_IsExecutablePathLike(ep)) {
+                        result := ep
+                        break
+                    }
+                } catch as _e {
+                    NmerCatch(A_ThisFunc, _e) 
+                }
             }
         }
     } catch as _e {
         NmerCatch(A_ThisFunc, _e) 
     }
-    return ""
+    gShellIcon_WmiMissCache[key] := true
+    if (result != "")
+        AppPathCache[key] := result
+    return result
 }
 
 ShellIcon_AppPathCachePut(key, path) {
