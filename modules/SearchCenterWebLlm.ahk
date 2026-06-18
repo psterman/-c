@@ -33,8 +33,43 @@ global g_SCWebLlm_BootstrapWaitCount := 0
 global g_SCWebLlm_MainWebViewLowered := false
 global g_SCWebLlm_BoundsRetryScheduled := false
 
+; 与 NiumaMobileBrowser（网络搜索手机浏览器）保持一致
 ScWebLlm_MobileUserAgent() {
-    return "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1"
+    return "Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1"
+}
+
+ScWebLlm_ShouldUseMobileEmulation(siteId := "") {
+    ; Perplexity/Cloudflare is sensitive to partial mobile spoofing in WebView2.
+    ; Keep it close to a normal Edge profile so human verification can complete.
+    return (ScWebLlm_NormalizeSiteId(siteId) != "perplexity")
+}
+
+ScWebLlm_ShouldNavigateKeywordDirect(siteId := "", keyword := "") {
+    sid := ScWebLlm_NormalizeSiteId(siteId)
+    kw := Trim(String(keyword))
+    if (sid = "perplexity" && kw != "" && !InStr(kw, "://"))
+        return false
+    return true
+}
+
+ScWebLlm_SiteUsesIsolatedProfile(siteId := "") {
+    return (ScWebLlm_NormalizeSiteId(siteId) = "perplexity")
+}
+
+ScWebLlm_BuildInitScript(siteId := "") {
+    return ""
+}
+
+ScWebLlm_ResolveStartUrl(siteId, navigateUrl := "") {
+    sid := ScWebLlm_NormalizeSiteId(siteId)
+    targetUrl := Trim(String(navigateUrl))
+    if (sid = "perplexity" && targetUrl = "")
+        return ScWebLlm_SiteHomeUrl(sid)
+    if (targetUrl = "")
+        targetUrl := SearchCenterWebLlm_SiteLastUrl(sid)
+    if (targetUrl = "")
+        targetUrl := ScWebLlm_SiteHomeUrl(sid)
+    return targetUrl
 }
 
 ScWebLlm_MobileColumnCssWidth() {
@@ -96,15 +131,16 @@ SearchCenterWebLlm_SyncActiveGlobals() {
     g_SCWebLlm_TokenNavCompleted := rec.Has("tokenNavCompleted") ? rec["tokenNavCompleted"] : 0
 }
 
-SearchCenterWebLlm_ApplyMobileSettings(wv2) {
+SearchCenterWebLlm_ApplyMobileSettings(wv2, siteId := "") {
     if !IsObject(wv2)
         return
     try {
         s := wv2.Settings
         if IsObject(s) {
-            s.UserAgent := ScWebLlm_MobileUserAgent()
+            if ScWebLlm_ShouldUseMobileEmulation(siteId)
+                s.UserAgent := ScWebLlm_MobileUserAgent()
             s.AreDefaultContextMenusEnabled := true
-            s.AreDevToolsEnabled := true
+            s.AreDevToolsEnabled := false
             s.IsStatusBarEnabled := false
         }
     } catch as e {
@@ -622,10 +658,17 @@ SearchCenterWebLlm_OnControllerReady(ctrl, siteId, url) {
     try ctrl.DefaultBackgroundColor := 0xFFF8FAFC
     catch {
     }
-    SearchCenterWebLlm_ApplyMobileSettings(rec["wv2"])
+    SearchCenterWebLlm_ApplyMobileSettings(rec["wv2"], sid)
     if FuncExists("ApplyWebView2PerformanceSettings") {
         try ApplyWebView2PerformanceSettings(rec["wv2"])
         catch {
+        }
+    }
+    initScript := ScWebLlm_BuildInitScript(sid)
+    if (initScript != "") {
+        try rec["wv2"].AddScriptToExecuteOnDocumentCreatedAsync(initScript)
+        catch as e {
+            ScWebLlm_Trace("init_script_fail", false, Map("site", sid, "error", e.Message))
         }
     }
     try {
@@ -689,11 +732,7 @@ SearchCenterWebLlm_OpenSite(siteId, forceNavigate := false, navigateUrl := "") {
         global g_SCWebLlm_StateCache
         g_SCWebLlm_StateCache := st
     }
-    targetUrl := Trim(String(navigateUrl))
-    if (targetUrl = "")
-        targetUrl := SearchCenterWebLlm_SiteLastUrl(sid)
-    if (targetUrl = "")
-        targetUrl := ScWebLlm_SiteHomeUrl(sid)
+    targetUrl := ScWebLlm_ResolveStartUrl(sid, navigateUrl)
     if !SearchCenterWebLlm_HostAlive() {
         if !g_SCWebLlm_ParentHwnd
             return false
@@ -722,14 +761,21 @@ SearchCenterWebLlm_OpenSite(siteId, forceNavigate := false, navigateUrl := "") {
     SearchCenterWebLlm_DisposeSiteController(sid)
     rec["createInFlight"] := true
     ScWebLlm_Trace("open_site", true, Map("site", sid, "url", targetUrl, "host", hostHwnd))
-    if !FuncExists("WebView2_CreateWithSharedEnvAsync") {
+    if !FuncExists("WebView2_CreateWithSharedEnvAsync") && !FuncExists("WebView2_CreateWithSiteDataDirAsync") {
         rec["createInFlight"] := false
         ScWebLlm_Trace("open_site_fail", false, Map("site", sid, "reason", "no_shared_env"))
         return false
     }
-    WebView2_CreateWithSharedEnvAsync(hostHwnd, (ctrl) => (
-        SearchCenterWebLlm_OnControllerReady(ctrl, sid, targetUrl)
-    ), "searchcenter_sc_web_llm_" . sid)
+    readyCb := (ctrl) => SearchCenterWebLlm_OnControllerReady(ctrl, sid, targetUrl)
+    if ScWebLlm_SiteUsesIsolatedProfile(sid) && FuncExists("WebView2_CreateWithSiteDataDirAsync") {
+        WebView2_CreateWithSiteDataDirAsync(hostHwnd, sid, readyCb, "searchcenter_sc_web_llm_" . sid)
+    } else if FuncExists("WebView2_CreateWithSharedEnvAsync") {
+        WebView2_CreateWithSharedEnvAsync(hostHwnd, readyCb, "searchcenter_sc_web_llm_" . sid)
+    } else {
+        rec["createInFlight"] := false
+        ScWebLlm_Trace("open_site_fail", false, Map("site", sid, "reason", "no_webview_create"))
+        return false
+    }
     return true
 }
 
@@ -1161,7 +1207,7 @@ SearchCenterWebLlm_NavigateEngine(engine, keyword := "") {
     g_SCWebLlm_ActiveSiteId := sid
     kw := Trim(String(keyword))
     url := ""
-    if (kw != "") {
+    if (kw != "" && ScWebLlm_ShouldNavigateKeywordDirect(sid, kw)) {
         if FuncExists("VoiceInputEffect_BuildSearchUrl") {
             try url := VoiceInputEffect_BuildSearchUrl(kw, eng)
             catch {

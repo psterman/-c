@@ -2643,14 +2643,68 @@ body.web-bookmarks-hide-labels .webllm-site-chip {
   position: relative;
   z-index: 3;
 }
+.web-embed-resize-shell {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 240px;
+  min-width: 0;
+  display: flex;
+  justify-content: center;
+  align-items: stretch;
+}
 .web-embed-frame {
   flex: 1 1 auto;
   min-height: 240px;
+  max-width: 100%;
   border-radius: 12px;
   border: 1px solid var(--border-subtle);
   background: #f8fafc;
   box-shadow: inset 0 0 0 1px rgba(255,255,255,.04);
   overflow: hidden;
+}
+.web-embed-resize-shell.is-user-sized .web-embed-frame {
+  flex: 0 0 auto;
+  width: var(--web-embed-frame-width, 100%);
+}
+.web-embed-resize-handle {
+  position: absolute;
+  top: 10px;
+  bottom: 10px;
+  z-index: 6;
+  width: 16px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  cursor: ew-resize;
+  opacity: .58;
+  padding: 0;
+}
+.web-embed-resize-handle::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 3px;
+  height: 44px;
+  border-radius: 999px;
+  transform: translate(-50%, -50%);
+  background: rgba(255,141,42,.72);
+  box-shadow: 0 0 0 1px rgba(255,255,255,.1), 0 0 14px rgba(255,141,42,.22);
+}
+.web-embed-resize-handle:hover,
+.web-embed-resize-handle.is-dragging {
+  opacity: 1;
+}
+.web-embed-resize-handle.left {
+  left: max(0px, calc((100% - var(--web-embed-frame-width, 100%)) / 2 - 8px));
+}
+.web-embed-resize-handle.right {
+  right: max(0px, calc((100% - var(--web-embed-frame-width, 100%)) / 2 - 8px));
+}
+body.sc-web-embed-resizing {
+  cursor: ew-resize;
+  user-select: none;
+  -webkit-user-select: none;
 }
 body.sc-web-embed-layout .web-embed-frame {
   background: #0b1220;
@@ -3697,7 +3751,11 @@ html[data-theme="light"] .search-wrapper.has-content .search-box-inner {
         </div>
         <span id="webllm-status" class="web-omnibar-status" aria-live="polite"></span>
       </div>
-      <div id="web-embed-frame" class="web-embed-frame" aria-hidden="true"></div>
+      <div id="web-embed-resize-shell" class="web-embed-resize-shell" aria-label="浏览器宽度调节">
+        <button type="button" id="web-embed-resize-left" class="web-embed-resize-handle left" title="拖动调整浏览器宽度，双击恢复自动" aria-label="调整浏览器宽度"></button>
+        <div id="web-embed-frame" class="web-embed-frame" aria-hidden="true"></div>
+        <button type="button" id="web-embed-resize-right" class="web-embed-resize-handle right" title="拖动调整浏览器宽度，双击恢复自动" aria-label="调整浏览器宽度"></button>
+      </div>
     </div>
   </div>
   <div id="preview-dock-stash" aria-hidden="true"></div>
@@ -5061,6 +5119,8 @@ const COMPOSE_MODE_CHROME = Object.freeze({
 
 const SC_WEB_BOOKMARK_LABELS_KEY = "sc_web_bookmark_labels_v1";
 const SC_WEB_BROADCAST_SITES_KEY = "sc_web_broadcast_sites_v1";
+const SC_WEB_EMBED_WIDTH_KEY = "sc_web_embed_width_px_v1";
+const SC_WEB_EMBED_MIN_WIDTH = 320;
 
 const SC_WEB_EMBED_SITES = Object.freeze([
   { id: "deepseek", label: "DeepSeek", enabled: true },
@@ -5138,6 +5198,59 @@ function isWebEmbedCategory() {
 
 function isWebEmbedActive() {
   return getUIMode() === "web" && isWebEmbedCategory();
+}
+
+function loadWebEmbedWidthPref() {
+  try {
+    const n = Number(localStorage.getItem(SC_WEB_EMBED_WIDTH_KEY) || 0);
+    return Number.isFinite(n) && n >= SC_WEB_EMBED_MIN_WIDTH ? n : 0;
+  } catch (_) {}
+  return 0;
+}
+
+function saveWebEmbedWidthPref(widthPx) {
+  try {
+    const n = Math.round(Number(widthPx) || 0);
+    if (n >= SC_WEB_EMBED_MIN_WIDTH) localStorage.setItem(SC_WEB_EMBED_WIDTH_KEY, String(n));
+    else localStorage.removeItem(SC_WEB_EMBED_WIDTH_KEY);
+  } catch (_) {}
+}
+
+function getWebEmbedMaxWidth() {
+  const shell = document.getElementById("web-embed-resize-shell");
+  const w = shell ? Math.floor(shell.getBoundingClientRect().width) : 0;
+  return Math.max(SC_WEB_EMBED_MIN_WIDTH, w || window.innerWidth || 800);
+}
+
+function clampWebEmbedWidth(widthPx) {
+  const max = getWebEmbedMaxWidth();
+  return Math.min(max, Math.max(SC_WEB_EMBED_MIN_WIDTH, Math.round(Number(widthPx) || max)));
+}
+
+let _scWebEmbedWidthPx = loadWebEmbedWidthPref();
+
+function applyWebEmbedFrameWidth(widthPx, persist) {
+  const shell = document.getElementById("web-embed-resize-shell");
+  if (!shell) return;
+  const n = Math.round(Number(widthPx) || 0);
+  if (n >= SC_WEB_EMBED_MIN_WIDTH) {
+    const clamped = clampWebEmbedWidth(n);
+    _scWebEmbedWidthPx = clamped;
+    shell.classList.add("is-user-sized");
+    shell.style.setProperty("--web-embed-frame-width", clamped + "px");
+    if (persist) saveWebEmbedWidthPref(clamped);
+  } else {
+    _scWebEmbedWidthPx = 0;
+    shell.classList.remove("is-user-sized");
+    shell.style.removeProperty("--web-embed-frame-width");
+    if (persist) saveWebEmbedWidthPref(0);
+  }
+  _scWebEmbedLastRectKey = "";
+  scheduleWebEmbedContentRect();
+}
+
+function resetWebEmbedFrameWidth() {
+  applyWebEmbedFrameWidth(0, true);
 }
 
 function getWebEmbedActiveEngine() {
@@ -5307,6 +5420,8 @@ function ensureWebEmbedLayoutObserver() {
   _scWebEmbedLayoutRo.observe(ws);
   const frame = document.getElementById("web-embed-frame");
   if (frame) _scWebEmbedLayoutRo.observe(frame);
+  const shell = document.getElementById("web-embed-resize-shell");
+  if (shell) _scWebEmbedLayoutRo.observe(shell);
   const bar = document.getElementById("web-embed-toolbar");
   if (bar) _scWebEmbedLayoutRo.observe(bar);
 }
@@ -5351,6 +5466,7 @@ function syncWebEmbedLayout() {
   syncWebEmbedToolbarVisibility();
   syncWebBookmarkLabelsUi();
   if (embed) {
+    applyWebEmbedFrameWidth(_scWebEmbedWidthPx, false);
     ensureWebEmbedLayoutObserver();
     scheduleWebEmbedContentRect();
     setTimeout(scheduleWebEmbedContentRect, 300);
@@ -5474,6 +5590,7 @@ function renderWebLlmToolbar() {
 function initWebLlmToolbar() {
   syncWebEmbedSearchDock(isWebEmbedActive());
   renderWebLlmToolbar();
+  initWebEmbedResizeHandles();
   const map = {
     "webllm-btn-back": "back",
     "webllm-btn-forward": "forward",
@@ -5506,6 +5623,59 @@ function initWebLlmToolbar() {
   if (state.webBookmarkShowLabels == null) state.webBookmarkShowLabels = loadWebBookmarkLabelsPref();
   syncWebBookmarkLabelsUi();
   syncWebEmbedLayout();
+}
+
+function initWebEmbedResizeHandles() {
+  const shell = document.getElementById("web-embed-resize-shell");
+  const frame = document.getElementById("web-embed-frame");
+  if (!shell || !frame || shell.getAttribute("data-resize-ready") === "1") return;
+  shell.setAttribute("data-resize-ready", "1");
+  applyWebEmbedFrameWidth(_scWebEmbedWidthPx, false);
+
+  const beginDrag = (event, side) => {
+    if (event.button !== 0) return;
+    const handle = event.currentTarget;
+    const startFrame = frame.getBoundingClientRect();
+    if (startFrame.width < 80) return;
+    event.preventDefault();
+    event.stopPropagation();
+    document.body.classList.add("sc-web-embed-resizing");
+    if (handle) handle.classList.add("is-dragging");
+    try { handle.setPointerCapture(event.pointerId); } catch (_) {}
+
+    const move = (ev) => {
+      const next = side === "left"
+        ? startFrame.right - ev.clientX
+        : ev.clientX - startFrame.left;
+      applyWebEmbedFrameWidth(clampWebEmbedWidth(next), false);
+    };
+    const end = (ev) => {
+      document.removeEventListener("pointermove", move, true);
+      document.removeEventListener("pointerup", end, true);
+      document.removeEventListener("pointercancel", end, true);
+      document.body.classList.remove("sc-web-embed-resizing");
+      if (handle) handle.classList.remove("is-dragging");
+      try { handle.releasePointerCapture(ev.pointerId); } catch (_) {}
+      saveWebEmbedWidthPref(_scWebEmbedWidthPx);
+      _scWebEmbedLastRectKey = "";
+      postWebEmbedContentRect();
+    };
+    document.addEventListener("pointermove", move, true);
+    document.addEventListener("pointerup", end, true);
+    document.addEventListener("pointercancel", end, true);
+  };
+
+  ["left", "right"].forEach((side) => {
+    const el = document.getElementById("web-embed-resize-" + side);
+    if (!el) return;
+    el.addEventListener("pointerdown", (event) => beginDrag(event, side));
+    el.addEventListener("dblclick", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      resetWebEmbedFrameWidth();
+      postWebEmbedContentRect();
+    });
+  });
 }
 
 function normalizeUiMode(mode) {
@@ -11472,6 +11642,7 @@ document.addEventListener("keyup", (event) => {
 });
 
 window.addEventListener("resize", () => {
+  if (_scWebEmbedWidthPx) applyWebEmbedFrameWidth(_scWebEmbedWidthPx, false);
   scheduleRunPreview();
   scheduleWebEmbedContentRect();
 });
