@@ -3,6 +3,8 @@
 A_MaxHotkeysPerInterval := 400
 #Include modules\NmerCatch.ahk
 #Include modules\LocalPaths.ahk
+#Include modules\NmerDiagnostics.ahk
+#Include modules\NmerLoadGuard.ahk
 #Include modules\WsHubAuth.ahk
 #Include modules\SecretVault.ahk
 #Include modules\Nmer_SecretStore.ahk
@@ -53,6 +55,10 @@ NMER_Log(scope, event, detail := "") {
 }
 
 OnError(NMER_StartupOnError)
+for arg in A_Args {
+    if (arg = "/validateOnly")
+        ExitApp(0)
+}
 #Include modules\SqlSafe.ahk
 global NMER_TraceSession := FormatTime(A_Now, "yyyyMMdd-HHmmss") . "-" . A_TickCount
 global NMER_StartupTick := A_TickCount
@@ -225,7 +231,6 @@ global NativeDropDiagLogPath := Nmer_DebugPath("drop_diagnostics_runtime.log")
 ; 包含 lib 文件夹中的 ImagePut.ahk（用于简化图片处理，提高性能和功能）
 #Include lib\ahk\ImagePut.ahk
 
-#Include modules\NmerDiagnostics.ahk
 #Include modules\NmerTelemetry.ahk
 #Include modules\NmerMigration.ahk
 #Include modules\NmerHealthSummary.ahk

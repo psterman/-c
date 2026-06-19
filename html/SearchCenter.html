@@ -94,7 +94,7 @@ button, input, select, textarea { font: inherit; }
   background: radial-gradient(circle at 50% 36%, rgba(58,107,168,.2), transparent 56%), linear-gradient(180deg, #0b1018 0%, #14243a 100%);
   opacity: 1;
   visibility: visible;
-  transition: opacity .24s ease, visibility .24s ease;
+  transition: opacity .18s ease, visibility .18s ease;
 }
 #startup-splash.leave {
   opacity: 0;
@@ -124,10 +124,13 @@ html[data-theme="light"] #startup-splash {
   width: 62px;
   height: 62px;
   border-radius: 50%;
-  border: 2px solid rgba(255,179,71,.45);
-  border-top-color: rgba(255,179,71,.96);
-  animation: startup-spin .95s linear infinite;
+  border: 1.5px solid rgba(255,179,71,.18);
+  border-top-color: rgba(255,179,71,.82);
+  border-right-color: rgba(255,179,71,.34);
+  box-shadow: 0 0 18px rgba(255,141,42,.12);
+  animation: startup-spin .68s linear infinite;
   position: absolute;
+  opacity: .92;
 }
 .startup-splash-logo {
   width: 46px;
@@ -2506,15 +2509,76 @@ body.sc-cli-layout .compose-context .cli-engine-tabs {
 .web-embed-chrome {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 0 0 6px;
+  gap: 8px;
+  padding: 8px 10px 10px;
   flex-shrink: 0;
+  border-radius: 16px;
+  background:
+    linear-gradient(165deg, rgba(255,255,255,.08) 0%, rgba(255,255,255,.025) 48%, rgba(255,141,42,.04) 100%),
+    rgba(8,12,22,.55);
+  backdrop-filter: blur(18px) saturate(1.35);
+  -webkit-backdrop-filter: blur(18px) saturate(1.35);
+  border: 1px solid rgba(255,255,255,.11);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.14),
+    0 10px 28px rgba(0,0,0,.22);
 }
 .web-omnibar-row {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   min-width: 0;
+}
+.web-omnibar-glass {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 4px 6px 4px 8px;
+  border-radius: 14px;
+  background: rgba(0,0,0,.28);
+  border: 1px solid rgba(255,255,255,.09);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.06);
+}
+.web-embed-omnibar-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  max-width: 148px;
+  padding: 4px 10px 4px 5px;
+  border-radius: 10px;
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.1);
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(248,250,252,.94);
+  transition: opacity 0.32s cubic-bezier(0.22, 1, 0.36, 1), transform 0.36s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.web-embed-omnibar-badge[hidden] {
+  display: none !important;
+}
+.web-embed-omnibar-badge__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+.web-embed-omnibar-badge__icon .web-chip-icon,
+.web-embed-omnibar-badge__icon .web-chip-fallback {
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+}
+.web-embed-omnibar-badge__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .web-embed-search-slot {
   flex: 1 1 auto;
@@ -2526,6 +2590,15 @@ body.sc-cli-layout .compose-context .cli-engine-tabs {
   gap: 2px;
   flex-shrink: 0;
 }
+.web-omnibar-actions-glass {
+  padding: 4px 5px;
+  border-radius: 14px;
+  background: rgba(0,0,0,.26);
+  border: 1px solid rgba(255,255,255,.09);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.06);
+}
 .web-chrome-btn {
   display: inline-flex;
   align-items: center;
@@ -2534,21 +2607,30 @@ body.sc-cli-layout .compose-context .cli-engine-tabs {
   height: 30px;
   padding: 0;
   border: none;
-  border-radius: 50%;
+  border-radius: 10px;
   background: transparent;
-  color: var(--text);
+  color: rgba(226,232,240,.88);
   font-size: 15px;
   line-height: 1;
   cursor: pointer;
-  opacity: .88;
-  transition: background .14s ease, opacity .14s ease;
+  opacity: .9;
+  transition:
+    background 0.22s cubic-bezier(0.22, 1, 0.36, 1),
+    color 0.2s ease,
+    opacity 0.2s ease,
+    transform 0.24s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .web-chrome-btn:hover:not(:disabled) {
-  background: rgba(255,255,255,.08);
+  background: rgba(255,255,255,.1);
+  color: #f8fafc;
   opacity: 1;
+  transform: translateY(-1px);
+}
+.web-chrome-btn:active:not(:disabled) {
+  transform: translateY(0) scale(0.96);
 }
 .web-chrome-btn:disabled {
-  opacity: .35;
+  opacity: .32;
   cursor: not-allowed;
 }
 .web-bookmarks-bar {
@@ -2561,25 +2643,67 @@ body.sc-cli-layout .compose-context .cli-engine-tabs {
 }
 .web-embed-tabbar {
   display: flex;
-  align-items: flex-end;
+  align-items: stretch;
   min-width: 0;
-  margin: 0 -2px;
-  padding: 0 4px;
-  border-bottom: 1px solid rgba(255,255,255,.08);
-  background: linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.01));
+  margin: 0;
+  padding: 4px;
+  border-radius: 14px;
+  background: rgba(0,0,0,.24);
+  border: 1px solid rgba(255,255,255,.09);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.05);
+}
+.web-embed-tabbar-inner {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: stretch;
+}
+.web-embed-tab-indicator {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: 0;
+  width: 0;
+  border-radius: 11px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.16), rgba(255,255,255,.04)),
+    linear-gradient(135deg, rgba(255,141,42,.22), rgba(255,141,42,.08));
+  border: 1px solid rgba(255,141,42,.32);
+  box-shadow:
+    0 6px 18px rgba(255,141,42,.14),
+    inset 0 1px 0 rgba(255,255,255,.22);
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0;
+  transform: scale(0.96);
+  transition:
+    opacity 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.42s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: left, width, transform;
+}
+.web-embed-tab-indicator.is-visible {
+  opacity: 1;
+}
+.web-embed-tab-indicator.is-settled {
+  transform: scale(1);
 }
 .web-embed-tabs,
 .webllm-site-chips,
 .web-bookmark-chips {
   display: flex;
   flex-wrap: nowrap;
-  gap: 2px;
+  gap: 4px;
   overflow-x: auto;
   overflow-y: hidden;
   flex: 1 1 auto;
   min-width: 0;
-  padding: 4px 2px 0;
+  padding: 4px 2px;
   scrollbar-width: thin;
+  position: relative;
+  z-index: 1;
 }
 .web-embed-tab,
 .webllm-site-chip {
@@ -2587,53 +2711,135 @@ body.sc-cli-layout .compose-context .cli-engine-tabs {
   align-items: center;
   gap: 6px;
   border: none;
-  background: rgba(255,255,255,.04);
-  color: rgba(226,232,240,.78);
-  border-radius: 8px 8px 0 0;
-  padding: 7px 12px 9px;
+  background: transparent;
+  color: rgba(226,232,240,.72);
+  border-radius: 11px;
+  padding: 8px 12px;
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;
   flex-shrink: 0;
   max-width: 168px;
   position: relative;
-  transition: background .12s ease, color .12s ease, box-shadow .12s ease;
+  z-index: 1;
+  transition:
+    color 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.28s ease,
+    transform 0.32s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .web-embed-tab:hover,
 .webllm-site-chip:hover {
-  background: rgba(255,255,255,.08);
   color: rgba(248,250,252,.95);
+  transform: translateY(-1px);
 }
 .web-embed-tab.active,
 .webllm-site-chip.active {
-  background: #0b1220;
+  background: transparent;
   color: #f8fafc;
-  box-shadow: inset 0 2px 0 #ff8d2a, inset 1px 0 0 rgba(255,141,42,.45), inset -1px 0 0 rgba(255,141,42,.45);
+  box-shadow: none;
   z-index: 2;
+  transform: none;
 }
 .web-embed-tab.active::after,
 .webllm-site-chip.active::after {
-  content: "";
+  display: none;
+}
+.web-embed-column-slot {
+  position: relative;
+  flex: 0 0 auto;
+  align-self: stretch;
+  min-height: 0;
+  height: 100%;
+  background: transparent;
+  transition: opacity 0.42s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.web-embed-column-slot:not(.focus-active) {
+  opacity: 0.82;
+}
+.web-embed-column-slot.focus-active {
+  opacity: 1;
+}
+.web-embed-focus-frame {
   position: absolute;
+  top: 6px;
   left: 0;
-  right: 0;
-  bottom: -1px;
-  height: 2px;
-  background: #0b1220;
+  width: 0;
+  height: calc(100% - 12px);
+  pointer-events: none;
+  z-index: 5;
+  border-radius: 14px;
+  opacity: 0;
+  transform: scale(0.985);
+  transition: opacity 0.34s cubic-bezier(0.22, 1, 0.36, 1),
+              transform 0.48s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: left, width, opacity, transform;
+}
+.web-embed-focus-frame.is-visible {
+  opacity: 1;
+}
+.web-embed-focus-frame.is-settled {
+  transform: scale(1);
+}
+.web-embed-focus-frame__glass {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background:
+    linear-gradient(145deg, rgba(255,255,255,.11) 0%, rgba(255,255,255,.03) 38%, rgba(255,141,42,.06) 100%),
+    linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,0));
+  backdrop-filter: blur(10px) saturate(1.25);
+  -webkit-backdrop-filter: blur(10px) saturate(1.25);
+  border: 1px solid rgba(255,255,255,.16);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.22),
+    inset 0 0 0 1px rgba(255,141,42,.14),
+    0 10px 32px rgba(0,0,0,.24),
+    0 0 0 1px rgba(255,141,42,.08);
+}
+.web-embed-focus-frame__halo {
+  position: absolute;
+  top: 8%;
+  bottom: 8%;
+  width: 40px;
+  pointer-events: none;
+  opacity: 0;
+  transform: scaleY(0.86);
+  transition:
+    opacity 0.46s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.58s cubic-bezier(0.22, 1, 0.36, 1);
+  filter: blur(4px);
+}
+.web-embed-focus-frame__halo-left {
+  left: -10px;
+  background: radial-gradient(
+    ellipse 78% 92% at 100% 50%,
+    rgba(255,168,92,.34) 0%,
+    rgba(255,141,42,.16) 38%,
+    rgba(255,120,40,.05) 64%,
+    transparent 80%
+  );
+}
+.web-embed-focus-frame__halo-right {
+  right: -10px;
+  background: radial-gradient(
+    ellipse 78% 92% at 0% 50%,
+    rgba(255,168,92,.34) 0%,
+    rgba(255,141,42,.16) 38%,
+    rgba(255,120,40,.05) 64%,
+    transparent 80%
+  );
+}
+.web-embed-focus-frame.is-visible .web-embed-focus-frame__halo {
+  opacity: 0.72;
+}
+.web-embed-focus-frame.is-settled .web-embed-focus-frame__halo {
+  opacity: 1;
+  transform: scaleY(1);
 }
 .web-embed-column-slot.focus-active::before,
 .web-embed-column-slot.focus-active::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 3px;
-  background: rgba(255,141,42,.88);
-  z-index: 2;
-  pointer-events: none;
+  display: none;
 }
-.web-embed-column-slot.focus-active::before { left: 0; }
-.web-embed-column-slot.focus-active::after { right: 0; }
 .web-embed-tab.broadcast-on:not(.active),
 .webllm-site-chip.broadcast-on:not(.active) {
   box-shadow: inset 0 -1px 0 rgba(255,255,255,.12);
@@ -2708,9 +2914,14 @@ body.web-bookmarks-hide-labels .webllm-site-chip {
   height: 100%;
   overflow-x: auto;
   overflow-y: hidden;
-  border-radius: 12px;
-  border: 1px solid var(--border-subtle);
-  background: #0b1220;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,.1);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.01)),
+    #0b1220;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.08),
+    0 12px 36px rgba(0,0,0,.18);
   scrollbar-gutter: auto;
 }
 .web-embed-scroll-track {
@@ -2720,14 +2931,6 @@ body.web-bookmarks-hide-labels .webllm-site-chip {
   min-height: 100%;
   height: 100%;
   min-width: 100%;
-}
-.web-embed-column-slot {
-  position: relative;
-  flex: 0 0 auto;
-  align-self: stretch;
-  min-height: 0;
-  height: 100%;
-  background: transparent;
 }
 .web-embed-column-gap {
   position: relative;
@@ -2810,23 +3013,20 @@ body.sc-web-embed-layout .compose-hint-strip {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 0 12px;
-  height: 36px;
-  border-radius: 999px;
-  border: 1px solid rgba(255,255,255,.08);
-  background: rgba(0,0,0,.22);
-  box-shadow: inset 0 1px 2px rgba(0,0,0,.18);
+  padding: 0 6px 0 0;
+  height: 32px;
+  border-radius: 0;
+  border: none;
+  background: transparent;
+  box-shadow: none;
 }
 html[data-theme="light"] .web-embed-search-compact.search-box-inner {
-  background: rgba(255,255,255,.92);
-  border-color: rgba(0,0,0,.1);
-  box-shadow: inset 0 1px 2px rgba(0,0,0,.04);
+  background: transparent;
+  border: none;
+  box-shadow: none;
 }
 .web-embed-search-compact .search-icon-left {
-  display: inline-flex !important;
-  color: var(--muted);
-  font-size: 14px;
-  opacity: .75;
+  display: none !important;
 }
 .web-embed-search-compact .search-more-menu,
 .web-embed-search-compact .engine-switch-capsule,
@@ -2900,21 +3100,60 @@ body.sc-web-embed-layout .web-embed-workspace {
   gap: 0;
 }
 body.sc-web-embed-layout .web-embed-scroll-viewport {
-  border-color: transparent;
-  border-radius: 0;
-  background: #0b1220;
+  border-color: rgba(255,255,255,.12);
+  border-radius: 14px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.015)),
+    rgba(11,18,32,.88);
+  backdrop-filter: blur(14px) saturate(1.2);
+  -webkit-backdrop-filter: blur(14px) saturate(1.2);
   flex: 1 1 0;
-  min-height: 0;
+  min-height: 280px;
   height: auto;
   margin: 0;
   padding: 0;
 }
 body.sc-web-embed-layout .web-embed-tabbar {
-  border-bottom-color: rgba(255,255,255,.1);
+  border-color: rgba(255,255,255,.1);
 }
 body.sc-web-embed-layout #web-embed-toolbar {
-  gap: 0;
-  padding-bottom: 0;
+  gap: 8px;
+  padding-bottom: 8px;
+}
+html[data-theme="light"] .web-embed-chrome {
+  background:
+    linear-gradient(165deg, rgba(255,255,255,.82) 0%, rgba(255,255,255,.58) 100%),
+    rgba(248,250,252,.9);
+  border-color: rgba(15,23,42,.1);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.95),
+    0 8px 22px rgba(15,23,42,.08);
+}
+html[data-theme="light"] .web-omnibar-glass,
+html[data-theme="light"] .web-omnibar-actions-glass,
+html[data-theme="light"] .web-embed-tabbar {
+  background: rgba(255,255,255,.55);
+  border-color: rgba(15,23,42,.08);
+}
+html[data-theme="light"] .web-embed-omnibar-badge {
+  background: rgba(255,255,255,.72);
+  border-color: rgba(15,23,42,.08);
+  color: #0f172a;
+}
+html[data-theme="light"] .web-embed-tab-indicator {
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.95), rgba(255,255,255,.7)),
+    linear-gradient(135deg, rgba(255,141,42,.18), rgba(255,141,42,.06));
+  border-color: rgba(255,141,42,.28);
+  box-shadow: 0 4px 14px rgba(255,141,42,.12), inset 0 1px 0 rgba(255,255,255,.9);
+}
+html[data-theme="light"] .web-embed-tab,
+html[data-theme="light"] .webllm-site-chip {
+  color: rgba(51,65,85,.78);
+}
+html[data-theme="light"] .web-embed-tab.active,
+html[data-theme="light"] .webllm-site-chip.active {
+  color: #0f172a;
 }
 body.sc-web-embed-layout .web-embed-column-label {
   display: none;
@@ -2940,7 +3179,25 @@ body.sc-web-mode-layout #app {
   gap: 8px;
 }
 html[data-theme="light"] .web-embed-scroll-viewport {
-  background: #fff;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.72), rgba(248,250,252,.92)),
+    #fff;
+  border-color: rgba(15,23,42,.1);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.9),
+    0 10px 28px rgba(15,23,42,.08);
+}
+html[data-theme="light"] .web-embed-focus-frame__glass {
+  background:
+    linear-gradient(145deg, rgba(255,255,255,.78) 0%, rgba(255,255,255,.42) 42%, rgba(255,141,42,.08) 100%);
+  border-color: rgba(255,141,42,.22);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.95),
+    inset 0 0 0 1px rgba(255,141,42,.12),
+    0 8px 24px rgba(15,23,42,.1);
+}
+html[data-theme="light"] .web-embed-column-slot:not(.focus-active) {
+  opacity: 0.9;
 }
 .web-mode-hint {
   padding: 28px 20px;
@@ -3850,8 +4107,11 @@ html[data-theme="light"] .search-wrapper.has-content .search-box-inner {
     <div id="web-embed-workspace" class="web-embed-workspace hidden" aria-label="内嵌浏览器">
       <div id="web-embed-toolbar" class="web-embed-chrome hidden" aria-label="内嵌浏览器控制">
         <div class="web-omnibar-row">
-          <div id="web-embed-search-slot" class="web-embed-search-slot" aria-label="地址栏"></div>
-          <div class="web-omnibar-actions" aria-label="浏览器操作">
+          <div class="web-omnibar-glass">
+            <div id="web-embed-omnibar-badge" class="web-embed-omnibar-badge" hidden aria-hidden="true"></div>
+            <div id="web-embed-search-slot" class="web-embed-search-slot" aria-label="地址栏"></div>
+          </div>
+          <div class="web-omnibar-actions web-omnibar-actions-glass" aria-label="浏览器操作">
             <button type="button" class="web-chrome-btn" id="webllm-btn-back" title="后退" aria-label="后退">&#8592;</button>
             <button type="button" class="web-chrome-btn" id="webllm-btn-forward" title="前进" aria-label="前进">&#8594;</button>
             <button type="button" class="web-chrome-btn" id="webllm-btn-reload" title="刷新当前 AI" aria-label="刷新">&#8635;</button>
@@ -3861,7 +4121,10 @@ html[data-theme="light"] .search-wrapper.has-content .search-box-inner {
           </div>
         </div>
         <div class="web-embed-tabbar" aria-label="AI 页面标签">
-          <div id="webllm-site-chips" class="web-embed-tabs" role="tablist" aria-label="AI 站点标签"></div>
+          <div class="web-embed-tabbar-inner">
+            <div id="web-embed-tab-indicator" class="web-embed-tab-indicator" aria-hidden="true"></div>
+            <div id="webllm-site-chips" class="web-embed-tabs" role="tablist" aria-label="AI 站点标签"></div>
+          </div>
         </div>
         <span id="webllm-status" class="web-omnibar-status" aria-live="polite"></span>
       </div>
@@ -4135,8 +4398,8 @@ const SC_CLI_READY_TTL_MS = 300000;
 const SC_SUBTAG_AUDIENCE_KEY = "sc_subtag_audience_v1";
 const SC_SUBTAG_SELECTION_KEY = "sc_subtag_selection_v1";
 const SC_SUBTAG_DEBUG_KEY = "sc_subtag_debug_v1";
-const SC_SPLASH_MIN_MS = 160;
-const SC_SPLASH_FALLBACK_MS = 2600;
+const SC_SPLASH_MIN_MS = 48;
+const SC_SPLASH_FALLBACK_MS = 900;
 const scSplashStartAt = Date.now();
 let scSplashHidden = false;
 
@@ -4360,7 +4623,7 @@ function dismissStartupSplash(forceNow = false) {
     scSplashHidden = true;
     splash.classList.add("leave");
     splash.setAttribute("aria-hidden", "true");
-    setTimeout(() => splash.classList.add("done"), 260);
+    setTimeout(() => splash.classList.add("done"), 180);
   };
   if (wait > 0) {
     setTimeout(doHide, wait);
@@ -5462,6 +5725,7 @@ function renderWebEmbedColumnTrack() {
   _scWebEmbedLastLayoutKey = "";
   if (!_scWebEmbedLayoutFromHost) postWebEmbedColumnLayout(true);
   renderWebEmbedTabBar();
+  animateWebEmbedFocusFrame(getWebEmbedActiveEngine(), true);
 }
 
 function syncWebEmbedColumnSlotWidths(columns) {
@@ -5498,7 +5762,11 @@ function applyWebLlmColumnLayoutState(payload) {
     }
     if (payload.scrollX != null) {
       const viewport = document.getElementById("web-embed-scroll-viewport");
-      if (viewport) viewport.scrollLeft = Math.max(0, Math.round(Number(payload.scrollX) || 0));
+      if (viewport) {
+        const target = Math.max(0, Math.round(Number(payload.scrollX) || 0));
+        if (Math.abs((viewport.scrollLeft || 0) - target) > 1)
+          viewport.scrollLeft = target;
+      }
     }
     if (payload.dragging) {
       syncWebEmbedColumnSlotWidths(payload.columns);
@@ -5506,6 +5774,9 @@ function applyWebLlmColumnLayoutState(payload) {
     } else {
       document.body.classList.remove("sc-web-embed-col-resizing");
       syncWebEmbedColumnSlotWidths(payload.columns);
+    }
+    if (isWebEmbedActive()) {
+      animateWebEmbedFocusFrame(getWebEmbedActiveEngine(), !!payload.dragging);
     }
     if (payload.persist) saveWebEmbedColumnWidthsPref(_scWebEmbedColumnWidths);
   } finally {
@@ -5557,12 +5828,143 @@ function getWebEmbedBroadcastSites() {
   return loadWebEmbedBroadcastSitesPref();
 }
 
+let _scWebEmbedFocusAnim = 0;
+let _scWebEmbedFocusState = { left: 0, width: 0, leftV: 0, widthV: 0, siteId: "" };
+
+function ensureWebEmbedFocusFrame() {
+  const track = document.getElementById("web-embed-scroll-track");
+  if (!track) return null;
+  let frame = document.getElementById("web-embed-focus-frame");
+  if (!frame) {
+    frame = document.createElement("div");
+    frame.id = "web-embed-focus-frame";
+    frame.className = "web-embed-focus-frame";
+    frame.setAttribute("aria-hidden", "true");
+    track.appendChild(frame);
+  }
+  if (!frame.querySelector(".web-embed-focus-frame__halo-left")) {
+    frame.innerHTML =
+      '<div class="web-embed-focus-frame__glass"></div>' +
+      '<div class="web-embed-focus-frame__halo web-embed-focus-frame__halo-left"></div>' +
+      '<div class="web-embed-focus-frame__halo web-embed-focus-frame__halo-right"></div>';
+  }
+  return frame;
+}
+
+function getWebEmbedColumnSlotMetrics(siteId) {
+  const track = document.getElementById("web-embed-scroll-track");
+  const slot = document.querySelector('.web-embed-column-slot[data-site="' + String(siteId || "") + '"]');
+  if (!track || !slot) return null;
+  const padX = 5;
+  const padY = 6;
+  const left = slot.offsetLeft + padX;
+  const width = Math.max(28, slot.offsetWidth - padX * 2);
+  const height = Math.max(0, track.clientHeight - padY * 2);
+  return { left, width, top: padY, height };
+}
+
+function _scWebEmbedSpringStep(current, target, velocity, stiffness, damping, dt) {
+  const accel = -stiffness * (current - target) - damping * velocity;
+  velocity += accel * dt;
+  current += velocity * dt;
+  return { current, velocity };
+}
+
+function animateWebEmbedFocusFrame(siteId, immediate) {
+  const frame = ensureWebEmbedFocusFrame();
+  if (!frame) return;
+  const sid = String(siteId || "").trim();
+  if (!sid || !isWebEmbedActive()) {
+    frame.classList.remove("is-visible", "is-settled");
+    if (_scWebEmbedFocusAnim) {
+      cancelAnimationFrame(_scWebEmbedFocusAnim);
+      _scWebEmbedFocusAnim = 0;
+    }
+    _scWebEmbedFocusState.siteId = "";
+    return;
+  }
+  const metrics = getWebEmbedColumnSlotMetrics(sid);
+  if (!metrics) return;
+  const targetLeft = metrics.left;
+  const targetWidth = metrics.width;
+  const targetTop = metrics.top;
+  const targetHeight = metrics.height;
+
+  const applyMetrics = (left, width, settled) => {
+    frame.style.left = Math.round(left) + "px";
+    frame.style.width = Math.round(width) + "px";
+    frame.style.top = targetTop + "px";
+    frame.style.height = targetHeight + "px";
+    frame.classList.add("is-visible");
+    frame.classList.toggle("is-settled", !!settled);
+  };
+
+  if (immediate || !_scWebEmbedFocusState.siteId) {
+    if (_scWebEmbedFocusAnim) {
+      cancelAnimationFrame(_scWebEmbedFocusAnim);
+      _scWebEmbedFocusAnim = 0;
+    }
+    _scWebEmbedFocusState = {
+      left: targetLeft,
+      width: targetWidth,
+      leftV: 0,
+      widthV: 0,
+      siteId: sid
+    };
+    applyMetrics(targetLeft, targetWidth, true);
+    return;
+  }
+
+  let animState = _scWebEmbedFocusState;
+  animState.siteId = sid;
+  const stiffness = immediate ? 280 : 164;
+  const damping = immediate ? 32 : 30;
+  let lastTs = 0;
+
+  const tick = (ts) => {
+    if (!lastTs) lastTs = ts;
+    const dt = Math.min(0.034, (ts - lastTs) / 1000);
+    lastTs = ts;
+
+    const leftStep = _scWebEmbedSpringStep(animState.left, targetLeft, animState.leftV || 0, stiffness, damping, dt);
+    const widthStep = _scWebEmbedSpringStep(animState.width, targetWidth, animState.widthV || 0, stiffness, damping, dt);
+    animState.left = leftStep.current;
+    animState.leftV = leftStep.velocity;
+    animState.width = widthStep.current;
+    animState.widthV = widthStep.velocity;
+
+    const done = Math.abs(animState.left - targetLeft) < 0.45
+      && Math.abs(animState.width - targetWidth) < 0.45
+      && Math.abs(animState.leftV) < 1.8
+      && Math.abs(animState.widthV) < 1.8;
+
+    if (done) {
+      animState.left = targetLeft;
+      animState.width = targetWidth;
+      animState.leftV = 0;
+      animState.widthV = 0;
+      _scWebEmbedFocusState = animState;
+      applyMetrics(targetLeft, targetWidth, true);
+      _scWebEmbedFocusAnim = 0;
+      return;
+    }
+
+    applyMetrics(animState.left, animState.width, false);
+    _scWebEmbedFocusAnim = requestAnimationFrame(tick);
+  };
+
+  if (_scWebEmbedFocusAnim) cancelAnimationFrame(_scWebEmbedFocusAnim);
+  frame.classList.remove("is-settled");
+  _scWebEmbedFocusAnim = requestAnimationFrame(tick);
+}
+
 function syncWebEmbedColumnFocus() {
   const focus = getWebEmbedActiveEngine();
   document.querySelectorAll(".web-embed-column-slot").forEach((slot) => {
     const sid = String(slot.getAttribute("data-site") || "");
     slot.classList.toggle("focus-active", sid === focus);
   });
+  animateWebEmbedFocusFrame(focus, false);
 }
 
 function syncWebEmbedTabBar() {
@@ -5581,6 +5983,127 @@ function syncWebEmbedTabBar() {
     btn.title = label + (on ? " · 已参与同问" : " · 未参与同问") + "（点击切换页面，Ctrl+点击切换参与）";
   });
   syncWebEmbedColumnFocus();
+  syncWebEmbedOmnibarBadge(focus);
+  animateWebEmbedTabIndicator(focus, false);
+}
+
+function syncWebEmbedOmnibarBadge(siteId) {
+  const badge = document.getElementById("web-embed-omnibar-badge");
+  if (!badge) return;
+  if (!isWebEmbedActive()) {
+    badge.innerHTML = "";
+    badge.hidden = true;
+    return;
+  }
+  const sid = String(siteId || getWebEmbedActiveEngine() || "").trim();
+  const site = SC_WEB_EMBED_SITES.find((s) => s.id === sid);
+  if (!site) {
+    badge.innerHTML = "";
+    badge.hidden = true;
+    return;
+  }
+  badge.hidden = false;
+  badge.setAttribute("aria-hidden", "false");
+  badge.innerHTML = "";
+  const iconWrap = document.createElement("span");
+  iconWrap.className = "web-embed-omnibar-badge__icon";
+  mountWebChipIcon(iconWrap, site);
+  const label = document.createElement("span");
+  label.className = "web-embed-omnibar-badge__label";
+  label.textContent = site.label;
+  badge.appendChild(iconWrap);
+  badge.appendChild(label);
+}
+
+let _scWebEmbedTabIndAnim = 0;
+let _scWebEmbedTabIndState = { left: 0, width: 0, leftV: 0, widthV: 0, siteId: "" };
+
+function getWebEmbedTabMetrics(siteId) {
+  const host = document.getElementById("webllm-site-chips");
+  const inner = host ? host.closest(".web-embed-tabbar-inner") : null;
+  const btn = host ? host.querySelector('.web-embed-tab[data-site="' + String(siteId || "") + '"], .webllm-site-chip[data-site="' + String(siteId || "") + '"]') : null;
+  if (!inner || !btn) return null;
+  const innerRect = inner.getBoundingClientRect();
+  const btnRect = btn.getBoundingClientRect();
+  const pad = 2;
+  return {
+    left: btnRect.left - innerRect.left + pad,
+    width: Math.max(28, btnRect.width - pad * 2)
+  };
+}
+
+function animateWebEmbedTabIndicator(siteId, immediate) {
+  const indicator = document.getElementById("web-embed-tab-indicator");
+  if (!indicator) return;
+  const sid = String(siteId || "").trim();
+  if (!sid || !isWebEmbedActive()) {
+    indicator.classList.remove("is-visible", "is-settled");
+    if (_scWebEmbedTabIndAnim) {
+      cancelAnimationFrame(_scWebEmbedTabIndAnim);
+      _scWebEmbedTabIndAnim = 0;
+    }
+    _scWebEmbedTabIndState.siteId = "";
+    return;
+  }
+  const metrics = getWebEmbedTabMetrics(sid);
+  if (!metrics) return;
+  const targetLeft = metrics.left;
+  const targetWidth = metrics.width;
+
+  const apply = (left, width, settled) => {
+    indicator.style.left = Math.round(left) + "px";
+    indicator.style.width = Math.round(width) + "px";
+    indicator.classList.add("is-visible");
+    indicator.classList.toggle("is-settled", !!settled);
+  };
+
+  if (immediate || !_scWebEmbedTabIndState.siteId) {
+    if (_scWebEmbedTabIndAnim) {
+      cancelAnimationFrame(_scWebEmbedTabIndAnim);
+      _scWebEmbedTabIndAnim = 0;
+    }
+    _scWebEmbedTabIndState = { left: targetLeft, width: targetWidth, leftV: 0, widthV: 0, siteId: sid };
+    apply(targetLeft, targetWidth, true);
+    return;
+  }
+
+  let anim = _scWebEmbedTabIndState;
+  anim.siteId = sid;
+  const stiffness = immediate ? 300 : 210;
+  const damping = immediate ? 32 : 26;
+  let lastTs = 0;
+
+  const tick = (ts) => {
+    if (!lastTs) lastTs = ts;
+    const dt = Math.min(0.034, (ts - lastTs) / 1000);
+    lastTs = ts;
+    const leftStep = _scWebEmbedSpringStep(anim.left, targetLeft, anim.leftV || 0, stiffness, damping, dt);
+    const widthStep = _scWebEmbedSpringStep(anim.width, targetWidth, anim.widthV || 0, stiffness, damping, dt);
+    anim.left = leftStep.current;
+    anim.leftV = leftStep.velocity;
+    anim.width = widthStep.current;
+    anim.widthV = widthStep.velocity;
+    const done = Math.abs(anim.left - targetLeft) < 0.45
+      && Math.abs(anim.width - targetWidth) < 0.45
+      && Math.abs(anim.leftV) < 1.8
+      && Math.abs(anim.widthV) < 1.8;
+    if (done) {
+      anim.left = targetLeft;
+      anim.width = targetWidth;
+      anim.leftV = 0;
+      anim.widthV = 0;
+      _scWebEmbedTabIndState = anim;
+      apply(targetLeft, targetWidth, true);
+      _scWebEmbedTabIndAnim = 0;
+      return;
+    }
+    apply(anim.left, anim.width, false);
+    _scWebEmbedTabIndAnim = requestAnimationFrame(tick);
+  };
+
+  if (_scWebEmbedTabIndAnim) cancelAnimationFrame(_scWebEmbedTabIndAnim);
+  indicator.classList.remove("is-settled");
+  _scWebEmbedTabIndAnim = requestAnimationFrame(tick);
 }
 
 function syncWebEmbedBroadcastUi(postHost = false, rebuildTrack = false) {
@@ -5607,7 +6130,7 @@ function scrollWebEmbedColumnIntoView(siteId, postLayout = false) {
     || getWebEmbedStripWidth(sites) <= Math.round(viewport.clientWidth || 0) + 1;
   if (fit) {
     if ((viewport.scrollLeft || 0) > 0) viewport.scrollLeft = 0;
-    if (postLayout) postWebEmbedColumnLayout(false);
+    if (postLayout) postWebEmbedColumnLayout(true);
     return;
   }
   let x = 0;
@@ -5617,13 +6140,13 @@ function scrollWebEmbedColumnIntoView(siteId, postLayout = false) {
   const maxScroll = Math.max(0, viewport.scrollWidth - viewport.clientWidth);
   const target = Math.min(Math.max(0, x), maxScroll);
   if (Math.abs((viewport.scrollLeft || 0) - target) > 2) {
-    try {
-      viewport.scrollTo({ left: target, behavior: "smooth" });
-    } catch (_) {
-      viewport.scrollLeft = target;
-    }
+    // 与宿主 WebView 列同步须即时滚动；smooth 会导致 scrollX 滞后、页面只露出窄条
+    viewport.scrollLeft = target;
   }
-  if (postLayout) postWebEmbedColumnLayout(false);
+  if (postLayout) {
+    postWebEmbedColumnLayout(true);
+    requestAnimationFrame(() => postWebEmbedColumnLayout(true));
+  }
 }
 
 function setWebEmbedFocusSite(siteId, postHost = true) {
@@ -5882,7 +6405,7 @@ function postWebEmbedContentRect(force) {
   const key = [Math.round(r.left), Math.round(r.top), Math.round(r.width), Math.round(r.height)].join("x");
   if (!force && key === _scWebEmbedLastRectKey) {
     syncWebEmbedViewportScroll(true);
-    postWebEmbedColumnLayout(false);
+    postWebEmbedColumnLayout(true);
     postToAhk({
       type: "webLlmContentRect",
       rect: {
@@ -5983,6 +6506,18 @@ function renderWebEmbedTabBar() {
     state.webEmbedBroadcastSites = loadWebEmbedBroadcastSitesPref();
   }
   syncWebEmbedTabBar();
+  animateWebEmbedTabIndicator(getWebEmbedActiveEngine(), true);
+}
+
+function ensureWebEmbedTabScrollSync() {
+  const host = document.getElementById("webllm-site-chips");
+  if (!host || host.getAttribute("data-tab-scroll-ready") === "1") return;
+  host.setAttribute("data-tab-scroll-ready", "1");
+  host.addEventListener("scroll", () => {
+    if (isWebEmbedActive() && _scWebEmbedTabIndState.siteId) {
+      animateWebEmbedTabIndicator(_scWebEmbedTabIndState.siteId, true);
+    }
+  }, { passive: true });
 }
 
 function renderWebLlmToolbar() {
@@ -5991,6 +6526,7 @@ function renderWebLlmToolbar() {
 
 function initWebLlmToolbar() {
   syncWebEmbedSearchDock(isWebEmbedActive());
+  ensureWebEmbedTabScrollSync();
   renderWebLlmToolbar();
   initWebEmbedColumnLayout();
   const map = {
@@ -6045,8 +6581,22 @@ function initWebEmbedColumnLayout() {
       syncWebEmbedViewportScroll(true);
       postWebEmbedColumnLayout(false);
     }, 180);
+    if (isWebEmbedActive() && _scWebEmbedFocusState.siteId) {
+      animateWebEmbedFocusFrame(_scWebEmbedFocusState.siteId, true);
+    }
   }, { passive: true });
   renderWebEmbedColumnTrack();
+  if (typeof ResizeObserver === "function") {
+    const track = document.getElementById("web-embed-scroll-track");
+    if (track && !viewport._scWebEmbedResizeObs) {
+      viewport._scWebEmbedResizeObs = new ResizeObserver(() => {
+        if (isWebEmbedActive() && _scWebEmbedFocusState.siteId) {
+          animateWebEmbedFocusFrame(_scWebEmbedFocusState.siteId, true);
+        }
+      });
+      viewport._scWebEmbedResizeObs.observe(track);
+    }
+  }
 }
 
 function normalizeUiMode(mode) {
@@ -6712,18 +7262,21 @@ function setUIMode(mode, persist, skipHostPost, skipCategoryReset) {
       state.modeSwitchGuardUntil = Date.now() + guardMs;
       postToAhk({ type: "modeSwitchGuard", active: true, ms: guardMs, heavy: "cli" });
     } else if (m === "web") {
-      const guardMs = Math.max(200, Number(state.modeSwitchGuardMs || 120));
-      state.modeSwitchGuardUntil = Date.now() + guardMs + 180;
+      const guardMs = Math.max(400, Number(state.modeSwitchGuardMs || 120));
+      state.modeSwitchGuardUntil = Date.now() + guardMs + 400;
       postToAhk({ type: "modeSwitchGuard", active: true, ms: guardMs, heavy: "web" });
     }
   }
   state.uiMode = m;
+  if (m !== "web")
+    dismissWebEmbedHost();
   if (m === "local" || m === "clipboard" || m === "fulltext" || m === "cli") {
     cancelWebEmbedRectTimers();
-    if (m !== "cli") dismissWebEmbedHost();
   } else if (m === "web") {
     _scWebEmbedLastRectKey = "";
     _scWebEmbedLastLayoutKey = "";
+    const viewport = document.getElementById("web-embed-scroll-viewport");
+    if (viewport) viewport.scrollLeft = 0;
   }
   if (m !== "clipboard" && state.clipboardViewFilter !== "all") {
     state.clipboardViewFilter = "all";

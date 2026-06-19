@@ -29,6 +29,7 @@ global g_SCWebLlm_EmbedRequested := false
 global g_SCWebLlm_WatchdogToken := 0
 global g_SCWebLlm_BootstrapScheduled := false
 global g_SCWebLlm_BootstrapInFlight := false
+global g_SCWebLlm_EmbedFocusGuardUntil := 0
 global g_SCWebLlm_BootstrapWaitCount := 0
 global g_SCWebLlm_MainWebViewLowered := false
 global g_SCWebLlm_BoundsRetryScheduled := false
@@ -123,6 +124,49 @@ ScWebLlm_ClampScrollForFill(siteIds, embedWCss) {
         changed := true
     }
     return changed
+}
+
+ScWebLlm_EnsureActiveColumnInView(siteIds, activeSiteId, embedWCss) {
+    global g_SCWebLlm_ScrollX, g_SCWebLlm_LastColFillCss
+    if !siteIds.Length || embedWCss <= 0
+        return false
+    activeNorm := ScWebLlm_NormalizeSiteId(activeSiteId)
+    if (activeNorm = "")
+        return false
+    activeIdx := 0
+    for i, sid in siteIds {
+        if (ScWebLlm_NormalizeSiteId(sid) = activeNorm) {
+            activeIdx := i
+            break
+        }
+    }
+    if (activeIdx < 1)
+        return false
+    colLeftCss := 0
+    if (activeIdx > 1) {
+        Loop activeIdx - 1 {
+            colLeftCss += ScWebLlm_ResolveColumnWidth(siteIds[A_Index], siteIds, 0) + ScWebLlm_ColumnGap()
+        }
+    }
+    colWCss := ScWebLlm_ResolveColumnWidth(siteIds[activeIdx], siteIds, 0)
+    if (activeIdx = siteIds.Length && g_SCWebLlm_LastColFillCss > 0)
+        colWCss += Integer(g_SCWebLlm_LastColFillCss)
+    strip := ScWebLlm_ComputeVirtualStripWidth(siteIds, embedWCss)
+    fill := ScWebLlm_ComputeStripFillExtraCss(siteIds, embedWCss)
+    maxScroll := Max(0, strip + fill - embedWCss)
+    desired := g_SCWebLlm_ScrollX
+    if (strip + fill <= embedWCss + 1) {
+        desired := 0
+    } else if (colLeftCss < g_SCWebLlm_ScrollX) {
+        desired := colLeftCss
+    } else if (colLeftCss + colWCss > g_SCWebLlm_ScrollX + embedWCss) {
+        desired := Min(maxScroll, Max(0, colLeftCss + colWCss - embedWCss))
+    }
+    if (desired != g_SCWebLlm_ScrollX) {
+        g_SCWebLlm_ScrollX := desired
+        return true
+    }
+    return false
 }
 
 ScWebLlm_IsRailDragging() {
@@ -314,7 +358,7 @@ SearchCenterWebLlm_SetColumnLayout(layout) {
     }
     if (!scrollChanged && !colsChanged)
         return true
-    g_SCWebLlm_LastBoundsKey := ""
+    SearchCenterWebLlm_InvalidateLayoutCaches(false)
     if (colsChanged || scrollChanged) {
         try SearchCenterWebLlm_EnsureMissingSites(false)
         catch as e {
@@ -621,14 +665,23 @@ SearchCenterWebLlm_PaintResizeRail(rec, hitWPhys, hPhys) {
             }
         }
         if IsObject(line) {
-            try line.Opt("+Background" . lineColor)
-            catch {
-            }
-            try {
-                line.Move(lineX, 0, lineW, h)
-                line.Visible := true
-            } catch as e {
-                ScWebLlm_Catch(e)
+            ; 焦点高亮由 HTML 玻璃框动画承担，拖条仅在非焦点时保留细分隔线
+            if focused {
+                try line.Visible := false
+                catch {
+                }
+            } else {
+                try line.Opt("+Background" . lineColor)
+                catch {
+                }
+                try {
+                    lineWIdle := Max(1, ScWebLlm_CssToPhysical(1))
+                    lineXIdle := Max(0, (hitW - lineWIdle) // 2)
+                    line.Move(lineXIdle, 0, lineWIdle, h)
+                    line.Visible := true
+                } catch as e {
+                    ScWebLlm_Catch(e)
+                }
             }
         }
     }
@@ -1310,6 +1363,8 @@ ScWebLlm_BuildFocusComposerScript(siteId := "") {
 }
 
 SearchCenterWebLlm_FocusSiteInput(siteId) {
+    if !ScWebLlm_AllowEmbedFocusSteal()
+        return false
     sid := ScWebLlm_NormalizeSiteId(siteId)
     if (sid = "")
         return false
@@ -1352,7 +1407,6 @@ ScWebLlm_BuildInitScript(siteId := "") {
         . "window.chrome.webview.postMessage(JSON.stringify({type:'scWebLlmInteract',siteId:sid,kind:k||'event'}));"
         . "}catch(e){}}"
         . "document.addEventListener('pointerdown',function(){post('pointer');},true);"
-        . "document.addEventListener('focusin',function(){post('focus');},true);"
         . "document.addEventListener('wheel',function(){post('wheel');},{capture:true,passive:true});"
         . "})();"
 }
@@ -1706,7 +1760,7 @@ SearchCenterWebLlm_PositionChildHost(hostHwnd, x, y, w, h, show := true, parentH
         }
         return
     }
-    flags := 0x0010
+    flags := 0x0010 | 0x0004
     if (show && w > 0 && h > 0)
         flags |= 0x0040
     else {
@@ -1823,8 +1877,49 @@ SearchCenterWebLlm_RaiseSiteHosts(activeSiteId := "") {
     }
 }
 
+ScWebLlm_BeginEmbedFocusGuard(ms := 15000) {
+    global g_SCWebLlm_EmbedFocusGuardUntil
+    guardUntil := A_TickCount + Max(4000, Integer(ms))
+    if (guardUntil > g_SCWebLlm_EmbedFocusGuardUntil)
+        g_SCWebLlm_EmbedFocusGuardUntil := guardUntil
+}
+
+ScWebLlm_EndEmbedFocusGuard() {
+    global g_SCWebLlm_EmbedFocusGuardUntil
+    g_SCWebLlm_EmbedFocusGuardUntil := 0
+}
+
+ScWebLlm_IsEmbedFocusGuarded() {
+    global g_SCWebLlm_EmbedFocusGuardUntil, g_SCWebLlm_BootstrapInFlight, g_SCWebLlm_BootstrapScheduled
+    if (g_SCWebLlm_EmbedFocusGuardUntil > A_TickCount)
+        return true
+    if (g_SCWebLlm_BootstrapInFlight || g_SCWebLlm_BootstrapScheduled)
+        return true
+    return false
+}
+
+ScWebLlm_AllowEmbedFocusSteal() {
+    if ScWebLlm_IsEmbedFocusGuarded()
+        return false
+    fn := "SCWV_IsSearchCenterForegroundOrChild"
+    if FuncExists(fn) {
+        try {
+            if !(%fn%)()
+                return false
+        } catch {
+            return false
+        }
+    }
+    return true
+}
+
 ScWebLlm_GetRasterScale() {
-    global g_SCWV_Ctrl
+    global g_SCWebLlm_ContentRect, g_SCWV_Ctrl
+    if (g_SCWebLlm_ContentRect is Map) && g_SCWebLlm_ContentRect.Has("dpr") {
+        dpr := Float(g_SCWebLlm_ContentRect["dpr"])
+        if (dpr > 0.1 && dpr < 10)
+            return dpr
+    }
     if IsObject(g_SCWV_Ctrl) {
         try {
             sc := g_SCWV_Ctrl.RasterizationScale
@@ -2004,6 +2099,8 @@ SearchCenterWebLlm_MakeSiteWebMessageHandler(siteId) {
 }
 
 SearchCenterWebLlm_OnSiteGotFocus(siteId, sender, args) {
+    if !ScWebLlm_AllowEmbedFocusSteal()
+        return
     SearchCenterWebLlm_FocusSiteFromInteraction(siteId, false)
 }
 
@@ -2043,6 +2140,8 @@ SearchCenterWebLlm_FocusSiteFromInteraction(siteId, focusInput := false) {
     global g_SCWebLlm_Visible, g_SCWebLlm_ParentHwnd, g_SCWebLlm_ActiveSiteId
     if !ScWebLlm_ShouldShowWebEmbed() || !g_SCWebLlm_Visible
         return false
+    if focusInput && !ScWebLlm_AllowEmbedFocusSteal()
+        focusInput := false
     sid := ScWebLlm_NormalizeSiteId(siteId)
     if (sid = "" || !ScWebLlm_IsSiteEnabled(sid))
         return false
@@ -2458,6 +2557,25 @@ ScWebLlm_ResolveEmbedScreenRect(&left, &top, &w, &h) {
     return false
 }
 
+SearchCenterWebLlm_InvalidateLayoutCaches(resetScroll := false) {
+    global g_SCWebLlm_LastBoundsKey, g_SCWebLlm_ChildHostBoundsCache, g_SCWebLlm_SiteBoundsSig, g_SCWebLlm_ScrollX
+    g_SCWebLlm_LastBoundsKey := ""
+    g_SCWebLlm_ChildHostBoundsCache := Map()
+    g_SCWebLlm_SiteBoundsSig := Map()
+    if resetScroll
+        g_SCWebLlm_ScrollX := 0
+}
+
+SearchCenterWebLlm_PrepareForWebModeShow() {
+    global g_SCWebLlm_Visible, g_SCWebLlm_MainWebViewLowered, g_SCWebLlm_ScrollX
+    g_SCWebLlm_Visible := true
+    g_SCWebLlm_MainWebViewLowered := false
+    g_SCWebLlm_ScrollX := 0
+    SearchCenterWebLlm_InvalidateLayoutCaches(false)
+    SearchCenterWebLlm_MarkEmbedRequested()
+    ScWebLlm_BeginEmbedFocusGuard(18000)
+}
+
 ScWebLlm_EnsureFallbackContentRect(markReady := false) {
     global g_SCWebLlm_ContentRect, g_SCWebLlm_ContentRectReady, g_SCWV_Gui
     if (g_SCWebLlm_ContentRectReady && (g_SCWebLlm_ContentRect is Map) && Integer(g_SCWebLlm_ContentRect.Get("width", 0)) >= 160)
@@ -2468,12 +2586,18 @@ ScWebLlm_EnsureFallbackContentRect(markReady := false) {
         WinGetClientPos(, , &cw, &ch, g_SCWV_Gui.Hwnd)
         if (cw < 200 || ch < 200)
             return false
+        sc := ScWebLlm_GetRasterScale()
+        cssW := Max(160, Round(Float(cw) / Max(sc, 0.01)))
+        cssH := Max(80, Round(Float(ch) / Max(sc, 0.01)))
+        cssT := Max(120, Round(Float(ch) / Max(sc, 0.01) * 0.34))
         g_SCWebLlm_ContentRect := Map(
             "left", 0,
-            "top", Max(200, Round(ch * 0.34)),
-            "width", cw,
-            "height", Max(180, Round(ch * 0.52))
+            "top", cssT,
+            "width", cssW,
+            "height", Max(140, Round(Float(ch) / Max(sc, 0.01) * 0.52))
         )
+        if (sc > 0.1 && sc < 10)
+            g_SCWebLlm_ContentRect["dpr"] := sc
         if markReady
             g_SCWebLlm_ContentRectReady := true
         return true
@@ -2530,7 +2654,7 @@ ScWebLlm_ScheduleEmbedBootstrap() {
     if g_SCWebLlm_BootstrapScheduled
         return
     g_SCWebLlm_BootstrapScheduled := true
-    SetTimer(ScWebLlm_EmbedBootstrapTick, -320)
+    SetTimer(ScWebLlm_EmbedBootstrapTick, -48)
 }
 
 SearchCenterWebLlm_StartEmbedWatchdog() {
@@ -2596,7 +2720,7 @@ SearchCenterWebLlm_SetContentRect(rect) {
         "height", Integer(rect.Get("height", 0)),
         "dpr", rect.Has("dpr") ? Float(rect["dpr"]) : 0
     )
-    SetTimer(ScWebLlm_ApplyPendingContentRect, -140)
+    SetTimer(ScWebLlm_ApplyPendingContentRect, -48)
 }
 
 ScWebLlm_ApplyPendingContentRect() {
@@ -2628,12 +2752,18 @@ SearchCenterWebLlm_ApplyContentRectNow(rect) {
     h := Max(0, Integer(rect.Get("height", 0)))
     prevW := 0
     prevH := 0
+    prevT := 0
+    prevDpr := 0.0
     if (g_SCWebLlm_ContentRect is Map) {
         prevW := Integer(g_SCWebLlm_ContentRect.Get("width", 0))
         prevH := Integer(g_SCWebLlm_ContentRect.Get("height", 0))
+        prevT := Integer(g_SCWebLlm_ContentRect.Get("top", 0))
+        if g_SCWebLlm_ContentRect.Has("dpr")
+            prevDpr := Float(g_SCWebLlm_ContentRect["dpr"])
     }
-    if (w > prevW + 48 || h > prevH + 48)
-        g_SCWebLlm_LastBoundsKey := ""
+    newDpr := rect.Has("dpr") ? Float(rect["dpr"]) : 0.0
+    if (w > prevW + 48 || h > prevH + 48 || Abs(Integer(rect.Get("top", 0)) - prevT) > 12 || (newDpr > 0.1 && Abs(newDpr - prevDpr) > 0.05))
+        SearchCenterWebLlm_InvalidateLayoutCaches(false)
     g_SCWebLlm_ContentRect := Map(
         "left", Integer(rect.Get("left", 0)),
         "top", Integer(rect.Get("top", 220)),
@@ -2660,7 +2790,10 @@ SearchCenterWebLlm_ApplyContentRectNow(rect) {
         ScWebLlm_Catch(e)
     }
     ScWebLlm_ScheduleBoundsRetries()
-    ScWebLlm_ScheduleEmbedBootstrap()
+    if !g_SCWebLlm_EmbedBootstrapped
+        SetTimer(ScWebLlm_EmbedBootstrapTick, -1)
+    else
+        ScWebLlm_ScheduleEmbedBootstrap()
     if !g_SCWebLlm_EmbedBootstrapped
         SearchCenterWebLlm_StartEmbedWatchdog()
 }
@@ -2726,7 +2859,9 @@ SearchCenterWebLlm_ApplyBounds(parentHwnd := 0) {
         siteIds := [sid]
     }
     scrollClamped := ScWebLlm_ClampScrollForFill(siteIds, embedWCss)
-    if scrollClamped
+    activeNorm := ScWebLlm_NormalizeSiteId(g_SCWebLlm_ActiveSiteId)
+    activeScrolled := ScWebLlm_EnsureActiveColumnInView(siteIds, activeNorm, embedWCss)
+    if (scrollClamped || activeScrolled)
         g_SCWebLlm_LastBoundsKey := ""
     g_SCWebLlm_LastColFillCss := ScWebLlm_ComputeStripFillExtraCss(siteIds, embedWCss)
     key := embedLeft . "x" . embedTop . "x" . embedW . "x" . embedH . "x" . g_SCWebLlm_ActiveSiteId . "x" . siteIds.Length
@@ -2846,9 +2981,14 @@ SearchCenterWebLlm_ApplyBounds(parentHwnd := 0) {
             ScWebLlm_Catch(e)
         }
     }
-    if !dragActive && (fillCss > 0 || scrollClamped)
+    if !dragActive && (fillCss > 0 || scrollClamped || activeScrolled)
         ScWebLlm_PushColumnLayoutToWeb(false, false)
     SearchCenterWebLlm_SyncActiveGlobals()
+    if ScWebLlm_SitesToLoadReady() {
+        global g_SCWebLlm_BootstrapInFlight, g_SCWebLlm_BootstrapScheduled
+        if !g_SCWebLlm_BootstrapInFlight && !g_SCWebLlm_BootstrapScheduled
+            ScWebLlm_EndEmbedFocusGuard()
+    }
     return true
 }
 
@@ -2871,6 +3011,7 @@ SearchCenterWebLlm_EnsureEmbedSitesLoaded(forceNavigateHome := false, parentHwnd
         ScWebLlm_Trace("ensure_skip", false, Map("reason", "should_not_embed"))
         return false
     }
+    ScWebLlm_BeginEmbedFocusGuard(18000)
     if !SearchCenterWebLlm_CanBootstrapEmbed() {
         ScWebLlm_Trace("ensure_wait", false, Map("reason", "not_ready", "wait", g_SCWebLlm_BootstrapWaitCount))
         return false
@@ -3083,13 +3224,11 @@ SearchCenterWebLlm_ReloadSites(engines := 0) {
 SearchCenterWebLlm_RestoreVisibleFromModeSwitch() {
     if !ScWebLlm_ShouldShowWebEmbed()
         return false
-    global g_SCWebLlm_Visible, g_SCWebLlm_MainWebViewLowered, g_SCWebLlm_ContentRectReady
+    global g_SCWebLlm_ContentRectReady
+    SearchCenterWebLlm_PrepareForWebModeShow()
     h := ScWebLlm_ResolveEmbedHostHwnd()
     if !h
         return false
-    g_SCWebLlm_Visible := true
-    g_SCWebLlm_MainWebViewLowered := false
-    SearchCenterWebLlm_MarkEmbedRequested()
     if !g_SCWebLlm_ContentRectReady {
         try ScWebLlm_EnsureFallbackContentRect(true)
         catch as e {
@@ -3111,6 +3250,7 @@ SearchCenterWebLlm_Hide() {
     global g_SCWebLlm_Visible, g_SCWebLlm_LastBoundsKey, g_SCWebLlm_ContentRectReady, g_SCWebLlm_SiteHosts
     global g_SCWebLlm_BootstrapScheduled, g_SCWebLlm_BootstrapInFlight, g_SCWebLlm_BootstrapWaitCount
     global g_SCWebLlm_WatchdogToken, g_SCWebLlm_BoundsRetryScheduled, g_SCWebLlm_ChildHostBoundsCache
+    ScWebLlm_EndEmbedFocusGuard()
     g_SCWebLlm_Visible := false
     SearchCenterWebLlm_ClearEmbedRequested()
     g_SCWebLlm_ContentRectReady := false

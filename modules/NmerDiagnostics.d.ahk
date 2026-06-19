@@ -21,3 +21,9 @@ Nmer_CacheDir(*) {
 
 Nmer_OpenDebugDir(*) {
 }
+
+Nmer_ShowLoadErrorDialog(errText, scriptPath := "", scene := "startup") {
+}
+
+Nmer_ShowUserErrorDialog(err, mode := "") {
+}

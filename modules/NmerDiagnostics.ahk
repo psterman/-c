@@ -119,6 +119,120 @@ Nmer_ErrorDlg_OnClose(guiObj, *) {
     g_NmerErrorDlg_Gui := 0
 }
 
+Nmer_ParseLoadErrorStderr(rawText) {
+    result := Map("raw", rawText, "message", "", "file", "", "line", 0, "marker", "")
+    text := Trim(String(rawText))
+    if (text = "")
+        return result
+    lines := StrSplit(text, "`n", "`r")
+    msg := ""
+    file := ""
+    line := 0
+    marker := ""
+    for ln in lines {
+        t := Trim(ln)
+        if (t = "")
+            continue
+        if (InStr(t, "Error:") = 1)
+            msg := t
+        else if RegExMatch(t, "i)^----\s+(.+)$", &m)
+            file := Trim(m[1])
+        else if RegExMatch(t, "^\d+:\s", &m2) {
+            if RegExMatch(t, "^(\d+):", &m3)
+                line := Integer(m3[1])
+        } else if (InStr(t, Chr(0x25B6)) || RegExMatch(t, "^\s*>"))
+            marker := t
+    }
+    if (msg = "" && lines.Length)
+        msg := Trim(lines[1])
+    result["message"] := msg
+    result["file"] := file
+    result["line"] := line
+    result["marker"] := marker
+    return result
+}
+
+Nmer_BuildLoadErrorReport(errText, scriptPath := "", scene := "startup") {
+    parsed := Nmer_ParseLoadErrorStderr(errText)
+    raw := parsed["raw"]
+    msg := parsed["message"]
+    file := parsed["file"]
+    line := parsed["line"]
+    marker := parsed["marker"]
+    if (msg = "" && raw != "")
+        msg := raw
+
+    summary := msg != "" ? msg : "脚本加载失败"
+    if (file != "")
+        summary .= "`n`n" . file . (line ? " (行 " . line . ")" : "")
+
+    full := "【牛马加载错误报告】`n"
+    full .= "时间: " . FormatTime(A_Now, "yyyy-MM-dd HH:mm:ss") . "`n"
+    full .= "场景: " . scene . "`n"
+    if (scriptPath != "")
+        full .= "主脚本: " . scriptPath . "`n"
+    full .= "AHK: " . A_AhkVersion . "`n"
+    full .= "`n--- 错误 ---`n" . (raw != "" ? raw : msg) . "`n"
+    if (file != "")
+        full .= "`n文件: " . file . "`n"
+    if (line)
+        full .= "行号: " . line . "`n"
+    if (marker != "")
+        full .= "定位: " . marker . "`n"
+    full .= "`n--- 最近日志 (nmer_trace.log) ---`n" . Nmer_ReadTraceTail(20)
+
+    global g_NmerErrorDlg_Report
+    g_NmerErrorDlg_Report := full
+    return Map("summary", summary, "full", full)
+}
+
+Nmer_AppendStartupErrorLog(reportText) {
+    path := A_ScriptDir . "\Cache\debug\startup_error.log"
+    if FuncExists("Nmer_DebugPath")
+        path := Nmer_DebugPath("startup_error.log")
+    try {
+        dir := ""
+        SplitPath(path, , &dir)
+        if (dir != "" && !DirExist(dir))
+            DirCreate(dir)
+        FileAppend(Format("{}`n{}`n---`n", FormatTime(A_Now, "yyyy-MM-dd HH:mm:ss"), reportText), path, "UTF-8")
+    } catch {
+    }
+}
+
+Nmer_ShowLoadErrorDialog(errText, scriptPath := "", scene := "startup") {
+    rep := Nmer_BuildLoadErrorReport(errText, scriptPath, scene)
+    body := rep.Has("full") ? rep["full"] : rep.Get("summary", "")
+    Nmer_AppendStartupErrorLog(body)
+
+    global g_NmerErrorDlg_Gui
+    if g_NmerErrorDlg_Gui {
+        try g_NmerErrorDlg_Gui.Destroy()
+        catch {
+        }
+    }
+
+    hint := scene = "reload"
+        ? "重载前检测到语法/加载错误，当前进程未退出。请修复后再次重载。"
+        : "脚本无法加载，请修复语法错误后重新启动。详情已写入 Cache\debug\startup_error.log。"
+
+    g := Gui("+AlwaysOnTop", "牛马 — 脚本无法加载")
+    g.SetFont("s9", "Microsoft YaHei UI")
+    g.MarginX := 14
+    g.MarginY := 12
+    g.Add("Text", "w560", hint)
+    g.Add("Edit", "w560 h240 ReadOnly -Wrap vNmerLoadErrEdit", body)
+    g.Add("Button", "Default w130", "复制报告").OnEvent("Click", Nmer_ErrorDlg_OnCopy)
+    g.Add("Button", "x+10 w130", "打开日志目录").OnEvent("Click", (*) => Nmer_OpenLogsFolder())
+    g.Add("Button", "x+10 w72", "关闭").OnEvent("Click", Nmer_ErrorDlg_OnClose.Bind(g))
+    g.OnEvent("Close", Nmer_ErrorDlg_OnClose.Bind(g))
+    g.Show()
+    g_NmerErrorDlg_Gui := g
+    try WinWaitClose(g.Hwnd)
+    catch {
+    }
+}
+
 Nmer_ShowUserErrorDialog(err, mode := "") {
     rep := Nmer_BuildErrorReport(err, mode)
     body := rep.Has("full") ? rep["full"] : rep.Get("summary", "")

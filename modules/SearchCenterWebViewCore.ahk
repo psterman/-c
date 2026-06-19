@@ -148,6 +148,8 @@ global g_SCWV_ModeSwitchGuard := false
 global g_SCWV_ModeSwitchGuardUntilTick := 0
 global g_SCWV_ModeSwitchGuardEpoch := 0
 global g_SCWV_WebEmbedSuppressMinimizeUntil := 0
+global g_SCWV_WebModeTransitionUntil := 0
+global g_SCWV_SysCommandHooked := false
 global g_SCWV_ModeSwitchDeferredCaps := Map()
 global g_SCWV_GuardPausedSearchTimer := 0
 ; 微创：搜索历史内存缓存 + 防抖写盘（热路径不再每次 FileRead/Jxon_Dump）
@@ -898,15 +900,56 @@ _SCWV_InferWebUiModeFromEmbedState() {
 _SCWV_DeferredWebEmbedSync(*) {
     if !SCWV_IsWebSearchUIMode()
         return
-    _SCWV_RejectSpuriousMinimize()
     _SCWV_SyncWebEmbedForMode()
+    SetTimer(_SCWV_DeferredWebEmbedBoundsPass, -160)
+    SetTimer(_SCWV_DeferredWebEmbedBoundsPass, -520)
+    SetTimer(_SCWV_DeferredWebEmbedBoundsPass, -1100)
 }
 
-_SCWV_RejectSpuriousMinimize(*) {
+_SCWV_DeferredWebEmbedBoundsPass(*) {
+    if !SCWV_IsWebSearchUIMode() || !_SCWV_ShouldShowWebEmbed()
+        return
+    global g_SCWV_Gui
+    if FuncExists("SearchCenterWebLlm_ApplyBounds") && IsObject(g_SCWV_Gui) {
+        try SearchCenterWebLlm_ApplyBounds(g_SCWV_Gui.Hwnd)
+        catch {
+        }
+    }
+}
+
+SCWV_EnsureSysCommandHook() {
+    global g_SCWV_SysCommandHooked
+    if g_SCWV_SysCommandHooked
+        return
+    OnMessage(0x0112, SCWV_WM_SYSCOMMAND)
+    g_SCWV_SysCommandHooked := true
+}
+
+SCWV_WM_SYSCOMMAND(wParam, lParam, msg, hwnd) {
+    global g_SCWV_Gui
+    if !IsObject(g_SCWV_Gui)
+        return
+    try {
+        if (Integer(hwnd) != Integer(g_SCWV_Gui.Hwnd))
+            return
+    } catch {
+        return
+    }
+    cmd := wParam & 0xFFF0
+    if (cmd = 0xF020) {
+        if _SCWV_ShouldSuppressWebModeMinimize() {
+            SetTimer(_SCWV_RestoreFromSpuriousMinimize, -15)
+            return 0
+        }
+    }
+}
+
+_SCWV_RejectSpuriousMinimize(allowActivate := false) {
     global g_SCWV_Gui, g_SCWV_UserMinimized, g_SCWV_Visible
     if !g_SCWV_Visible || !IsObject(g_SCWV_Gui)
         return
     hwnd := g_SCWV_Gui.Hwnd
+    restored := false
     try {
         mm := WinGetMinMax("ahk_id " . hwnd)
         if (mm = -1) {
@@ -915,14 +958,19 @@ _SCWV_RejectSpuriousMinimize(*) {
             catch {
             }
             g_SCWV_UserMinimized := false
+            restored := true
             try SCWV_PostJson(Map("type", "hostMinimized", "active", false))
             catch {
             }
         }
     } catch {
     }
-    try WinActivate("ahk_id " . hwnd)
-    catch {
+    if (allowActivate || restored) {
+        if (allowActivate || SCWV_IsSearchCenterForegroundOrChild() || SCWV_IsHostForegroundActive()) {
+            try WinActivate("ahk_id " . hwnd)
+            catch {
+            }
+        }
     }
     global g_SCWebLlm_MainWebViewLowered
     g_SCWebLlm_MainWebViewLowered := false
@@ -972,10 +1020,7 @@ _SCWV_ApplyRestoredSession(triggerSource := "") {
             NmerCatch(A_ThisFunc, _e)
         }
         if (cat = "ai") {
-            if FuncExists("SearchCenterWebLlm_MarkEmbedRequested")
-                SearchCenterWebLlm_MarkEmbedRequested()
             _SCWV_EnsureDefaultWebEngines(cat)
-            _SCWV_SyncWebEmbedForMode()
         }
     }
     return um
@@ -1302,7 +1347,7 @@ SCWV_IsSearchCenterForegroundOrChild() {
 }
 
 _SCWV_ShouldSuppressWebModeMinimize() {
-    global g_SCWV_Visible, g_SCWV_ModeSwitchGuard, g_SCWV_WebEmbedSuppressMinimizeUntil
+    global g_SCWV_Visible, g_SCWV_ModeSwitchGuard, g_SCWV_WebEmbedSuppressMinimizeUntil, g_SCWV_WebModeTransitionUntil
     global g_SCWebLlm_BootstrapInFlight, g_SCWebLlm_BootstrapScheduled, g_SCWebLlm_EmbedRequested, g_SCWebLlm_Visible
     if !g_SCWV_Visible || SCWV_IsCloseRequested()
         return false
@@ -1310,8 +1355,13 @@ _SCWV_ShouldSuppressWebModeMinimize() {
         return true
     if (g_SCWV_WebEmbedSuppressMinimizeUntil > A_TickCount)
         return true
-    if !SCWV_IsWebSearchUIMode()
+    if (g_SCWV_WebModeTransitionUntil > A_TickCount)
+        return true
+    if !SCWV_IsWebSearchUIMode() {
+        if (g_SCWebLlm_BootstrapInFlight || g_SCWebLlm_BootstrapScheduled || g_SCWebLlm_EmbedRequested)
+            return true
         return false
+    }
     if (g_SCWebLlm_EmbedRequested || g_SCWebLlm_Visible || g_SCWebLlm_BootstrapInFlight || g_SCWebLlm_BootstrapScheduled)
         return true
     return false
@@ -1325,7 +1375,7 @@ _SCWV_ArmWebEmbedMinimizeGuard(ms := 5000) {
 }
 
 _SCWV_RestoreFromSpuriousMinimize(*) {
-    _SCWV_RejectSpuriousMinimize()
+    _SCWV_RejectSpuriousMinimize(true)
 }
 
 ; sc_* / Caps 和弦：WebView 模式要求宿主可见且 WinActive，避免后台仍触发分类/筛选
@@ -1668,6 +1718,7 @@ SCWV_Init(reason := "") {
 
     ; 浣跨敤 Windows 鍘熺敓鏍囬鏍忎笌绯荤粺绐楀彛鎸夐挳锛堟渶灏忓寲/鏈€澶у寲/鍏抽棴锛?
     g_SCWV_Gui := Gui("+Resize +MinSize760x540 +MinimizeBox +MaximizeBox -DPIScale", "搜索中心")
+    SCWV_EnsureSysCommandHook()
     g_SCWV_Gui.BackColor := "0d1016"
     g_SCWV_Gui.MarginX := 0
     g_SCWV_Gui.MarginY := 0
@@ -2190,6 +2241,10 @@ SCWV_CompositionPump(reason := "", token := 0) {
             try SearchCenterWebLlm_ApplyBounds(g_SCWV_Gui.Hwnd)
             catch {
             }
+        } else {
+            global g_SCWebLlm_Visible
+            if g_SCWebLlm_Visible
+                _SCWV_DismissWebEmbed()
         }
         try SCWV_Preview_OnHostLayoutChanged()
         catch {
@@ -5333,15 +5388,8 @@ SCWV_ProcessWebMessageJson(jsonStr) {
             if !SCWV_IsWebSearchUIMode() {
                 _SCWV_DismissWebEmbed()
             } else {
-                _SCWV_ArmWebEmbedMinimizeGuard(6000)
+                _SCWV_ArmWebEmbedMinimizeGuard(8000)
                 _SCWV_BlockDeactivate(4000, "web_embed_rect")
-                g_SCWV_UiMode := "web"
-                if (SearchCenterFilterType = "clipboard" || SearchCenterFilterType = "fulltext")
-                    SearchCenterFilterType := ""
-                try _SCWV_SetCategoryByKey("ai")
-                catch as _e {
-                    NmerCatch(A_ThisFunc, _e)
-                }
                 if FuncExists("SearchCenterWebLlm_MarkEmbedRequested")
                     SearchCenterWebLlm_MarkEmbedRequested()
                 rect := (msg.Has("rect") && (msg["rect"] is Map)) ? msg["rect"] : msg
@@ -5424,30 +5472,31 @@ SCWV_ProcessWebMessageJson(jsonStr) {
             if !SCWV_IsWebSearchUIMode() {
                 _SCWV_DismissWebEmbed()
             } else {
-                _SCWV_ArmWebEmbedMinimizeGuard(8000)
+                _SCWV_ArmWebEmbedMinimizeGuard(10000)
                 _SCWV_BlockDeactivate(6000, "web_embed_bootstrap")
-                g_SCWV_UiMode := "web"
-                if (SearchCenterFilterType = "clipboard" || SearchCenterFilterType = "fulltext")
-                    SearchCenterFilterType := ""
-                try _SCWV_SetCategoryByKey("ai")
-                catch as _e {
-                    NmerCatch(A_ThisFunc, _e)
-                }
                 if msg.Has("selectedEngines")
                     _SCWV_ApplySelectedEnginesFromWeb(msg["selectedEngines"])
-                if FuncExists("SearchCenterWebLlm_MarkEmbedRequested")
+                if FuncExists("SearchCenterWebLlm_PrepareForWebModeShow")
+                    SearchCenterWebLlm_PrepareForWebModeShow()
+                else if FuncExists("SearchCenterWebLlm_MarkEmbedRequested")
                     SearchCenterWebLlm_MarkEmbedRequested()
-                if msg.Has("rect") && FuncExists("SearchCenterWebLlm_SetContentRect")
-                    SearchCenterWebLlm_SetContentRect(msg["rect"])
+                rect := (msg.Has("rect") && (msg["rect"] is Map)) ? msg["rect"] : 0
+                if (rect is Map) {
+                    if FuncExists("SearchCenterWebLlm_ApplyContentRectNow")
+                        SearchCenterWebLlm_ApplyContentRectNow(rect)
+                    else if FuncExists("SearchCenterWebLlm_SetContentRect")
+                        SearchCenterWebLlm_SetContentRect(rect)
+                }
                 if msg.Has("columnLayout") && FuncExists("SearchCenterWebLlm_SetColumnLayout")
                     SearchCenterWebLlm_SetColumnLayout(msg["columnLayout"])
-                if FuncExists("SearchCenterWebLlm_EnsureMissingSites") {
-                    try SearchCenterWebLlm_EnsureMissingSites(false)
+                restored := false
+                if FuncExists("SearchCenterWebLlm_RestoreVisibleFromModeSwitch") {
+                    try restored := SearchCenterWebLlm_RestoreVisibleFromModeSwitch()
                     catch as _e {
                         NmerCatch(A_ThisFunc, _e)
                     }
                 }
-                else if !msg.Has("rect") && g_SCWV_Gui && FuncExists("SearchCenterWebLlm_EnsureEmbedSitesLoaded") {
+                if !restored && g_SCWV_Gui && FuncExists("SearchCenterWebLlm_EnsureEmbedSitesLoaded") {
                     try SearchCenterWebLlm_EnsureEmbedSitesLoaded(true, g_SCWV_Gui.Hwnd)
                     catch as _e {
                         NmerCatch(A_ThisFunc, _e)
@@ -5459,11 +5508,16 @@ SCWV_ProcessWebMessageJson(jsonStr) {
             global g_SCWV_ClipboardTimelineGen
             m := msg.Has("mode") ? StrLower(Trim(String(msg["mode"]))) : "local"
             if (m = "web") {
-                _SCWV_ArmWebEmbedMinimizeGuard(9000)
+                _SCWV_ArmWebEmbedMinimizeGuard(12000)
                 _SCWV_BlockDeactivate(5000, "web_mode_switch_early")
+                global g_SCWV_WebModeTransitionUntil
+                g_SCWV_WebModeTransitionUntil := A_TickCount + 12000
             }
-            if (m != "web")
+            if (m != "web") {
                 _SCWV_DismissWebEmbed()
+                global g_SCWV_WebModeTransitionUntil
+                g_SCWV_WebModeTransitionUntil := 0
+            }
             if (m = "clipboard") {
                 g_SCWV_UiMode := "clipboard"
                 if (Trim(String(g_SCWV_PendingTriggerSource)) = "clipboard_hotkey")
@@ -5507,10 +5561,14 @@ SCWV_ProcessWebMessageJson(jsonStr) {
                             NmerCatch(A_ThisFunc, _e)
                         }
                     _SCWV_EnsureDefaultWebEngines(GetSearchCenterCurrentCategoryKey())
-                    if FuncExists("SearchCenterWebLlm_MarkEmbedRequested")
+                    if FuncExists("SearchCenterWebLlm_PrepareForWebModeShow")
+                        SearchCenterWebLlm_PrepareForWebModeShow()
+                    else if FuncExists("SearchCenterWebLlm_MarkEmbedRequested")
                         SearchCenterWebLlm_MarkEmbedRequested()
-                    _SCWV_ArmWebEmbedMinimizeGuard(8000)
+                    _SCWV_ArmWebEmbedMinimizeGuard(10000)
                     _SCWV_BlockDeactivate(5000, "web_mode_switch")
+                    global g_SCWV_WebModeTransitionUntil
+                    g_SCWV_WebModeTransitionUntil := A_TickCount + 12000
                     SCWV_PushState("init")
                 } else {
                     SCWV_PushState("init")
@@ -5619,8 +5677,11 @@ SCWV_ProcessWebMessageJson(jsonStr) {
             heavy := msg.Has("heavy") ? StrLower(Trim(String(msg["heavy"]))) : ""
             if active {
                 SCWV_ModeSwitchGuardBegin(span)
-                if (heavy = "web")
-                    _SCWV_ArmWebEmbedMinimizeGuard(9000)
+                if (heavy = "web") {
+                    _SCWV_ArmWebEmbedMinimizeGuard(12000)
+                    global g_SCWV_WebModeTransitionUntil
+                    g_SCWV_WebModeTransitionUntil := A_TickCount + 12000
+                }
             } else
                 SCWV_ModeSwitchGuardEnd("ui_ack")
         case "close":

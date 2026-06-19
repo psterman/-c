@@ -1199,6 +1199,9 @@ Nmer_ResolveAutoStartPaths(&ahkExe, &scriptPath) {
         if FileExist(cand)
             scriptPath := cand
     }
+    launcher := A_ScriptDir . "\NmerLauncher.ahk"
+    if FileExist(launcher)
+        scriptPath := launcher
     if (ahkExe = "" || scriptPath = "")
         return false
     return true

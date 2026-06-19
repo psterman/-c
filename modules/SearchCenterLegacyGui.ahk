@@ -1416,6 +1416,14 @@ UpdateSearchCenterCategoryMode() {
     }
     UpdateSearchCenterFilterDropdown()
     BringSearchCenterFilterButtonsToFront()
+
+    ; 统一补一次 WebView 叠层同步，防止分类布局刷新后把联网搜索页面留在错误层级。
+    if (FuncExists("_SCWV_SyncWebEmbedForMode")) {
+        try _SCWV_SyncWebEmbedForMode()
+        catch as err {
+            NmerCatch(A_ThisFunc, err)
+        }
+    }
 }
 
 GetSearchCenterResultItemByRow(Row) {
@@ -1993,6 +2001,15 @@ SwitchSearchCenterCategory(Direction, DirectIndex := false) {
     
     ; 刷新搜索引擎图标显示
     RefreshSearchCenterEngineIcons()
+
+    ; 切换分类后，立刻同步联网搜索叠层显隐，避免 AI 页残留在本地页上方，
+    ; 或从本地页切回 AI 页时叠层没有重新挂回。
+    if (FuncExists("_SCWV_SyncWebEmbedForMode")) {
+        try _SCWV_SyncWebEmbedForMode()
+        catch as err {
+            NmerCatch(A_ThisFunc, err)
+        }
+    }
 
     if (SearchCenterIsCLICategory()) {
         try ExecuteSearchCenterSearch()

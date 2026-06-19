@@ -1298,23 +1298,53 @@ HideFloatingToolbarFromPopupMenu(*) {
 }
 
 Nmer_ScheduleCleanRestart() {
-    ahkExe := A_AhkPath
     scriptPath := A_ScriptFullPath
+    err := ""
+    if FuncExists("Nmer_ValidateMainScript") {
+        if !Nmer_ValidateMainScript(scriptPath, &err) {
+            try {
+                if FuncExists("Nmer_ShowLoadErrorDialog")
+                    Nmer_ShowLoadErrorDialog(err, scriptPath, "reload")
+                else if FuncExists("Nmer_TryShowLoadError")
+                    Nmer_TryShowLoadError(scriptPath, err, "reload")
+            } catch as validateUiErr {
+                try TrayMenu_Log("restart_validate_ui_failed msg=" . validateUiErr.Message)
+            }
+            try TrayMenu_Log("restart_validate_failed script=" . scriptPath)
+            try TrayTip("牛马", "脚本校验失败，未重载（当前进程保持运行）", "Iconx 3")
+            return false
+        }
+    }
+
+    ahkExe := A_AhkPath
+    launcherPath := A_ScriptDir . "\NmerLauncher.ahk"
+    if FuncExists("Nmer_LauncherScriptPath")
+        launcherPath := Nmer_LauncherScriptPath()
+    launchTarget := scriptPath
+    launchArgs := scriptPath
+    if FileExist(launcherPath) {
+        launchTarget := launcherPath
+        launchArgs := '"' . launcherPath . '" "' . scriptPath . '"'
+    } else {
+        launchArgs := '"' . scriptPath . '"'
+    }
     pid := DllCall("GetCurrentProcessId", "UInt")
     ; 等当前进程完全退出后再拉起，避免与 #SingleInstance Force 抢实例、WebView2 环境未释放
     ps := "while (Get-Process -Id " . pid . " -ErrorAction SilentlyContinue) { Start-Sleep -Milliseconds 250 }; "
-        . "Start-Process -FilePath '" . StrReplace(ahkExe, "'", "''") . "' -ArgumentList '" . StrReplace(scriptPath, "'", "''") . "'"
+        . "Start-Process -FilePath '" . StrReplace(ahkExe, "'", "''") . "' -ArgumentList '" . StrReplace(launchTarget, "'", "''") . "'"
+    if (launchTarget != scriptPath)
+        ps .= ",'" . StrReplace(scriptPath, "'", "''") . "'"
     try {
         Run('powershell.exe -NoProfile -WindowStyle Hidden -Command "' . ps . '"', , "Hide")
-        try TrayMenu_Log("restart_clean_spawn_scheduled pid=" . pid)
+        try TrayMenu_Log("restart_clean_spawn_scheduled pid=" . pid . " target=" . launchTarget)
         return true
     } catch as err {
         try TrayMenu_Log("restart_clean_spawn_ps_failed msg=" . err.Message)
     }
-    cmd := 'cmd /c ping 127.0.0.1 -n 4 >nul & start "" "' . ahkExe . '" "' . scriptPath . '"'
+    cmd := 'cmd /c ping 127.0.0.1 -n 4 >nul & start "" "' . ahkExe . '" ' . launchArgs
     try {
         Run(cmd, , "Hide")
-        try TrayMenu_Log("restart_clean_spawn_fallback_scheduled pid=" . pid)
+        try TrayMenu_Log("restart_clean_spawn_fallback_scheduled pid=" . pid . " target=" . launchTarget)
         return true
     } catch as _e {
         NmerCatch(A_ThisFunc, _e) 
