@@ -45,9 +45,15 @@ global g_SCWebLlm_RailLayoutPushDue := 0
 global g_SCWebLlm_LastColFillCss := 0
 global g_SCWebLlm_PendingKeywords := Map()
 global g_SCWebLlm_EdgeRails := Map()
+global g_SCWebLlm_FocusGlow := Map()
+global g_SCWebLlm_FocusGlowSig := ""
 
 ScWebLlm_MinColumnWidth() {
     return 280
+}
+
+ScWebLlm_AbsMinColumnWidth() {
+    return 200
 }
 
 ScWebLlm_ColumnGap() {
@@ -81,8 +87,18 @@ ScWebLlm_ColumnIntersectsViewport(colLeft, colW, embedLeft, embedW) {
 }
 
 ScWebLlm_ExpandEmbedWidthToParent(hwnd, embedLeft, embedW) {
+    global g_SCWebLlm_ContentRect
     ph := Integer(hwnd)
     w := Max(200, Integer(embedW))
+    ; 以 HTML 实测 contentRect 为上限，避免侧栏布局后 embed 被撑满父窗导致列错位
+    if (g_SCWebLlm_ContentRect is Map) {
+        cssW := Integer(g_SCWebLlm_ContentRect.Get("width", 0))
+        if (cssW >= 160) {
+            capW := ScWebLlm_CssToPhysical(cssW)
+            if (capW > 0 && w > capW)
+                w := capW
+        }
+    }
     if !ph
         return w
     try WinGetClientPos(, , &pcw, , ph)
@@ -90,6 +106,14 @@ ScWebLlm_ExpandEmbedWidthToParent(hwnd, embedLeft, embedW) {
         maxW := Max(200, pcw - Integer(embedLeft))
         if (maxW > w)
             w := maxW
+    }
+    if (g_SCWebLlm_ContentRect is Map) {
+        cssW := Integer(g_SCWebLlm_ContentRect.Get("width", 0))
+        if (cssW >= 160) {
+            capW := ScWebLlm_CssToPhysical(cssW)
+            if (capW > 0 && w > capW)
+                w := capW
+        }
     }
     return w
 }
@@ -145,10 +169,10 @@ ScWebLlm_EnsureActiveColumnInView(siteIds, activeSiteId, embedWCss) {
     colLeftCss := 0
     if (activeIdx > 1) {
         Loop activeIdx - 1 {
-            colLeftCss += ScWebLlm_ResolveColumnWidth(siteIds[A_Index], siteIds, 0) + ScWebLlm_ColumnGap()
+            colLeftCss += ScWebLlm_ResolveColumnWidth(siteIds[A_Index], siteIds, embedWCss) + ScWebLlm_ColumnGap()
         }
     }
-    colWCss := ScWebLlm_ResolveColumnWidth(siteIds[activeIdx], siteIds, 0)
+    colWCss := ScWebLlm_ResolveColumnWidth(siteIds[activeIdx], siteIds, embedWCss)
     if (activeIdx = siteIds.Length && g_SCWebLlm_LastColFillCss > 0)
         colWCss += Integer(g_SCWebLlm_LastColFillCss)
     strip := ScWebLlm_ComputeVirtualStripWidth(siteIds, embedWCss)
@@ -175,7 +199,16 @@ ScWebLlm_IsRailDragging() {
 }
 
 ScWebLlm_FullEmbedColumnHeight(parentHwnd, embedTop, embedH) {
+    global g_SCWebLlm_ContentRect
     h := Max(140, Integer(embedH))
+    if (g_SCWebLlm_ContentRect is Map) {
+        cssH := Integer(g_SCWebLlm_ContentRect.Get("height", 0))
+        if (cssH >= 140) {
+            capH := ScWebLlm_CssToPhysical(cssH)
+            if (capH > 0 && h > capH)
+                h := capH
+        }
+    }
     ph := Integer(parentHwnd)
     if !ph
         return h
@@ -185,6 +218,14 @@ ScWebLlm_FullEmbedColumnHeight(parentHwnd, embedTop, embedH) {
     }
     if (ch > Integer(embedTop) + 4)
         h := Max(h, ch - Integer(embedTop))
+    if (g_SCWebLlm_ContentRect is Map) {
+        cssH := Integer(g_SCWebLlm_ContentRect.Get("height", 0))
+        if (cssH >= 140) {
+            capH := ScWebLlm_CssToPhysical(cssH)
+            if (capH > 0 && h > capH)
+                h := capH
+        }
+    }
     return h
 }
 
@@ -202,17 +243,45 @@ ScWebLlm_DefaultColumnWidth(embedW := 0, siteCount := 1) {
     return Max(ScWebLlm_MinColumnWidth(), ScWebLlm_MobileColumnCssWidth())
 }
 
-ScWebLlm_ResolveColumnWidth(siteId, siteIds, embedW := 0) {
+ScWebLlm_GetStoredColumnWidth(siteId) {
     global g_SCWebLlm_ColumnWidths
     sid := ScWebLlm_NormalizeSiteId(siteId)
     if (sid = "")
-        return ScWebLlm_DefaultColumnWidth(embedW, siteIds.Length)
+        return ScWebLlm_DefaultColumnWidth(0, 1)
     if (g_SCWebLlm_ColumnWidths is Map && g_SCWebLlm_ColumnWidths.Has(sid)) {
         w := Integer(g_SCWebLlm_ColumnWidths[sid])
-        if (w >= ScWebLlm_MinColumnWidth())
+        if (w >= ScWebLlm_AbsMinColumnWidth())
             return w
     }
-    return ScWebLlm_DefaultColumnWidth(embedW, siteIds.Length)
+    return ScWebLlm_DefaultColumnWidth(0, 1)
+}
+
+ScWebLlm_ComputeVirtualStripWidthFromStored(siteIds) {
+    total := 0
+    n := siteIds.Length
+    idx := 0
+    for sid in siteIds {
+        total += ScWebLlm_GetStoredColumnWidth(sid)
+        idx += 1
+        if (idx < n)
+            total += ScWebLlm_ColumnGap()
+    }
+    return total
+}
+
+ScWebLlm_ResolveColumnWidth(siteId, siteIds, embedW := 0) {
+    stored := ScWebLlm_GetStoredColumnWidth(siteId)
+    n := siteIds.Length
+    if (embedW <= 0 || n < 1)
+        return stored
+    strip := ScWebLlm_ComputeVirtualStripWidthFromStored(siteIds)
+    if (strip <= embedW + 1)
+        return stored
+    gaps := (n - 1) * ScWebLlm_ColumnGap()
+    minFit := (n >= 4) ? ScWebLlm_AbsMinColumnWidth() : ScWebLlm_MinColumnWidth()
+    fitW := Max(minFit, Floor((embedW - gaps) / n))
+    fitW := Min(ScWebLlm_MobileColumnCssWidth(), fitW)
+    return fitW
 }
 
 ScWebLlm_ComputeVirtualStripWidth(siteIds, embedW := 0) {
@@ -325,7 +394,7 @@ SearchCenterWebLlm_SetColumnLayout(layout) {
                     continue
                 sid := ScWebLlm_NormalizeSiteId(col.Get("id", ""))
                 w := Integer(col.Get("width", 0))
-                if (sid != "" && w >= ScWebLlm_MinColumnWidth())
+                if (sid != "" && w >= ScWebLlm_AbsMinColumnWidth())
                     next[sid] := w
             }
             if (fillExtra > 0 && lastSid != "" && next.Has(lastSid)) {
@@ -456,7 +525,7 @@ ScWebLlm_OnResizeRailLButtonDown(wParam, lParam, msg, hwnd) {
             ScWebLlm_Catch(e)
         }
         ScWebLlm_PushColumnLayoutToWeb(false, true)
-        SetTimer(ScWebLlm_ResizeRailDragTick, 8)
+        SetTimer(ScWebLlm_ResizeRailDragTick, 16)
         return
     }
     leftSid := rec.Has("leftSid") ? rec["leftSid"] : ""
@@ -482,7 +551,7 @@ ScWebLlm_OnResizeRailLButtonDown(wParam, lParam, msg, hwnd) {
         ScWebLlm_Catch(e)
     }
     ScWebLlm_PushColumnLayoutToWeb(false, true)
-    SetTimer(ScWebLlm_ResizeRailDragTick, 8)
+    SetTimer(ScWebLlm_ResizeRailDragTick, 16)
 }
 
 ScWebLlm_ResizeRailDragTick() {
@@ -647,6 +716,10 @@ SearchCenterWebLlm_PaintResizeRail(rec, hitWPhys, hPhys) {
             catch as e {
                 ScWebLlm_Catch(e)
             }
+            try WinSetTransparent(148, g)
+            catch as e {
+                ScWebLlm_Catch(e)
+            }
         }
         if IsObject(line) {
             try line.Visible := false
@@ -654,6 +727,11 @@ SearchCenterWebLlm_PaintResizeRail(rec, hitWPhys, hPhys) {
             }
         }
     } else {
+        if IsObject(g) {
+            try WinSetTransparent(255, g)
+            catch {
+            }
+        }
         lineWCss := focused ? ScWebLlm_FocusRailLineCss() : 2
         lineW := Max(1, ScWebLlm_CssToPhysical(lineWCss))
         lineX := Max(0, (hitW - lineW) // 2)
@@ -731,6 +809,8 @@ SearchCenterWebLlm_ApplyFocusRails(siteId := "") {
 }
 
 SearchCenterWebLlm_PulseFocusSite(siteId, durationMs := 0) {
+    global g_SCWebLlm_FocusGlowSig
+    g_SCWebLlm_FocusGlowSig := ""
     SearchCenterWebLlm_ApplyFocusRails(siteId)
 }
 
@@ -891,28 +971,6 @@ SearchCenterWebLlm_ApplyResizeRails(siteIds, embedLeft, embedTop, embedW, embedH
     global g_SCWebLlm_EdgeRails
     edgeUsed := Map()
     edgeHit := idleHit
-    if (activeSid != "" && siteIds.Length) {
-        firstSid := ScWebLlm_NormalizeSiteId(siteIds[1])
-        if (activeSid = firstSid) {
-            colL := 0
-            colT := 0
-            colW := 0
-            colH := 0
-            if ScWebLlm_ComputeSiteColumnLayout(siteIds, "", embedLeft, embedTop, embedW, embedH, &colL, &colT, &colW, &colH, 0, lastColFillCss) {
-                rec := SearchCenterWebLlm_EnsureEdgeRail(parentHwnd, "start")
-                if (rec is Map) && rec.Has("hwnd") {
-                    rec["dragging"] := false
-                    rec["focused"] := true
-                    rec["paintSig"] := ""
-                    railX := Max(embedLeft, colL)
-                    SearchCenterWebLlm_PositionChildHost(rec["hwnd"], railX, railT, edgeHit, railH, true, parentHwnd)
-                    SearchCenterWebLlm_PaintResizeRail(rec, edgeHit, railH)
-                    railHwnds.Push(rec["hwnd"])
-                    edgeUsed["start"] := true
-                }
-            }
-        }
-    }
     if siteIds.Length {
         lastIdx := siteIds.Length - 1
         lastSid := siteIds[siteIds.Length]
@@ -937,7 +995,7 @@ SearchCenterWebLlm_ApplyResizeRails(siteIds, embedLeft, embedTop, embedW, embedH
                     railX := embedLeft
                 showRail := (railX + hitW > embedLeft && railX < embedRight)
                 rec["dragging"] := recDragging
-                rec["focused"] := isFocusRail && !recDragging
+                rec["focused"] := false
                 rec["paintSig"] := ""
                 SearchCenterWebLlm_PositionChildHost(rec["hwnd"], railX, railT, hitW, railH, showRail, parentHwnd)
                 if showRail {
@@ -1036,8 +1094,208 @@ SearchCenterWebLlm_RaiseResizeRailsAboveHosts() {
     ScWebLlm_RaiseResizeRailsTop(hwnds)
 }
 
+ScWebLlm_FocusGlowWidthCss() {
+    return 16
+}
+
+ScWebLlm_CreateFocusGlowHost(parentHwnd) {
+    owner := Integer(parentHwnd)
+    if !owner
+        return 0
+    try {
+        g := Gui("-Caption -DPIScale", "SCWebLlmFocusGlow")
+        g.Show("Hide x-32000 y-32000 w8 h8")
+        hwnd := g.Hwnd
+        style := DllCall("GetWindowLongPtr", "Ptr", hwnd, "Int", -16, "Ptr")
+        style := (style | 0x40000000 | 0x10000000) & ~0x80000000
+        DllCall("SetWindowLongPtr", "Ptr", hwnd, "Int", -16, "Ptr", style, "Ptr")
+        if !DllCall("SetParent", "Ptr", hwnd, "Ptr", owner, "Ptr") {
+            try g.Destroy()
+            return 0
+        }
+        ex := DllCall("GetWindowLongPtr", "Ptr", hwnd, "Int", -20, "Ptr")
+        DllCall("SetWindowLongPtr", "Ptr", hwnd, "Int", -20, "Ptr", ex | 0x80000 | 0x20, "Ptr")
+        return Map("gui", g, "hwnd", hwnd)
+    } catch as e {
+        ScWebLlm_Catch(e)
+        return 0
+    }
+}
+
+ScWebLlm_PaintFocusGlowLayer(rec, side, w, h) {
+    if !(rec is Map) || !rec.Has("hwnd") || !rec["hwnd"]
+        return false
+    w := Max(4, Integer(w))
+    h := Max(8, Integer(h))
+    sig := Trim(String(side)) . "|" . w . "|" . h
+    if (rec.Get("paintSig", "") = sig)
+        return true
+    rec["paintSig"] := sig
+    if !FuncExists("Gdip_CreateBitmap") || !FuncExists("UpdateLayeredWindow") {
+        return false
+    }
+    pBitmap := 0
+    G := 0
+    hBitmap := 0
+    hdc := 0
+    try {
+        pBitmap := Gdip_CreateBitmap(w, h)
+        G := Gdip_GraphicsFromImage(pBitmap)
+        Gdip_SetSmoothingMode(G, 4)
+        Gdip_GraphicsClear(G, 0x00000000)
+        inner := 0x22FFB060
+        outer := 0x00FF8020
+        if (Trim(String(side)) = "left") {
+            pBrush := Gdip_CreateLineBrushFromRect(0, 0, w, h, outer, inner, 0)
+        } else {
+            pBrush := Gdip_CreateLineBrushFromRect(0, 0, w, h, inner, outer, 0)
+        }
+        Gdip_FillRectangle(G, pBrush, 0, 0, w, h)
+        Gdip_DeleteBrush(pBrush)
+        hBitmap := Gdip_CreateHBITMAPFromBitmap(pBitmap, 0x00000000)
+        hdc := DllCall("CreateCompatibleDC", "Ptr", 0, "Ptr")
+        obm := DllCall("SelectObject", "Ptr", hdc, "Ptr", hBitmap, "Ptr")
+        UpdateLayeredWindow(rec["hwnd"], hdc, "", "", w, h, 255)
+        DllCall("SelectObject", "Ptr", hdc, "Ptr", obm, "Ptr")
+        return true
+    } catch as e {
+        ScWebLlm_Catch(e)
+        return false
+    } finally {
+        if hdc
+            try DllCall("DeleteDC", "Ptr", hdc)
+        if hBitmap
+            try DllCall("DeleteObject", "UPtr", hBitmap)
+        if G
+            try Gdip_DeleteGraphics(G)
+        if pBitmap
+            try Gdip_DisposeImage(pBitmap)
+    }
+}
+
+SearchCenterWebLlm_EnsureFocusGlowSide(parentHwnd, side) {
+    global g_SCWebLlm_FocusGlow
+    key := Trim(String(side))
+    if (key = "")
+        return 0
+    if !(g_SCWebLlm_FocusGlow is Map)
+        g_SCWebLlm_FocusGlow := Map()
+    if g_SCWebLlm_FocusGlow.Has(key) {
+        rec := g_SCWebLlm_FocusGlow[key]
+        if (rec is Map) && rec.Has("hwnd") && rec["hwnd"]
+            return rec
+    }
+    created := ScWebLlm_CreateFocusGlowHost(Integer(parentHwnd))
+    if !(created is Map) || !created.Has("hwnd")
+        return 0
+    rec := Map("gui", created["gui"], "hwnd", created["hwnd"], "side", key, "paintSig", "")
+    g_SCWebLlm_FocusGlow[key] := rec
+    return rec
+}
+
+SearchCenterWebLlm_HideFocusGlow(parentHwnd := 0) {
+    global g_SCWebLlm_FocusGlow, g_SCWebLlm_FocusGlowSig
+    g_SCWebLlm_FocusGlowSig := ""
+    if !(g_SCWebLlm_FocusGlow is Map)
+        return
+    ph := Integer(parentHwnd)
+    for , rec in g_SCWebLlm_FocusGlow {
+        if !(rec is Map) || !rec.Has("hwnd") || !rec["hwnd"]
+            continue
+        SearchCenterWebLlm_PositionChildHost(rec["hwnd"], 0, 0, 0, 0, false, ph)
+    }
+}
+
+ScWebLlm_RaiseFocusGlowTop() {
+    global g_SCWebLlm_FocusGlow
+    if !(g_SCWebLlm_FocusGlow is Map)
+        return
+    hwnds := []
+    for , rec in g_SCWebLlm_FocusGlow {
+        if !(rec is Map) || !rec.Has("hwnd") || !rec["hwnd"]
+            continue
+        h := Integer(rec["hwnd"])
+        try {
+            WinGetClientPos(, , &w, &hh, h)
+            if (w > 0 && hh > 0)
+                hwnds.Push(h)
+        } catch {
+        }
+    }
+    if hwnds.Length
+        ScWebLlm_RaiseResizeRailsTop(hwnds)
+}
+
+SearchCenterWebLlm_ApplyFocusGlow(siteIds, activeSiteId, embedLeft, embedTop, embedW, embedH, parentHwnd, lastColFillCss := 0) {
+    global g_SCWebLlm_FocusGlowSig
+    if !siteIds.Length || !parentHwnd {
+        SearchCenterWebLlm_HideFocusGlow(parentHwnd)
+        return
+    }
+    activeNorm := ScWebLlm_NormalizeSiteId(activeSiteId)
+    if (activeNorm = "") {
+        SearchCenterWebLlm_HideFocusGlow(parentHwnd)
+        return
+    }
+    activeIdx := 0
+    for i, sid in siteIds {
+        if (ScWebLlm_NormalizeSiteId(sid) = activeNorm) {
+            activeIdx := i
+            break
+        }
+    }
+    if (activeIdx < 1) {
+        SearchCenterWebLlm_HideFocusGlow(parentHwnd)
+        return
+    }
+    colL := 0
+    colT := 0
+    colW := 0
+    colH := 0
+    if !ScWebLlm_ComputeSiteColumnLayout(siteIds, activeNorm, embedLeft, embedTop, embedW, embedH, &colL, &colT, &colW, &colH, activeIdx - 1, lastColFillCss) {
+        SearchCenterWebLlm_HideFocusGlow(parentHwnd)
+        return
+    }
+    if (colW < 40 || colH < 80) {
+        SearchCenterWebLlm_HideFocusGlow(parentHwnd)
+        return
+    }
+    activeRec := SearchCenterWebLlm_SiteRecord(activeNorm)
+    if !(activeRec is Map) || !activeRec.Get("ready", false) || !IsObject(activeRec.Get("wv2", 0)) {
+        SearchCenterWebLlm_HideFocusGlow(parentHwnd)
+        return
+    }
+    glowW := ScWebLlm_CssToPhysical(ScWebLlm_FocusGlowWidthCss())
+    padY := ScWebLlm_CssToPhysical(14)
+    glowH := Max(ScWebLlm_CssToPhysical(72), colH - padY * 2)
+    glowT := colT + padY
+    leftX := colL
+    rightX := colL + colW - glowW
+    sig := leftX . "x" . rightX . "x" . glowT . "x" . glowW . "x" . glowH . "x" . activeNorm
+    if (sig = g_SCWebLlm_FocusGlowSig)
+        return
+    g_SCWebLlm_FocusGlowSig := sig
+    inView := (colL + colW > embedLeft && colL < embedLeft + embedW)
+    if !inView {
+        SearchCenterWebLlm_HideFocusGlow(parentHwnd)
+        return
+    }
+    leftRec := SearchCenterWebLlm_EnsureFocusGlowSide(parentHwnd, "left")
+    rightRec := SearchCenterWebLlm_EnsureFocusGlowSide(parentHwnd, "right")
+    if (leftRec is Map) && leftRec.Has("hwnd") {
+        SearchCenterWebLlm_PositionChildHost(leftRec["hwnd"], leftX, glowT, glowW, glowH, true, parentHwnd)
+        ScWebLlm_PaintFocusGlowLayer(leftRec, "left", glowW, glowH)
+    }
+    if (rightRec is Map) && rightRec.Has("hwnd") {
+        SearchCenterWebLlm_PositionChildHost(rightRec["hwnd"], rightX, glowT, glowW, glowH, true, parentHwnd)
+        ScWebLlm_PaintFocusGlowLayer(rightRec, "right", glowW, glowH)
+    }
+    ScWebLlm_RaiseFocusGlowTop()
+}
+
 SearchCenterWebLlm_HideResizeRails() {
     global g_SCWebLlm_ResizeRails, g_SCWebLlm_RailDrag, g_SCWebLlm_EdgeRails
+    SearchCenterWebLlm_HideFocusGlow()
     g_SCWebLlm_RailDrag := 0
     SetTimer(ScWebLlm_ResizeRailDragTick, 0)
     for , rec in g_SCWebLlm_ResizeRails {
@@ -2160,8 +2418,9 @@ SearchCenterWebLlm_FocusSiteFromInteraction(siteId, focusInput := false) {
         }
     }
     if changed {
-        global g_SCWebLlm_LastBoundsKey
+        global g_SCWebLlm_LastBoundsKey, g_SCWebLlm_FocusGlowSig
         g_SCWebLlm_LastBoundsKey := ""
+        g_SCWebLlm_FocusGlowSig := ""
         SearchCenterWebLlm_SyncActiveGlobals()
     }
     SearchCenterWebLlm_ApplyBounds(h)
@@ -2419,7 +2678,7 @@ SearchCenterWebLlm_HasReadySites() {
 SearchCenterWebLlm_EnsureMissingSites(forceNavigate := false) {
     ok := false
     pending := 0
-    for sid in SearchCenterWebLlm_ListSitesToLoad() {
+    for sid in SearchCenterWebLlm_ListLayoutSiteIds() {
         rec := SearchCenterWebLlm_SiteRecord(sid)
         if !(rec is Map)
             continue
@@ -2434,7 +2693,7 @@ SearchCenterWebLlm_EnsureMissingSites(forceNavigate := false) {
                 continue
             }
         }
-        delay := pending * 200
+        delay := pending * 60
         if (delay <= 0)
             ok := SearchCenterWebLlm_OpenSite(sid, forceNavigate) || ok
         else
@@ -2445,23 +2704,83 @@ SearchCenterWebLlm_EnsureMissingSites(forceNavigate := false) {
     return ok
 }
 
+ScWebLlm_IsActiveSiteReady() {
+    global g_SCWebLlm_ActiveSiteId
+    sid := ScWebLlm_NormalizeSiteId(g_SCWebLlm_ActiveSiteId)
+    if (sid = "")
+        sid := ScWebLlm_DefaultSiteId()
+    rec := SearchCenterWebLlm_SiteRecord(sid)
+    return (rec is Map) && rec.Get("ready", false) && IsObject(rec.Get("wv2", 0))
+}
+
+ScWebLlm_EnsureActiveSiteOpened(forceNavigate := false) {
+    global g_SCWebLlm_ActiveSiteId
+    sid := ScWebLlm_NormalizeSiteId(g_SCWebLlm_ActiveSiteId)
+    if (sid = "" || !ScWebLlm_IsSiteEnabled(sid))
+        sid := ScWebLlm_PickSiteFromEngines(SearchCenterSelectedEngines)
+    if (sid = "" || !ScWebLlm_IsSiteEnabled(sid))
+        sid := ScWebLlm_DefaultSiteId()
+    g_SCWebLlm_ActiveSiteId := sid
+    return SearchCenterWebLlm_OpenSite(sid, forceNavigate)
+}
+
+ScWebLlm_ScheduleEmbedResumeCheck() {
+    SetTimer(ScWebLlm_EmbedResumeCheck, -160)
+    SetTimer(ScWebLlm_EmbedResumeCheck, -480)
+    SetTimer(ScWebLlm_EmbedResumeCheck, -960)
+}
+
+ScWebLlm_EmbedResumeCheck(*) {
+    if !ScWebLlm_ShouldShowWebEmbed()
+        return
+    if ScWebLlm_IsActiveSiteReady()
+        return
+    if !SearchCenterWebLlm_CanBootstrapEmbed()
+        return
+    h := ScWebLlm_GetEmbedParentHwnd()
+    if !h
+        return
+    try ScWebLlm_EnsureActiveSiteOpened(false)
+    catch as e {
+        ScWebLlm_Catch(e)
+    }
+    try SearchCenterWebLlm_EnsureMissingSites(false)
+    catch as e {
+        ScWebLlm_Catch(e)
+    }
+    try SearchCenterWebLlm_ShowReadySites(h)
+    catch as e {
+        ScWebLlm_Catch(e)
+    }
+    try SearchCenterWebLlm_ApplyBounds(h)
+    catch as e {
+        ScWebLlm_Catch(e)
+    }
+}
+
 SearchCenterWebLlm_OpenAllSites(forceNavigate := false) {
-    global g_SCWebLlm_MultiMobile
+    global g_SCWebLlm_MultiMobile, g_SCWebLlm_ActiveSiteId
     if !g_SCWebLlm_MultiMobile {
         sid := ScWebLlm_DefaultSiteId()
-        global g_SCWebLlm_ActiveSiteId
         if (g_SCWebLlm_ActiveSiteId != "")
             sid := ScWebLlm_NormalizeSiteId(g_SCWebLlm_ActiveSiteId)
         return SearchCenterWebLlm_OpenSite(sid, forceNavigate)
     }
+    activeSid := ScWebLlm_NormalizeSiteId(g_SCWebLlm_ActiveSiteId)
+    if (activeSid = "" || !ScWebLlm_IsSiteEnabled(activeSid))
+        activeSid := ScWebLlm_PickSiteFromEngines(SearchCenterSelectedEngines)
+    if (activeSid = "")
+        activeSid := ScWebLlm_DefaultSiteId()
+    g_SCWebLlm_ActiveSiteId := activeSid
     ok := false
+    if (activeSid != "")
+        ok := SearchCenterWebLlm_OpenSite(activeSid, forceNavigate) || ok
     idx := 0
-    for sid in SearchCenterWebLlm_ListSitesToLoad() {
-        delay := idx * 120
-        if (delay <= 0)
-            ok := SearchCenterWebLlm_OpenSite(sid, forceNavigate) || ok
-        else
-            SetTimer(SearchCenterWebLlm_OpenSiteDelayed.Bind(sid, forceNavigate), -delay)
+    for sid in SearchCenterWebLlm_ListLayoutSiteIds() {
+        if (ScWebLlm_NormalizeSiteId(sid) = activeSid)
+            continue
+        delay := 80 + idx * 120
+        SetTimer(SearchCenterWebLlm_OpenSiteDelayed.Bind(sid, forceNavigate), -delay)
         ok := true
         idx += 1
     }
@@ -2567,13 +2886,16 @@ SearchCenterWebLlm_InvalidateLayoutCaches(resetScroll := false) {
 }
 
 SearchCenterWebLlm_PrepareForWebModeShow() {
-    global g_SCWebLlm_Visible, g_SCWebLlm_MainWebViewLowered, g_SCWebLlm_ScrollX
+    global g_SCWebLlm_Visible, g_SCWebLlm_ScrollX, g_SCWebLlm_ContentRectReady
+    wasShowing := g_SCWebLlm_Visible && g_SCWebLlm_ContentRectReady
     g_SCWebLlm_Visible := true
-    g_SCWebLlm_MainWebViewLowered := false
-    g_SCWebLlm_ScrollX := 0
-    SearchCenterWebLlm_InvalidateLayoutCaches(false)
+    if !wasShowing {
+        g_SCWebLlm_ScrollX := 0
+        SearchCenterWebLlm_InvalidateLayoutCaches(false)
+    }
     SearchCenterWebLlm_MarkEmbedRequested()
-    ScWebLlm_BeginEmbedFocusGuard(18000)
+    ScWebLlm_BeginEmbedFocusGuard(8000)
+    ScWebLlm_ScheduleEmbedResumeCheck()
 }
 
 ScWebLlm_EnsureFallbackContentRect(markReady := false) {
@@ -2789,13 +3111,29 @@ SearchCenterWebLlm_ApplyContentRectNow(rect) {
     catch as e {
         ScWebLlm_Catch(e)
     }
+    parentHwnd := ScWebLlm_GetEmbedParentHwnd()
+    if g_SCWebLlm_ContentRectReady && parentHwnd {
+        if !SearchCenterWebLlm_HasReadySites() {
+            global g_SCWebLlm_EmbedBootstrapped
+            try SearchCenterWebLlm_EnsureEmbedSitesLoaded(!g_SCWebLlm_EmbedBootstrapped, parentHwnd)
+            catch as e {
+                ScWebLlm_Catch(e)
+            }
+        } else {
+            try SearchCenterWebLlm_ShowReadySites(parentHwnd)
+            catch as e {
+                ScWebLlm_Catch(e)
+            }
+        }
+    }
     ScWebLlm_ScheduleBoundsRetries()
     if !g_SCWebLlm_EmbedBootstrapped
         SetTimer(ScWebLlm_EmbedBootstrapTick, -1)
-    else
+    else if !SearchCenterWebLlm_HasReadySites()
         ScWebLlm_ScheduleEmbedBootstrap()
     if !g_SCWebLlm_EmbedBootstrapped
         SearchCenterWebLlm_StartEmbedWatchdog()
+    ScWebLlm_ScheduleEmbedResumeCheck()
 }
 
 ScWebLlm_ComputeSiteColumnLayout(siteIds, activeSiteId, embedLeft, embedTop, embedW, embedH, &colLeft, &colTop, &colW, &colH, index, lastColFillCss := 0) {
@@ -2804,12 +3142,13 @@ ScWebLlm_ComputeSiteColumnLayout(siteIds, activeSiteId, embedLeft, embedTop, emb
     if (n < 1 || index < 0 || index >= n)
         return false
     sid := siteIds[index + 1]
-    colWCss := ScWebLlm_ResolveColumnWidth(sid, siteIds, embedW)
+    embedWCss := ScWebLlm_PhysicalToCss(embedW)
+    colWCss := ScWebLlm_ResolveColumnWidth(sid, siteIds, embedWCss)
     if (index = n - 1 && lastColFillCss > 0)
         colWCss += Integer(lastColFillCss)
     virtualXPhys := 0
     Loop index {
-        virtualXPhys += ScWebLlm_CssToPhysical(ScWebLlm_ResolveColumnWidth(siteIds[A_Index], siteIds, embedW))
+        virtualXPhys += ScWebLlm_CssToPhysical(ScWebLlm_ResolveColumnWidth(siteIds[A_Index], siteIds, embedWCss))
         virtualXPhys += ScWebLlm_CssToPhysical(ScWebLlm_ColumnGap())
     }
     scrollPhys := ScWebLlm_CssToPhysical(g_SCWebLlm_ScrollX)
@@ -2823,7 +3162,7 @@ ScWebLlm_ComputeSiteColumnLayout(siteIds, activeSiteId, embedLeft, embedTop, emb
         if (wantW > 0)
             colW := wantW
     }
-    return (colWCss >= ScWebLlm_MinColumnWidth() && colH >= 140 && colW > 0)
+    return (colWCss >= ScWebLlm_AbsMinColumnWidth() && colH >= 140 && colW > 0)
 }
 
 SearchCenterWebLlm_ApplyBounds(parentHwnd := 0) {
@@ -2878,7 +3217,7 @@ SearchCenterWebLlm_ApplyBounds(parentHwnd := 0) {
         return true
     g_SCWebLlm_LastBoundsKey := key
     activeNorm := ScWebLlm_NormalizeSiteId(g_SCWebLlm_ActiveSiteId)
-    if !g_SCWebLlm_OwnerOverlay
+    if !g_SCWebLlm_OwnerOverlay && !dragActive && !g_SCWebLlm_MainWebViewLowered
         SearchCenterWebLlm_LowerMainWebView()
     fillCss := Integer(g_SCWebLlm_LastColFillCss)
     allColumnsFit := (ScWebLlm_ComputeVirtualStripWidth(siteIds, embedWCss) + fillCss <= embedWCss + 1)
@@ -2968,6 +3307,10 @@ SearchCenterWebLlm_ApplyBounds(parentHwnd := 0) {
     if !dragActive
         SearchCenterWebLlm_RaiseSiteHosts(activeNorm)
     SearchCenterWebLlm_ApplyResizeRails(siteIds, embedLeft, embedTop, embedW, embedH, hwnd, fillCss)
+    if dragActive
+        SearchCenterWebLlm_HideFocusGlow(hwnd)
+    else
+        SearchCenterWebLlm_ApplyFocusGlow(siteIds, activeNorm, embedLeft, embedTop, embedW, embedH, hwnd, fillCss)
     for sid in siteIds {
         rec := SearchCenterWebLlm_SiteRecord(sid)
         if !(rec is Map)
@@ -3011,7 +3354,7 @@ SearchCenterWebLlm_EnsureEmbedSitesLoaded(forceNavigateHome := false, parentHwnd
         ScWebLlm_Trace("ensure_skip", false, Map("reason", "should_not_embed"))
         return false
     }
-    ScWebLlm_BeginEmbedFocusGuard(18000)
+    ScWebLlm_BeginEmbedFocusGuard(8000)
     if !SearchCenterWebLlm_CanBootstrapEmbed() {
         ScWebLlm_Trace("ensure_wait", false, Map("reason", "not_ready", "wait", g_SCWebLlm_BootstrapWaitCount))
         return false
@@ -3041,7 +3384,8 @@ SearchCenterWebLlm_EnsureEmbedSitesLoaded(forceNavigateHome := false, parentHwnd
     } else if navHome {
         ok := SearchCenterWebLlm_OpenAllSites(true)
     } else {
-        ok := SearchCenterWebLlm_EnsureMissingSites(false)
+        ok := ScWebLlm_EnsureActiveSiteOpened(false)
+        ok := SearchCenterWebLlm_EnsureMissingSites(false) || ok
         if !ok && SearchCenterWebLlm_HasReadySites()
             ok := true
     }
@@ -3221,6 +3565,34 @@ SearchCenterWebLlm_ReloadSites(engines := 0) {
     return ok
 }
 
+SearchCenterWebLlm_ShowReadySites(parentHwnd := 0) {
+    h := Integer(parentHwnd)
+    if !h
+        h := ScWebLlm_ResolveEmbedHostHwnd()
+    if !h
+        return false
+    ok := false
+    for sid in SearchCenterWebLlm_ListLayoutSiteIds() {
+        rec := SearchCenterWebLlm_SiteRecord(sid)
+        if !(rec is Map) || !rec.Get("ready", false)
+            continue
+        if IsObject(rec["ctrl"]) {
+            try rec["ctrl"].IsVisible := true
+            catch {
+            }
+        }
+        if IsObject(rec["wv2"]) && FuncExists("WebView2_NotifyShown") {
+            try WebView2_NotifyShown(rec["wv2"])
+            catch {
+            }
+        }
+        ok := true
+    }
+    if ok
+        SearchCenterWebLlm_ApplyBounds(h)
+    return ok
+}
+
 SearchCenterWebLlm_RestoreVisibleFromModeSwitch() {
     if !ScWebLlm_ShouldShowWebEmbed()
         return false
@@ -3239,6 +3611,10 @@ SearchCenterWebLlm_RestoreVisibleFromModeSwitch() {
         return false
     SearchCenterWebLlm_ApplyBounds(h)
     try SearchCenterWebLlm_EnsureMissingSites(false)
+    catch as e {
+        ScWebLlm_Catch(e)
+    }
+    try SearchCenterWebLlm_ShowReadySites(h)
     catch as e {
         ScWebLlm_Catch(e)
     }
@@ -3369,6 +3745,7 @@ SearchCenterWebLlm_FocusSite(siteId) {
     if (rec is Map) && rec.Has("hostHwnd") && rec["hostHwnd"]
         SearchCenterWebLlm_RaiseChildHost(rec["hostHwnd"])
     SearchCenterWebLlm_RaiseResizeRailsAboveHosts()
+    ScWebLlm_RaiseFocusGlowTop()
     SetTimer(SearchCenterWebLlm_FocusSiteInput.Bind(sid), -260)
     return true
 }

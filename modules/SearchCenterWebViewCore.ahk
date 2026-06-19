@@ -901,9 +901,7 @@ _SCWV_DeferredWebEmbedSync(*) {
     if !SCWV_IsWebSearchUIMode()
         return
     _SCWV_SyncWebEmbedForMode()
-    SetTimer(_SCWV_DeferredWebEmbedBoundsPass, -160)
-    SetTimer(_SCWV_DeferredWebEmbedBoundsPass, -520)
-    SetTimer(_SCWV_DeferredWebEmbedBoundsPass, -1100)
+    SetTimer(_SCWV_DeferredWebEmbedBoundsPass, -120)
 }
 
 _SCWV_DeferredWebEmbedBoundsPass(*) {
@@ -2724,6 +2722,7 @@ SCWV_FinishReveal() {
     SCWV_ApplyBounds()
     SCWV_ScheduleBoundsRetries("finish_reveal")
     g_SCWV_Visible := true
+    SCWV_StartCpuMonitor()
     SCWV_ScheduleCompositionPump("finish_reveal")
     SCWV_PostHostForeground(true)
     g_SCWV_LastShown := A_TickCount
@@ -4651,6 +4650,7 @@ SCWV_Hide(PersistSelection := true) {
         }
     }
 
+    SCWV_StopCpuMonitor()
     g_SCWV_Visible := false
     GuiID_SearchCenter := 0
     SearchCenterInvalidateGuiControlRefs()
@@ -4835,6 +4835,73 @@ SCWV_FlushPendingJsonQueue(*) {
             WebView_QueuePayload(g_SCWV_WV2, item["obj"])
         else if (item is Map) && item.Has("str")
             WebView_QueueJson(g_SCWV_WV2, item["str"])
+    }
+}
+
+global g_SCWV_CpuSampleLastK := 0
+global g_SCWV_CpuSampleLastU := 0
+global g_SCWV_CpuSampleLastTick := 0
+global g_SCWV_CpuTimerActive := false
+global g_SCWV_CpuCoreCount := 0
+
+SCWV_ReadProcessCpuPercent() {
+    global g_SCWV_CpuSampleLastK, g_SCWV_CpuSampleLastU, g_SCWV_CpuSampleLastTick, g_SCWV_CpuCoreCount
+    if (g_SCWV_CpuCoreCount < 1) {
+        n := 0
+        try n := Integer(EnvGet("NUMBER_OF_PROCESSORS"))
+        catch {
+        }
+        g_SCWV_CpuCoreCount := Max(1, n)
+    }
+    hProc := DllCall("GetCurrentProcess", "Ptr")
+    ft := Buffer(32, 0)
+    if !DllCall("GetProcessTimes", "Ptr", hProc, "Ptr", ft, "Ptr", ft.Ptr + 8, "Ptr", ft.Ptr + 16, "Ptr", ft.Ptr + 24)
+        return 0.0
+    k := NumGet(ft, 16, "UInt64")
+    u := NumGet(ft, 24, "UInt64")
+    now := A_TickCount
+    pct := 0.0
+    if (g_SCWV_CpuSampleLastTick > 0 && now > g_SCWV_CpuSampleLastTick) {
+        dk := k - g_SCWV_CpuSampleLastK
+        du := u - g_SCWV_CpuSampleLastU
+        if (dk < 0)
+            dk := 0
+        if (du < 0)
+            du := 0
+        elapsed100ns := (now - g_SCWV_CpuSampleLastTick) * 10000
+        if (elapsed100ns > 0)
+            pct := Min(100.0, (100.0 * (dk + du) / elapsed100ns) / g_SCWV_CpuCoreCount)
+    }
+    g_SCWV_CpuSampleLastK := k
+    g_SCWV_CpuSampleLastU := u
+    g_SCWV_CpuSampleLastTick := now
+    return Round(pct, 1)
+}
+
+SCWV_StartCpuMonitor() {
+    global g_SCWV_CpuTimerActive
+    if g_SCWV_CpuTimerActive
+        return
+    g_SCWV_CpuTimerActive := true
+    SetTimer(SCWV_CpuMonitorTick, 1500)
+}
+
+SCWV_StopCpuMonitor() {
+    global g_SCWV_CpuTimerActive
+    g_SCWV_CpuTimerActive := false
+    SetTimer(SCWV_CpuMonitorTick, 0)
+}
+
+SCWV_CpuMonitorTick(*) {
+    global g_SCWV_Visible, g_SCWV_Gui, g_SCWV_Ready
+    if !g_SCWV_Visible || !IsObject(g_SCWV_Gui) || !g_SCWV_Ready {
+        SCWV_StopCpuMonitor()
+        return
+    }
+    pct := SCWV_ReadProcessCpuPercent()
+    try SCWV_PostJson(Map("type", "scCpuUsage", "percent", pct))
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e)
     }
 }
 
@@ -5496,8 +5563,10 @@ SCWV_ProcessWebMessageJson(jsonStr) {
                         NmerCatch(A_ThisFunc, _e)
                     }
                 }
-                if !restored && g_SCWV_Gui && FuncExists("SearchCenterWebLlm_EnsureEmbedSitesLoaded") {
-                    try SearchCenterWebLlm_EnsureEmbedSitesLoaded(true, g_SCWV_Gui.Hwnd)
+                if g_SCWV_Gui && FuncExists("SearchCenterWebLlm_EnsureEmbedSitesLoaded") {
+                    global g_SCWebLlm_EmbedBootstrapped
+                    navHome := !restored && !g_SCWebLlm_EmbedBootstrapped
+                    try SearchCenterWebLlm_EnsureEmbedSitesLoaded(navHome, g_SCWV_Gui.Hwnd)
                     catch as _e {
                         NmerCatch(A_ThisFunc, _e)
                     }
@@ -7431,21 +7500,21 @@ _SCWV_SyncWebEmbedForMode() {
         return
     }
     if FuncExists("SearchCenterWebLlm_RestoreVisibleFromModeSwitch") {
-        try {
-            if SearchCenterWebLlm_RestoreVisibleFromModeSwitch()
-                return
-        } catch as _e {
-            NmerCatch(A_ThisFunc, _e)
-        }
-    }
-    if FuncExists("ScWebLlm_ScheduleEmbedBootstrap")
-        ScWebLlm_ScheduleEmbedBootstrap()
-    else if g_SCWV_Gui && FuncExists("SearchCenterWebLlm_EnsureEmbedSitesLoaded") {
-        try SearchCenterWebLlm_EnsureEmbedSitesLoaded(false, g_SCWV_Gui.Hwnd)
+        try SearchCenterWebLlm_RestoreVisibleFromModeSwitch()
         catch as _e {
             NmerCatch(A_ThisFunc, _e)
         }
     }
+    if g_SCWV_Gui && FuncExists("SearchCenterWebLlm_EnsureEmbedSitesLoaded") {
+        try SearchCenterWebLlm_EnsureEmbedSitesLoaded(false, g_SCWV_Gui.Hwnd)
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e)
+        }
+    } else if FuncExists("ScWebLlm_ScheduleEmbedBootstrap") {
+        ScWebLlm_ScheduleEmbedBootstrap()
+    }
+    if FuncExists("ScWebLlm_ScheduleEmbedResumeCheck")
+        ScWebLlm_ScheduleEmbedResumeCheck()
 }
 
 _SCWV_OpenSearchTarget(keyword, engine) {
