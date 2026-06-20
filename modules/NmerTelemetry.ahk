@@ -2,6 +2,7 @@
 ;@reference NmerTelemetry.d.ahk
 ; 目标：记录谁被用了多少次、最近一次何时成功/失败、失败原因摘要。
 #Include FuncExists.ahk
+#Include ..\lib\ahk\Jxon.ahk
 
 NmerTelemetry_Catch(err) {
     fn := "NmerCatch"

@@ -970,8 +970,10 @@ _SCWV_RejectSpuriousMinimize(allowActivate := false) {
             }
         }
     }
-    global g_SCWebLlm_MainWebViewLowered
+    global g_SCWebLlm_MainWebViewLowered, g_SCWebLlm_LastBoundsKey
     g_SCWebLlm_MainWebViewLowered := false
+    if _SCWV_ShouldShowWebEmbed()
+        g_SCWebLlm_LastBoundsKey := ""
     if _SCWV_ShouldShowWebEmbed() && FuncExists("SearchCenterWebLlm_ApplyBounds") {
         try SearchCenterWebLlm_ApplyBounds(hwnd)
         catch {
@@ -2234,8 +2236,9 @@ SCWV_CompositionPump(reason := "", token := 0) {
         catch {
         }
         if _SCWV_ShouldShowWebEmbed() && IsObject(g_SCWV_Gui) && FuncExists("SearchCenterWebLlm_ApplyBounds") {
-            global g_SCWebLlm_MainWebViewLowered
+            global g_SCWebLlm_MainWebViewLowered, g_SCWebLlm_LastBoundsKey
             g_SCWebLlm_MainWebViewLowered := false
+            g_SCWebLlm_LastBoundsKey := ""
             try SearchCenterWebLlm_ApplyBounds(g_SCWV_Gui.Hwnd)
             catch {
             }
@@ -2610,6 +2613,8 @@ SCWV_ShowHostFullscreen(retryLeft := 3) {
     }
     shown := false
     if SCWV_FuncExists("Nmer_EnsureGuiMaximizedOnPopupScreen") {
+        if !Nmer_IsLiveGuiWindow(g_SCWV_Gui)
+            return
         try shown := !!Nmer_EnsureGuiMaximizedOnPopupScreen(g_SCWV_Gui)
         catch {
             shown := false
@@ -5307,6 +5312,8 @@ SCWV_ProcessWebMessageJson(jsonStr) {
             um := StrLower(Trim(String(g_SCWV_UiMode)))
             if (ck = "cli")
                 g_SCWV_UiMode := "cli"
+            else if _SCWV_IsWebSearchCategoryKey(ck)
+                g_SCWV_UiMode := "web"
             else if (ck = "ai" && um = "web")
                 g_SCWV_UiMode := "web"
             if (Trim(SearchCenterWebKeyword) != "")
@@ -5392,24 +5399,35 @@ SCWV_ProcessWebMessageJson(jsonStr) {
                 changed := _SCWV_ApplySelectedEnginesFromWeb(msg["selectedEngines"])
             else if msg.Has("engines")
                 changed := _SCWV_ApplySelectedEnginesFromWeb(msg["engines"])
+            global g_SCWebLlm_BroadcastSynced
+            embedAi := g_SCWebLlm_BroadcastSynced && FuncExists("ScWebLlm_IsEmbedEngine")
+                && IsObject(SearchCenterSelectedEngines) && SearchCenterSelectedEngines.Length > 0
+                && ScWebLlm_IsEmbedEngine(SearchCenterSelectedEngines[1])
+                && StrLower(Trim(String(GetSearchCenterCurrentCategoryKey()))) = "ai"
             if changed {
                 global g_SCWV_UiMode, g_SCWV_Gui
-                if (FuncExists("ScWebLlm_IsEmbedEngine") && IsObject(SearchCenterSelectedEngines)
-                    && SearchCenterSelectedEngines.Length > 0
-                    && ScWebLlm_IsEmbedEngine(SearchCenterSelectedEngines[1])
-                    && StrLower(Trim(String(GetSearchCenterCurrentCategoryKey()))) = "ai") {
+                if embedAi {
                     g_SCWV_UiMode := "web"
                     SearchCenterFilterType := ""
                     _SCWV_SyncWebEmbedForMode()
                 }
-                if FuncExists("SearchCenterWebLlm_EnsureMissingSites") {
-                    try SearchCenterWebLlm_EnsureMissingSites(false)
-                    catch as _e {
-                        NmerCatch(A_ThisFunc, _e)
+                if embedAi {
+                    if FuncExists("SearchCenterWebLlm_EnsureMissingSites") {
+                        try SearchCenterWebLlm_EnsureMissingSites(false)
+                        catch as _e {
+                            NmerCatch(A_ThisFunc, _e)
+                        }
+                    }
+                    if FuncExists("SearchCenterWebLlm_ApplyBounds") {
+                        try SearchCenterWebLlm_ApplyBounds()
+                        catch as _e {
+                            NmerCatch(A_ThisFunc, _e)
+                        }
                     }
                 }
                 SCWV_PushState("state")
             }
+            return
         case "webSearch":
             global SearchCenterWebKeyword
             if msg.Has("keyword")
@@ -5450,8 +5468,12 @@ SCWV_ProcessWebMessageJson(jsonStr) {
                 if !skipExternal
                     _SCWV_BatchSearch()
             }
+            return
         case "webLlmContentRect":
             global g_SCWV_Gui, g_SCWebLlm_Visible, g_SCWV_UiMode, SearchCenterFilterType
+            ckRect := StrLower(Trim(String(GetSearchCenterCurrentCategoryKey())))
+            if (ckRect = "ai" && !SCWV_IsWebSearchUIMode())
+                g_SCWV_UiMode := "web"
             if !SCWV_IsWebSearchUIMode() {
                 _SCWV_DismissWebEmbed()
             } else {
@@ -5460,6 +5482,14 @@ SCWV_ProcessWebMessageJson(jsonStr) {
                 if FuncExists("SearchCenterWebLlm_MarkEmbedRequested")
                     SearchCenterWebLlm_MarkEmbedRequested()
                 rect := (msg.Has("rect") && (msg["rect"] is Map)) ? msg["rect"] : msg
+                if !(rect is Map) {
+                    return
+                }
+                rw := Integer(rect.Get("width", 0))
+                rh := Integer(rect.Get("height", 0))
+                if (rw < 80 || rh < 40) {
+                    return
+                }
                 if FuncExists("SearchCenterWebLlm_SetContentRect")
                     SearchCenterWebLlm_SetContentRect(rect)
                 if msg.Has("columnLayout") && FuncExists("SearchCenterWebLlm_SetColumnLayout")
@@ -5471,8 +5501,10 @@ SCWV_ProcessWebMessageJson(jsonStr) {
                     }
                 }
             }
+            return
         case "webLlmDismiss":
             _SCWV_DismissWebEmbed()
+            return
         case "webLlmSelectSite":
             if msg.Has("siteId") {
                 global g_SCWV_UiMode, g_SCWV_Gui, SearchCenterFilterType
@@ -5493,9 +5525,9 @@ SCWV_ProcessWebMessageJson(jsonStr) {
                     catch as _e {
                         NmerCatch(A_ThisFunc, _e)
                     }
-                    SCWV_PushState("state")
                 }
             }
+            return
         case "webLlmFocusSite":
             if msg.Has("siteId") {
                 global g_SCWV_UiMode, SearchCenterFilterType
@@ -5504,15 +5536,11 @@ SCWV_ProcessWebMessageJson(jsonStr) {
                     g_SCWV_UiMode := "web"
                     g_SCWV_ClipboardHomeLock := false
                     SearchCenterFilterType := ""
-                    try _SCWV_SetCategoryByKey("ai")
-                    catch as _e {
-                        NmerCatch(A_ThisFunc, _e)
-                    }
                     if FuncExists("SearchCenterWebLlm_FocusSite")
                         SearchCenterWebLlm_FocusSite(sid)
-                    SCWV_PushState("state")
                 }
             }
+            return
         case "webLlmNavigate":
             if msg.Has("url") && FuncExists("SearchCenterWebLlm_NavigateUrl") {
                 global g_SCWV_UiMode, SearchCenterFilterType
@@ -5528,14 +5556,56 @@ SCWV_ProcessWebMessageJson(jsonStr) {
                     NmerCatch(A_ThisFunc, _e)
                 }
             }
+            return
         case "webLlmNav":
             if FuncExists("SearchCenterWebLlm_HandleNav") && msg.Has("action")
                 SearchCenterWebLlm_HandleNav(msg["action"])
+            return
         case "webLlmColumnLayout":
             if msg.Has("columnLayout") && FuncExists("SearchCenterWebLlm_SetColumnLayout")
                 SearchCenterWebLlm_SetColumnLayout(msg["columnLayout"])
+            return
+        case "webLlmScroll":
+            if msg.Has("siteId") && FuncExists("ScWebLlm_ScrollEmbedToSite") {
+                try ScWebLlm_ScrollEmbedToSite(String(msg["siteId"]))
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e)
+                }
+            } else if msg.Has("adjacent") && FuncExists("ScWebLlm_FocusAdjacentEmbedSite") {
+                try ScWebLlm_FocusAdjacentEmbedSite(Integer(msg["adjacent"]))
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e)
+                }
+            } else if msg.Has("scrollX") && FuncExists("ScWebLlm_ApplyEmbedScrollCss") {
+                vp := msg.Has("viewportWidth") ? Integer(msg["viewportWidth"]) : 0
+                strip := msg.Has("stripWidth") ? Integer(msg["stripWidth"]) : 0
+                try ScWebLlm_ApplyEmbedScrollCss(Integer(msg["scrollX"]), vp, strip)
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e)
+                }
+            } else if msg.Has("deltaCss") && FuncExists("ScWebLlm_ScrollEmbedByCssDelta") {
+                try ScWebLlm_ScrollEmbedByCssDelta(Integer(msg["deltaCss"]))
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e)
+                }
+            } else if msg.Has("delta") && FuncExists("ScWebLlm_ScrollEmbedByColumns") {
+                try ScWebLlm_ScrollEmbedByColumns(Integer(msg["delta"]))
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e)
+                }
+            }
+            return
+        case "webEmbedDebugRequest":
+            _SCWV_PostWebEmbedDebugSnapshot(msg)
+            return
+        case "webEmbedDebugAction":
+            _SCWV_HandleWebEmbedDebugAction(msg)
+            return
         case "webLlmBootstrap":
             global g_SCWV_Gui, g_SCWV_UiMode, SearchCenterFilterType
+            ckBoot := StrLower(Trim(String(GetSearchCenterCurrentCategoryKey())))
+            if (ckBoot = "ai" && !SCWV_IsWebSearchUIMode())
+                g_SCWV_UiMode := "web"
             if !SCWV_IsWebSearchUIMode() {
                 _SCWV_DismissWebEmbed()
             } else {
@@ -5572,6 +5642,7 @@ SCWV_ProcessWebMessageJson(jsonStr) {
                     }
                 }
             }
+            return
         case "setUiMode":
             global g_SCWV_UiMode, SearchCenterWebKeyword, g_SCWV_CliTerminalFocus, SearchCenterFilterType, g_SCWV_ClipboardHomeLock
             global g_SCWV_ClipboardTimelineGen
@@ -7275,6 +7346,18 @@ _SCWV_LoadSelectedEngines(CategoryKey) {
     }
     Engines := filtered
 
+    if (CategoryKey = "ai" && FuncExists("ScWebLlm_NormalizeBroadcastSiteIds")) {
+        embedOnly := []
+        for _, ev in Engines {
+            if (FuncExists("ScWebLlm_IsEmbedEngine") && ScWebLlm_IsEmbedEngine(ev))
+                embedOnly.Push(ev)
+        }
+        if (embedOnly.Length)
+            Engines := ScWebLlm_NormalizeBroadcastSiteIds(embedOnly)
+        else if !Engines.Length
+            Engines := ScWebLlm_DefaultOpenSiteIds()
+    }
+
     ; CLI 鍒嗙被涓嶅啀璁剧疆榛樿寮曟搸锛屽繀椤荤敱鐢ㄦ埛鎵嬪姩閫夋嫨鍚庢墠鐢熸晥
 
     SearchCenterSelectedEnginesByCategory[CategoryKey] := _SCWV_CopyArray(Engines)
@@ -7298,6 +7381,18 @@ _SCWV_SaveSelectedEngines(CategoryKey, Engines) {
         }
     }
     try IniWrite(CategoryKey . ":" . EnginesStr, ConfigFile, "Settings", "SearchCenterSelectedEngines_" . CategoryKey)
+}
+
+_SCWV_MarkAiEmbedBroadcastSynced(engines) {
+    if !IsObject(engines) || !engines.Length
+        return
+    if !FuncExists("ScWebLlm_IsEmbedEngine") || !ScWebLlm_IsEmbedEngine(engines[1])
+        return
+    if (StrLower(Trim(String(GetSearchCenterCurrentCategoryKey()))) != "ai")
+        return
+    global g_SCWebLlm_BroadcastSynced, g_SCWebLlm_LayoutSiteIds
+    g_SCWebLlm_BroadcastSynced := true
+    g_SCWebLlm_LayoutSiteIds := engines.Clone()
 }
 
 _SCWV_ApplySelectedEnginesFromWeb(raw) {
@@ -7332,6 +7427,13 @@ _SCWV_ApplySelectedEnginesFromWeb(raw) {
     }
     if (next.Length = 0)
         return false
+    if (StrLower(Trim(CategoryKey)) = "ai" && FuncExists("ScWebLlm_NormalizeBroadcastSiteIds")) {
+        normalized := ScWebLlm_NormalizeBroadcastSiteIds(next)
+        if (normalized.Length)
+            next := normalized
+    }
+    if (next.Length = 0)
+        return false
     if (next.Length = SearchCenterSelectedEngines.Length) {
         same := true
         for i, v in next {
@@ -7340,11 +7442,15 @@ _SCWV_ApplySelectedEnginesFromWeb(raw) {
                 break
             }
         }
-        if same
+        if same {
+            ; 与 ini 相同仍须标记已同步，否则宿主一直按 defaultOpen 5 列布局
+            _SCWV_MarkAiEmbedBroadcastSynced(next)
             return false
+        }
     }
     SearchCenterSelectedEngines := next
     _SCWV_SaveSelectedEngines(CategoryKey, SearchCenterSelectedEngines)
+    _SCWV_MarkAiEmbedBroadcastSynced(SearchCenterSelectedEngines)
     return true
 }
 
@@ -7477,6 +7583,17 @@ SCWV_IsWebSearchUIMode() {
     return (StrLower(Trim(String(g_SCWV_UiMode))) = "web")
 }
 
+_SCWV_IsWebSearchCategoryKey(key) {
+    k := StrLower(Trim(String(key)))
+    if (k = "" || k = "cli")
+        return false
+    static webKeys := Map(
+        "ai", true, "academic", true, "baidu", true, "image", true, "audio", true,
+        "video", true, "book", true, "price", true, "medical", true, "cloud", true
+    )
+    return webKeys.Has(k)
+}
+
 _SCWV_ShouldShowWebEmbed() {
     global g_SCWebLlm_EmbedRequested, g_SCWebLlm_Visible
     if !SCWV_IsWebSearchUIMode()
@@ -7491,6 +7608,125 @@ _SCWV_DismissWebEmbed() {
     SetTimer(_SCWV_DeferredWebEmbedSync, 0)
     if FuncExists("SearchCenterWebLlm_Hide")
         try SearchCenterWebLlm_Hide()
+}
+
+_SCWV_PostWebEmbedDebugSnapshot(msg) {
+    client := (msg is Map && msg.Has("client") && (msg["client"] is Map)) ? msg["client"] : Map()
+    snap := Map("type", "webEmbedDebugResult", "ok", true)
+    if FuncExists("SearchCenterWebLlm_BuildDebugSnapshot") {
+        try snap["snapshot"] := SearchCenterWebLlm_BuildDebugSnapshot(client)
+        catch as e {
+            snap["ok"] := false
+            snap["error"] := e.Message
+        }
+    } else {
+        snap["ok"] := false
+        snap["error"] := "SearchCenterWebLlm_BuildDebugSnapshot missing"
+    }
+    try SCWV_PostJson(snap)
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e)
+    }
+}
+
+_SCWV_HandleWebEmbedDebugAction(msg) {
+    act := msg.Has("action") ? StrLower(Trim(String(msg["action"]))) : ""
+    result := Map("type", "webEmbedDebugActionResult", "action", act, "ok", false)
+    switch act {
+        case "open_log_dir":
+            if FuncExists("Nmer_OpenDebugDir") {
+                try result["ok"] := !!Nmer_OpenDebugDir()
+                catch {
+                    result["ok"] := false
+                }
+            }
+        case "rebootstrap":
+            global g_SCWV_Gui, g_SCWebLlm_EmbedBootstrapped
+            if SCWV_IsWebSearchUIMode() && StrLower(Trim(String(GetSearchCenterCurrentCategoryKey()))) = "ai" {
+                _SCWV_ArmWebEmbedMinimizeGuard(10000)
+                _SCWV_BlockDeactivate(6000, "web_embed_debug_rebootstrap")
+                if FuncExists("SearchCenterWebLlm_MarkEmbedRequested")
+                    SearchCenterWebLlm_MarkEmbedRequested()
+                rect := (msg is Map && msg.Has("rect") && (msg["rect"] is Map)) ? msg["rect"] : 0
+                if (rect is Map) {
+                    if FuncExists("SearchCenterWebLlm_ApplyContentRectNow")
+                        SearchCenterWebLlm_ApplyContentRectNow(rect)
+                    else if FuncExists("SearchCenterWebLlm_SetContentRect")
+                        SearchCenterWebLlm_SetContentRect(rect)
+                }
+                if msg.Has("selectedEngines")
+                    _SCWV_ApplySelectedEnginesFromWeb(msg["selectedEngines"])
+                if msg.Has("columnLayout") && FuncExists("SearchCenterWebLlm_SetColumnLayout")
+                    SearchCenterWebLlm_SetColumnLayout(msg["columnLayout"])
+                if g_SCWV_Gui && FuncExists("SearchCenterWebLlm_EnsureEmbedSitesLoaded") {
+                    try {
+                        SearchCenterWebLlm_EnsureEmbedSitesLoaded(true, g_SCWV_Gui.Hwnd)
+                        result["ok"] := true
+                    } catch as e {
+                        result["error"] := e.Message
+                    }
+                } else if FuncExists("ScWebLlm_ScheduleEmbedBootstrap") {
+                    ScWebLlm_ScheduleEmbedBootstrap()
+                    result["ok"] := true
+                }
+                if FuncExists("SearchCenterWebLlm_EnsureMissingSites") {
+                    try SearchCenterWebLlm_EnsureMissingSites(false)
+                    catch {
+                    }
+                }
+                ScWebLlm_Trace("debug_rebootstrap", !!result["ok"], Map("source", "debug_panel"))
+            } else {
+                result["error"] := "需要 web 模式且 ai 分类"
+            }
+        case "copy_trace":
+            text := ""
+            if FuncExists("SearchCenterWebLlm_BuildDebugSnapshot") {
+                try {
+                    snap := SearchCenterWebLlm_BuildDebugSnapshot(msg.Has("client") ? msg["client"] : Map())
+                    text := "=== 联网内嵌诊断 " . snap.Get("ts", A_Now) . " ===`n"
+                    text .= "mode=" . snap.Get("uiMode", "") . " cat=" . snap.Get("category", "") . "`n"
+                    text .= "engines=" . (IsObject(snap.Get("selectedEngines", 0)) ? snap["selectedEngines"].Length : 0) . "`n"
+                    flags := snap.Get("flags", Map())
+                    if (flags is Map) {
+                        for k, v in flags
+                            text .= k . "=" . String(v) . " "
+                        text .= "`n"
+                    }
+                    rect := snap.Get("contentRect", Map())
+                    if (rect is Map)
+                        text .= "rect=" . rect.Get("width", 0) . "x" . rect.Get("height", 0) . "`n"
+                    issues := snap.Get("issues", [])
+                    if (issues is Array) {
+                        for iss in issues {
+                            if !(iss is Map)
+                                continue
+                            text .= "[!" . iss.Get("level", "?") . "] " . iss.Get("msg", "") . "`n"
+                        }
+                    }
+                    logs := snap.Get("logs", Map())
+                    if (logs is Map) {
+                        for k, v in logs
+                            text .= "`n--- " . k . " ---`n" . String(v) . "`n"
+                    }
+                } catch as e {
+                    text := "诊断复制失败: " . e.Message
+                }
+            }
+            if (text != "") {
+                try {
+                    A_Clipboard := text
+                    result["ok"] := true
+                } catch as e {
+                    result["error"] := e.Message
+                }
+            }
+        default:
+            result["error"] := "unknown action"
+    }
+    try SCWV_PostJson(result)
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e)
+    }
 }
 
 _SCWV_SyncWebEmbedForMode() {

@@ -1,0 +1,33 @@
+﻿[20260620122426][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=500 enterDelayMs=5000
+[20260620122426][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=500 enterDelayMs=5000
+[20260620122426][config][reloaded] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=500 enterDelayMs=5000
+[20260620122429][trigger][fire] delta=0 count=0 runtime=recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=500 enterDelayMs=5000
+[20260620122429][action][ralt] count=1
+[20260620165058][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=500 enterDelayMs=5000
+[20260620165059][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=500 enterDelayMs=5000
+[20260620165059][config][reloaded] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=500 enterDelayMs=5000
+[20260620165102][trigger][fire] delta=0 count=0 runtime=recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=500 enterDelayMs=5000
+[20260620165102][action][ralt] count=1
+[20260620165303][trigger][fire] delta=120422 count=1 runtime=recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=500 enterDelayMs=5000
+[20260620165303][action][ralt] count=2
+[20260620165303][timer][enter_scheduled] enterDelayMs=5000
+[20260620165308][action][enter] 
+[20260620165337][trigger][fire] delta=34032 count=2 runtime=recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=500 enterDelayMs=5000
+[20260620165337][action][ralt] count=3
+[20260620165354][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=500 enterDelayMs=5000
+[20260620165355][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=500 enterDelayMs=5000
+[20260620165355][config][reloaded] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=500 enterDelayMs=5000
+[20260620165408][trigger][fire] delta=0 count=0 runtime=recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=500 enterDelayMs=5000
+[20260620165408][action][ralt] count=1
+[20260620172755][config][write_default] {"enterDelayMs":5000,"intervalMs":2000,"mappings":[{"command":"voice_start","key":"RAlt"},{"command":"voice_send","key":""},{"command":"voice_stop","key":""}],"recordKey":"AutoTrigger"}
+[20260620172755][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2000 enterDelayMs=5000
+[20260620172755][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2000 enterDelayMs=5000
+[20260620172755][config][reloaded] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2000 enterDelayMs=5000
+[20260620172809][runtime][apply_config] recordKey= trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2000 enterDelayMs=5000
+[20260620172809][config][reloaded] recordKey= trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2000 enterDelayMs=5000
+[20260620173958][runtime][rebind] global|block|Volume_Down,Volume_Up,
+[20260620174000][runtime][rebind] global|block|Volume_Down,Volume_Up,
+[20260620174000][config][reloaded] source=音量混合单键 group=same_source_group scene=global bindings=Volume_Down,Volume_Up
+[20260620175203][runtime][rebind] global|block|Volume_Down,Volume_Up,
+[20260620175255][runtime][rebind] global|block|Volume_Down,Volume_Up,
+[20260620175507][config][reloaded] source=音量混合单键 group=same_source_group scene=global bindings=Volume_Down,Volume_Up

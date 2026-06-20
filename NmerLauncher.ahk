@@ -28,3 +28,4 @@ try {
     Nmer_TryShowLoadError(main, "启动主脚本失败: " . e.Message, "startup")
     ExitApp(1)
 }
+ExitApp(0)

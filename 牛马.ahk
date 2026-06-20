@@ -62,6 +62,7 @@ for arg in A_Args {
 #Include modules\SqlSafe.ahk
 global NMER_TraceSession := FormatTime(A_Now, "yyyyMMdd-HHmmss") . "-" . A_TickCount
 global NMER_StartupTick := A_TickCount
+global g_Nmer_CleanRestartPending := false
 global pToken := Gdip_Startup()
 if (!pToken) {
     MsgBox "GDI+ 启动失败，请检查 lib\ahk\Gdip_All.ahk"
@@ -1156,6 +1157,16 @@ GetText(Key) {
             "search_engine_copilot", "Copilot",
             "search_engine_chatgpt", "ChatGPT",
             "search_engine_grok", "Grok",
+            "search_engine_gemini", "Gemini",
+            "search_engine_aistudio", "AI Studio",
+            "search_engine_nami", "纳米 AI",
+            "search_engine_lmarena", "LMArena",
+            "search_engine_manus", "Manus",
+            "search_engine_mistral", "Mistral",
+            "search_engine_yupp", "Yupp",
+            "search_engine_zai", "Z.ai",
+            "search_engine_coze", "扣子",
+            "search_engine_tiangong", "天工",
             "search_engine_you", "You",
             "search_engine_claude", "Claude",
             "search_engine_monica", "Monica",
@@ -1604,6 +1615,16 @@ GetText(Key) {
             "search_engine_copilot", "Copilot",
             "search_engine_chatgpt", "ChatGPT",
             "search_engine_grok", "Grok",
+            "search_engine_gemini", "Gemini",
+            "search_engine_aistudio", "AI Studio",
+            "search_engine_nami", "Nami AI",
+            "search_engine_lmarena", "LMArena",
+            "search_engine_manus", "Manus",
+            "search_engine_mistral", "Mistral",
+            "search_engine_yupp", "Yupp",
+            "search_engine_zai", "Z.ai",
+            "search_engine_coze", "Coze",
+            "search_engine_tiangong", "Tiangong",
             "search_engine_you", "You",
             "search_engine_claude", "Claude",
             "search_engine_monica", "Monica",
@@ -7407,7 +7428,16 @@ SwitchToChineseIMEForSearchCenter(*) {
 ; ===================== 脚本退出处理 =====================
 ; 在脚本退出前关闭数据库连接，确保数据完全写入
 ExitFunc(ExitReason, ExitCode) {
-    global ClipboardDB
+    global ClipboardDB, g_Nmer_CleanRestartPending
+    if g_Nmer_CleanRestartPending {
+        try NMER_Log("exit", "clean_restart_skip_heavy", ExitReason)
+        if (ClipboardDB && ClipboardDB != 0) {
+            try ClipboardDB.CloseDB()
+            catch as _e {
+            }
+        }
+        return
+    }
     if FuncExists("HoleTriggers_RemoveMouseHook")
         try HoleTriggers_RemoveMouseHook()
     try Send("{CapsLock up}")

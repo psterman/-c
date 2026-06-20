@@ -1,0 +1,72 @@
+{
+  "version": 2,
+  "triggerSource": {
+    "id": "source_volume_mixed",
+    "label": "音量混合单键",
+    "mode": "single_press",
+    "grouping": "same_source_group",
+    "rawEvents": [
+      {
+        "device": "keyboard",
+        "key": "AudioVolumeDown",
+        "code": "AudioVolumeDown",
+        "location": 0,
+        "type": "keydown",
+        "hotkey": "Volume_Down",
+        "label": "音量下"
+      },
+      {
+        "device": "keyboard",
+        "key": "AudioVolumeUp",
+        "code": "AudioVolumeUp",
+        "location": 0,
+        "type": "keydown",
+        "hotkey": "Volume_Up",
+        "label": "音量上"
+      }
+    ]
+  },
+  "actions": {
+    "start": "voice_start",
+    "cancel": "voice_cancel",
+    "send": "voice_send"
+  },
+  "scenes": [
+    {
+      "id": "global",
+      "label": "全局",
+      "enabled": true,
+      "overrideMode": "block",
+      "cancelWindowMs": 500,
+      "sendDelayMs": 5000,
+      "match": {
+        "kind": "any",
+        "value": ""
+      }
+    },
+    {
+      "id": "editor",
+      "label": "编辑器",
+      "enabled": false,
+      "overrideMode": "pass_through",
+      "cancelWindowMs": 500,
+      "sendDelayMs": 5000,
+      "match": {
+        "kind": "process_contains",
+        "value": "Code.exe;Cursor.exe;idea64.exe;notepad++.exe;devenv.exe"
+      }
+    },
+    {
+      "id": "browser",
+      "label": "浏览器",
+      "enabled": false,
+      "overrideMode": "pass_through",
+      "cancelWindowMs": 500,
+      "sendDelayMs": 5000,
+      "match": {
+        "kind": "process_contains",
+        "value": "chrome.exe;msedge.exe;firefox.exe;brave.exe"
+      }
+    }
+  ]
+}

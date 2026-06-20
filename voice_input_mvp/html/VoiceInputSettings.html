@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Voice Trigger Manager</title>
+  <style>
+    :root {
+      --bg:#eef2f7;
+      --card:rgba(255,255,255,.84);
+      --card-strong:#ffffff;
+      --line:rgba(25,28,34,.12);
+      --line-strong:rgba(0,98,255,.28);
+      --txt:#12161d;
+      --muted:#657084;
+      --accent:#0a72ff;
+      --accent-soft:rgba(10,114,255,.10);
+      --warn:#d94d3f;
+      --shadow:0 22px 60px rgba(34,51,84,.10);
+      font-family:"SF Pro Text","PingFang SC","Microsoft YaHei UI","Segoe UI",sans-serif;
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;height:100%;background:
+      radial-gradient(circle at top left, rgba(10,114,255,.08), transparent 32%),
+      radial-gradient(circle at bottom right, rgba(53,198,137,.10), transparent 28%),
+      linear-gradient(180deg,#f7f9fc,#edf1f6);
+      color:var(--txt)}
+    body{padding:20px;overflow:hidden}
+    .app{width:min(1280px,100%);height:min(900px,100%);margin:0 auto;display:grid;grid-template-columns:300px 1fr;gap:18px}
+    .pane{background:var(--card);border:1px solid var(--line);border-radius:28px;box-shadow:var(--shadow);backdrop-filter:blur(24px) saturate(160%);overflow:auto}
+    .side{padding:22px;display:flex;flex-direction:column;gap:14px}
+    .main{padding:22px}
+    .title{margin:0;font-size:30px;line-height:1.05;letter-spacing:-.04em;font-weight:800}
+    .subtitle{margin:8px 0 0;color:var(--muted);font-size:14px;line-height:1.6}
+    .badge{display:inline-flex;align-items:center;gap:8px;padding:9px 14px;border-radius:999px;background:var(--accent-soft);color:var(--accent);font-size:12px;font-weight:800}
+    .block{background:rgba(255,255,255,.92);border:1px solid var(--line);border-radius:22px;padding:16px}
+    .block h3{margin:0 0 10px;font-size:15px}
+    .mini{margin:0;color:var(--muted);font-size:12px;line-height:1.55}
+    .warn{border-color:rgba(217,77,63,.18);background:rgba(217,77,63,.05)}
+    .warn ul{margin:8px 0 0;padding-left:18px;color:#8e3027;font-size:12px}
+    .shell{display:grid;gap:18px}
+    .hero{display:grid;grid-template-columns:1.05fr .95fr;gap:18px}
+    .card{background:rgba(255,255,255,.90);border:1px solid var(--line);border-radius:24px;padding:18px}
+    .card-title{margin:0 0 6px;font-size:22px;font-weight:800;letter-spacing:-.03em}
+    .card-sub{margin:0 0 14px;color:var(--muted);font-size:13px}
+    .grid{display:grid;gap:12px}
+    .two{grid-template-columns:1fr 1fr}
+    label{display:block;margin:0 0 8px;font-size:12px;font-weight:800;color:#273142}
+    input,select{width:100%;height:44px;border-radius:16px;border:1px solid var(--line);background:rgba(255,255,255,.96);padding:0 14px;font:inherit;color:var(--txt)}
+    .btns{display:flex;gap:10px;flex-wrap:wrap}
+    .btn{height:42px;border:none;border-radius:999px;padding:0 18px;font:inherit;font-weight:800;cursor:pointer;background:var(--accent-soft);color:var(--accent)}
+    .btn.primary{background:linear-gradient(180deg,#1a84ff,#0a72ff);color:#fff;box-shadow:0 10px 24px rgba(10,114,255,.22)}
+    .btn.line{background:#fff;color:#151b24;border:1px solid var(--line)}
+    .capture{display:grid;gap:12px}
+    .capture-view{min-height:74px;border-radius:22px;border:1px dashed var(--line-strong);background:linear-gradient(180deg,rgba(10,114,255,.08),rgba(10,114,255,.03));display:flex;align-items:center;justify-content:center;text-align:center;padding:10px 16px;color:var(--accent);font-size:28px;font-weight:800;letter-spacing:-.03em}
+    .capture-view.recording{box-shadow:0 0 0 5px rgba(10,114,255,.10)}
+    .facts{display:grid;grid-template-columns:120px 1fr;gap:8px 12px;font-size:12px}
+    .facts .k{color:var(--muted)}
+    .facts .v{font-weight:700;word-break:break-word}
+    .steps{display:grid;gap:10px}
+    .step{display:flex;align-items:center;justify-content:space-between;gap:12px;border:1px solid var(--line);border-radius:18px;background:#fff;padding:12px 14px}
+    .step strong{font-size:14px}
+    .section-title{margin:0 0 10px;font-size:15px;font-weight:800}
+    .event-box,.source-box{border:1px solid var(--line);border-radius:18px;background:#fff;padding:14px}
+    pre{margin:0;white-space:pre-wrap;word-break:break-word;font:12px/1.55 ui-monospace,SFMono-Regular,Consolas,monospace;color:#2b3342}
+    .scene-table{display:grid;gap:12px}
+    .scene-row{display:grid;grid-template-columns:140px 120px 1fr 1fr;gap:12px;align-items:end;border:1px solid var(--line);border-radius:18px;background:#fff;padding:14px}
+    .scene-head{display:flex;align-items:center;gap:10px}
+    .scene-head input{width:auto;height:auto}
+    .scene-name{font-size:15px;font-weight:800}
+    .runtime{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+    .runtime-card{border:1px solid var(--line);border-radius:20px;background:linear-gradient(180deg,rgba(255,255,255,.98),rgba(247,250,255,.94));padding:16px}
+    .footer{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;color:var(--muted);font-size:12px}
+    .toast{position:fixed;right:24px;bottom:24px;padding:12px 16px;border-radius:15px;background:rgba(18,22,29,.94);color:#fff;opacity:0;transform:translateY(10px);transition:.2s}
+    .toast.show{opacity:1;transform:translateY(0)}
+    @media (max-width: 1100px){
+      body{overflow:auto}
+      .app{grid-template-columns:1fr;height:auto}
+      .hero,.runtime{grid-template-columns:1fr}
+      .scene-row{grid-template-columns:1fr}
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="pane side">
+      <div>
+        <h1 class="title">通用单键<br>语音触发器</h1>
+        <p class="subtitle">把任意单键或单按钮录成一个触发源，再交给语音状态机负责单击、取消、延迟发送。</p>
+      </div>
+      <div class="badge">录制真实按钮 · 同源分组 · 场景切换</div>
+      <div class="block">
+        <h3>当前状态</h3>
+        <p class="mini" id="statusText">等待页面初始化</p>
+      </div>
+      <div class="block" id="conflictCard" hidden>
+        <h3>冲突提醒</h3>
+        <p class="mini">检测到别的脚本也可能在接管同一批按键。</p>
+        <ul id="conflictList"></ul>
+      </div>
+      <div class="block">
+        <h3>设计原则</h3>
+        <p class="mini">页面只负责录制触发源，不把用户按钮偷偷改成固定键。执行器内部再把这个触发源映射到语音输入动作。</p>
+      </div>
+      <div class="block">
+        <h3>兼容说明</h3>
+        <p class="mini">像 Y6 这种同一个物理键混出 `Volume_Down / Volume_Up` 的设备，会被归并成一个“同源分组”，触发时只进一套状态机。</p>
+      </div>
+    </aside>
+
+    <main class="pane main">
+      <div class="shell">
+        <section class="hero">
+          <div class="card">
+            <h2 class="card-title">触发源录制</h2>
+            <p class="card-sub">录制用户真正按下的单键或单按钮。页面采集原始事件，后端决定是否归并成同源分组。</p>
+            <div class="capture">
+              <div class="capture-view" id="captureView">右 Alt</div>
+              <div class="btns">
+                <button class="btn primary" id="btnRecord" type="button">开始录制</button>
+                <button class="btn line" id="btnClear" type="button">恢复默认</button>
+              </div>
+              <div class="facts">
+                <div class="k">录制标签</div><div class="v" id="sourceLabel">右 Alt</div>
+                <div class="k">分组策略</div><div class="v" id="sourceGrouping">exact</div>
+                <div class="k">热键绑定</div><div class="v" id="sourceHotkeys">RAlt</div>
+                <div class="k">原始事件数</div><div class="v" id="sourceCount">1</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <h2 class="card-title">语音状态机</h2>
+            <p class="card-sub">触发源只负责“谁来触发”，真正执行的是语音输入状态机。</p>
+            <div class="steps">
+              <div class="step"><strong>第一次单击</strong><span>voice_start / 发送右 Alt</span></div>
+              <div class="step"><strong>取消窗口内再次单击</strong><span>voice_cancel / 发送 Esc</span></div>
+              <div class="step"><strong>第二次有效触发后</strong><span>等待延迟并执行 voice_send</span></div>
+              <div class="step"><strong>第三次开始</strong><span>回到单击循环</span></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="card">
+          <h3 class="section-title">源组解释</h3>
+          <p class="card-sub">这里展示页面录到的原始事件，以及后端如何把它解释成最终触发源。</p>
+          <div class="grid two">
+            <div class="source-box">
+              <h3 style="margin:0 0 10px;font-size:14px">原始事件流</h3>
+              <pre id="rawEventLog">等待按键...</pre>
+            </div>
+            <div class="source-box">
+              <h3 style="margin:0 0 10px;font-size:14px">当前源组</h3>
+              <pre id="sourceExplain">source: 右 Alt
+grouping: exact
+events:
+- key=Alt code=AltRight hotkey=RAlt</pre>
+            </div>
+          </div>
+        </section>
+
+        <section class="card">
+          <h3 class="section-title">场景行为</h3>
+          <p class="card-sub">MVP 先支持全局、编辑器、浏览器三个预设场景。每个场景可决定是否拦截原按钮功能，以及自己的取消/回车时间。</p>
+          <div class="scene-table" id="sceneTable">
+            <div class="scene-row">
+              <div class="scene-head">
+                <input id="scene_global_enabled" type="checkbox">
+                <div>
+                  <div class="scene-name">全局</div>
+                  <div class="mini">所有窗口的回退规则</div>
+                </div>
+              </div>
+              <div>
+                <label for="scene_global_mode">按钮处理</label>
+                <select id="scene_global_mode">
+                  <option value="block">拦截替代</option>
+                  <option value="pass_through">透传并触发</option>
+                </select>
+              </div>
+              <div>
+                <label for="scene_global_cancel">取消间隔 (ms)</label>
+                <input id="scene_global_cancel" type="number" min="0" step="50">
+              </div>
+              <div>
+                <label for="scene_global_send">回车延迟 (ms)</label>
+                <input id="scene_global_send" type="number" min="0" step="50">
+              </div>
+            </div>
+
+            <div class="scene-row">
+              <div class="scene-head">
+                <input id="scene_editor_enabled" type="checkbox">
+                <div>
+                  <div class="scene-name">编辑器</div>
+                  <div class="mini">Code / Cursor / IDEA / Notepad++</div>
+                </div>
+              </div>
+              <div>
+                <label for="scene_editor_mode">按钮处理</label>
+                <select id="scene_editor_mode">
+                  <option value="block">拦截替代</option>
+                  <option value="pass_through">透传并触发</option>
+                </select>
+              </div>
+              <div>
+                <label for="scene_editor_cancel">取消间隔 (ms)</label>
+                <input id="scene_editor_cancel" type="number" min="0" step="50">
+              </div>
+              <div>
+                <label for="scene_editor_send">回车延迟 (ms)</label>
+                <input id="scene_editor_send" type="number" min="0" step="50">
+              </div>
+            </div>
+
+            <div class="scene-row">
+              <div class="scene-head">
+                <input id="scene_browser_enabled" type="checkbox">
+                <div>
+                  <div class="scene-name">浏览器</div>
+                  <div class="mini">Chrome / Edge / Firefox / Brave</div>
+                </div>
+              </div>
+              <div>
+                <label for="scene_browser_mode">按钮处理</label>
+                <select id="scene_browser_mode">
+                  <option value="block">拦截替代</option>
+                  <option value="pass_through">透传并触发</option>
+                </select>
+              </div>
+              <div>
+                <label for="scene_browser_cancel">取消间隔 (ms)</label>
+                <input id="scene_browser_cancel" type="number" min="0" step="50">
+              </div>
+              <div>
+                <label for="scene_browser_send">回车延迟 (ms)</label>
+                <input id="scene_browser_send" type="number" min="0" step="50">
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="runtime">
+          <div class="runtime-card">
+            <h3 class="section-title">运行解释</h3>
+            <div class="facts">
+              <div class="k">当前场景</div><div class="v" id="runtimeScene">-</div>
+              <div class="k">执行绑定</div><div class="v" id="runtimeBindings">-</div>
+              <div class="k">最近动作</div><div class="v" id="runtimeAction">-</div>
+              <div class="k">源组类型</div><div class="v" id="runtimeGrouping">-</div>
+            </div>
+          </div>
+          <div class="runtime-card">
+            <h3 class="section-title">动作定义</h3>
+            <div class="facts">
+              <div class="k">voice_start</div><div class="v">内部发送右 Alt</div>
+              <div class="k">voice_cancel</div><div class="v">内部发送 Esc</div>
+              <div class="k">voice_send</div><div class="v">内部发送 Enter</div>
+              <div class="k">录制目标</div><div class="v">单键 / 单按钮 / 单次触发</div>
+            </div>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="btns">
+            <button class="btn line" id="btnExport" type="button">导出 JSON</button>
+            <button class="btn line" id="btnResetConfig" type="button">恢复整页默认</button>
+            <button class="btn primary" id="btnSave" type="button">保存配置</button>
+          </div>
+        </section>
+
+        <div class="footer">
+          <div>录制真实按钮，状态机只接管动作，不接管用户的命名方式。</div>
+          <div id="dirtyState">待保存</div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const SCENE_IDS = ["global", "editor", "browser"];
+
+    const makeDefaultConfig = () => ({
+      version: 2,
+      triggerSource: {
+        id: "source_ralt_default",
+        label: "右 Alt",
+        mode: "single_press",
+        grouping: "exact",
+        rawEvents: [
+          { device: "keyboard", key: "Alt", code: "AltRight", location: 2, type: "keydown", hotkey: "RAlt", label: "右 Alt" }
+        ]
+      },
+      actions: {
+        start: "voice_start",
+        cancel: "voice_cancel",
+        send: "voice_send"
+      },
+      scenes: [
+        { id: "global", label: "全局", enabled: true, overrideMode: "block", cancelWindowMs: 2000, sendDelayMs: 5000, match: { kind: "any", value: "" } },
+        { id: "editor", label: "编辑器", enabled: false, overrideMode: "pass_through", cancelWindowMs: 2000, sendDelayMs: 5000, match: { kind: "process_contains", value: "Code.exe;Cursor.exe;idea64.exe;notepad++.exe;devenv.exe" } },
+        { id: "browser", label: "浏览器", enabled: false, overrideMode: "pass_through", cancelWindowMs: 2000, sendDelayMs: 5000, match: { kind: "process_contains", value: "chrome.exe;msedge.exe;firefox.exe;brave.exe" } }
+      ]
+    });
+
+    const state = {
+      config: makeDefaultConfig(),
+      runtime: {
+        activeSceneLabel: "-",
+        bindings: "-",
+        lastAction: "-",
+        sourceGrouping: "-",
+        conflicts: []
+      },
+      rawLog: [],
+      recording: {
+        active: false,
+        events: [],
+        timer: 0
+      }
+    };
+
+    const $ = (id) => document.getElementById(id);
+    const toast = (msg) => {
+      const el = $("toast");
+      el.textContent = msg;
+      el.classList.add("show");
+      clearTimeout(el._timer);
+      el._timer = setTimeout(() => el.classList.remove("show"), 1800);
+    };
+
+    const setDirty = (text = "待保存") => {
+      $("dirtyState").textContent = text;
+    };
+
+    const describeGrouping = (grouping) => grouping === "same_source_group" ? "same_source_group / 同源分组" : "exact / 单事件";
+    const describeMode = (mode) => mode === "pass_through" ? "透传并触发" : "拦截替代";
+    const describeAction = (action) => ({
+      "voice_start": "voice_start",
+      "voice_cancel": "voice_cancel",
+      "voice_send": "voice_send",
+      "voice_send_wait": "等待 voice_send",
+      "saved": "配置已保存",
+      "config_push": "配置已同步",
+      "runtime_refresh": "运行态已刷新"
+    }[action] || action || "-");
+
+    const getScene = (id) => state.config.scenes.find((scene) => scene.id === id);
+
+    const previewHotkey = (raw) => {
+      if (!raw) return "";
+      if (raw.device === "mouse") {
+        const mouseMap = { 0: "LButton", 1: "MButton", 2: "RButton", 3: "XButton1", 4: "XButton2" };
+        return mouseMap[raw.button] || "";
+      }
+      if (raw.code === "AltRight" || (raw.key === "Alt" && raw.location === 2) || raw.key === "AltGraph") return "RAlt";
+      if (raw.code === "AltLeft" || (raw.key === "Alt" && raw.location === 1)) return "LAlt";
+      if (raw.code === "ControlRight" || (raw.key === "Control" && raw.location === 2)) return "RCtrl";
+      if (raw.code === "ControlLeft" || (raw.key === "Control" && raw.location === 1)) return "LCtrl";
+      if (raw.code === "ShiftRight" || (raw.key === "Shift" && raw.location === 2)) return "RShift";
+      if (raw.code === "ShiftLeft" || (raw.key === "Shift" && raw.location === 1)) return "LShift";
+      const keyMap = {
+        AudioVolumeDown: "Volume_Down",
+        AudioVolumeUp: "Volume_Up",
+        AudioVolumeMute: "Volume_Mute",
+        MediaTrackNext: "Media_Next",
+        MediaTrackPrevious: "Media_Prev",
+        MediaPlayPause: "Media_Play_Pause",
+        MediaStop: "Media_Stop",
+        Escape: "Esc",
+        Enter: "Enter",
+        Tab: "Tab",
+        Backspace: "Backspace",
+        Delete: "Delete",
+        Home: "Home",
+        End: "End",
+        PageUp: "PgUp",
+        PageDown: "PgDn",
+        CapsLock: "CapsLock",
+        ArrowUp: "Up",
+        ArrowDown: "Down",
+        ArrowLeft: "Left",
+        ArrowRight: "Right",
+        " ": "Space"
+      };
+      if (keyMap[raw.key]) return keyMap[raw.key];
+      return raw.key && raw.key.length === 1 ? raw.key.toUpperCase() : (raw.key || "");
+    };
+
+    const pushRawLog = (raw, accepted, note = "") => {
+      const line = `${new Date().toLocaleTimeString()}  type=${raw.type} key=${raw.key || "-"} code=${raw.code || "-"} hotkey=${previewHotkey(raw) || "-"} accepted=${accepted ? "yes" : "no"} ${note}`.trim();
+      state.rawLog.unshift(line);
+      state.rawLog = state.rawLog.slice(0, 16);
+      $("rawEventLog").textContent = state.rawLog.join("\n");
+    };
+
+    const serializeSourceExplain = () => {
+      const source = state.config.triggerSource;
+      const lines = [
+        `source: ${source.label}`,
+        `grouping: ${source.grouping}`,
+        `mode: ${source.mode}`,
+        `events:`
+      ];
+      for (const raw of source.rawEvents || []) {
+        lines.push(`- device=${raw.device} key=${raw.key} code=${raw.code} hotkey=${raw.hotkey}`);
+      }
+      $("sourceExplain").textContent = lines.join("\n");
+    };
+
+    const applySceneInputs = () => {
+      for (const id of SCENE_IDS) {
+        const scene = getScene(id);
+        if (!scene) continue;
+        $(`scene_${id}_enabled`).checked = !!scene.enabled;
+        $(`scene_${id}_mode`).value = scene.overrideMode;
+        $(`scene_${id}_cancel`).value = scene.cancelWindowMs;
+        $(`scene_${id}_send`).value = scene.sendDelayMs;
+      }
+    };
+
+    const readSceneInputs = () => {
+      state.config.scenes = state.config.scenes.map((scene) => ({
+        ...scene,
+        enabled: $(`scene_${scene.id}_enabled`).checked,
+        overrideMode: $(`scene_${scene.id}_mode`).value,
+        cancelWindowMs: Number($(`scene_${scene.id}_cancel`).value || 0),
+        sendDelayMs: Number($(`scene_${scene.id}_send`).value || 0)
+      }));
+    };
+
+    const renderSource = () => {
+      const source = state.config.triggerSource;
+      const hotkeys = (source.rawEvents || []).map((raw) => raw.hotkey).filter(Boolean);
+      $("captureView").textContent = source.label;
+      $("sourceLabel").textContent = source.label;
+      $("sourceGrouping").textContent = describeGrouping(source.grouping);
+      $("sourceHotkeys").textContent = hotkeys.join(", ") || "-";
+      $("sourceCount").textContent = String((source.rawEvents || []).length);
+      serializeSourceExplain();
+    };
+
+    const renderRuntime = () => {
+      $("runtimeScene").textContent = state.runtime.activeSceneLabel || "-";
+      $("runtimeBindings").textContent = state.runtime.bindings || "-";
+      $("runtimeAction").textContent = describeAction(state.runtime.lastAction);
+      $("runtimeGrouping").textContent = describeGrouping(state.runtime.sourceGrouping || state.config.triggerSource.grouping);
+      const conflicts = state.runtime.conflicts || [];
+      $("conflictCard").hidden = conflicts.length === 0;
+      $("conflictList").innerHTML = conflicts.map((item) => `<li>${item}</li>`).join("");
+    };
+
+    const render = () => {
+      renderSource();
+      applySceneInputs();
+      renderRuntime();
+    };
+
+    const saveConfig = () => {
+      readSceneInputs();
+      const json = JSON.stringify(state.config, null, 2);
+      try {
+        window.chrome?.webview?.postMessage({ type: "mvp_save", json });
+      } catch (_) {}
+      localStorage.setItem("voice_input_manager_v2", json);
+      setDirty("保存中...");
+      $("statusText").textContent = "正在把新的触发源和场景规则写入配置。";
+      toast("正在保存");
+    };
+
+    const resetConfig = () => {
+      state.config = makeDefaultConfig();
+      state.recording.active = false;
+      state.recording.events = [];
+      clearTimeout(state.recording.timer);
+      $("captureView").classList.remove("recording");
+      render();
+      setDirty("待保存");
+      $("statusText").textContent = "已恢复为默认触发源。";
+      toast("已恢复默认");
+    };
+
+    const exportConfig = () => {
+      readSceneInputs();
+      const blob = new Blob([JSON.stringify(state.config, null, 2)], { type: "application/json" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "voice_input_settings.json";
+      a.click();
+    };
+
+    const startRecording = () => {
+      state.recording.active = true;
+      state.recording.events = [];
+      clearTimeout(state.recording.timer);
+      $("captureView").classList.add("recording");
+      $("statusText").textContent = "录制中：按下任意单键或单按钮。Y6 这类混合键会在后端归并。";
+      toast("开始录制");
+    };
+
+    const finishRecording = () => {
+      if (!state.recording.active) return;
+      const events = state.recording.events.slice();
+      state.recording.active = false;
+      state.recording.events = [];
+      $("captureView").classList.remove("recording");
+      if (!events.length) {
+        $("statusText").textContent = "没有捕获到有效事件。";
+        return;
+      }
+      try {
+        window.chrome?.webview?.postMessage({ type: "mvp_capture_source", rawEvents: events });
+      } catch (_) {}
+      $("statusText").textContent = "已把原始事件交给后端做源组判断。";
+    };
+
+    const queueRecordingFinalize = () => {
+      clearTimeout(state.recording.timer);
+      state.recording.timer = setTimeout(finishRecording, 220);
+    };
+
+    const captureRawEvent = (raw) => {
+      if (!state.recording.active) return;
+      const signature = `${raw.device}|${raw.type}|${previewHotkey(raw)}|${raw.code}|${raw.button ?? ""}`;
+      if (state.recording.events.some((item) => `${item.device}|${item.type}|${previewHotkey(item)}|${item.code}|${item.button ?? ""}` === signature)) {
+        queueRecordingFinalize();
+        return;
+      }
+      state.recording.events.push(raw);
+      queueRecordingFinalize();
+    };
+
+    const makeKeyboardRaw = (e, type) => ({
+      device: "keyboard",
+      key: String(e.key),
+      code: String(e.code),
+      location: Number(e.location || 0),
+      type
+    });
+
+    const makeMouseRaw = (e, type) => ({
+      device: "mouse",
+      key: `Mouse${e.button}`,
+      code: `Mouse${e.button}`,
+      location: 0,
+      type,
+      button: Number(e.button)
+    });
+
+    const bindSceneChangeListeners = () => {
+      for (const id of SCENE_IDS) {
+        $(`scene_${id}_enabled`).addEventListener("change", () => setDirty());
+        $(`scene_${id}_mode`).addEventListener("change", () => setDirty());
+        $(`scene_${id}_cancel`).addEventListener("input", () => setDirty());
+        $(`scene_${id}_send`).addEventListener("input", () => setDirty());
+      }
+    };
+
+    $("btnRecord").addEventListener("click", startRecording);
+    $("btnClear").addEventListener("click", resetConfig);
+    $("btnSave").addEventListener("click", saveConfig);
+    $("btnExport").addEventListener("click", exportConfig);
+    $("btnResetConfig").addEventListener("click", resetConfig);
+    bindSceneChangeListeners();
+
+    document.addEventListener("keydown", (e) => {
+      const raw = makeKeyboardRaw(e, "keydown");
+      pushRawLog(raw, state.recording.active, state.recording.active ? "captured" : "");
+      if (!state.recording.active || e.repeat) return;
+      e.preventDefault();
+      e.stopPropagation();
+      captureRawEvent(raw);
+    }, true);
+
+    document.addEventListener("keyup", (e) => {
+      pushRawLog(makeKeyboardRaw(e, "keyup"), false, "");
+    }, true);
+
+    document.addEventListener("mousedown", (e) => {
+      const raw = makeMouseRaw(e, "mousedown");
+      pushRawLog(raw, state.recording.active, state.recording.active ? "captured" : "");
+      if (!state.recording.active) return;
+      e.preventDefault();
+      e.stopPropagation();
+      captureRawEvent(raw);
+    }, true);
+
+    window.chrome?.webview?.addEventListener?.("message", (e) => {
+      const msg = e?.data;
+      if (!msg || typeof msg !== "object") return;
+      if (msg.type === "mvp_init") {
+        if (msg.config && typeof msg.config === "object") {
+          state.config = msg.config;
+          render();
+          setDirty("待保存");
+          $("statusText").textContent = "配置已同步到页面。";
+        }
+      }
+      if (msg.type === "mvp_saved" && msg.ok) {
+        setDirty("已保存");
+        $("statusText").textContent = "配置已写入文件，执行器会自动刷新热键。";
+        toast("已保存");
+      }
+      if (msg.type === "mvp_source_captured") {
+        if (msg.source && typeof msg.source === "object") {
+          state.config.triggerSource = msg.source;
+          renderSource();
+          setDirty("待保存");
+          $("statusText").textContent = `已录制触发源：${msg.source.label}`;
+          toast("触发源已录制");
+        }
+      }
+      if (msg.type === "mvp_runtime") {
+        state.runtime.activeSceneLabel = msg.activeSceneLabel || "-";
+        state.runtime.bindings = msg.bindings || "-";
+        state.runtime.lastAction = msg.lastAction || "-";
+        state.runtime.sourceGrouping = msg.sourceGrouping || state.config.triggerSource.grouping;
+        state.runtime.conflicts = Array.isArray(msg.conflicts) ? msg.conflicts : [];
+        renderRuntime();
+      }
+    });
+
+    (() => {
+      try {
+        const local = JSON.parse(localStorage.getItem("voice_input_manager_v2") || "null");
+        if (local && typeof local === "object")
+          state.config = local;
+      } catch (_) {}
+      render();
+      $("statusText").textContent = "等待后端同步运行时信息。";
+      try {
+        window.chrome?.webview?.postMessage({ type: "mvp_ready" });
+        window.chrome?.webview?.postMessage({ type: "mvp_request_runtime" });
+      } catch (_) {}
+    })();
+  </script>
+</body>
+</html>

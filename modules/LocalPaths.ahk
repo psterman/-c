@@ -1,4 +1,5 @@
 ; LocalPaths.ahk — 用户私有数据目录（API Key、主配置、OpenClaw 状态）
+#Include NmerCatch.ahk
 
 Nmer_RepoRoot(*) {
     try {

@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>语音输入设置</title>
+  <style>
+    :root {
+      --bg: #f5f5f7;
+      --card: rgba(255,255,255,.72);
+      --card-solid: #ffffff;
+      --stroke: rgba(60,60,67,.12);
+      --stroke-strong: rgba(60,60,67,.18);
+      --text: #111114;
+      --muted: rgba(60,60,67,.68);
+      --accent: #007aff;
+      --accent2: #0a84ff;
+      --good: #34c759;
+      --danger: #ff3b30;
+      --shadow: 0 18px 55px rgba(0,0,0,.08);
+      --radius: 28px;
+      --radius-sm: 18px;
+      --font: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "PingFang SC", "Microsoft YaHei UI", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; width: 100%; height: 100%; background:
+      radial-gradient(circle at top left, rgba(0,122,255,.12), transparent 28%),
+      radial-gradient(circle at top right, rgba(52,199,89,.10), transparent 22%),
+      linear-gradient(180deg, #fbfbfd 0%, #f2f2f7 100%);
+      color: var(--text); font-family: var(--font); overflow: hidden; }
+    body::before {
+      content: "";
+      position: fixed; inset: 0;
+      background:
+        linear-gradient(135deg, rgba(255,255,255,.46), rgba(255,255,255,0)),
+        radial-gradient(circle at 20% 20%, rgba(255,255,255,.5), transparent 28%);
+      pointer-events: none;
+    }
+    .shell {
+      position: relative;
+      width: 100%; height: 100%;
+      display: grid;
+      grid-template-columns: 300px 1fr;
+      gap: 20px;
+      padding: 20px;
+    }
+    .sidebar, .main {
+      backdrop-filter: blur(26px) saturate(180%);
+      -webkit-backdrop-filter: blur(26px) saturate(180%);
+      background: var(--card);
+      border: 1px solid var(--stroke);
+      box-shadow: var(--shadow);
+    }
+    .sidebar { border-radius: var(--radius); padding: 22px; display: flex; flex-direction: column; gap: 18px; }
+    .brand { display: flex; gap: 14px; align-items: center; }
+    .brand-badge {
+      width: 54px; height: 54px; border-radius: 18px;
+      background: linear-gradient(135deg, #007aff, #64d2ff);
+      box-shadow: 0 10px 30px rgba(0,122,255,.28);
+      display: grid; place-items: center; color: white; font-size: 22px;
+    }
+    .eyebrow { font-size: 12px; color: var(--muted); letter-spacing: .08em; text-transform: uppercase; }
+    .brand h1 { margin: 2px 0 4px; font-size: 22px; line-height: 1.1; }
+    .brand p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.45; }
+    .status-pill {
+      display: inline-flex; align-items: center; gap: 8px;
+      border-radius: 999px; padding: 8px 12px;
+      background: rgba(0,122,255,.08); color: var(--accent);
+      font-size: 12px; font-weight: 600; width: fit-content;
+    }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 4px rgba(0,122,255,.12); }
+    .card {
+      background: rgba(255,255,255,.7);
+      border: 1px solid var(--stroke);
+      border-radius: var(--radius-sm);
+      padding: 16px;
+    }
+    .mini-title { font-size: 13px; font-weight: 700; margin-bottom: 10px; }
+    .quick-list { display: grid; gap: 10px; }
+    .quick-item {
+      display: grid; grid-template-columns: 28px 1fr; gap: 12px; align-items: center;
+      border-radius: 16px; padding: 10px 12px; background: rgba(255,255,255,.5); border: 1px solid rgba(60,60,67,.08);
+    }
+    .quick-icon { width: 28px; height: 28px; border-radius: 10px; display: grid; place-items: center; background: rgba(0,122,255,.10); color: var(--accent); }
+    .quick-item strong { display: block; font-size: 13px; }
+    .quick-item span { font-size: 12px; color: var(--muted); }
+    .main {
+      border-radius: 34px;
+      padding: 22px;
+      display: grid;
+      grid-template-rows: auto auto 1fr auto;
+      gap: 16px;
+      min-width: 0;
+    }
+    .topbar { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+    .topbar h2 { margin: 0; font-size: 28px; letter-spacing: -.03em; }
+    .topbar .sub { color: var(--muted); font-size: 13px; margin-top: 4px; }
+    .top-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+    .btn {
+      border: 1px solid var(--stroke-strong);
+      background: rgba(255,255,255,.85);
+      color: var(--text);
+      border-radius: 999px;
+      height: 40px;
+      padding: 0 16px;
+      font-family: var(--font);
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn.primary { background: linear-gradient(180deg, var(--accent2), var(--accent)); color: white; border-color: transparent; box-shadow: 0 10px 24px rgba(0,122,255,.28); }
+    .btn.ghost { background: rgba(255,255,255,.55); }
+    .grid {
+      display: grid;
+      grid-template-columns: 1.15fr .85fr;
+      gap: 16px;
+      min-height: 0;
+    }
+    .stack { display: grid; gap: 16px; min-width: 0; }
+    .section {
+      background: rgba(255,255,255,.78);
+      border: 1px solid var(--stroke);
+      border-radius: 26px;
+      padding: 18px;
+    }
+    .section h3 { margin: 0 0 6px; font-size: 16px; }
+    .section .desc { margin: 0 0 14px; color: var(--muted); font-size: 13px; line-height: 1.5; }
+    .field { display: grid; gap: 8px; margin-bottom: 14px; }
+    .field label { font-size: 13px; font-weight: 700; color: #1c1c1e; }
+    .field .help { font-size: 12px; color: var(--muted); line-height: 1.4; }
+    input[type="text"], input[type="number"], select, textarea {
+      width: 100%; border: 1px solid rgba(60,60,67,.14); background: rgba(255,255,255,.9);
+      border-radius: 16px; padding: 12px 14px; color: var(--text); font: inherit; outline: none;
+      transition: border-color .15s, box-shadow .15s, transform .15s;
+    }
+    input:focus, select:focus, textarea:focus {
+      border-color: rgba(0,122,255,.4);
+      box-shadow: 0 0 0 4px rgba(0,122,255,.10);
+    }
+    textarea { min-height: 120px; resize: vertical; line-height: 1.45; }
+    .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .segmented {
+      display: inline-flex; background: rgba(118,118,128,.10); border-radius: 16px; padding: 4px; gap: 4px; flex-wrap: wrap;
+    }
+    .segmented button {
+      border: none; background: transparent; color: var(--muted); border-radius: 12px; padding: 9px 14px; font-weight: 700; cursor: pointer;
+    }
+    .segmented button.active { background: white; color: var(--accent); box-shadow: 0 4px 14px rgba(0,0,0,.08); }
+    .chips { display: flex; flex-wrap: wrap; gap: 10px; }
+    .chip {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(255,255,255,.82);
+      border: 1px solid rgba(60,60,67,.14);
+      border-radius: 999px;
+      padding: 10px 14px;
+      font-size: 13px;
+    }
+    .chip input { margin: 0; }
+    .record-box {
+      display: grid; gap: 12px;
+      padding: 16px; border-radius: 22px;
+      background: linear-gradient(180deg, rgba(0,122,255,.08), rgba(255,255,255,.76));
+      border: 1px solid rgba(0,122,255,.12);
+    }
+    .record-key {
+      min-height: 70px;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 18px;
+      background: rgba(255,255,255,.88);
+      border: 1px dashed rgba(0,122,255,.28);
+      color: var(--accent);
+      font-weight: 800;
+      letter-spacing: .02em;
+      font-size: 20px;
+    }
+    .recording { animation: pulse 1.35s ease-in-out infinite; }
+    @keyframes pulse { 0%,100%{ box-shadow: 0 0 0 0 rgba(0,122,255,.18)} 50%{ box-shadow: 0 0 0 12px rgba(0,122,255,0)} }
+    .table {
+      display: grid; gap: 10px;
+    }
+    .mapping {
+      display: grid;
+      grid-template-columns: 1.1fr .9fr 1.2fr .7fr;
+      gap: 10px;
+      align-items: center;
+      background: rgba(255,255,255,.82);
+      border: 1px solid rgba(60,60,67,.12);
+      border-radius: 18px;
+      padding: 12px;
+    }
+    .mapping .tag { font-size: 12px; color: var(--muted); font-weight: 700; }
+    .mapping .del { justify-self: end; }
+    .footer {
+      display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;
+      color: var(--muted); font-size: 12px;
+    }
+    .toast {
+      position: fixed; right: 20px; bottom: 20px;
+      background: rgba(20,20,24,.92); color: white;
+      border-radius: 16px; padding: 12px 14px; font-size: 13px;
+      box-shadow: 0 16px 40px rgba(0,0,0,.22); opacity: 0; transform: translateY(10px);
+      transition: opacity .2s, transform .2s;
+    }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    @media (max-width: 1180px) {
+      html, body { overflow: auto; }
+      .shell { grid-template-columns: 1fr; height: auto; min-height: 100%; overflow: auto; }
+      .grid { grid-template-columns: 1fr; }
+      .sidebar, .main { border-radius: 24px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-badge">🎙</div>
+        <div>
+          <div class="eyebrow">Voice Input</div>
+          <h1>语音输入设置</h1>
+          <p>按你熟悉的快捷键触发语音输入，支持自定义录制键、场景、命令与自启动。</p>
+        </div>
+      </div>
+      <div class="status-pill"><span class="dot"></span><span id="statusText">等待连接宿主</span></div>
+      <div class="card">
+        <div class="mini-title">快捷概览</div>
+        <div class="quick-list">
+          <div class="quick-item"><div class="quick-icon">⌘</div><div><strong>录制按键</strong><span>支持重新学习任意组合键</span></div></div>
+          <div class="quick-item"><div class="quick-icon">⏱</div><div><strong>间隔策略</strong><span>设置触发延迟与冷却时间</span></div></div>
+          <div class="quick-item"><div class="quick-icon">📍</div><div><strong>场景命令</strong><span>按应用场景绑定不同命令</span></div></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="mini-title">使用建议</div>
+        <div style="color:var(--muted);font-size:13px;line-height:1.6">
+          推荐把“语音输入”绑定成你肌肉记忆最强的组合键，例如 `CapsLock + Z`、`Alt + Space` 或任意侧键。
+          如果你常在 Cursor / 浏览器 / 文档间切换，可以给不同场景分配不同命令。
+        </div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <div class="topbar">
+        <div>
+          <h2>语音输入控制台</h2>
+          <div class="sub">iOS 风格设置页，强调“少打扰、可自定义、能快速上手”。</div>
+        </div>
+        <div class="top-actions">
+          <button class="btn ghost" id="btnReset">恢复默认</button>
+          <button class="btn ghost" id="btnExport">导出 JSON</button>
+          <button class="btn primary" id="btnSave">保存配置</button>
+        </div>
+      </div>
+
+      <div class="grid">
+        <div class="stack">
+          <section class="section">
+            <h3>触发设置</h3>
+            <p class="desc">决定你按下快捷键后，语音输入如何启动，以及是否有二次确认或延迟。</p>
+            <div class="row2">
+              <div class="field">
+                <label>录制按键</label>
+                <div class="record-box">
+                  <div class="record-key" id="recordKeyView">CapsLock + Z</div>
+                  <div class="chips">
+                    <button class="btn" id="btnRecord">开始录制</button>
+                    <button class="btn" id="btnClearRecord">清除</button>
+                  </div>
+                  <div class="help">点击“开始录制”后按下目标按键即可。会记录成宿主可识别的热键字符串。</div>
+                </div>
+              </div>
+              <div class="field">
+                <label>主场景</label>
+                <select id="sceneSelect">
+                  <option value="cursor">Cursor / 编辑器</option>
+                  <option value="browser">浏览器</option>
+                  <option value="docs">文档 / 写作</option>
+                  <option value="chat">聊天 / IM</option>
+                  <option value="global">全局</option>
+                </select>
+                <div class="help">选择默认生效场景。不同场景可以采用不同命令或间隔。</div>
+                <label style="margin-top:8px">间隔时间（ms）</label>
+                <input id="intervalMs" type="number" min="0" max="10000" step="50" value="500">
+                <div class="help">触发后执行命令前的等待时间，适合不同输入法和录音流程。</div>
+              </div>
+            </div>
+          </section>
+
+          <section class="section">
+            <h3>命令映射</h3>
+            <p class="desc">你可以给不同场景指定不同命令，例如“启动语音输入”“停止并发送”“仅切换输入法状态”。</p>
+            <div class="table" id="mappingTable"></div>
+            <div class="chips" style="margin-top:14px">
+              <button class="btn" id="btnAddMapping">新增映射</button>
+              <button class="btn" id="btnAutoFill">填充推荐项</button>
+            </div>
+          </section>
+        </div>
+
+        <div class="stack">
+          <section class="section">
+            <h3>行为选项</h3>
+            <p class="desc">这些选项决定语音输入调用后，页面和宿主怎么协作。</p>
+            <div class="chips" style="margin-bottom:14px">
+              <label class="chip"><input id="autoStart" type="checkbox">开机自启动</label>
+              <label class="chip"><input id="hotkeyPassthrough" type="checkbox">允许热键透传</label>
+              <label class="chip"><input id="autoSend" type="checkbox">识别后自动发送</label>
+              <label class="chip"><input id="autoClosePanel" type="checkbox">完成后自动关闭面板</label>
+            </div>
+            <div class="field">
+              <label>默认命令</label>
+              <select id="defaultCommand">
+                <option value="voice_start">启动语音输入</option>
+                <option value="voice_toggle">切换语音输入</option>
+                <option value="voice_send">识别并发送</option>
+                <option value="voice_stop">停止语音输入</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>默认场景命令</label>
+              <textarea id="sceneNotes" placeholder="例如：Cursor 场景优先发送到编辑器，浏览器场景优先打开搜索框..."></textarea>
+            </div>
+          </section>
+
+          <section class="section">
+            <h3>即时预览</h3>
+            <p class="desc">这块可以先帮助用户理解当前配置的效果。</p>
+            <div class="card" style="margin:0;background:linear-gradient(180deg, rgba(0,122,255,.06), rgba(255,255,255,.9));">
+              <div style="font-size:14px;font-weight:700;margin-bottom:8px">当前配置</div>
+              <div id="preview" style="font-size:13px;color:var(--muted);line-height:1.7"></div>
+            </div>
+          </section>
+        </div>
+      </div>
+
+      <div class="footer">
+        <div>建议：把最常用的触发键放在左手容易碰到的位置，减少语音输入打断节奏。</div>
+        <div id="saveHint">未保存</div>
+      </div>
+    </main>
+  </div>
+  <div class="toast" id="toast"></div>
+  <script>
+    const LS_KEY = "nmer.voice.settings.v1";
+    const state = {
+      recordKey: "CapsLock + Z",
+      scene: "cursor",
+      intervalMs: 500,
+      autoStart: false,
+      hotkeyPassthrough: true,
+      autoSend: true,
+      autoClosePanel: true,
+      defaultCommand: "voice_start",
+      sceneNotes: "",
+      mappings: [
+        { scene: "cursor", command: "voice_start", key: "CapsLock + Z", intervalMs: 300 },
+        { scene: "browser", command: "voice_send", key: "Alt + Space", intervalMs: 400 },
+      ]
+    };
+
+    function $(id) { return document.getElementById(id); }
+    function esc(s) { return String(s ?? "").replace(/[&<>"']/g, m => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"': "&quot;", "'":"&#39;" }[m])); }
+    function toast(msg) { const el = $("toast"); el.textContent = msg; el.classList.add("show"); setTimeout(() => el.classList.remove("show"), 2200); }
+    function saveLocal() { localStorage.setItem(LS_KEY, JSON.stringify(state)); $("saveHint").textContent = "已保存到本地"; }
+    function syncFromUI() {
+      state.recordKey = $("recordKeyView").textContent.trim();
+      state.scene = $("sceneSelect").value;
+      state.intervalMs = Number($("intervalMs").value || 0);
+      state.autoStart = $("autoStart").checked;
+      state.hotkeyPassthrough = $("hotkeyPassthrough").checked;
+      state.autoSend = $("autoSend").checked;
+      state.autoClosePanel = $("autoClosePanel").checked;
+      state.defaultCommand = $("defaultCommand").value;
+      state.sceneNotes = $("sceneNotes").value;
+    }
+    function applyToUI() {
+      $("recordKeyView").textContent = state.recordKey;
+      $("sceneSelect").value = state.scene;
+      $("intervalMs").value = state.intervalMs;
+      $("autoStart").checked = !!state.autoStart;
+      $("hotkeyPassthrough").checked = !!state.hotkeyPassthrough;
+      $("autoSend").checked = !!state.autoSend;
+      $("autoClosePanel").checked = !!state.autoClosePanel;
+      $("defaultCommand").value = state.defaultCommand;
+      $("sceneNotes").value = state.sceneNotes || "";
+      renderMappings();
+      renderPreview();
+    }
+    function renderMappings() {
+      const rows = state.mappings.map((m, idx) => `
+        <div class="mapping">
+          <input type="text" data-i="${idx}" data-k="scene" value="${esc(m.scene)}" placeholder="场景">
+          <input type="text" data-i="${idx}" data-k="command" value="${esc(m.command)}" placeholder="命令">
+          <input type="text" data-i="${idx}" data-k="key" value="${esc(m.key)}" placeholder="按键">
+          <div style="display:flex;gap:8px;justify-content:flex-end">
+            <input type="number" data-i="${idx}" data-k="intervalMs" value="${esc(m.intervalMs)}" min="0" max="10000" step="50" style="max-width:110px">
+            <button class="btn del" data-del="${idx}">删除</button>
+          </div>
+        </div>`).join("");
+      $("mappingTable").innerHTML = rows || '<div class="mapping"><div class="tag">暂无映射</div><div></div><div></div><div></div></div>';
+      $("mappingTable").querySelectorAll("input").forEach((el) => {
+        el.addEventListener("input", () => {
+          const i = Number(el.dataset.i);
+          const k = el.dataset.k;
+          if (!state.mappings[i]) return;
+          state.mappings[i][k] = k === "intervalMs" ? Number(el.value || 0) : el.value;
+          renderPreview();
+        });
+      });
+      $("mappingTable").querySelectorAll("[data-del]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          state.mappings.splice(Number(btn.dataset.del), 1);
+          renderMappings();
+          renderPreview();
+        });
+      });
+    }
+    function renderPreview() {
+      $("preview").innerHTML = [
+        `<div><strong>录制键：</strong>${esc(state.recordKey)}</div>`,
+        `<div><strong>主场景：</strong>${esc($("sceneSelect").value)}</div>`,
+        `<div><strong>间隔：</strong>${esc($("intervalMs").value)} ms</div>`,
+        `<div><strong>默认命令：</strong>${esc($("defaultCommand").value)}</div>`,
+        `<div><strong>开机自启动：</strong>${$("autoStart").checked ? "开启" : "关闭"}</div>`,
+      ].join("");
+    }
+    function pickRecordKey() {
+      const label = $("recordKeyView");
+      label.classList.add("recording");
+      $("saveHint").textContent = "正在录制按键...";
+      const onKey = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const parts = [];
+        if (e.ctrlKey) parts.push("Ctrl");
+        if (e.shiftKey) parts.push("Shift");
+        if (e.altKey) parts.push("Alt");
+        if (e.metaKey) parts.push("Win");
+        const key = e.key.length === 1 ? e.key.toUpperCase() : e.key;
+        if (!["Control","Shift","Alt","Meta"].includes(key)) parts.push(key);
+        const text = parts.join(" + ").replace(/\bCapsLock\b/g, "CapsLock");
+        if (text) {
+          label.textContent = text;
+          label.classList.remove("recording");
+          document.removeEventListener("keydown", onKey, true);
+          syncFromUI();
+          renderPreview();
+          toast("按键已录制");
+        }
+      };
+      document.addEventListener("keydown", onKey, true);
+      setTimeout(() => {
+        document.removeEventListener("keydown", onKey, true);
+        label.classList.remove("recording");
+      }, 10000);
+    }
+    function exportJson() {
+      syncFromUI();
+      const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "voice-input-settings.json";
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+    function postHost(type) {
+      try {
+        window.chrome?.webview?.postMessage({ type, payload: JSON.parse(JSON.stringify(state)) });
+      } catch (_) {}
+    }
+    function load() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(LS_KEY) || "null");
+        if (saved && typeof saved === "object") Object.assign(state, saved);
+      } catch (_) {}
+      applyToUI();
+      $("statusText").textContent = "可编辑";
+      $("saveHint").textContent = "已加载本地配置";
+    }
+    $("btnRecord").addEventListener("click", pickRecordKey);
+    $("btnClearRecord").addEventListener("click", () => { $("recordKeyView").textContent = ""; syncFromUI(); renderPreview(); });
+    $("btnAddMapping").addEventListener("click", () => { state.mappings.push({ scene: "global", command: "voice_toggle", key: "Ctrl + Space", intervalMs: 500 }); renderMappings(); renderPreview(); });
+    $("btnAutoFill").addEventListener("click", () => {
+      state.mappings = [
+        { scene: "cursor", command: "voice_start", key: "CapsLock + Z", intervalMs: 250 },
+        { scene: "browser", command: "voice_send", key: "Alt + Space", intervalMs: 400 },
+        { scene: "docs", command: "voice_toggle", key: "Ctrl + Alt + V", intervalMs: 500 }
+      ];
+      renderMappings(); renderPreview();
+      toast("已填充推荐项");
+    });
+    $("btnSave").addEventListener("click", () => {
+      syncFromUI();
+      saveLocal();
+      postHost("saveVoiceInputSettings");
+      toast("配置已保存");
+    });
+    $("btnReset").addEventListener("click", () => {
+      Object.assign(state, {
+        recordKey: "CapsLock + Z",
+        scene: "cursor",
+        intervalMs: 500,
+        autoStart: false,
+        hotkeyPassthrough: true,
+        autoSend: true,
+        autoClosePanel: true,
+        defaultCommand: "voice_start",
+        sceneNotes: "",
+        mappings: [
+          { scene: "cursor", command: "voice_start", key: "CapsLock + Z", intervalMs: 300 },
+          { scene: "browser", command: "voice_send", key: "Alt + Space", intervalMs: 400 },
+        ]
+      });
+      applyToUI();
+      toast("已恢复默认");
+    });
+    $("btnExport").addEventListener("click", exportJson);
+    ["sceneSelect","intervalMs","autoStart","hotkeyPassthrough","autoSend","autoClosePanel","defaultCommand","sceneNotes"].forEach((id) => {
+      $(id).addEventListener("input", () => { syncFromUI(); renderPreview(); });
+      $(id).addEventListener("change", () => { syncFromUI(); renderPreview(); });
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        try { window.chrome?.webview?.postMessage({ type: "closeVoiceInputSettings" }); } catch (_) {}
+      }
+    });
+    load();
+  </script>
+</body>
+</html>

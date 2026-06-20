@@ -469,18 +469,39 @@ WebView2_PrepareForScriptReload() {
     } catch as _e {
         NmerCatch(A_ThisFunc, _e) 
     }
+    WebView2_ResetSharedEnvState()
+    try OutputDebug("[WV2] PrepareForScriptReload: shared env reset")
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
+    }
+}
+
+; 托盘/热键干净重启：仅停定时器并重置共享环境指针，勿同步 Close 多路 WebView（会卡死重启）
+WebView2_PrepareForCleanExit() {
+    try {
+        if FuncExists("Nmer_WailsBridgePrepareForScriptReload")
+            Nmer_WailsBridgePrepareForScriptReload()
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
+    }
+    WebView2_ResetSharedEnvState()
+    try OutputDebug("[WV2] PrepareForCleanExit: shared env reset")
+    catch as _e {
+        NmerCatch(A_ThisFunc, _e) 
+    }
+}
+
+WebView2_ResetSharedEnvState() {
+    global g_WV2SharedEnv, g_WV2EnvCreatePromise, g_WV2EnvReadyCallbacks
+    global g_WV2EnvCreateFailed, g_WV2EnvCreateError
+    global g_WV2_CreateQueue, g_WV2_CreateBusy
     g_WV2SharedEnv := 0
     g_WV2EnvCreatePromise := 0
     g_WV2EnvReadyCallbacks := []
     g_WV2EnvCreateFailed := false
     g_WV2EnvCreateError := ""
-    global g_WV2_CreateQueue, g_WV2_CreateBusy
     g_WV2_CreateQueue := []
     g_WV2_CreateBusy := false
-    try OutputDebug("[WV2] PrepareForScriptReload: shared env reset")
-    catch as _e {
-        NmerCatch(A_ThisFunc, _e) 
-    }
 }
 
 _WV2_CreateWithSharedEnvReady(hwnd, callback, reason, env, err := 0) {

@@ -313,22 +313,7 @@ html, body {
     0 0 36px rgba(255, 154, 47, 0.28);
 }
 
-/* 浠呴瑙堜笖鏃犲爢鍙犲崱鐗囨椂锛氳兌鍥婂３涓嶆嫤鎴偣鍑伙紝绌虹櫧鍖虹┛閫忓埌 #host锛岀敱鑴氭湰閫氱煡 AHK 绔嬪嵆鍏抽棴 */
-#capsule.selection-active:not(.has-content) {
-  pointer-events: none;
-}
-#capsule.selection-active:not(.has-content) #header,
-#capsule.selection-active:not(.has-content) #preview-search-wrap,
-#capsule.selection-active:not(.has-content) #pending-lane,
-#capsule.selection-active:not(.has-content) #stack-row,
-#capsule.selection-active:not(.has-content) #slot-rail,
-#capsule.selection-active:not(.has-content) #stack-display,
-#capsule.selection-active:not(.has-content) #action-bar,
-#capsule.selection-active:not(.has-content) #preview-ctx-menu,
-#capsule.selection-active:not(.has-content) #resize-handle {
-  pointer-events: auto;
-}
-
+/* 预览态仅降低透明度提示，勿对 #capsule 设 pointer-events:none——WebView2 下会导致按钮/拖动全部无法命中 */
 #capsule.is-docked {
   width: 74px;
   min-width: 74px;
@@ -397,7 +382,17 @@ html, body {
   user-select: none;
   touch-action: none;
 }
-body.native-titlebar #header { display: none; }
+/* 保留 OS 标题栏时仍显示页内顶栏：关闭按钮 + 拖动手柄（勿 display:none 整栏） */
+body.native-titlebar #header {
+  display: flex;
+  min-height: 22px;
+  padding: 2px 10px 4px;
+}
+body.native-titlebar #header-title {
+  font-size: 10px;
+  letter-spacing: 1px;
+  opacity: 0.72;
+}
 
 #drag-handle {
   width: 40px;
@@ -504,6 +499,13 @@ body.native-titlebar #header { display: none; }
   justify-content: space-between;
   gap: 8px;
   flex-wrap: wrap;
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+}
+
+.pending-bar-head:active {
+  cursor: grabbing;
 }
 
 .pending-bar-title {
@@ -974,7 +976,6 @@ body.native-titlebar #header { display: none; }
   padding: 0;
   position: relative;
   overflow: visible;
-  touch-action: none;
 }
 
 #preview-card.preview-pulse-image {
@@ -1010,6 +1011,14 @@ body.native-titlebar #header { display: none; }
   -webkit-user-select: text;
   position: relative;
   box-sizing: border-box;
+}
+
+#stack-display.stack-drop-target {
+  box-shadow: inset 0 0 0 2px rgba(255, 154, 47, 0.55);
+}
+
+#preview-card.draft-drag-active {
+  touch-action: none;
 }
 
 #preview-card.draft-drag-active #preview {
@@ -1659,6 +1668,13 @@ button.ctx-sub-item:disabled {
 .slot-strip-title {
   font-size: 11px;
   color: var(--text-muted);
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+}
+
+.slot-strip-title:active {
+  cursor: grabbing;
 }
 
 .hub-chip-row {
@@ -2436,6 +2452,7 @@ html[data-theme="light"] #tx-test-result {
   const stackList = document.getElementById('stack-list');
   const gravityTip = document.getElementById('gravity-tip');
   const btnClear = document.getElementById('btnClear');
+  const btnWinRecycle = document.getElementById('btnWinRecycle');
   const hubStackFilter = document.getElementById('hub-stack-filter');
   const previewCtxMenu = document.getElementById('preview-ctx-menu');
   const hubTrashOverlay = document.getElementById('hub-trash-overlay');
@@ -2507,7 +2524,7 @@ html[data-theme="light"] #tx-test-result {
   }
 
   function bootstrapThemeMode() {
-    ; 首帧用深色占位，真实主题由宿主 set_theme 推送（与 INI/ApplyTheme 一致，避免 localStorage 陈旧浅色）
+    // 首帧用深色占位，真实主题由宿主 set_theme 推送（与 INI/ApplyTheme 一致，避免 localStorage 陈旧浅色）
     applyHubTheme('dark', false);
   }
 
@@ -2641,12 +2658,93 @@ html[data-theme="light"] #tx-test-result {
     ['#preview-copy-image', 'v', '复制图片预览']
   ]);
 
-  if (btnCloseHub) {
-    btnCloseHub.addEventListener('click', (e) => {
-      e.stopPropagation();
-      postToAhk({ type: 'selection_menu_dismiss' });
+  function handleHubButtonAction(btnId, e) {
+    switch (String(btnId || '')) {
+      case 'btnPendingSave':
+        e?.preventDefault?.();
+        e?.stopPropagation?.();
+        addToDraft();
+        return true;
+      case 'btnPendingOpenFile':
+        e?.preventDefault?.();
+        e?.stopPropagation?.();
+        postToAhk({ type: 'hub_open_text_file_pick' });
+        return true;
+      case 'btnPendingSearch':
+        e?.preventDefault?.();
+        e?.stopPropagation?.();
+        doPendingSearch();
+        return true;
+      case 'btnPendingAi':
+        e?.preventDefault?.();
+        e?.stopPropagation?.();
+        doPendingAi();
+        return true;
+      case 'btnPendingPanel':
+        e?.preventDefault?.();
+        e?.stopPropagation?.();
+        setAdvPanelOpen(advPanel ? advPanel.hidden : true);
+        return true;
+      case 'btnCloseHub':
+        e?.preventDefault?.();
+        e?.stopPropagation?.();
+        postToAhk({ type: 'selection_menu_dismiss' });
+        return true;
+      case 'btnClear':
+        e?.preventDefault?.();
+        e?.stopPropagation?.();
+        clearAll();
+        return true;
+      case 'btnWinRecycle':
+        e?.preventDefault?.();
+        e?.stopPropagation?.();
+        openTrashPanel();
+        return true;
+      case 'btnTriggerCapslock':
+        e?.preventDefault?.();
+        e?.stopPropagation?.();
+        setCopyTriggerMode('capslock');
+        postToAhk({ type: 'hub_set_copy_trigger_mode', mode: 'capslock' });
+        return true;
+      case 'btnTriggerDoubleCtrl':
+        e?.preventDefault?.();
+        e?.stopPropagation?.();
+        setCopyTriggerMode('double');
+        postToAhk({ type: 'hub_set_copy_trigger_mode', mode: 'double' });
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  function bindHubButtonAction(el) {
+    if (!el) return;
+    el.addEventListener('pointerup', (e) => {
+      if (e.button != null && e.button !== 0) return;
+      if (handleHubButtonAction(el.id, e)) {
+        el.__hubLastPointerActionAt = Date.now();
+        e.__hubHandled = true;
+      }
+    });
+    el.addEventListener('click', (e) => {
+      if (e.__hubHandled) return;
+      if (Date.now() - Number(el.__hubLastPointerActionAt || 0) < 450) return;
+      handleHubButtonAction(el.id, e);
     });
   }
+
+  [
+    btnCloseHub,
+    btnClear,
+    btnWinRecycle,
+    btnPendingSave,
+    btnPendingOpenFile,
+    btnPendingSearch,
+    btnPendingAi,
+    btnPendingPanel,
+    btnTriggerCapslock,
+    btnTriggerDoubleCtrl
+  ].forEach(bindHubButtonAction);
 
   previewImage.addEventListener('error', () => {
     previewImage.alt = '图片预览加载失败';
@@ -5244,11 +5342,13 @@ html[data-theme="light"] #tx-test-result {
       startY: e.clientY,
       offsetX: e.clientX - rect.left,
       offsetY: e.clientY - rect.top,
-      moved: false
+      moved: false,
+      captureEl: e.currentTarget
     };
 
     state.justDragged = false;
     capsule.classList.add('dragging');
+    try { e.currentTarget.setPointerCapture(e.pointerId); } catch (_) {}
     postToAhk({ type: 'hub_mousedown', x: e.screenX, y: e.screenY });
     postToAhk({ type: 'hub_drag_start' });
     window.addEventListener('pointermove', onDragMove);
@@ -5293,6 +5393,10 @@ html[data-theme="light"] #tx-test-result {
       postToAhk(state.drag.latestMove);
       state.drag.latestMove = null;
     }
+    try {
+      if (state.drag.captureEl && state.drag.captureEl.releasePointerCapture)
+        state.drag.captureEl.releasePointerCapture(e.pointerId);
+    } catch (_) {}
     state.drag = null;
     capsule.classList.remove('dragging');
     postToAhk({ type: 'hub_drag_end', x: e.screenX, y: e.screenY });
@@ -5315,8 +5419,21 @@ html[data-theme="light"] #tx-test-result {
     }, 170);
   }
 
-  header.addEventListener('pointerdown', beginDrag);
-  resizeHandle.addEventListener('pointerdown', beginResize);
+  function bindDragHandle(el) {
+    if (!el) return;
+    el.addEventListener('pointerdown', beginDrag);
+  }
+  bindDragHandle(dragHandle);
+  document.querySelectorAll('.slot-strip-title').forEach(bindDragHandle);
+  if (resizeHandle) resizeHandle.addEventListener('pointerdown', beginResize);
+
+  /* 捕获阶段委托：避免个别 WebView2 版本 click 丢失时按钮无响应 */
+  capsule.addEventListener('click', (e) => {
+    const btn = e.target.closest('button[id]');
+    if (!btn) return;
+    if (handleHubButtonAction(btn.id, e))
+      e.__hubHandled = true;
+  }, true);
 
   capsule.addEventListener('click', (e) => {
     if (state.justDragged) return;
@@ -5469,14 +5586,6 @@ html[data-theme="light"] #tx-test-result {
     previewCtxMenu.setAttribute('aria-hidden', 'false');
   }
 
-  btnClear.addEventListener('click', clearAll);
-  if (btnPendingSave) btnPendingSave.addEventListener('click', () => addToDraft());
-  if (btnPendingOpenFile) btnPendingOpenFile.addEventListener('click', () => {
-    postToAhk({ type: 'hub_open_text_file_pick' });
-  });
-  if (btnPendingSearch) btnPendingSearch.addEventListener('click', doPendingSearch);
-  if (btnPendingAi) btnPendingAi.addEventListener('click', doPendingAi);
-  if (btnPendingPanel) btnPendingPanel.addEventListener('click', () => setAdvPanelOpen(advPanel ? advPanel.hidden : true));
   if (btnAdvClose) btnAdvClose.addEventListener('click', () => setAdvPanelOpen(false));
   if (advGroups) {
     advGroups.addEventListener('click', (e) => {
@@ -5607,10 +5716,6 @@ html[data-theme="light"] #tx-test-result {
       postToAhk({ type: 'hub_open_external_url', url: href });
     });
   }
-  const btnWinRecycle = document.getElementById('btnWinRecycle');
-  if (btnWinRecycle) {
-    btnWinRecycle.addEventListener('click', () => openTrashPanel());
-  }
   if (btnTrashClose)
     btnTrashClose.addEventListener('click', () => closeTrashPanel());
   if (hubTrashOverlay) {
@@ -5691,17 +5796,12 @@ html[data-theme="light"] #tx-test-result {
       await applyExternalDropToPreview(e);
     }, true);
     preview.addEventListener('mousedown', armDraftDragFromTextarea, true);
+    preview.addEventListener('pointerdown', armDraftDragFromTextarea, true);
   }
-  if (pendingLane)
+  if (pendingLane) {
     pendingLane.addEventListener('mousedown', armDraftDragFromPendingLane, true);
-  btnTriggerCapslock.addEventListener('click', () => {
-    setCopyTriggerMode('capslock');
-    postToAhk({ type: 'hub_set_copy_trigger_mode', mode: 'capslock' });
-  });
-  btnTriggerDoubleCtrl.addEventListener('click', () => {
-    setCopyTriggerMode('double');
-    postToAhk({ type: 'hub_set_copy_trigger_mode', mode: 'double' });
-  });
+    pendingLane.addEventListener('pointerdown', armDraftDragFromPendingLane, true);
+  }
   previewCopyImage.addEventListener('click', () => {
     copyCurrentPreviewImage();
   });
@@ -5727,8 +5827,12 @@ html[data-theme="light"] #tx-test-result {
   const DRAFT_DRAG_MIN_PX = 6;
   const DRAFT_HOLD_MS = 320;
 
+  let draftArmLive = false;
+
   function armDraftDragFromPendingLane(e) {
-    if (!e || e.button !== 0) return;
+    if (!e) return;
+    if (e.button !== undefined && e.button !== 0) return;
+    if (e.type === 'mousedown' && e.pointerType) return;
     const t = e.target;
     if (!t || !(t instanceof Element)) return;
     if (t.closest('button, input, select, textarea, a, label, [contenteditable="true"]')) return;
@@ -5737,14 +5841,18 @@ html[data-theme="light"] #tx-test-result {
   }
 
   function armDraftDragFromTextarea(e) {
-    if (e.button !== 0) return;
+    if (e.button !== undefined && e.button !== 0) return;
+    if (e.type === 'mousedown' && e.pointerType) return;
+    if (draftArmLive) return;
     if (hasPendingImage()) return;
+    draftArmLive = true;
     const startX = e.clientX;
     const startY = e.clientY;
     let live = true;
     function cleanup() {
       if (!live) return;
       live = false;
+      draftArmLive = false;
       window.removeEventListener('mousemove', onMove, true);
       window.removeEventListener('mouseup', onUp, true);
       window.removeEventListener('pointermove', onMove, true);
@@ -5780,9 +5888,19 @@ html[data-theme="light"] #tx-test-result {
   }
 
   function pointInStackDisplay(clientX, clientY) {
-    if (!stackDisplay) return false;
-    const r = stackDisplay.getBoundingClientRect();
+    const el = document.getElementById('stack-row') || stackDisplay;
+    if (!el) return false;
+    const r = el.getBoundingClientRect();
     return clientX >= r.left && clientX <= r.right && clientY >= r.top && clientY <= r.bottom;
+  }
+
+  function setDraftDragStackHover(clientX, clientY) {
+    if (!stackDisplay) return;
+    stackDisplay.classList.toggle('stack-drop-target', pointInStackDisplay(clientX, clientY));
+  }
+
+  function clearDraftDragStackHover() {
+    if (stackDisplay) stackDisplay.classList.remove('stack-drop-target');
   }
 
   function clearDraftHoldTimer(dd) {
@@ -5824,17 +5942,21 @@ html[data-theme="light"] #tx-test-result {
   }
 
   function removeDraftDragListeners(moveFn, upFn) {
-    document.removeEventListener('mousemove', moveFn, true);
-    document.removeEventListener('mouseup', upFn, true);
-    document.removeEventListener('pointermove', moveFn, true);
-    document.removeEventListener('pointerup', upFn, true);
-    document.removeEventListener('pointercancel', upFn, true);
+    window.removeEventListener('mousemove', moveFn, true);
+    window.removeEventListener('mouseup', upFn, true);
+    window.removeEventListener('pointermove', moveFn, true);
+    window.removeEventListener('pointerup', upFn, true);
+    window.removeEventListener('pointercancel', upFn, true);
   }
 
   function beginDraftDrag(e) {
     syncPendingFromTextarea();
     if (state.draftDrag || !String(state.pendingDraft || '').trim()) return;
     if (e.button !== undefined && e.button !== 0) return;
+
+    const captureEl = (e.currentTarget instanceof Element) ? e.currentTarget
+      : (previewCard || preview || document.getElementById('pending-lane'));
+    const pointerId = e.pointerId;
 
     const ghost = document.createElement('div');
     ghost.style.position = 'fixed';
@@ -5857,8 +5979,14 @@ html[data-theme="light"] #tx-test-result {
       startY: e.clientY,
       moved: false,
       finished: false,
-      holdTimerId: 0
+      holdTimerId: 0,
+      pointerId,
+      captureEl
     };
+    try {
+      if (captureEl && pointerId !== undefined && captureEl.setPointerCapture)
+        captureEl.setPointerCapture(pointerId);
+    } catch (_) {}
     state.draftDrag.holdTimerId = setTimeout(() => {
       if (!state.draftDrag || state.draftDrag.finished) return;
       state.draftDrag.moved = true;
@@ -5868,31 +5996,40 @@ html[data-theme="light"] #tx-test-result {
 
     function onDraftMove(ev) {
       if (!state.draftDrag || state.draftDrag.finished) return;
+      if (state.draftDrag.pointerId !== undefined && ev.pointerId !== undefined
+        && state.draftDrag.pointerId !== ev.pointerId) return;
       if (ev.type === 'mousemove' && ev.buttons !== undefined && ev.buttons !== 1) return;
       const dx = ev.clientX - state.draftDrag.startX;
       const dy = ev.clientY - state.draftDrag.startY;
       if (Math.hypot(dx, dy) >= DRAFT_DRAG_MIN_PX) state.draftDrag.moved = true;
       ghost.style.left = (ev.clientX + 12) + 'px';
       ghost.style.top = (ev.clientY + 12) + 'px';
+      setDraftDragStackHover(ev.clientX, ev.clientY);
     }
 
     function onDraftUp(ev) {
       if (!state.draftDrag || state.draftDrag.finished) return;
-      if (ev.button !== undefined && ev.button !== 0) return;
+      if (ev.type === 'mouseup' && ev.button !== 0) return;
+      if (state.draftDrag.pointerId !== undefined && ev.pointerId !== undefined
+        && state.draftDrag.pointerId !== ev.pointerId) return;
       syncPendingFromTextarea();
       const dd = state.draftDrag;
-      const moved = dd.moved;
       const g = dd.ghost;
       const textToCommit = state.pendingDraft;
       clearDraftHoldTimer(dd);
       dd.finished = true;
       removeDraftDragListeners(onDraftMove, onDraftUp);
+      try {
+        if (dd.captureEl && dd.pointerId !== undefined && dd.captureEl.releasePointerCapture)
+          dd.captureEl.releasePointerCapture(dd.pointerId);
+      } catch (_) {}
 
       const inStack = pointInStackDisplay(ev.clientX, ev.clientY);
-      const shouldCommit = !!textToCommit && (moved || inStack);
+      const shouldCommit = !!textToCommit && inStack;
 
       state.draftDrag = null;
       previewCard.classList.remove('draft-drag-active');
+      clearDraftDragStackHover();
 
       if (shouldCommit) {
         animateGhostToStackThen(g, () => {
@@ -5907,11 +6044,11 @@ html[data-theme="light"] #tx-test-result {
       ev.stopPropagation();
     }
 
-    document.addEventListener('mousemove', onDraftMove, true);
-    document.addEventListener('mouseup', onDraftUp, true);
-    document.addEventListener('pointermove', onDraftMove, true);
-    document.addEventListener('pointerup', onDraftUp, true);
-    document.addEventListener('pointercancel', onDraftUp, true);
+    window.addEventListener('mousemove', onDraftMove, true);
+    window.addEventListener('mouseup', onDraftUp, true);
+    window.addEventListener('pointermove', onDraftMove, true);
+    window.addEventListener('pointerup', onDraftUp, true);
+    window.addEventListener('pointercancel', onDraftUp, true);
 
     onDraftMove(e);
     e.preventDefault();
@@ -5921,6 +6058,10 @@ html[data-theme="light"] #tx-test-result {
   function beginImageDraftDrag(e) {
     if (state.draftDrag || !hasPendingImage()) return;
     if (e.button !== undefined && e.button !== 0) return;
+
+    const captureEl = (e.currentTarget instanceof Element) ? e.currentTarget
+      : (previewCard || preview || document.getElementById('pending-lane'));
+    const pointerId = e.pointerId;
 
     const ghost = document.createElement('div');
     ghost.style.position = 'fixed';
@@ -5943,8 +6084,14 @@ html[data-theme="light"] #tx-test-result {
       startY: e.clientY,
       moved: false,
       finished: false,
-      holdTimerId: 0
+      holdTimerId: 0,
+      pointerId,
+      captureEl
     };
+    try {
+      if (captureEl && pointerId !== undefined && captureEl.setPointerCapture)
+        captureEl.setPointerCapture(pointerId);
+    } catch (_) {}
     state.draftDrag.holdTimerId = setTimeout(() => {
       if (!state.draftDrag || state.draftDrag.finished) return;
       state.draftDrag.moved = true;
@@ -5954,31 +6101,40 @@ html[data-theme="light"] #tx-test-result {
 
     function onDraftMove(ev) {
       if (!state.draftDrag || state.draftDrag.finished) return;
+      if (state.draftDrag.pointerId !== undefined && ev.pointerId !== undefined
+        && state.draftDrag.pointerId !== ev.pointerId) return;
       if (ev.type === 'mousemove' && ev.buttons !== undefined && ev.buttons !== 1) return;
       const dx = ev.clientX - state.draftDrag.startX;
       const dy = ev.clientY - state.draftDrag.startY;
       if (Math.hypot(dx, dy) >= DRAFT_DRAG_MIN_PX) state.draftDrag.moved = true;
       ghost.style.left = (ev.clientX + 12) + 'px';
       ghost.style.top = (ev.clientY + 12) + 'px';
+      setDraftDragStackHover(ev.clientX, ev.clientY);
     }
 
     function onDraftUp(ev) {
       if (!state.draftDrag || state.draftDrag.finished) return;
-      if (ev.button !== undefined && ev.button !== 0) return;
+      if (ev.type === 'mouseup' && ev.button !== 0) return;
+      if (state.draftDrag.pointerId !== undefined && ev.pointerId !== undefined
+        && state.draftDrag.pointerId !== ev.pointerId) return;
       const dd = state.draftDrag;
-      const moved = dd.moved;
       const g = dd.ghost;
       const pPath = state.pendingImagePath;
       const pData = state.pendingImageDataUrl;
       clearDraftHoldTimer(dd);
       dd.finished = true;
       removeDraftDragListeners(onDraftMove, onDraftUp);
+      try {
+        if (dd.captureEl && dd.pointerId !== undefined && dd.captureEl.releasePointerCapture)
+          dd.captureEl.releasePointerCapture(dd.pointerId);
+      } catch (_) {}
 
       const inStack = pointInStackDisplay(ev.clientX, ev.clientY);
-      const shouldCommit = (moved || inStack) && (pPath || pData);
+      const shouldCommit = inStack && (pPath || pData);
 
       state.draftDrag = null;
       previewCard.classList.remove('draft-drag-active');
+      clearDraftDragStackHover();
 
       if (shouldCommit) {
         animateGhostToStackThen(g, () => {
@@ -5993,11 +6149,11 @@ html[data-theme="light"] #tx-test-result {
       ev.stopPropagation();
     }
 
-    document.addEventListener('mousemove', onDraftMove, true);
-    document.addEventListener('mouseup', onDraftUp, true);
-    document.addEventListener('pointermove', onDraftMove, true);
-    document.addEventListener('pointerup', onDraftUp, true);
-    document.addEventListener('pointercancel', onDraftUp, true);
+    window.addEventListener('mousemove', onDraftMove, true);
+    window.addEventListener('mouseup', onDraftUp, true);
+    window.addEventListener('pointermove', onDraftMove, true);
+    window.addEventListener('pointerup', onDraftUp, true);
+    window.addEventListener('pointercancel', onDraftUp, true);
 
     onDraftMove(e);
     e.preventDefault();
@@ -6231,6 +6387,14 @@ html[data-theme="light"] #tx-test-result {
       if (e.button !== 0 && e.button !== 2) return;
       postToAhk({ type: 'selection_menu_dismiss' });
     }, true);
+    /* 预览态点击胶囊内非交互空白：仍支持快速关闭（替代 pointer-events 穿透方案） */
+    capsule.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0) return;
+      if (!capsule.classList.contains('selection-active') || capsule.classList.contains('has-content')) return;
+      if (e.target.closest('button, input, textarea, select, a, label, [role="button"], #ctx-menu, #preview-ctx-menu, #hub-trash-overlay.open')) return;
+      if (e.target.closest('#header, #pending-lane, #preview-search-wrap, #stack-row, #action-bar, #trigger-bar, #resize-handle, #nm-bottom-dock')) return;
+      postToAhk({ type: 'selection_menu_dismiss' });
+    });
   }
 
   /** 鏁撮〉 WebView 浣滀负鎷栨斁鐩爣锛氫粠 Cursor 绛夊閮ㄧ獥鍙ｆ嫋鍏ュ嵆鍔犲叆鍗＄墖 */
@@ -6556,5 +6720,3 @@ html[data-theme="light"] #tx-test-result {
 </script>
 </body>
 </html>
-
-

@@ -228,13 +228,11 @@ class WebView2 {
 					}
 					try OutputDebug("[WebView2] add_handler failed: " . msg)
 					catch as _e {
-					    NmerCatch(A_ThisFunc, _e) 
+					    WebView2_TryCatch(A_ThisFunc, _e) 
 					}
-					try {
-						if FuncExists("NMER_Log")
-							NMER_Log("webview2", "add_handler_fail", msg)
-					} catch as _e {
-					    NmerCatch(A_ThisFunc, _e) 
+					try WebView2_TryLog("webview2", "add_handler_fail", msg)
+					catch as _e {
+					    WebView2_TryCatch(A_ThisFunc, _e) 
 					}
 					return 0
 				}
@@ -2362,6 +2360,22 @@ WebView2_MoveFocusProgrammatic(ctrl) {
 		ctrl.MoveFocus(WebView2.MOVE_FOCUS_REASON.PROGRAMMATIC)
 	} catch as e {
 		OutputDebug("[WebView2] MoveFocus programmatic: " . e.Message)
+	}
+}
+
+WebView2_TryCatch(scope, err, detail := "") {
+	try {
+		if IsSet(NmerCatch)
+			NmerCatch(scope, err, detail)
+	} catch {
+	}
+}
+
+WebView2_TryLog(scope, event, detail := "") {
+	try {
+		if IsSet(NMER_Log)
+			NMER_Log(scope, event, detail)
+	} catch {
 	}
 }
 

@@ -2,6 +2,7 @@
 ; 依赖：主脚本已定义的 GetText、ConfigFile、NormalizeWindowsPath、ApplyTheme、UpdateTrayIcon、
 ; SetAutoStart、FTB_*、NormalizeAppearanceActivationMode、CloseConfigGUI、ShowConfigGUI、
 ; GetClipboardDataForCurrentTab、RefreshClipboardList、ShowImportSuccessTip 等。
+;@reference ConfigManager.d.ahk
 
 ; ===================== 初始化配置 =====================
 ; AHK 部分版本下 Float() 仅接受 Number；IniRead 恒为字符串，统一经此解析。
@@ -359,32 +360,32 @@ Nmer_IsHwndUsable(hwnd) {
 
 Nmer_SafeShowWindow(hwnd) {
     h := Integer(hwnd)
-    if !Nmer_IsHwndUsable(h)
+    if (h <= 0)
         return false
     try {
-        if !DllCall("IsWindow", "Ptr", h, "Int")
+        if !WinExist("ahk_id " . h)
             return false
-        DllCall("ShowWindow", "Ptr", h, "Int", 5, "Int") ; SW_SHOW
+        WinShow("ahk_id " . h)
+        return WinExist("ahk_id " . h) != 0
     } catch as _e {
         NmerCatch(A_ThisFunc, _e)
         return false
     }
-    return Nmer_IsHwndUsable(h)
 }
 
 Nmer_SafeMaximizeWindow(hwnd) {
     h := Integer(hwnd)
-    if !Nmer_IsHwndUsable(h)
+    if (h <= 0)
         return false
     try {
-        if !DllCall("IsWindow", "Ptr", h, "Int")
+        if !WinExist("ahk_id " . h)
             return false
-        DllCall("ShowWindow", "Ptr", h, "Int", 3, "Int") ; SW_MAXIMIZE
+        WinMaximize("ahk_id " . h)
+        return true
     } catch as _e {
         NmerCatch(A_ThisFunc, _e)
         return false
     }
-    return true
 }
 
 Nmer_MoveGuiToPopupScreen(gui, forMaximize := false) {
@@ -429,44 +430,49 @@ Nmer_MoveGuiToPopupScreen(gui, forMaximize := false) {
 Nmer_EnsureGuiMaximizedOnPopupScreen(gui) {
     if !Nmer_IsLiveGuiWindow(gui)
         return false
-    hwnd := Nmer_HwndFromGui(gui)
-    if !hwnd
-        return false
     Nmer_MoveGuiToPopupScreen(gui, true)
-    hwnd := Nmer_HwndFromGui(gui)
-    if !hwnd
-        return false
-    if !Nmer_SafeShowWindow(hwnd)
+    if !Nmer_IsLiveGuiWindow(gui)
         return false
     maximized := false
-    try maximized := !!DllCall("IsZoomed", "Ptr", hwnd, "Int")
+    try gui.Show("Maximize")
     catch as _e {
         NmerCatch(A_ThisFunc, _e)
     }
+    hwnd := Nmer_HwndFromGui(gui)
+    if hwnd {
+        try maximized := !!DllCall("IsZoomed", "Ptr", hwnd, "Int")
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e)
+        }
+    }
     if !maximized {
-        if !Nmer_SafeMaximizeWindow(hwnd) {
-            idx := Nmer_GetPopupScreenIndex()
-            try MonitorGetWorkArea(idx, &l, &t, &r, &b)
-            catch {
-                try MonitorGetWorkArea(1, &l, &t, &r, &b)
-                catch
-                    return false
-            }
-            workW := Max(200, r - l)
-            workH := Max(160, b - t)
-            if !Nmer_IsLiveGuiWindow(gui)
-                return false
-            try gui.Move(l, t, workW, workH)
-            catch {
-                return false
-            }
-        } else {
+        hwnd := Nmer_HwndFromGui(gui)
+        if hwnd && Nmer_SafeMaximizeWindow(hwnd) {
             try maximized := !!DllCall("IsZoomed", "Ptr", hwnd, "Int")
-            catch {
+            catch as _e {
+                NmerCatch(A_ThisFunc, _e)
             }
         }
     }
-    return maximized || Nmer_IsHwndUsable(hwnd)
+    if maximized
+        return true
+    if !Nmer_IsLiveGuiWindow(gui)
+        return false
+    idx := Nmer_GetPopupScreenIndex()
+    try MonitorGetWorkArea(idx, &l, &t, &r, &b)
+    catch {
+        try MonitorGetWorkArea(1, &l, &t, &r, &b)
+        catch
+            return false
+    }
+    workW := Max(200, r - l)
+    workH := Max(160, b - t)
+    try gui.Move(l, t, workW, workH)
+    catch {
+        return false
+    }
+    hwnd := Nmer_HwndFromGui(gui)
+    return hwnd != 0
 }
 
 ; 弹窗显示器上的默认窗口左上角（草稿本等，靠右居中）
@@ -1199,9 +1205,7 @@ Nmer_ResolveAutoStartPaths(&ahkExe, &scriptPath) {
         if FileExist(cand)
             scriptPath := cand
     }
-    launcher := A_ScriptDir . "\NmerLauncher.ahk"
-    if FileExist(launcher)
-        scriptPath := launcher
+    ; 开机自启动写主脚本路径；NmerLauncher 仅用于手动「校验后启动」，勿写入 Run 项（否则会多一个进程）
     if (ahkExe = "" || scriptPath = "")
         return false
     return true

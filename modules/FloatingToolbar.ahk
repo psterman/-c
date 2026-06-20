@@ -144,18 +144,18 @@ FloatingToolbar_NormalizeAppearanceMode(v) {
 }
 
 FloatingToolbar_NotifyWebViewShown(wv2) {
-    if !wv2
+    if !wv2 || !FuncExists("WebView2_NotifyShown")
         return
-    try Func("WebView2_NotifyShown").Call(wv2)
+    try WebView2_NotifyShown(wv2)
     catch as _e {
         NmerCatch(A_ThisFunc, _e) 
     }
 }
 
 FloatingToolbar_NotifyWebViewHidden(wv2) {
-    if !wv2
+    if !wv2 || !FuncExists("WebView2_NotifyHidden")
         return
-    try Func("WebView2_NotifyHidden").Call(wv2)
+    try WebView2_NotifyHidden(wv2)
     catch as _e {
         NmerCatch(A_ThisFunc, _e) 
     }

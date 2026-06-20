@@ -1,6 +1,7 @@
 ; NmerDiagnostics.ahk — 诊断包导出、日志入口、用户可见错误对话框
 #Requires AutoHotkey v2.0
 #Include FuncExists.ahk
+#Include NmerTelemetry.ahk
 
 global g_NmerErrorDlg_Report := ""
 global g_NmerErrorDlg_Gui := 0

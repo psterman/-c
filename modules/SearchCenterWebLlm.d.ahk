@@ -30,10 +30,43 @@ Jxon_Load(src, args*) {
 Jxon_Dump(obj, args*) {
 }
 
+ScWebLlm_ValidateSiteCatalog() {
+}
+
+ScWebLlm_SiteEmbedEnabled(site) {
+}
+
+ScWebLlm_SiteCapability(siteId, key, default := "") {
+}
+
+ScWebLlm_SiteQueryMode(siteId := "") {
+}
+
+ScWebLlm_SiteUaMode(siteId := "") {
+}
+
+ScWebLlm_SiteProfileMode(siteId := "") {
+}
+
+ScWebLlm_DefaultOpenSiteIds() {
+}
+
+ScWebLlm_ApplySiteIdAlias(rawId) {
+}
+
+ScWebLlm_MakeSite(id, label, homeUrl, opts := "") {
+}
+
 ScWebLlm_FindSite(siteId) {
 }
 
 ScWebLlm_IsSiteEnabled(siteId) {
+}
+
+ScWebLlm_NormalizeBroadcastSiteIds(rawIds) {
+}
+
+ScWebLlm_MaxBroadcastColumns() {
 }
 
 ScWebLlm_DefaultSiteId() {
@@ -106,6 +139,12 @@ SearchCenterWebLlm_ReloadSites(engines := 0) {
 }
 
 SearchCenterWebLlm_HandleNav(action) {
+}
+
+SearchCenterWebLlm_BuildDebugSnapshot(clientMeta := 0) {
+}
+
+SCWV_PostJson(jsonStr) {
 }
 
 SearchCenterWebLlm_PrepareForScriptReload() {

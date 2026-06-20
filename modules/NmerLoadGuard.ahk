@@ -33,7 +33,7 @@ Nmer_ValidateMainScript(scriptPath, &errText := "") {
     } catch {
     }
 
-    cmd := 'cmd.exe /c ""' . ahkExe . '" /ErrorStdOut "' . scriptPath . '" /validateOnly 2> "' . errFile . '""'
+    cmd := 'cmd.exe /c ""' . ahkExe . '" /ErrorStdOut "' . scriptPath . '" validateOnly 2> "' . errFile . '""'
     exitCode := -1
     try exitCode := RunWait(cmd, , "Hide")
     catch {

@@ -2771,8 +2771,97 @@ body.sc-cli-layout .compose-context .cli-engine-tabs {
 .sc-web-nav-ai-list {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
   padding: 0 6px 8px;
+}
+.sc-web-ai-count {
+  margin-left: auto;
+  font-size: 10px;
+  font-weight: 600;
+  opacity: .72;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: rgba(255,128,42,.14);
+  color: #ffb366;
+}
+.sc-web-ai-section-label {
+  font-size: 10px;
+  font-weight: 700;
+  opacity: .55;
+  padding: 2px 4px 0;
+  letter-spacing: .02em;
+}
+.sc-web-ai-pool {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.sc-web-ai-pool-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 100%;
+  padding: 4px 6px 4px 4px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.1);
+  background: rgba(255,255,255,.04);
+  color: var(--text);
+  cursor: pointer;
+  font-size: 10px;
+  line-height: 1.2;
+  transition: background .12s ease, border-color .12s ease;
+}
+.sc-web-ai-pool-chip:hover {
+  background: rgba(255,255,255,.08);
+  border-color: rgba(255,255,255,.16);
+}
+.sc-web-ai-pool-chip.is-on {
+  border-color: rgba(255,128,42,.45);
+  background: rgba(255,128,42,.12);
+}
+.sc-web-ai-pool-chip.is-focus {
+  box-shadow: 0 0 0 1px rgba(255,128,42,.35);
+}
+.sc-web-ai-pool-chip.is-risk {
+  opacity: .82;
+}
+.sc-web-ai-pool-chip .web-chip-icon,
+.sc-web-ai-pool-chip .web-chip-fallback {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.sc-web-ai-pool-chip .web-chip-fallback {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  font-weight: 700;
+  background: rgba(255,255,255,.08);
+}
+.sc-web-ai-pool-chip__label {
+  max-width: 72px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sc-web-ai-pool-chip__act {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  background: rgba(255,255,255,.08);
+  flex-shrink: 0;
+}
+.sc-web-ai-pool-chip.is-on .sc-web-ai-pool-chip__act {
+  background: rgba(255,128,42,.25);
+  color: #ffc285;
 }
 .sc-web-ai-row {
   display: grid;
@@ -3123,6 +3212,34 @@ body.sc-cli-layout .compose-context .cli-engine-tabs {
   -webkit-backdrop-filter: blur(12px);
   box-shadow: inset 0 1px 0 rgba(255,255,255,.05);
 }
+.web-embed-tab-scroll-nav {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: stretch;
+  gap: 2px;
+  margin-right: 4px;
+}
+.web-embed-tab-scroll-btn {
+  flex: 0 0 auto;
+  width: 26px;
+  min-width: 26px;
+  padding: 0;
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 10px;
+  background: rgba(255,255,255,.06);
+  color: rgba(226,232,240,.85);
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+}
+.web-embed-tab-scroll-btn:hover:not(:disabled) {
+  background: rgba(255,255,255,.12);
+  border-color: rgba(255,255,255,.18);
+}
+.web-embed-tab-scroll-btn:disabled {
+  opacity: .35;
+  cursor: default;
+}
 .web-embed-tabbar-inner {
   position: relative;
   flex: 1 1 auto;
@@ -3388,8 +3505,9 @@ body.web-bookmarks-hide-labels .webllm-site-chip {
   min-height: 0;
   min-width: 0;
   height: 100%;
-  overflow-x: auto;
+  overflow-x: hidden;
   overflow-y: hidden;
+  box-sizing: border-box;
   border-radius: 14px;
   border: 1px solid rgba(255,255,255,.1);
   background:
@@ -3399,6 +3517,52 @@ body.web-bookmarks-hide-labels .webllm-site-chip {
     inset 0 1px 0 rgba(255,255,255,.08),
     0 12px 36px rgba(0,0,0,.18);
   scrollbar-gutter: auto;
+}
+.web-embed-hscroll-row {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+  min-height: 28px;
+  padding: 2px 4px 0;
+  position: relative;
+  z-index: 6;
+}
+.web-embed-hscroll-row.hidden {
+  display: none !important;
+}
+.web-embed-hscroll-btn {
+  flex: 0 0 auto;
+  width: 28px;
+  min-width: 28px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 8px;
+  background: rgba(255,255,255,.07);
+  color: rgba(226,232,240,.9);
+  font-size: 11px;
+  line-height: 1;
+  cursor: pointer;
+}
+.web-embed-hscroll-btn:hover:not(:disabled) {
+  background: rgba(255,255,255,.14);
+}
+.web-embed-hscroll-btn:disabled {
+  opacity: .35;
+  cursor: default;
+}
+.web-embed-hscroll-slider {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 24px;
+  margin: 0;
+  accent-color: #60a5fa;
+  cursor: grab;
+  touch-action: none;
+}
+.web-embed-hscroll-slider:active {
+  cursor: grabbing;
 }
 .web-embed-scroll-track {
   display: flex;
@@ -3546,6 +3710,159 @@ body.sc-web-embed-layout .web-embed-setup .sc-section + .sc-section {
   padding-top: 8px;
   margin-top: 0;
 }
+
+.web-embed-debug-panel {
+  flex: 0 0 auto;
+  max-height: 42vh;
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid rgba(255, 154, 47, 0.28);
+  background: rgba(8, 12, 20, 0.92);
+  backdrop-filter: blur(10px);
+  font-size: 11px;
+  color: #c8d4e8;
+}
+.web-embed-debug-panel.hidden {
+  display: none !important;
+}
+.web-embed-debug-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+.web-embed-debug-head h4 {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 600;
+  color: #ffe6cc;
+  flex: 1 1 auto;
+}
+.web-embed-debug-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.web-embed-debug-btn {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  color: #dbe7ff;
+  border-radius: 6px;
+  padding: 2px 8px;
+  font-size: 10px;
+  cursor: pointer;
+}
+.web-embed-debug-btn:hover {
+  border-color: rgba(255, 154, 47, 0.45);
+  color: #fff;
+}
+.web-embed-debug-body {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(280px, 1.2fr);
+  gap: 8px;
+  padding: 8px 10px 10px;
+  min-height: 0;
+  overflow: hidden;
+}
+.web-embed-debug-col {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.web-embed-debug-issues {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 88px;
+  overflow: auto;
+}
+.web-embed-debug-issue {
+  padding: 4px 8px;
+  border-radius: 6px;
+  line-height: 1.35;
+}
+.web-embed-debug-issue.level-error {
+  background: rgba(255, 72, 72, 0.14);
+  border: 1px solid rgba(255, 96, 96, 0.35);
+  color: #ffb4b4;
+}
+.web-embed-debug-issue.level-warn {
+  background: rgba(255, 180, 64, 0.12);
+  border: 1px solid rgba(255, 193, 100, 0.28);
+  color: #ffd9a0;
+}
+.web-embed-debug-issue.level-ok {
+  background: rgba(72, 200, 120, 0.1);
+  border: 1px solid rgba(96, 220, 140, 0.25);
+  color: #b8f0cc;
+}
+.web-embed-debug-kv {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px 8px;
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 10px;
+  line-height: 1.45;
+}
+.web-embed-debug-kv dt {
+  opacity: 0.72;
+}
+.web-embed-debug-kv dd {
+  margin: 0;
+  word-break: break-all;
+}
+.web-embed-debug-sites {
+  max-height: 72px;
+  overflow: auto;
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 10px;
+  line-height: 1.4;
+}
+.web-embed-debug-log-tabs {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.web-embed-debug-log-tab {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: transparent;
+  color: #aab8d0;
+  border-radius: 999px;
+  padding: 1px 8px;
+  font-size: 10px;
+  cursor: pointer;
+}
+.web-embed-debug-log-tab.is-active {
+  border-color: rgba(255, 154, 47, 0.55);
+  color: #ffe6cc;
+  background: rgba(255, 154, 47, 0.12);
+}
+.web-embed-debug-log {
+  flex: 1 1 auto;
+  min-height: 120px;
+  max-height: 180px;
+  overflow: auto;
+  margin: 0;
+  padding: 8px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 10px;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+body.sc-web-embed-debug-open .web-embed-scroll-viewport {
+  flex: 1 1 auto;
+  min-height: 120px;
+}
+#sc-status-group-web-debug.hidden {
+  display: none !important;
+}
+
 body.sc-web-embed-layout #compose-context-web #engines {
   display: none !important;
 }
@@ -4720,9 +5037,14 @@ html[data-theme="light"] .sc-web-ai-row.is-active {
             <button type="button" class="web-chrome-btn" id="webllm-btn-reload-all" title="刷新全部已选 AI" aria-label="刷新全部">&#10227;</button>
             <button type="button" class="web-chrome-btn" id="webllm-btn-home" title="首页" aria-label="首页">&#8962;</button>
             <button type="button" class="web-chrome-btn" id="webllm-btn-copyurl" title="复制链接" aria-label="复制链接">&#128279;</button>
+            <button type="button" class="web-chrome-btn" id="webllm-btn-debug" title="内嵌 AI 调试面板" aria-label="调试">&#128027;</button>
           </div>
         </div>
         <div class="web-embed-tabbar" aria-label="AI 页面标签">
+          <div id="web-embed-tab-scroll-nav" class="web-embed-tab-scroll-nav hidden" aria-label="列滚动">
+            <button type="button" id="web-embed-scroll-prev" class="web-embed-tab-scroll-btn" title="上一个 AI 页" aria-label="上一个 AI 页">&#9664;</button>
+            <button type="button" id="web-embed-scroll-next" class="web-embed-tab-scroll-btn" title="下一个 AI 页" aria-label="下一个 AI 页">&#9654;</button>
+          </div>
           <div class="web-embed-tabbar-inner">
             <div id="web-embed-tab-indicator" class="web-embed-tab-indicator" aria-hidden="true"></div>
             <div id="webllm-site-chips" class="web-embed-tabs" role="tablist" aria-label="AI 站点标签"></div>
@@ -4732,6 +5054,39 @@ html[data-theme="light"] .sc-web-ai-row.is-active {
       </div>
       <div id="web-embed-scroll-viewport" class="web-embed-scroll-viewport" aria-label="内嵌浏览器横向滚动">
         <div id="web-embed-scroll-track" class="web-embed-scroll-track"></div>
+      </div>
+      <div id="web-embed-hscroll-row" class="web-embed-hscroll-row hidden" aria-label="横向滚动条">
+        <button type="button" id="web-embed-hscroll-prev" class="web-embed-hscroll-btn" title="向左滚动" aria-label="向左滚动">&#9664;</button>
+        <input type="range" id="web-embed-hscroll-slider" class="web-embed-hscroll-slider" min="0" max="0" value="0" step="1" aria-label="横向滚动位置" />
+        <button type="button" id="web-embed-hscroll-next" class="web-embed-hscroll-btn" title="向右滚动" aria-label="向右滚动">&#9654;</button>
+      </div>
+      <div id="web-embed-debug-panel" class="web-embed-debug-panel hidden" aria-label="联网内嵌调试">
+        <div class="web-embed-debug-head">
+          <h4>联网内嵌 · 调试</h4>
+          <div class="web-embed-debug-actions">
+            <button type="button" class="web-embed-debug-btn" id="web-embed-debug-refresh">刷新</button>
+            <button type="button" class="web-embed-debug-btn" id="web-embed-debug-rebootstrap">重试 Bootstrap</button>
+            <button type="button" class="web-embed-debug-btn" id="web-embed-debug-copy">复制诊断</button>
+            <button type="button" class="web-embed-debug-btn" id="web-embed-debug-open-log">打开日志目录</button>
+            <button type="button" class="web-embed-debug-btn" id="web-embed-debug-close">关闭</button>
+          </div>
+        </div>
+        <div class="web-embed-debug-body">
+          <div class="web-embed-debug-col">
+            <div id="web-embed-debug-issues" class="web-embed-debug-issues"></div>
+            <dl id="web-embed-debug-kv" class="web-embed-debug-kv"></dl>
+            <div id="web-embed-debug-sites" class="web-embed-debug-sites"></div>
+          </div>
+          <div class="web-embed-debug-col">
+            <div class="web-embed-debug-log-tabs" id="web-embed-debug-log-tabs">
+              <button type="button" class="web-embed-debug-log-tab is-active" data-log-tab="js">页面事件</button>
+              <button type="button" class="web-embed-debug-log-tab" data-log-tab="webLlm">webLlm</button>
+              <button type="button" class="web-embed-debug-log-tab" data-log-tab="scwv">scwv</button>
+              <button type="button" class="web-embed-debug-log-tab" data-log-tab="wv2">wv2</button>
+            </div>
+            <pre id="web-embed-debug-log" class="web-embed-debug-log"></pre>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -4772,6 +5127,14 @@ html[data-theme="light"] .sc-web-ai-row.is-active {
             </div>
           </div>
           <span class="sc-status-cap sc-status-cap-live" id="sc-cpu-cap">CPU —</span>
+        </div>
+      </div>
+      <div class="sc-status-group sc-status-group-web-debug hidden" id="sc-status-group-web-debug">
+        <div class="sc-status-item">
+          <button type="button" id="btn-web-embed-debug" class="sc-status-btn" title="联网内嵌 AI 调试面板" aria-label="联网调试">
+            <span class="sc-status-icon">🐞</span>
+          </button>
+          <span class="sc-status-cap">联网调试</span>
         </div>
       </div>
       <div class="sc-status-group sc-status-group-dock" id="sc-status-group-dock">
@@ -6114,7 +6477,7 @@ const COMPOSE_MODE_CHROME = Object.freeze({
   local: { icon: "&#128269;", btnRun: "搜索", hint: "搜索本机文件、配置与提示词库" },
   clipboard: { icon: "&#128203;", btnRun: "筛选", hint: "查看复制历史，输入关键词筛选时间线" },
   fulltext: { icon: "&#128196;", btnRun: "搜索", hint: "输入关键词搜索全文索引" },
-  web: { icon: "&#127760;", btnRun: "同问", hint: "Enter 同问已选 AI；Ctrl+点击书签增删页面；列间橙条拖动调宽，底部横滚查看更多" },
+  web: { icon: "&#127760;", btnRun: "同问", hint: "Enter 同问已选 AI；侧栏 AI 页面点击 +/- 增删（最多 8 列）" },
   cli: { icon: "&#9000;", btnRun: "发送", hint: "输入内容发送到下方终端" }
 });
 
@@ -6127,37 +6490,123 @@ const SC_WEB_EMBED_COL_DEFAULT_WIDTH = 390;
 const SC_WEB_EMBED_COL_GAP = 8;
 const SC_WEB_EMBED_MAX_COLUMNS = 8;
 
+const WEB_EMBED_ID_ALIASES = Object.freeze({
+  qwen: "qianwen",
+  tongyi: "qianwen"
+});
+
+function scWebEmbedMakeSite(id, label, homeUrl, opts) {
+  return Object.assign({
+    id: id,
+    label: label,
+    homeUrl: homeUrl,
+    embedEnabled: true,
+    defaultOpen: false,
+    iconKey: id,
+    kind: "chat",
+    queryMode: "inject",
+    uaMode: "mobile",
+    profileMode: "shared",
+    embedRisk: "untested",
+    submitDelayMs: 0
+  }, opts || {});
+}
+
 const SC_WEB_EMBED_SITES = Object.freeze([
-  { id: "deepseek", label: "DeepSeek", enabled: true },
-  { id: "doubao", label: "豆包", enabled: true },
-  { id: "gemini", label: "Gemini", enabled: true },
-  { id: "grok", label: "Grok", enabled: true },
-  { id: "perplexity", label: "Perplexity", enabled: true }
+  scWebEmbedMakeSite("deepseek", "DeepSeek", "https://chat.deepseek.com/", { defaultOpen: true, embedRisk: "none", submitDelayMs: 550 }),
+  scWebEmbedMakeSite("doubao", "豆包", "https://www.doubao.com/chat/", { defaultOpen: true, embedRisk: "none" }),
+  scWebEmbedMakeSite("gemini", "Gemini", "https://gemini.google.com/app", { defaultOpen: true, uaMode: "desktop", embedRisk: "login", submitDelayMs: 550 }),
+  scWebEmbedMakeSite("grok", "Grok", "https://grok.com/", { defaultOpen: true, queryMode: "url", uaMode: "desktop", embedRisk: "none" }),
+  scWebEmbedMakeSite("perplexity", "Perplexity", "https://www.perplexity.ai/", { defaultOpen: true, kind: "search", queryMode: "url", uaMode: "desktop", profileMode: "isolated", embedRisk: "none" }),
+  scWebEmbedMakeSite("kimi", "Kimi", "https://kimi.moonshot.cn/", { embedRisk: "none" }),
+  scWebEmbedMakeSite("claude", "Claude", "https://claude.ai/", { uaMode: "desktop", embedRisk: "login" }),
+  scWebEmbedMakeSite("yuanbao", "元宝", "https://yuanbao.tencent.com/", { embedRisk: "none" }),
+  scWebEmbedMakeSite("aistudio", "AI Studio", "https://aistudio.google.com/", { iconKey: "gemini", uaMode: "desktop", embedRisk: "login" }),
+  scWebEmbedMakeSite("nami", "纳米 AI", "https://www.n.cn/", { kind: "search", queryMode: "url", uaMode: "desktop" }),
+  scWebEmbedMakeSite("mita", "秘塔", "https://metaso.cn/", { kind: "search", queryMode: "url", uaMode: "desktop", embedRisk: "none" }),
+  scWebEmbedMakeSite("qianwen", "千问", "https://tongyi.aliyun.com/qianwen/", { iconKey: "qwen", embedRisk: "none" }),
+  scWebEmbedMakeSite("copilot", "Copilot", "https://copilot.microsoft.com/", { uaMode: "desktop", embedRisk: "login" }),
+  scWebEmbedMakeSite("lmarena", "LMArena", "https://lmarena.ai/", { uaMode: "desktop" }),
+  scWebEmbedMakeSite("manus", "Manus", "https://manus.im/", { uaMode: "desktop" }),
+  scWebEmbedMakeSite("mistral", "Mistral", "https://chat.mistral.ai/", { uaMode: "desktop" }),
+  scWebEmbedMakeSite("yupp", "Yupp", "https://yupp.ai/", { uaMode: "desktop" }),
+  scWebEmbedMakeSite("zai", "Z.ai", "https://z.ai/", { uaMode: "desktop" }),
+  scWebEmbedMakeSite("coze", "扣子", "https://www.coze.cn/", { embedRisk: "none" }),
+  scWebEmbedMakeSite("tiangong", "天工", "https://www.tiangong.cn/", { uaMode: "desktop" }),
+  scWebEmbedMakeSite("wenxin", "文心一言", "https://yiyan.baidu.com/", { embedRisk: "none" })
 ]);
+
+function normalizeWebEmbedSiteId(rawId) {
+  const s = String(rawId || "").trim().toLowerCase();
+  return WEB_EMBED_ID_ALIASES[s] || s;
+}
+
+function findWebEmbedSite(siteId) {
+  const id = normalizeWebEmbedSiteId(siteId);
+  return SC_WEB_EMBED_SITES.find((s) => s.id === id) || null;
+}
+
+function isWebEmbedSiteEnabled(site) {
+  if (!site) return false;
+  if (site.embedEnabled === false) return false;
+  if (site.enabled === false) return false;
+  return true;
+}
+
+function getWebEmbedPoolSites() {
+  return SC_WEB_EMBED_SITES.filter(isWebEmbedSiteEnabled);
+}
+
+function getWebEmbedDefaultOpenSiteIds() {
+  const pool = getWebEmbedPoolSites();
+  const defs = pool.filter((s) => s.defaultOpen).map((s) => s.id);
+  return defs.length ? defs : (pool[0] ? [pool[0].id] : ["deepseek"]);
+}
+
+function normalizeWebEmbedBroadcastSites(rawIds) {
+  const allowed = new Set(getWebEmbedPoolSites().map((s) => s.id));
+  const base = Array.isArray(rawIds) && rawIds.length
+    ? rawIds.map(normalizeWebEmbedSiteId)
+    : getWebEmbedDefaultOpenSiteIds();
+  const result = [];
+  for (const id of base) {
+    if (!allowed.has(id)) continue;
+    if (result.includes(id)) continue;
+    result.push(id);
+    if (result.length >= SC_WEB_EMBED_MAX_COLUMNS) break;
+  }
+  return result.length ? result : getWebEmbedDefaultOpenSiteIds();
+}
+
+function validateWebEmbedCatalog() {
+  const ids = SC_WEB_EMBED_SITES.map((s) => s.id);
+  const duplicated = ids.filter((id, i) => ids.indexOf(id) !== i);
+  const missingDefault = getWebEmbedDefaultOpenSiteIds().filter((id) => !ids.includes(id));
+  const missingHome = SC_WEB_EMBED_SITES.filter((s) => !s.homeUrl).map((s) => s.id);
+  if (duplicated.length || missingDefault.length || missingHome.length) {
+    scWebEmbedDebugLog("warn", "catalog validate dup=" + duplicated.join(",") + " missingDefault=" + missingDefault.join(",") + " missingHome=" + missingHome.join(","));
+  }
+}
 
 function webEmbedAssetUrl(relPath) {
   const p = String(relPath || "").replace(/^\/+/, "");
   return "https://app.local/assets/" + p;
 }
 
-function webEmbedSiteIconCandidates(siteId) {
-  const id = String(siteId || "").toLowerCase();
+function webEmbedSiteIconCandidates(siteOrId) {
+  const site = typeof siteOrId === "object" ? siteOrId : findWebEmbedSite(siteOrId);
+  const id = site ? site.id : normalizeWebEmbedSiteId(siteOrId);
+  const iconKey = site && site.iconKey ? site.iconKey : id;
   const urls = [];
-  const fromEngine = (state.engines || []).find((e) => String(e && e.value || "").toLowerCase() === id);
+  const fromEngine = (state.engines || []).find((e) => normalizeWebEmbedSiteId(e && e.value) === id);
   if (fromEngine && fromEngine.iconUrl) urls.push(String(fromEngine.iconUrl));
-  const aliasNames = {
-    deepseek: ["deepseek", "DeepSeek"],
-    doubao: ["doubao", "Doubao"],
-    gemini: ["gemini", "Gemini"],
-    grok: ["grok", "Grok"],
-    perplexity: ["perplexity", "Perplexity"]
-  };
-  const names = aliasNames[id] || [id];
+  const names = [iconKey, id];
   const exts = [".svg", ".png", ".webp", ".jpg", ".jpeg"];
   for (const name of names) {
+    if (!name) continue;
     for (const ext of exts) {
-      urls.push(webEmbedAssetUrl("icons/app/" + name + ext));
       urls.push(webEmbedAssetUrl("icons/ai/" + name + ext));
+      urls.push(webEmbedAssetUrl("icons/app/" + name + ext));
     }
   }
   urls.push(webEmbedAssetUrl("icons/app/chat-ai-fallback.svg"));
@@ -6170,13 +6619,14 @@ function webEmbedSiteIconCandidates(siteId) {
 }
 
 function mountWebChipIcon(btn, site) {
-  const urls = webEmbedSiteIconCandidates(site.id);
+  const meta = typeof site === "object" ? site : findWebEmbedSite(site);
+  const urls = webEmbedSiteIconCandidates(meta || site);
   let idx = 0;
   const showFallback = () => {
     if (btn.querySelector(".web-chip-fallback")) return;
     const fb = document.createElement("span");
     fb.className = "web-chip-fallback";
-    fb.textContent = String(site.label || site.id || "?").slice(0, 1).toUpperCase();
+    fb.textContent = String((meta && meta.label) || site.label || site.id || site || "?").slice(0, 1).toUpperCase();
     btn.insertBefore(fb, btn.firstChild);
   };
   const tryNext = () => {
@@ -6229,7 +6679,7 @@ function saveWebEmbedColumnWidthsPref(map) {
 let _scWebEmbedColumnWidths = loadWebEmbedColumnWidthsPref();
 let _scWebEmbedAutoFitWidths = null;
 let _scWebEmbedAutoFitKey = "";
-let _scWebEmbedAutoFitDisabled = false;
+let _scWebEmbedAutoFitDisabled = true;
 
 function clampWebEmbedColumnWidth(widthPx, allowFitMin) {
   const minW = allowFitMin ? SC_WEB_EMBED_COL_MIN_WIDTH_FIT : SC_WEB_EMBED_COL_MIN_WIDTH;
@@ -6244,41 +6694,9 @@ function getWebEmbedStoredColumnWidth(siteId) {
 }
 
 function refreshWebEmbedAutoFit(forceResetScroll) {
-  if (_scWebEmbedAutoFitDisabled || !isWebEmbedActive()) {
-    _scWebEmbedAutoFitWidths = null;
-    _scWebEmbedAutoFitKey = "";
-    return false;
-  }
-  const siteIds = getWebEmbedLayoutSites();
-  const viewport = document.getElementById("web-embed-scroll-viewport");
-  if (!siteIds.length || !viewport) {
-    _scWebEmbedAutoFitWidths = null;
-    _scWebEmbedAutoFitKey = "";
-    return false;
-  }
-  const vp = Math.max(0, Math.round(viewport.clientWidth || 0));
-  if (vp < 240) return false;
-  const n = siteIds.length;
-  const gaps = Math.max(0, n - 1) * SC_WEB_EMBED_COL_GAP;
-  const storedStrip = siteIds.reduce((sum, id) => sum + getWebEmbedStoredColumnWidth(id), 0) + gaps;
-  if (storedStrip <= vp + 2) {
-    _scWebEmbedAutoFitWidths = null;
-    _scWebEmbedAutoFitKey = "";
-    return false;
-  }
-  const multiMin = n >= 4 ? SC_WEB_EMBED_COL_MIN_WIDTH_FIT : SC_WEB_EMBED_COL_MIN_WIDTH;
-  let fitW = Math.floor((vp - gaps) / n);
-  fitW = Math.max(multiMin, Math.min(SC_WEB_EMBED_COL_DEFAULT_WIDTH, fitW));
-  const map = {};
-  siteIds.forEach((id) => { map[id] = fitW; });
-  const key = vp + "|" + n + "|" + fitW;
-  const changed = key !== _scWebEmbedAutoFitKey;
-  _scWebEmbedAutoFitWidths = map;
-  _scWebEmbedAutoFitKey = key;
-  if ((changed || forceResetScroll) && (n * fitW + gaps <= vp + 2)) {
-    if ((viewport.scrollLeft || 0) > 0) viewport.scrollLeft = 0;
-  }
-  return changed || !!_scWebEmbedAutoFitWidths;
+  _scWebEmbedAutoFitWidths = null;
+  _scWebEmbedAutoFitKey = "";
+  return false;
 }
 
 function getWebEmbedColumnWidth(siteId) {
@@ -6300,6 +6718,41 @@ function setWebEmbedColumnWidth(siteId, widthPx, persist) {
   if (persist) saveWebEmbedColumnWidthsPref(_scWebEmbedColumnWidths);
 }
 
+function getWebEmbedViewportWidthPx() {
+  const viewport = document.getElementById("web-embed-scroll-viewport");
+  return viewport ? Math.max(0, Math.round(viewport.clientWidth || 0)) : 0;
+}
+
+function getWebEmbedMaxScrollPx() {
+  const vpW = getWebEmbedViewportWidthPx();
+  const stripW = getWebEmbedStripWidth(getWebEmbedLayoutSites());
+  return Math.max(0, stripW - vpW);
+}
+
+function webEmbedNeedsHorizontalScroll(siteIds) {
+  const ids = siteIds || getWebEmbedLayoutSites();
+  if (!ids.length) return false;
+  return getWebEmbedStripWidth(ids) > getWebEmbedViewportWidthPx() + 1;
+}
+
+function healWebEmbedColumnWidthsForScroll(siteIds) {
+  const ids = siteIds || getWebEmbedLayoutSites();
+  if (!ids.length || !webEmbedNeedsHorizontalScroll(ids)) return false;
+  let healed = false;
+  ids.forEach((id, index) => {
+    const saved = Number(_scWebEmbedColumnWidths[id]);
+    if (!Number.isFinite(saved) || saved < SC_WEB_EMBED_COL_DEFAULT_WIDTH) {
+      _scWebEmbedColumnWidths[id] = SC_WEB_EMBED_COL_DEFAULT_WIDTH;
+      healed = true;
+    } else if (ids.length > 1 && index === ids.length - 1 && saved > SC_WEB_EMBED_COL_DEFAULT_WIDTH + 100) {
+      _scWebEmbedColumnWidths[id] = SC_WEB_EMBED_COL_DEFAULT_WIDTH;
+      healed = true;
+    }
+  });
+  if (healed) saveWebEmbedColumnWidthsPref(_scWebEmbedColumnWidths);
+  return healed;
+}
+
 function getWebEmbedTrackWidthPx() {
   const viewport = document.getElementById("web-embed-scroll-viewport");
   const siteIds = getWebEmbedLayoutSites();
@@ -6311,13 +6764,14 @@ function getWebEmbedTrackWidthPx() {
 function syncWebEmbedViewportScroll(resetWhenFit) {
   const viewport = document.getElementById("web-embed-scroll-viewport");
   if (!viewport) return;
-  const fit = getWebEmbedViewportFillExtra() > 0
-    || getWebEmbedStripWidth(getWebEmbedLayoutSites()) <= Math.round(viewport.clientWidth || 0) + 1;
+  const fit = !webEmbedNeedsHorizontalScroll()
+    && (getWebEmbedViewportFillExtra() > 0
+      || getWebEmbedStripWidth(getWebEmbedLayoutSites()) <= getWebEmbedViewportWidthPx() + 1);
   if (resetWhenFit && fit) {
     if ((viewport.scrollLeft || 0) > 0) viewport.scrollLeft = 0;
     return;
   }
-  const maxScroll = Math.max(0, viewport.scrollWidth - viewport.clientWidth);
+  const maxScroll = getWebEmbedMaxScrollPx();
   if ((viewport.scrollLeft || 0) > maxScroll) viewport.scrollLeft = maxScroll;
 }
 
@@ -6325,6 +6779,8 @@ function getWebEmbedViewportFillExtra() {
   const viewport = document.getElementById("web-embed-scroll-viewport");
   const siteIds = getWebEmbedLayoutSites();
   if (!viewport || !siteIds.length) return 0;
+  if (siteIds.length > 1) return 0;
+  if (webEmbedNeedsHorizontalScroll(siteIds)) return 0;
   const strip = getWebEmbedStripWidth(siteIds);
   const vp = Math.max(0, Math.round(viewport.clientWidth || 0));
   return (vp > strip + 1) ? Math.max(0, vp - strip) : 0;
@@ -6348,11 +6804,17 @@ function getWebEmbedStripWidth(siteIds) {
 function buildWebEmbedColumnLayoutPayload() {
   refreshWebEmbedAutoFit(false);
   const viewport = document.getElementById("web-embed-scroll-viewport");
-  syncWebEmbedViewportScroll(true);
+  syncWebEmbedViewportScroll(false);
   const siteIds = getWebEmbedLayoutSites();
   const fillExtra = getWebEmbedViewportFillExtra();
+  const vpW = getWebEmbedViewportWidthPx();
+  const stripW = getWebEmbedStripWidth(siteIds);
+  const maxScroll = Math.max(0, stripW - vpW);
+  const scrollX = viewport ? Math.min(Math.max(0, Math.round(viewport.scrollLeft || 0)), maxScroll) : 0;
   return {
-    scrollX: viewport ? Math.max(0, Math.round(viewport.scrollLeft || 0)) : 0,
+    scrollX,
+    viewportWidth: vpW,
+    stripWidth: stripW,
     columns: siteIds.map((id) => ({
       id,
       width: getWebEmbedColumnWidth(id)
@@ -6375,6 +6837,7 @@ function renderWebEmbedColumnTrack() {
   const track = document.getElementById("web-embed-scroll-track");
   if (!track) return;
   const siteIds = getWebEmbedLayoutSites();
+  healWebEmbedColumnWidthsForScroll(siteIds);
   track.innerHTML = "";
   track.style.width = getWebEmbedTrackWidthPx() + "px";
   siteIds.forEach((siteId, index) => {
@@ -6400,6 +6863,7 @@ function renderWebEmbedColumnTrack() {
   if (!_scWebEmbedLayoutFromHost) postWebEmbedColumnLayout(true);
   renderWebEmbedTabBar();
   animateWebEmbedFocusFrame(getWebEmbedActiveEngine(), true);
+  syncWebEmbedHScrollUi();
 }
 
 function syncWebEmbedColumnSlotWidths(columns) {
@@ -6416,6 +6880,7 @@ function syncWebEmbedColumnSlotWidths(columns) {
     if (slot) slot.style.width = getWebEmbedLayoutColumnWidth(id, idx >= 0 ? idx : 0) + "px";
   });
   track.style.width = getWebEmbedTrackWidthPx() + "px";
+  syncWebEmbedHScrollUi();
   syncWebEmbedViewportScroll(true);
 }
 
@@ -6442,6 +6907,7 @@ function applyWebLlmColumnLayoutState(payload) {
           viewport.scrollLeft = target;
       }
     }
+    syncWebEmbedHScrollUi();
     if (payload.dragging) {
       syncWebEmbedColumnSlotWidths(payload.columns);
       document.body.classList.add("sc-web-embed-col-resizing");
@@ -6470,35 +6936,29 @@ function getWebEmbedActiveEngine() {
 }
 
 function defaultWebEmbedBroadcastSites() {
-  return SC_WEB_EMBED_SITES.filter((s) => s.enabled).map((s) => s.id);
+  return normalizeWebEmbedBroadcastSites(null);
 }
 
 function loadWebEmbedBroadcastSitesPref() {
-  const defaults = defaultWebEmbedBroadcastSites();
   try {
     const raw = localStorage.getItem(SC_WEB_BROADCAST_SITES_KEY);
-    if (!raw) return defaults.slice();
+    if (!raw) return defaultWebEmbedBroadcastSites();
     const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return defaults.slice();
-    const allowed = new Set(defaults);
-    const out = parsed.map((v) => String(v || "").trim()).filter((v) => v && allowed.has(v));
-    defaults.forEach((id) => {
-      if (!out.includes(id)) out.push(id);
-    });
-    return out.length ? out : defaults.slice();
+    if (!Array.isArray(parsed)) return defaultWebEmbedBroadcastSites();
+    return normalizeWebEmbedBroadcastSites(parsed);
   } catch (_) {}
-  return defaults.slice();
+  return defaultWebEmbedBroadcastSites();
 }
 
 function saveWebEmbedBroadcastSitesPref(list) {
   try {
-    localStorage.setItem(SC_WEB_BROADCAST_SITES_KEY, JSON.stringify(Array.isArray(list) ? list : []));
+    localStorage.setItem(SC_WEB_BROADCAST_SITES_KEY, JSON.stringify(normalizeWebEmbedBroadcastSites(list)));
   } catch (_) {}
 }
 
 function getWebEmbedBroadcastSites() {
   if (Array.isArray(state.webEmbedBroadcastSites) && state.webEmbedBroadcastSites.length)
-    return state.webEmbedBroadcastSites.filter(Boolean).map((v) => String(v));
+    return normalizeWebEmbedBroadcastSites(state.webEmbedBroadcastSites);
   return loadWebEmbedBroadcastSitesPref();
 }
 
@@ -6632,13 +7092,13 @@ function animateWebEmbedFocusFrame(siteId, immediate) {
   _scWebEmbedFocusAnim = requestAnimationFrame(tick);
 }
 
-function syncWebEmbedColumnFocus() {
+function syncWebEmbedColumnFocus(immediate) {
   const focus = getWebEmbedActiveEngine();
   document.querySelectorAll(".web-embed-column-slot").forEach((slot) => {
     const sid = String(slot.getAttribute("data-site") || "");
     slot.classList.toggle("focus-active", sid === focus);
   });
-  animateWebEmbedFocusFrame(focus, false);
+  animateWebEmbedFocusFrame(focus, immediate !== false);
 }
 
 function syncWebEmbedTabBar() {
@@ -6656,9 +7116,9 @@ function syncWebEmbedTabBar() {
     const label = meta ? meta.label : sid;
     btn.title = label + (on ? " · 已参与同问" : " · 未参与同问") + "（点击切换页面，Ctrl+点击切换参与）";
   });
-  syncWebEmbedColumnFocus();
+  syncWebEmbedColumnFocus(true);
   syncWebEmbedOmnibarBadge(focus);
-  animateWebEmbedTabIndicator(focus, false);
+  animateWebEmbedTabIndicator(focus, true);
   syncWebModeNavAiRows();
 }
 
@@ -6836,14 +7296,22 @@ function animateWebEmbedTabIndicator(siteId, immediate) {
   _scWebEmbedTabIndAnim = requestAnimationFrame(tick);
 }
 
+let _scWebEmbedLastBroadcastSyncKey = "";
+let _scWebEmbedLayoutBootstrapped = false;
+
 function syncWebEmbedBroadcastUi(postHost = false, rebuildTrack = false) {
-  const broadcast = new Set(getWebEmbedBroadcastSites());
+  const broadcast = new Set(normalizeWebEmbedBroadcastSites(getWebEmbedBroadcastSites()));
   state.webEmbedBroadcastSites = Array.from(broadcast);
   syncWebEmbedTabBar();
   state.selectedEngines = state.webEmbedBroadcastSites.slice();
   if (rebuildTrack && isWebEmbedActive()) renderWebEmbedColumnTrack();
   if (postHost) {
-    postToAhk({ type: "syncSelectedEngines", selectedEngines: state.selectedEngines.slice() });
+    const syncKey = state.selectedEngines.join(",");
+    if (syncKey !== _scWebEmbedLastBroadcastSyncKey) {
+      _scWebEmbedLastBroadcastSyncKey = syncKey;
+      postToAhk({ type: "syncSelectedEngines", selectedEngines: state.selectedEngines.slice() });
+      scWebEmbedDebugLog("info", "syncSelectedEngines → [" + state.selectedEngines.join(",") + "]");
+    }
     if (isWebEmbedActive()) {
       postToAhk({ type: "webLlmColumnLayout", columnLayout: buildWebEmbedColumnLayoutPayload() });
     }
@@ -6856,8 +7324,10 @@ function scrollWebEmbedColumnIntoView(siteId, postLayout = false) {
   const sites = getWebEmbedLayoutSites();
   const idx = sites.indexOf(String(siteId || ""));
   if (idx < 0) return;
-  const fit = getWebEmbedViewportFillExtra() > 0
-    || getWebEmbedStripWidth(sites) <= Math.round(viewport.clientWidth || 0) + 1;
+  healWebEmbedColumnWidthsForScroll(sites);
+  const fit = !webEmbedNeedsHorizontalScroll(sites)
+    && (getWebEmbedViewportFillExtra() > 0
+      || getWebEmbedStripWidth(sites) <= getWebEmbedViewportWidthPx() + 1);
   if (fit) {
     if ((viewport.scrollLeft || 0) > 0) viewport.scrollLeft = 0;
     if (postLayout) postWebEmbedColumnLayout(true);
@@ -6867,15 +7337,174 @@ function scrollWebEmbedColumnIntoView(siteId, postLayout = false) {
   for (let i = 0; i < idx; i++) {
     x += getWebEmbedLayoutColumnWidth(sites[i], i) + SC_WEB_EMBED_COL_GAP;
   }
-  const maxScroll = Math.max(0, viewport.scrollWidth - viewport.clientWidth);
+  const maxScroll = getWebEmbedMaxScrollPx();
   const target = Math.min(Math.max(0, x), maxScroll);
   if (Math.abs((viewport.scrollLeft || 0) - target) > 2) {
     // 与宿主 WebView 列同步须即时滚动；smooth 会导致 scrollX 滞后、页面只露出窄条
     viewport.scrollLeft = target;
   }
+  syncWebEmbedHScrollUi();
   if (postLayout) {
     postWebEmbedColumnLayout(true);
     requestAnimationFrame(() => postWebEmbedColumnLayout(true));
+  }
+}
+
+function focusAdjacentWebEmbedSite(delta) {
+  const sites = getWebEmbedLayoutSites();
+  if (sites.length < 2) return;
+  const step = Number(delta) || 0;
+  if (!step) return;
+  const cur = getWebEmbedActiveEngine();
+  let idx = sites.indexOf(cur);
+  if (idx < 0) idx = 0;
+  const nextIdx = (idx + step + sites.length * 8) % sites.length;
+  setWebEmbedFocusSite(sites[nextIdx], true);
+}
+
+function postWebEmbedHostScroll(siteId, deltaCss, deltaCols) {
+  if (siteId) {
+    postToAhk({ type: "webLlmScroll", siteId: String(siteId) });
+    return;
+  }
+  if (deltaCols != null && Number.isFinite(Number(deltaCols))) {
+    postToAhk({ type: "webLlmScroll", adjacent: Math.round(Number(deltaCols)) });
+    return;
+  }
+  if (deltaCss != null && Number.isFinite(Number(deltaCss))) {
+    postToAhk({ type: "webLlmScroll", deltaCss: Math.round(Number(deltaCss)) });
+  }
+}
+
+function setWebEmbedScrollPx(px, postHost = true, options = null) {
+  const viewport = document.getElementById("web-embed-scroll-viewport");
+  if (!viewport) return;
+  const isDrag = !!(options && options.drag);
+  const maxScroll = getWebEmbedMaxScrollPx();
+  const target = Math.min(Math.max(0, Math.round(Number(px) || 0)), maxScroll);
+  if (Math.abs((viewport.scrollLeft || 0) - target) > 1) viewport.scrollLeft = target;
+  syncWebEmbedHScrollUi();
+  if (!postHost || _scWebEmbedLayoutFromHost) return;
+  const vpW = getWebEmbedViewportWidthPx();
+  const stripW = getWebEmbedStripWidth(getWebEmbedLayoutSites());
+  const payload = {
+    type: "webLlmScroll",
+    scrollX: target,
+    viewportWidth: vpW,
+    stripWidth: stripW
+  };
+  if (isDrag) scheduleWebEmbedScrollHostSync(payload);
+  else flushWebEmbedScrollHostSync(payload);
+  if (!isDrag && maxScroll > 0 && target >= maxScroll - 2) {
+    const sites = getWebEmbedLayoutSites();
+    const last = sites.length ? sites[sites.length - 1] : "";
+    if (last) postToAhk({ type: "webLlmFocusSite", siteId: last });
+  }
+}
+
+function syncWebEmbedHScrollUi() {
+  const row = document.getElementById("web-embed-hscroll-row");
+  const slider = document.getElementById("web-embed-hscroll-slider");
+  const viewport = document.getElementById("web-embed-scroll-viewport");
+  if (!row || !slider || !viewport) return;
+  const show = isWebEmbedActive() && webEmbedNeedsHorizontalScroll();
+  row.classList.toggle("hidden", !show);
+  if (!show) return;
+  const maxScroll = getWebEmbedMaxScrollPx();
+  slider.max = String(maxScroll);
+  slider.value = String(Math.min(Math.max(0, Math.round(viewport.scrollLeft || 0)), maxScroll));
+  const prev = document.getElementById("web-embed-hscroll-prev");
+  const next = document.getElementById("web-embed-hscroll-next");
+  const cur = Number(slider.value) || 0;
+  if (prev) prev.disabled = cur <= 0;
+  if (next) next.disabled = cur >= maxScroll;
+}
+
+function initWebEmbedHScroll() {
+  const slider = document.getElementById("web-embed-hscroll-slider");
+  const prev = document.getElementById("web-embed-hscroll-prev");
+  const next = document.getElementById("web-embed-hscroll-next");
+  if (slider && slider.getAttribute("data-hscroll-ready") !== "1") {
+    slider.setAttribute("data-hscroll-ready", "1");
+    const endDrag = () => {
+      _scWebEmbedHScrollDragging = false;
+      setWebEmbedScrollPx(slider.value, true);
+    };
+    slider.addEventListener("pointerdown", () => { _scWebEmbedHScrollDragging = true; });
+    slider.addEventListener("pointerup", endDrag);
+    slider.addEventListener("pointercancel", endDrag);
+    slider.addEventListener("input", () => setWebEmbedScrollPx(slider.value, true, { drag: true }));
+    slider.addEventListener("change", endDrag);
+  }
+  if (prev && prev.getAttribute("data-hscroll-ready") !== "1") {
+    prev.setAttribute("data-hscroll-ready", "1");
+    prev.addEventListener("click", (e) => {
+      e.preventDefault();
+      const viewport = document.getElementById("web-embed-scroll-viewport");
+      const step = SC_WEB_EMBED_COL_DEFAULT_WIDTH + SC_WEB_EMBED_COL_GAP;
+      setWebEmbedScrollPx((viewport ? viewport.scrollLeft : 0) - step, true);
+    });
+  }
+  if (next && next.getAttribute("data-hscroll-ready") !== "1") {
+    next.setAttribute("data-hscroll-ready", "1");
+    next.addEventListener("click", (e) => {
+      e.preventDefault();
+      const viewport = document.getElementById("web-embed-scroll-viewport");
+      const step = SC_WEB_EMBED_COL_DEFAULT_WIDTH + SC_WEB_EMBED_COL_GAP;
+      setWebEmbedScrollPx((viewport ? viewport.scrollLeft : 0) + step, true);
+    });
+  }
+}
+
+function syncWebEmbedScrollNav() {
+  const nav = document.getElementById("web-embed-tab-scroll-nav");
+  if (!nav) return;
+  const sites = getWebEmbedLayoutSites();
+  const show = isWebEmbedActive() && sites.length > 1
+    && (sites.length > 5 || webEmbedNeedsHorizontalScroll());
+  nav.classList.toggle("hidden", !show);
+  if (!show) return;
+  const prev = document.getElementById("web-embed-scroll-prev");
+  const next = document.getElementById("web-embed-scroll-next");
+  if (prev) prev.disabled = false;
+  if (next) next.disabled = false;
+  syncWebEmbedHScrollUi();
+}
+
+function initWebEmbedScrollNav() {
+  const tabbar = document.querySelector(".web-embed-tabbar");
+  const prev = document.getElementById("web-embed-scroll-prev");
+  const next = document.getElementById("web-embed-scroll-next");
+  if (prev && prev.getAttribute("data-scroll-ready") !== "1") {
+    prev.setAttribute("data-scroll-ready", "1");
+    prev.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      focusAdjacentWebEmbedSite(-1);
+    });
+  }
+  if (next && next.getAttribute("data-scroll-ready") !== "1") {
+    next.setAttribute("data-scroll-ready", "1");
+    next.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      focusAdjacentWebEmbedSite(1);
+    });
+  }
+  if (tabbar && tabbar.getAttribute("data-wheel-ready") !== "1") {
+    tabbar.setAttribute("data-wheel-ready", "1");
+    tabbar.addEventListener("wheel", (e) => {
+      if (!isWebEmbedActive()) return;
+      const sites = getWebEmbedLayoutSites();
+      if (sites.length < 2) return;
+      if (sites.length <= 5 && !webEmbedNeedsHorizontalScroll()) return;
+      let step = 0;
+      if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) step = e.deltaX > 0 ? 1 : -1;
+      else if (Math.abs(e.deltaY) >= 1) step = e.deltaY > 0 ? 1 : -1;
+      if (!step) return;
+      e.preventDefault();
+      focusAdjacentWebEmbedSite(step);
+    }, { passive: false });
   }
 }
 
@@ -6885,27 +7514,65 @@ function setWebEmbedFocusSite(siteId, postHost = true) {
   state.webEmbedSiteId = eng;
   syncWebEmbedTabBar();
   if (isWebEmbedActive()) {
-    scrollWebEmbedColumnIntoView(eng, true);
+    if (healWebEmbedColumnWidthsForScroll()) {
+      const track = document.getElementById("web-embed-scroll-track");
+      if (track) {
+        track.style.width = getWebEmbedTrackWidthPx() + "px";
+        getWebEmbedLayoutSites().forEach((sid, index) => {
+          const slot = track.querySelector('.web-embed-column-slot[data-site="' + sid + '"]');
+          if (slot) slot.style.width = getWebEmbedLayoutColumnWidth(sid, index) + "px";
+        });
+      }
+    }
+    scrollWebEmbedColumnIntoView(eng, false);
+    if (postHost) {
+      const sites = getWebEmbedLayoutSites();
+      const inLayout = sites.indexOf(eng) >= 0;
+      if (!inLayout) {
+        postToAhk({ type: "syncSelectedEngines", selectedEngines: sites.slice() });
+      }
+      postToAhk({ type: "webLlmFocusSite", siteId: eng });
+    } else {
+      scrollWebEmbedColumnIntoView(eng, true);
+    }
+    syncWebEmbedScrollNav();
+  } else if (postHost) {
+    postToAhk({ type: "webLlmFocusSite", siteId: eng });
   }
-  if (postHost) postToAhk({ type: "webLlmFocusSite", siteId: eng });
 }
 
 function toggleWebEmbedBroadcastSite(siteId) {
-  const id = String(siteId || "").trim();
+  const id = normalizeWebEmbedSiteId(siteId);
   if (!id) return;
-  let list = getWebEmbedBroadcastSites();
+  let list = normalizeWebEmbedBroadcastSites(getWebEmbedBroadcastSites());
   const i = list.indexOf(id);
+  const wasAdd = i < 0;
   if (i >= 0) {
-    if (list.length <= 1) return;
+    if (list.length <= 1) {
+      scWebEmbedDebugLog("warn", "无法移除最后一个 AI 页面: " + id);
+      return;
+    }
     list = list.filter((v) => v !== id);
+    scWebEmbedDebugLog("info", "移除 AI 页面: " + id + " → [" + list.join(",") + "]");
   } else {
-    if (list.length >= SC_WEB_EMBED_MAX_COLUMNS) return;
+    if (list.length >= SC_WEB_EMBED_MAX_COLUMNS) {
+      scWebEmbedDebugLog("warn", "已达最大列数 " + SC_WEB_EMBED_MAX_COLUMNS + "，请先关闭一个 AI 页面");
+      try {
+        if (typeof showToast === "function") showToast("已达最大列数 " + SC_WEB_EMBED_MAX_COLUMNS + "，请先关闭一个 AI 页面");
+      } catch (_) {}
+      return;
+    }
     list = list.concat([id]);
+    scWebEmbedDebugLog("info", "添加 AI 页面: " + id + " → [" + list.join(",") + "]");
   }
   state.webEmbedBroadcastSites = list;
   saveWebEmbedBroadcastSitesPref(list);
   syncWebEmbedBroadcastUi(true, true);
-  if (isWebEmbedActive()) renderWebEmbedTabBar();
+  renderWebModeNavBody();
+  if (isWebEmbedActive()) {
+    renderWebEmbedTabBar();
+    if (wasAdd) setWebEmbedFocusSite(id, true);
+  }
 }
 
 function syncWebEmbedSelectedEngine(engineId, postHost = true) {
@@ -6940,6 +7607,7 @@ function syncWebBookmarkLabelsUi() {
 function dismissWebEmbedHost() {
   cancelWebEmbedRectTimers();
   _scWebEmbedLastRectKey = "";
+  _scWebEmbedHostBootstrapped = false;
   try { postToAhk({ type: "webLlmDismiss" }); } catch (_) {}
 }
 
@@ -7010,7 +7678,10 @@ function ensureWebEmbedLayoutObserver() {
   if (_scWebEmbedLayoutRo) return;
   const ws = document.getElementById("web-embed-workspace");
   if (!ws || typeof ResizeObserver !== "function") return;
-  _scWebEmbedLayoutRo = new ResizeObserver(() => scheduleWebEmbedContentRect());
+  _scWebEmbedLayoutRo = new ResizeObserver(() => {
+    scheduleWebEmbedContentRect();
+    if (isWebEmbedActive()) syncWebEmbedHScrollUi();
+  });
   _scWebEmbedLayoutRo.observe(ws);
   const frame = document.getElementById("web-embed-scroll-viewport");
   if (frame) _scWebEmbedLayoutRo.observe(frame);
@@ -7027,6 +7698,30 @@ let _scWebEmbedRectDebounce = 0;
 let _scWebEmbedLastRectKey = "";
 let _scWebEmbedLastLayoutKey = "";
 let _scWebEmbedLayoutFromHost = false;
+let _scWebEmbedHostBootstrapped = false;
+let _scWebEmbedHScrollDragging = false;
+let _scWebEmbedScrollHostRaf = 0;
+let _scWebEmbedScrollHostPending = null;
+
+function scheduleWebEmbedScrollHostSync(payload) {
+  _scWebEmbedScrollHostPending = payload;
+  if (_scWebEmbedScrollHostRaf) return;
+  _scWebEmbedScrollHostRaf = requestAnimationFrame(() => {
+    _scWebEmbedScrollHostRaf = 0;
+    const p = _scWebEmbedScrollHostPending;
+    _scWebEmbedScrollHostPending = null;
+    if (p && !_scWebEmbedLayoutFromHost) postToAhk(p);
+  });
+}
+
+function flushWebEmbedScrollHostSync(payload) {
+  if (_scWebEmbedScrollHostRaf) {
+    cancelAnimationFrame(_scWebEmbedScrollHostRaf);
+    _scWebEmbedScrollHostRaf = 0;
+  }
+  _scWebEmbedScrollHostPending = null;
+  if (payload && !_scWebEmbedLayoutFromHost) postToAhk(payload);
+}
 
 function scheduleWebEmbedContentRect() {
   if (!isWebEmbedActive()) return;
@@ -7034,7 +7729,6 @@ function scheduleWebEmbedContentRect() {
   _scWebEmbedRectDebounce = setTimeout(() => {
     _scWebEmbedRectDebounce = 0;
     requestAnimationFrame(() => {
-      renderWebEmbedColumnTrack();
       postWebEmbedContentRect();
     });
   }, 120);
@@ -7043,7 +7737,9 @@ function scheduleWebEmbedContentRect() {
 function syncWebEmbedToolbarVisibility() {
   const bar = document.getElementById("web-embed-toolbar");
   if (!bar) return;
-  bar.classList.toggle("hidden", !isWebEmbedActive());
+  const embed = isWebEmbedActive();
+  bar.classList.toggle("hidden", !embed);
+  if (embed) bar.classList.remove("hidden");
 }
 
 function syncWebEmbedLayout() {
@@ -7051,6 +7747,7 @@ function syncWebEmbedLayout() {
   const mode = getUIMode();
   document.body.classList.toggle("sc-web-embed-layout", embed);
   document.body.classList.toggle("sc-web-mode-layout", mode === "web");
+  syncWebEmbedDebugStatusBar();
   const layout = document.getElementById("layout");
   if (layout) layout.classList.toggle("sc-web-embed-active", embed);
   const ws = document.getElementById("web-embed-workspace");
@@ -7070,19 +7767,26 @@ function syncWebEmbedLayout() {
     if (!Array.isArray(state.webEmbedBroadcastSites) || !state.webEmbedBroadcastSites.length)
       state.webEmbedBroadcastSites = loadWebEmbedBroadcastSitesPref();
     state.selectedEngines = state.webEmbedBroadcastSites.slice();
-    saveWebEmbedBroadcastSitesPref(state.webEmbedBroadcastSites);
-    renderWebEmbedColumnTrack();
-    renderWebEmbedTabBar();
-    syncWebEmbedBroadcastUi(true);
-    syncWebEmbedViewportScroll(true);
-    ensureWebEmbedLayoutObserver();
-    scheduleWebEmbedContentRect();
-    setTimeout(scheduleWebEmbedContentRect, 120);
-    setTimeout(scheduleWebEmbedContentRect, 300);
-    setTimeout(scheduleWebEmbedContentRect, 800);
-    setTimeout(scheduleWebEmbedContentRect, 1500);
-    if (!String(state.webEmbedSiteId || "").trim())
-      setWebEmbedFocusSite(getWebEmbedActiveEngine(), true);
+    if (!_scWebEmbedLayoutBootstrapped) {
+      _scWebEmbedLayoutBootstrapped = true;
+      saveWebEmbedBroadcastSitesPref(state.webEmbedBroadcastSites);
+      renderWebEmbedColumnTrack();
+      renderWebEmbedTabBar();
+      syncWebEmbedBroadcastUi(true);
+      ensureWebEmbedLayoutObserver();
+      scheduleWebEmbedContentRect();
+      setTimeout(scheduleWebEmbedContentRect, 120);
+      setTimeout(scheduleWebEmbedContentRect, 300);
+      if (!String(state.webEmbedSiteId || "").trim())
+        setWebEmbedFocusSite(getWebEmbedActiveEngine(), true);
+    } else {
+      renderWebEmbedTabBar();
+      syncWebEmbedHScrollUi();
+      syncWebEmbedScrollNav();
+    }
+    syncWebEmbedViewportScroll(false);
+  } else {
+    _scWebEmbedLayoutBootstrapped = false;
   }
   if (mode === "web" && !embed) renderWebExternalHint();
   if (mode === "web") {
@@ -7175,6 +7879,9 @@ function postWebEmbedContentRect(force) {
   if (!r || r.width < 80 || r.height < 60) {
     if (_scWebEmbedRectRetries < 20) {
       _scWebEmbedRectRetries += 1;
+      if (_scWebEmbedRectRetries === 1 || _scWebEmbedRectRetries === 6 || _scWebEmbedRectRetries >= 20) {
+        scWebEmbedDebugLog("warn", "内嵌视口矩形无效 " + (r ? (r.width + "×" + r.height) : "null") + " retry=" + _scWebEmbedRectRetries);
+      }
       setTimeout(scheduleWebEmbedContentRect, _scWebEmbedRectRetries < 6 ? 80 : 200);
     }
     return;
@@ -7182,35 +7889,42 @@ function postWebEmbedContentRect(force) {
   _scWebEmbedRectRetries = 0;
   refreshWebEmbedAutoFit(true);
   const key = [Math.round(r.left), Math.round(r.top), Math.round(r.width), Math.round(r.height)].join("x");
+  const rectPayload = {
+    left: Math.round(r.left),
+    top: Math.round(r.top),
+    width: Math.max(200, Math.round(r.width)),
+    height: Math.max(140, Math.round(r.height)),
+    dpr: Number(window.devicePixelRatio) || 1
+  };
+  const layoutPayload = buildWebEmbedColumnLayoutPayload();
   if (!force && key === _scWebEmbedLastRectKey) {
     syncWebEmbedViewportScroll(true);
     postWebEmbedColumnLayout(true);
     postToAhk({
       type: "webLlmContentRect",
-      rect: {
-        left: Math.round(r.left),
-        top: Math.round(r.top),
-        width: Math.max(200, Math.round(r.width)),
-        height: Math.max(140, Math.round(r.height)),
-        dpr: Number(window.devicePixelRatio) || 1
-      },
-      columnLayout: buildWebEmbedColumnLayoutPayload()
+      rect: rectPayload,
+      columnLayout: layoutPayload
     });
     return;
   }
   _scWebEmbedLastRectKey = key;
   syncWebEmbedViewportScroll(true);
+  if (_scWebEmbedHostBootstrapped && !force) {
+    postToAhk({
+      type: "webLlmContentRect",
+      rect: rectPayload,
+      columnLayout: layoutPayload
+    });
+    scheduleWebEmbedLayoutResync();
+    return;
+  }
+  _scWebEmbedHostBootstrapped = true;
+  scWebEmbedDebugLog("info", "webLlmBootstrap " + rectPayload.width + "×" + rectPayload.height + " sites=[" + getWebEmbedLayoutSites().join(",") + "]");
   postToAhk({
     type: "webLlmBootstrap",
-    rect: {
-      left: Math.round(r.left),
-      top: Math.round(r.top),
-      width: Math.max(200, Math.round(r.width)),
-      height: Math.max(140, Math.round(r.height)),
-      dpr: Number(window.devicePixelRatio) || 1
-    },
+    rect: rectPayload,
     selectedEngines: getWebEmbedLayoutSites().slice(),
-    columnLayout: buildWebEmbedColumnLayoutPayload()
+    columnLayout: layoutPayload
   });
   scheduleWebEmbedLayoutResync();
 }
@@ -7230,14 +7944,15 @@ function applyWebLlmChromeState(payload) {
   if (input && isWebEmbedActive() && !String(input.value || "").trim()) {
     input.placeholder = SC_WEB_EMBED_INPUT_HINT;
   }
-  const sid = String(payload.siteId || "");
+  const sid = String(payload.siteId || "").trim();
   if (sid) {
     if (!state.webEmbedSiteChrome || typeof state.webEmbedSiteChrome !== "object")
       state.webEmbedSiteChrome = {};
     state.webEmbedSiteChrome[sid] = { loading, title, url };
   }
   syncWebModeNavAiRows();
-  if (sid) setWebEmbedFocusSite(sid, false);
+  const cur = String(state.webEmbedSiteId || "").trim();
+  if (sid && sid !== cur) setWebEmbedFocusSite(sid, false);
 }
 
 function renderWebEmbedTabBar() {
@@ -7269,7 +7984,7 @@ function renderWebEmbedTabBar() {
       label.textContent = site.label;
       btn.appendChild(label);
       btn.addEventListener("click", (e) => {
-        if (!site.enabled) return;
+        if (!isWebEmbedSiteEnabled(site)) return;
         e.preventDefault();
         e.stopPropagation();
         if (e.ctrlKey || e.metaKey) {
@@ -7283,7 +7998,7 @@ function renderWebEmbedTabBar() {
       const label = btn.querySelector(".web-chip-label");
       if (label) label.textContent = site.label;
       btn.classList.add("web-embed-tab");
-      btn.disabled = !site.enabled;
+      btn.disabled = !isWebEmbedSiteEnabled(site);
     }
   });
   if (!Array.isArray(state.webEmbedBroadcastSites) || !state.webEmbedBroadcastSites.length) {
@@ -7291,6 +8006,7 @@ function renderWebEmbedTabBar() {
   }
   syncWebEmbedTabBar();
   animateWebEmbedTabIndicator(getWebEmbedActiveEngine(), true);
+  syncWebEmbedScrollNav();
   renderWebModeNavBody();
 }
 
@@ -7306,12 +8022,218 @@ function ensureWebEmbedTabScrollSync() {
 }
 
 function renderWebLlmToolbar() {
+  validateWebEmbedCatalog();
   renderWebEmbedTabBar();
+}
+
+const _scWebEmbedDebugEvents = [];
+const _scWebEmbedDebugState = { open: false, logTab: "js", hostSnap: null, pollTimer: 0 };
+
+function scWebEmbedDebugLog(level, msg) {
+  const line = "[" + new Date().toLocaleTimeString() + "][" + String(level || "info") + "] " + String(msg || "");
+  _scWebEmbedDebugEvents.push(line);
+  if (_scWebEmbedDebugEvents.length > 120) _scWebEmbedDebugEvents.shift();
+  if (_scWebEmbedDebugState.open) renderWebEmbedDebugLogPane();
+}
+
+function buildWebEmbedClientDebugSnapshot() {
+  const viewport = document.getElementById("web-embed-scroll-viewport");
+  const ws = document.getElementById("web-embed-workspace");
+  const measured = measureWebEmbedHostRect();
+  const vpRect = viewport ? viewport.getBoundingClientRect() : null;
+  return {
+    mode: getUIMode(),
+    category: String(state.currentCategoryKey || ""),
+    embedActive: isWebEmbedActive(),
+    broadcastSites: getWebEmbedBroadcastSites().slice(),
+    layoutSites: getWebEmbedLayoutSites().slice(),
+    focusSite: String(state.webEmbedSiteId || ""),
+    hostRectNull: !measured,
+    hostRect: measured,
+    viewport: viewport ? {
+      clientW: viewport.clientWidth,
+      clientH: viewport.clientHeight,
+      scrollW: viewport.scrollWidth,
+      scrollLeft: viewport.scrollLeft,
+      boxW: vpRect ? Math.round(vpRect.width) : 0,
+      boxH: vpRect ? Math.round(vpRect.height) : 0
+    } : null,
+    workspaceHidden: !!(ws && ws.classList.contains("hidden")),
+    hostBootstrapped: !!_scWebEmbedHostBootstrapped,
+    lastRectKey: String(_scWebEmbedLastRectKey || "")
+  };
+}
+
+function syncWebEmbedDebugStatusBar() {
+  const grp = document.getElementById("sc-status-group-web-debug");
+  if (!grp) return;
+  grp.classList.toggle("hidden", getUIMode() !== "web");
+}
+
+function renderWebEmbedDebugIssues(issues) {
+  const host = document.getElementById("web-embed-debug-issues");
+  if (!host) return;
+  const list = Array.isArray(issues) ? issues : [];
+  if (!list.length) {
+    host.innerHTML = '<div class="web-embed-debug-issue level-ok">未发现明显异常 · 若仍无法加页，查看右侧日志</div>';
+    return;
+  }
+  host.innerHTML = list.map((it) => {
+    const lv = String(it && it.level || "warn");
+    const msg = escapeHtml(String(it && it.msg || it && it.code || "?"));
+    return '<div class="web-embed-debug-issue level-' + lv + '">' + msg + "</div>";
+  }).join("");
+}
+
+function renderWebEmbedDebugKv(client, snap) {
+  const host = document.getElementById("web-embed-debug-kv");
+  if (!host) return;
+  const flags = snap && snap.flags ? snap.flags : {};
+  const rect = snap && snap.contentRect ? snap.contentRect : {};
+  const rows = [
+    ["页面模式", String(client.mode || "") + " / cat=" + String(client.category || "")],
+    ["内嵌激活", client.embedActive ? "是" : "否"],
+    ["页面 AI 列", (client.broadcastSites || []).join(", ") || "(空)"],
+    ["宿主 engines", (snap && snap.selectedEngines || []).join(", ") || "(空)"],
+    ["layoutIds", (snap && snap.layoutSiteIds || []).join(", ") || "(空)"],
+    ["rectReady", flags.contentRectReady ? "是" : "否"],
+    ["宿主 rect", (rect.width || 0) + "×" + (rect.height || 0)],
+    ["页面 rect", client.hostRect ? (client.hostRect.width + "×" + client.hostRect.height) : "未测到"],
+    ["bootstrap", "boot=" + (flags.embedBootstrapped ? "1" : "0") + " wait=" + (flags.bootstrapWaitCount || 0)],
+    ["canBootstrap", flags.canBootstrap ? "是" : "否"]
+  ];
+  host.innerHTML = rows.map(([k, v]) => "<dt>" + escapeHtml(k) + "</dt><dd>" + escapeHtml(String(v)) + "</dd>").join("");
+}
+
+function renderWebEmbedDebugSites(snap) {
+  const host = document.getElementById("web-embed-debug-sites");
+  if (!host) return;
+  const sites = snap && Array.isArray(snap.sites) ? snap.sites : [];
+  if (!sites.length) {
+    host.textContent = "无 layout 站点记录";
+    return;
+  }
+  host.textContent = sites.map((s) => {
+    const st = [];
+    st.push(String(s.id || "?"));
+    st.push(s.ready ? "ready" : (s.createInFlight ? "creating" : "missing"));
+    if (s.createAgeMs) st.push(String(s.createAgeMs) + "ms");
+    if (s.lastNavError) st.push("err:" + s.lastNavError);
+    return st.join(" · ");
+  }).join("\n");
+}
+
+function renderWebEmbedDebugLogPane() {
+  const pre = document.getElementById("web-embed-debug-log");
+  if (!pre) return;
+  const tab = _scWebEmbedDebugState.logTab || "js";
+  if (tab === "js") {
+    pre.textContent = _scWebEmbedDebugEvents.length
+      ? _scWebEmbedDebugEvents.join("\n")
+      : "(暂无页面事件 — 尝试添加/切换 AI 页面后刷新)";
+    pre.scrollTop = pre.scrollHeight;
+    return;
+  }
+  const snap = _scWebEmbedDebugState.hostSnap;
+  const logs = snap && snap.logs ? snap.logs : {};
+  pre.textContent = String(logs[tab] || "(无日志)") || "(无日志)";
+  pre.scrollTop = pre.scrollHeight;
+}
+
+function renderWebEmbedDebugPanel(client, snap) {
+  _scWebEmbedDebugState.hostSnap = snap || null;
+  renderWebEmbedDebugIssues(snap && snap.issues);
+  renderWebEmbedDebugKv(client, snap);
+  renderWebEmbedDebugSites(snap);
+  renderWebEmbedDebugLogPane();
+}
+
+function requestWebEmbedDebugSnapshot() {
+  const client = buildWebEmbedClientDebugSnapshot();
+  scWebEmbedDebugLog("info", "请求宿主诊断快照…");
+  try {
+    postToAhk({ type: "webEmbedDebugRequest", client });
+  } catch (e) {
+    scWebEmbedDebugLog("error", "postToAhk 失败: " + (e && e.message ? e.message : e));
+    renderWebEmbedDebugPanel(client, null);
+  }
+}
+
+function buildWebEmbedDebugActionPayload() {
+  const rect = measureWebEmbedHostRect();
+  return {
+    client: buildWebEmbedClientDebugSnapshot(),
+    rect: rect || undefined,
+    selectedEngines: getWebEmbedLayoutSites().slice(),
+    columnLayout: buildWebEmbedColumnLayoutPayload()
+  };
+}
+
+function toggleWebEmbedDebugPanel(forceOpen) {
+  const panel = document.getElementById("web-embed-debug-panel");
+  if (!panel) return;
+  const next = typeof forceOpen === "boolean" ? forceOpen : !panel.classList.contains("hidden");
+  _scWebEmbedDebugState.open = next;
+  panel.classList.toggle("hidden", !next);
+  document.body.classList.toggle("sc-web-embed-debug-open", next);
+  if (next) {
+    if (getUIMode() !== "web") setUIMode("web", true);
+    if (!isWebEmbedCategory()) selectCategoryLocal("ai", true);
+    requestWebEmbedDebugSnapshot();
+    if (_scWebEmbedDebugState.pollTimer) clearInterval(_scWebEmbedDebugState.pollTimer);
+    _scWebEmbedDebugState.pollTimer = setInterval(() => {
+      if (!_scWebEmbedDebugState.open) return;
+      requestWebEmbedDebugSnapshot();
+    }, 2500);
+  } else if (_scWebEmbedDebugState.pollTimer) {
+    clearInterval(_scWebEmbedDebugState.pollTimer);
+    _scWebEmbedDebugState.pollTimer = 0;
+  }
+}
+
+function initWebEmbedDebugPanel() {
+  syncWebEmbedDebugStatusBar();
+  const bind = (id, fn) => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener("click", fn);
+  };
+  bind("webllm-btn-debug", () => toggleWebEmbedDebugPanel(true));
+  bind("btn-web-embed-debug", () => toggleWebEmbedDebugPanel(true));
+  bind("web-embed-debug-close", () => toggleWebEmbedDebugPanel(false));
+  bind("web-embed-debug-refresh", () => requestWebEmbedDebugSnapshot());
+  bind("web-embed-debug-rebootstrap", () => {
+    _scWebEmbedHostBootstrapped = false;
+    scWebEmbedDebugLog("info", "手动触发 webLlmBootstrap");
+    scheduleWebEmbedContentRect(true);
+    try {
+      postToAhk({ type: "webEmbedDebugAction", action: "rebootstrap", ...buildWebEmbedDebugActionPayload() });
+    } catch (e) {
+      scWebEmbedDebugLog("error", "rebootstrap 发送失败");
+    }
+  });
+  bind("web-embed-debug-copy", () => {
+    try {
+      postToAhk({ type: "webEmbedDebugAction", action: "copy_trace", client: buildWebEmbedClientDebugSnapshot() });
+    } catch (_) {}
+  });
+  bind("web-embed-debug-open-log", () => {
+    try { postToAhk({ type: "webEmbedDebugAction", action: "open_log_dir" }); } catch (_) {}
+  });
+  document.querySelectorAll("#web-embed-debug-log-tabs .web-embed-debug-log-tab").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll("#web-embed-debug-log-tabs .web-embed-debug-log-tab").forEach((b) => {
+        b.classList.toggle("is-active", b === btn);
+      });
+      _scWebEmbedDebugState.logTab = String(btn.getAttribute("data-log-tab") || "js");
+      renderWebEmbedDebugLogPane();
+    });
+  });
 }
 
 function initWebLlmToolbar() {
   syncWebEmbedSearchDock(isWebEmbedActive());
   ensureWebEmbedTabScrollSync();
+  initWebEmbedScrollNav();
   renderWebLlmToolbar();
   initWebEmbedColumnLayout();
   const map = {
@@ -7347,6 +8269,7 @@ function initWebLlmToolbar() {
   syncWebBookmarkLabelsUi();
   syncWebEmbedLayout();
   renderWebEmbedTabBar();
+  initWebEmbedDebugPanel();
 }
 
 function initWebEmbedColumnResizeHandles() {
@@ -7354,21 +8277,46 @@ function initWebEmbedColumnResizeHandles() {
 }
 
 let _scWebEmbedScrollDebounce = 0;
+let _scWebEmbedScrollSyncTimer = 0;
+
+function syncWebEmbedScrollToHost() {
+  if (!isWebEmbedActive() || _scWebEmbedLayoutFromHost) return;
+  const viewport = document.getElementById("web-embed-scroll-viewport");
+  if (!viewport) return;
+  syncWebEmbedViewportScroll(false);
+  const vpW = getWebEmbedViewportWidthPx();
+  const stripW = getWebEmbedStripWidth(getWebEmbedLayoutSites());
+  const maxScroll = Math.max(0, stripW - vpW);
+  const scrollX = Math.min(Math.max(0, Math.round(viewport.scrollLeft || 0)), maxScroll);
+  postToAhk({
+    type: "webLlmScroll",
+    scrollX,
+    viewportWidth: vpW,
+    stripWidth: stripW
+  });
+}
 
 function initWebEmbedColumnLayout() {
+  initWebEmbedHScroll();
   const viewport = document.getElementById("web-embed-scroll-viewport");
   if (!viewport || viewport.getAttribute("data-layout-ready") === "1") return;
   viewport.setAttribute("data-layout-ready", "1");
   viewport.addEventListener("scroll", () => {
-    if (_scWebEmbedScrollDebounce) return;
-    _scWebEmbedScrollDebounce = setTimeout(() => {
-      _scWebEmbedScrollDebounce = 0;
-      syncWebEmbedViewportScroll(true);
-      postWebEmbedColumnLayout(false);
-    }, 180);
+    if (_scWebEmbedLayoutFromHost) return;
+    syncWebEmbedHScrollUi();
+    if (_scWebEmbedHScrollDragging) return;
+    if (_scWebEmbedScrollSyncTimer) clearTimeout(_scWebEmbedScrollSyncTimer);
+    _scWebEmbedScrollSyncTimer = setTimeout(() => {
+      _scWebEmbedScrollSyncTimer = 0;
+      syncWebEmbedScrollToHost();
+    }, 36);
     if (isWebEmbedActive() && _scWebEmbedFocusState.siteId) {
       animateWebEmbedFocusFrame(_scWebEmbedFocusState.siteId, true);
     }
+  }, { passive: true });
+  viewport.addEventListener("pointerup", () => {
+    if (_scWebEmbedLayoutFromHost) return;
+    syncWebEmbedScrollToHost();
   }, { passive: true });
   renderWebEmbedColumnTrack();
   if (typeof ResizeObserver === "function") {
@@ -8025,7 +8973,7 @@ function ensureWebModeNavBodyShell(body) {
         "</div>" +
       "</details>" +
       "<details class=\"sc-web-nav-ai-folder\" open>" +
-        "<summary class=\"sc-web-nav-ai-folder-sum\"><span class=\"sc-web-nav-folder-icon\">📁</span> AI 页面</summary>" +
+        "<summary class=\"sc-web-nav-ai-folder-sum\"><span class=\"sc-web-nav-folder-icon\">📁</span> AI 页面 <span id=\"sc-web-ai-count\" class=\"sc-web-ai-count\">0/8</span></summary>" +
         "<div id=\"sc-web-nav-ai-list\" class=\"sc-web-nav-ai-list\" role=\"list\"></div>" +
       "</details>" +
       "<details class=\"sc-web-nav-more-panel hidden\" id=\"sc-web-nav-more-panel\">" +
@@ -8044,6 +8992,62 @@ function ensureWebModeNavBodyShell(body) {
   if (moreBtn) moreBtn.addEventListener("click", openWebEmbedSetupFromNav);
 }
 
+function updateWebEmbedAiCount() {
+  const el = document.getElementById("sc-web-ai-count");
+  if (!el) return;
+  const n = getWebEmbedBroadcastSites().length;
+  el.textContent = n + "/" + SC_WEB_EMBED_MAX_COLUMNS;
+}
+
+function appendWebEmbedPoolSection(listEl, label) {
+  const lab = document.createElement("div");
+  lab.className = "sc-web-ai-section-label";
+  lab.textContent = label;
+  listEl.appendChild(lab);
+  const pool = document.createElement("div");
+  pool.className = "sc-web-ai-pool";
+  listEl.appendChild(pool);
+  return pool;
+}
+
+function createWebEmbedPoolChip(site, isOn, isFocus) {
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "sc-web-ai-pool-chip" + (isOn ? " is-on" : "") + (isFocus ? " is-focus" : "") + (site.embedRisk && site.embedRisk !== "none" ? " is-risk" : "");
+  btn.setAttribute("data-site", site.id);
+  btn.setAttribute("role", "listitem");
+  mountWebChipIcon(btn, site);
+  const label = document.createElement("span");
+  label.className = "sc-web-ai-pool-chip__label";
+  label.textContent = site.label;
+  btn.appendChild(label);
+  const act = document.createElement("span");
+  act.className = "sc-web-ai-pool-chip__act";
+  act.textContent = isOn ? "✓" : "+";
+  act.setAttribute("aria-hidden", "true");
+  btn.appendChild(act);
+  const riskHint = site.embedRisk === "login" ? " · 可能需登录" : (site.embedRisk === "untested" ? " · 实验性" : "");
+  btn.title = site.label + (isOn ? " · 已参与同问" : " · 点击添加") + riskHint;
+  btn.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!isWebEmbedSiteEnabled(site)) return;
+    if (e.ctrlKey || e.metaKey) {
+      toggleWebEmbedBroadcastSite(site.id);
+      return;
+    }
+    const broadcast = getWebEmbedBroadcastSites();
+    if (broadcast.includes(site.id)) {
+      if (getUIMode() !== "web") setUIMode("web", true);
+      if (!isWebEmbedCategory()) selectCategoryLocal("ai", true);
+      setWebEmbedFocusSite(site.id, true);
+      return;
+    }
+    toggleWebEmbedBroadcastSite(site.id);
+  });
+  return btn;
+}
+
 function renderWebModeNavBody() {
   const card = document.querySelector('.sc-mode-card[data-mode="web"]');
   if (!card) return;
@@ -8052,55 +9056,33 @@ function renderWebModeNavBody() {
   ensureWebModeNavBodyShell(body);
   const list = document.getElementById("sc-web-nav-ai-list");
   if (!list) return;
-  const layoutSites = getWebEmbedLayoutSites();
-  const existing = new Map();
-  list.querySelectorAll(".sc-web-ai-row").forEach((row) => {
-    existing.set(String(row.getAttribute("data-site") || ""), row);
-  });
-  list.querySelectorAll(".sc-web-ai-row").forEach((row) => {
-    const sid = String(row.getAttribute("data-site") || "");
-    if (!layoutSites.includes(sid)) row.remove();
-  });
-  layoutSites.forEach((siteId) => {
-    const site = SC_WEB_EMBED_SITES.find((s) => s.id === siteId);
-    if (!site) return;
-    let row = existing.get(site.id);
-    if (!row) {
-      row = document.createElement("button");
-      row.type = "button";
-      row.className = "sc-web-ai-row";
-      row.setAttribute("data-site", site.id);
-      row.setAttribute("role", "listitem");
-      row.innerHTML =
-        "<span class=\"sc-web-ai-row__icon\"></span>" +
-        "<span class=\"sc-web-ai-row__main\">" +
-          "<span class=\"sc-web-ai-row__title\"></span>" +
-          "<span class=\"sc-web-ai-row__sub\"></span>" +
-          "<span class=\"sc-web-ai-row__progress\"><span class=\"sc-web-ai-row__progress-fill\"></span></span>" +
-        "</span>" +
-        "<span class=\"sc-web-ai-row__dot\" aria-hidden=\"true\"></span>";
-      const iconHost = row.querySelector(".sc-web-ai-row__icon");
-      if (iconHost) mountWebChipIcon(iconHost, site);
-      const titleEl = row.querySelector(".sc-web-ai-row__title");
-      if (titleEl) titleEl.textContent = site.label + " - 联网问答";
-      row.addEventListener("click", (e) => {
-        if (!site.enabled) return;
-        e.preventDefault();
-        e.stopPropagation();
-        if (e.ctrlKey || e.metaKey) {
-          toggleWebEmbedBroadcastSite(site.id);
-          return;
-        }
-        if (getUIMode() !== "web") setUIMode("web", true);
-        if (!isWebEmbedCategory()) selectCategoryLocal("ai", true);
-        setWebEmbedFocusSite(site.id, true);
-      });
-      list.appendChild(row);
-    } else {
-      const titleEl = row.querySelector(".sc-web-ai-row__title");
-      if (titleEl) titleEl.textContent = site.label + " - 联网问答";
-    }
-  });
+  const broadcast = getWebEmbedBroadcastSites();
+  const pool = getWebEmbedPoolSites();
+  const focus = getWebEmbedActiveEngine();
+  list.innerHTML = "";
+  updateWebEmbedAiCount();
+
+  const onSites = broadcast.map((id) => findWebEmbedSite(id)).filter(Boolean);
+  if (onSites.length) {
+    const onPool = appendWebEmbedPoolSection(list, "已开启");
+    onSites.forEach((site) => {
+      onPool.appendChild(createWebEmbedPoolChip(site, true, site.id === focus));
+    });
+  }
+
+  const addable = pool.filter((s) => !broadcast.includes(s.id));
+  const stableAdd = addable.filter((s) => s.embedRisk === "none" || !s.embedRisk);
+  const riskyAdd = addable.filter((s) => s.embedRisk && s.embedRisk !== "none");
+
+  if (stableAdd.length) {
+    const addPool = appendWebEmbedPoolSection(list, "可添加");
+    stableAdd.forEach((site) => addPool.appendChild(createWebEmbedPoolChip(site, false, false)));
+  }
+  if (riskyAdd.length) {
+    const riskPool = appendWebEmbedPoolSection(list, "实验性 / 需登录");
+    riskyAdd.forEach((site) => riskPool.appendChild(createWebEmbedPoolChip(site, false, false)));
+  }
+
   renderCategories();
   syncWebModeNavAiRows();
 }
@@ -8108,6 +9090,15 @@ function renderWebModeNavBody() {
 function syncWebModeNavAiRows() {
   const focus = getWebEmbedActiveEngine();
   const broadcast = new Set(getWebEmbedBroadcastSites());
+  updateWebEmbedAiCount();
+  document.querySelectorAll(".sc-web-ai-pool-chip").forEach((chip) => {
+    const sid = String(chip.getAttribute("data-site") || "");
+    const on = broadcast.has(sid);
+    chip.classList.toggle("is-on", on);
+    chip.classList.toggle("is-focus", sid === focus);
+    const act = chip.querySelector(".sc-web-ai-pool-chip__act");
+    if (act) act.textContent = on ? "✓" : "+";
+  });
   const chromeMap = (state.webEmbedSiteChrome && typeof state.webEmbedSiteChrome === "object")
     ? state.webEmbedSiteChrome
     : {};
@@ -8258,6 +9249,7 @@ function setUIMode(mode, persist, skipHostPost, skipCategoryReset) {
   } else if (m === "web") {
     _scWebEmbedLastRectKey = "";
     _scWebEmbedLastLayoutKey = "";
+    _scWebEmbedHostBootstrapped = false;
     const viewport = document.getElementById("web-embed-scroll-viewport");
     if (viewport) viewport.scrollLeft = 0;
   }
@@ -8328,6 +9320,7 @@ function setUIMode(mode, persist, skipHostPost, skipCategoryReset) {
   renderEngines();
   syncWebEmbedLayout();
   if (m === "web" && isWebEmbedCategory()) {
+    _scWebEmbedHostBootstrapped = false;
     renderWebLlmToolbar();
     scheduleWebEmbedContentRect();
   }
@@ -10924,7 +11917,10 @@ function toggleEngineLocal(engineValue) {
   }
   state.selectedEngines = list;
   if (isWebEmbedActive()) {
-    const embedIds = list.filter((e) => SC_WEB_EMBED_SITES.some((s) => s.id === String(e || "")));
+    const embedIds = list.filter((e) => {
+      const site = findWebEmbedSite(e);
+      return site && isWebEmbedSiteEnabled(site);
+    }).map(normalizeWebEmbedSiteId);
     if (embedIds.length) {
       state.webEmbedBroadcastSites = embedIds;
       saveWebEmbedBroadcastSitesPref(embedIds);
@@ -12922,6 +13918,23 @@ function scRequestWebUiRefresh() {
   postToAhk({ type: "requestUiRefresh" });
 }
 
+let _scHostWebModeResyncTimer = 0;
+function scheduleHostWebModeResync() {
+  if (_scHostWebModeResyncTimer) return;
+  _scHostWebModeResyncTimer = setTimeout(() => {
+    _scHostWebModeResyncTimer = 0;
+    if (getUIMode() !== "web") return;
+    scWebEmbedDebugLog("warn", "检测到宿主 uiMode≠web，回写 setUiMode=web 同步");
+    try {
+      postToAhk({ type: "setUiMode", mode: "web" });
+      const cat = String(state.currentCategoryKey || "ai");
+      if (SC_WEB_CATEGORY_KEYS.has(cat))
+        postToAhk({ type: "setCategory", category: cat });
+      if (isWebEmbedActive()) scheduleWebEmbedContentRect(true);
+    } catch (_) {}
+  }, 60);
+}
+
 function applyStateNow(payload) {
   const msgType = String(payload && payload.type || "");
   if (_scApplyStateBusy) {
@@ -12955,6 +13968,7 @@ function applyStateNow(payload) {
     && String(state.filterType || "") !== "fulltext";
   if (staleLocalHostWhileWeb) {
     payload.uiMode = "web";
+    scheduleHostWebModeResync();
   }
   const staleWebHostWhileLocal =
     !state.clipboardHomeLock
@@ -13159,10 +14173,10 @@ function applyStateNow(payload) {
     if (!Array.isArray(state.webEmbedBroadcastSites) || !state.webEmbedBroadcastSites.length)
       state.webEmbedBroadcastSites = loadWebEmbedBroadcastSitesPref();
     renderWebLlmToolbar();
-    scheduleWebEmbedContentRect();
-    setTimeout(scheduleWebEmbedContentRect, 80);
-    setTimeout(scheduleWebEmbedContentRect, 360);
-    setTimeout(scheduleWebEmbedContentRect, 900);
+    if (msgType === "init" || payload.uiMode != null || payload.selectedEngines != null) {
+      scheduleWebEmbedContentRect();
+      setTimeout(scheduleWebEmbedContentRect, 80);
+    }
   }
   renderCliEngineTabs();
   renderFilters();
@@ -13703,8 +14717,34 @@ if (window.chrome && window.chrome.webview) {
       applyWebLlmChromeState(payload);
       return;
     }
+    if (payload.type === "webEmbedDebugResult") {
+      const client = buildWebEmbedClientDebugSnapshot();
+      if (payload.ok === false) {
+        scWebEmbedDebugLog("error", String(payload.error || "宿主诊断失败"));
+        renderWebEmbedDebugPanel(client, null);
+      } else {
+        scWebEmbedDebugLog("info", "收到宿主快照 " + (payload.snapshot && payload.snapshot.ts ? payload.snapshot.ts : ""));
+        renderWebEmbedDebugPanel(client, payload.snapshot || null);
+      }
+      return;
+    }
+    if (payload.type === "webEmbedDebugActionResult") {
+      const act = String(payload.action || "");
+      if (payload.ok) {
+        scWebEmbedDebugLog("info", "操作成功: " + act);
+        if (act === "copy_trace") {
+          const st = document.getElementById("status");
+          if (st) st.textContent = "诊断已复制到剪贴板";
+        }
+      } else {
+        scWebEmbedDebugLog("error", "操作失败 " + act + ": " + String(payload.error || ""));
+      }
+      if (_scWebEmbedDebugState.open) requestWebEmbedDebugSnapshot();
+      return;
+    }
     if (payload.type === "webLlmColumnLayoutState") {
       applyWebLlmColumnLayoutState(payload);
+      syncWebEmbedScrollNav();
       return;
     }
     if (payload.type === "setUiMode") {

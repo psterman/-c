@@ -1297,6 +1297,24 @@ HideFloatingToolbarFromPopupMenu(*) {
     }
 }
 
+Nmer_FlushTrayMenuLogSync(msg := "") {
+    if (msg != "")
+        try TrayMenu_Log(msg)
+    try {
+        if FuncExists("NMER_AsyncLogFlush")
+            NMER_AsyncLogFlush()
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e)
+    }
+}
+
+Nmer_CleanRestartHelperPath() {
+    root := A_ScriptDir
+    if FuncExists("Nmer_RepoRoot")
+        root := Nmer_RepoRoot()
+    return root . "\tools\nmer_clean_restart_helper.ahk"
+}
+
 Nmer_ScheduleCleanRestart() {
     scriptPath := A_ScriptFullPath
     err := ""
@@ -1315,41 +1333,41 @@ Nmer_ScheduleCleanRestart() {
             return false
         }
     }
-
     ahkExe := A_AhkPath
-    launcherPath := A_ScriptDir . "\NmerLauncher.ahk"
-    if FuncExists("Nmer_LauncherScriptPath")
-        launcherPath := Nmer_LauncherScriptPath()
+    ; 重启前已校验主脚本，直接拉起牛马.ahk，勿经 NmerLauncher（否则会多一个 AHK 进程）
     launchTarget := scriptPath
-    launchArgs := scriptPath
-    if FileExist(launcherPath) {
-        launchTarget := launcherPath
-        launchArgs := '"' . launcherPath . '" "' . scriptPath . '"'
-    } else {
-        launchArgs := '"' . scriptPath . '"'
-    }
     pid := DllCall("GetCurrentProcessId", "UInt")
-    ; 等当前进程完全退出后再拉起，避免与 #SingleInstance Force 抢实例、WebView2 环境未释放
-    ps := "while (Get-Process -Id " . pid . " -ErrorAction SilentlyContinue) { Start-Sleep -Milliseconds 250 }; "
-        . "Start-Process -FilePath '" . StrReplace(ahkExe, "'", "''") . "' -ArgumentList '" . StrReplace(launchTarget, "'", "''") . "'"
-    if (launchTarget != scriptPath)
-        ps .= ",'" . StrReplace(scriptPath, "'", "''") . "'"
-    try {
-        Run('powershell.exe -NoProfile -WindowStyle Hidden -Command "' . ps . '"', , "Hide")
-        try TrayMenu_Log("restart_clean_spawn_scheduled pid=" . pid . " target=" . launchTarget)
-        return true
-    } catch as err {
-        try TrayMenu_Log("restart_clean_spawn_ps_failed msg=" . err.Message)
+    helperPath := Nmer_CleanRestartHelperPath()
+    if !FileExist(helperPath) {
+        try TrayMenu_Log("restart_helper_missing path=" . helperPath . " pid=" . pid)
+        return false
     }
-    cmd := 'cmd /c ping 127.0.0.1 -n 4 >nul & start "" "' . ahkExe . '" ' . launchArgs
+    ; 用 AHK 辅助脚本等待父进程退出后再拉起，避免 PowerShell 引号/中文路径导致 spawn 失败
+    cmd := Format('"{1}" "{2}" {3} "{4}" "{5}" "{6}"'
+        , A_AhkPath, helperPath, pid, ahkExe, launchTarget, scriptPath)
+    try {
+        Run(cmd, , "Hide")
+        try TrayMenu_Log("restart_clean_spawn_scheduled pid=" . pid . " target=" . launchTarget . " helper=ahk")
+        return true
+    } catch as runErr {
+        try TrayMenu_Log("restart_clean_spawn_ahk_failed msg=" . runErr.Message)
+    }
+    cmd := 'cmd /c ping 127.0.0.1 -n 4 >nul & start "" "' . ahkExe . '" "' . launchTarget . '"'
     try {
         Run(cmd, , "Hide")
         try TrayMenu_Log("restart_clean_spawn_fallback_scheduled pid=" . pid . " target=" . launchTarget)
         return true
     } catch as _e {
-        NmerCatch(A_ThisFunc, _e) 
+        NmerCatch(A_ThisFunc, _e)
     }
     return false
+}
+
+Nmer_ExitForCleanRestart(reason := "reload") {
+    global g_Nmer_CleanRestartPending
+    g_Nmer_CleanRestartPending := true
+    Nmer_FlushTrayMenuLogSync("clean_restart_exit reason=" . reason)
+    ExitApp()
 }
 
 RestartAppCleanFromTrayMenu(*) {
@@ -1382,12 +1400,6 @@ RestartAppCleanFromTrayMenu(*) {
         NmerCatch(A_ThisFunc, _e) 
     }
     try {
-        if FuncExists("SCWV_RequestHardClose")
-            SCWV_RequestHardClose("tray_restart_clean_sync")
-    } catch as _e {
-        NmerCatch(A_ThisFunc, _e) 
-    }
-    try {
         if FuncExists("HideFloatingToolbar")
             HideFloatingToolbar()
     } catch as _e {
@@ -1412,7 +1424,9 @@ RestartAppCleanFromTrayMenu(*) {
         NmerCatch(A_ThisFunc, _e) 
     }
     try {
-        if FuncExists("WebView2_PrepareForScriptReload")
+        if FuncExists("WebView2_PrepareForCleanExit")
+            WebView2_PrepareForCleanExit()
+        else if FuncExists("WebView2_PrepareForScriptReload")
             WebView2_PrepareForScriptReload()
     } catch as _e {
         NmerCatch(A_ThisFunc, _e) 
@@ -1428,9 +1442,9 @@ RestartAppCleanFromTrayMenu(*) {
         NmerCatch(A_ThisFunc, _e) 
     }
     okRestart := Nmer_ScheduleCleanRestart()
-    try TrayMenu_Log("restart_clean_exit_scheduled=" . (okRestart ? "1" : "0"))
+    Nmer_FlushTrayMenuLogSync("restart_clean_exit_scheduled=" . (okRestart ? "1" : "0"))
     if okRestart {
-        ExitApp()
+        Nmer_ExitForCleanRestart("tray_restart_clean")
     } else {
         try TrayTip("牛马", "重启调度失败，当前进程保持运行", "Iconx 2")
     }
@@ -1438,6 +1452,7 @@ RestartAppCleanFromTrayMenu(*) {
 
 ReloadScriptFromPopupMenu(*) {
     global TrayMenuGUI, ConfigFile
+    try TrayMenu_Log("reload_begin")
     if (TrayMenuGUI != 0) {
         try {
             TrayMenuGUI.Destroy()
@@ -1462,22 +1477,18 @@ ReloadScriptFromPopupMenu(*) {
         NmerCatch(A_ThisFunc, _e) 
     }
     try {
-        if FuncExists("Nmer_WailsBridgePrepareForScriptReload")
-            Nmer_WailsBridgePrepareForScriptReload()
-    } catch as _e {
-        NmerCatch(A_ThisFunc, _e) 
-    }
-    try {
-        if FuncExists("WebView2_PrepareForScriptReload")
+        if FuncExists("WebView2_PrepareForCleanExit")
+            WebView2_PrepareForCleanExit()
+        else if FuncExists("WebView2_PrepareForScriptReload")
             WebView2_PrepareForScriptReload()
     } catch as _e {
         NmerCatch(A_ThisFunc, _e) 
     }
     ; 等当前进程退出后再拉起，避免与 #SingleInstance Force 抢实例导致 Run(AutoHotkey64) 失败（error -1）
     okRestart := Nmer_ScheduleCleanRestart()
-    try TrayMenu_Log("reload_clean_spawn_scheduled=" . (okRestart ? "1" : "0"))
+    Nmer_FlushTrayMenuLogSync("reload_clean_spawn_scheduled=" . (okRestart ? "1" : "0"))
     if okRestart {
-        ExitApp()
+        Nmer_ExitForCleanRestart("tray_reload_script")
     } else {
         try TrayTip("牛马", "重载调度失败，当前进程保持运行", "Iconx 2")
     }

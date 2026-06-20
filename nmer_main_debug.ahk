@@ -56,12 +56,13 @@ NMER_Log(scope, event, detail := "") {
 
 OnError(NMER_StartupOnError)
 for arg in A_Args {
-    if (arg = "/validateOnly")
+    if (arg = "/validateOnly" || arg = "--validateOnly" || arg = "validateOnly")
         ExitApp(0)
 }
 #Include modules\SqlSafe.ahk
 global NMER_TraceSession := FormatTime(A_Now, "yyyyMMdd-HHmmss") . "-" . A_TickCount
 global NMER_StartupTick := A_TickCount
+global g_Nmer_CleanRestartPending := false
 global pToken := Gdip_Startup()
 if (!pToken) {
     MsgBox "GDI+ 启动失败，请检查 lib\ahk\Gdip_All.ahk"
@@ -337,7 +338,15 @@ if (EnableHoleOverlayOnNativeDrop) {
     try GDHO_SetFallbackUrl(holeFallbackUrl)
 }
 
-OnExit((*) => (NativeDropBridge_Stop(), Nmer_StopWailsBridge()))
+Nmer_OnExitBridgeCleanup(*) {
+    global g_Nmer_CleanRestartPending
+    try NativeDropBridge_Stop()
+    if g_Nmer_CleanRestartPending
+        return
+    try Nmer_StopWailsBridge()
+}
+
+OnExit(Nmer_OnExitBridgeCleanup)
 NativeDropBridge_InitCopyDataReceiver()
 
 ; 已移除强制管理员自提权，避免与 Everything 产生权限不一致导致 IPC 失败。
@@ -7406,7 +7415,16 @@ SwitchToChineseIMEForSearchCenter(*) {
 ; ===================== 脚本退出处理 =====================
 ; 在脚本退出前关闭数据库连接，确保数据完全写入
 ExitFunc(ExitReason, ExitCode) {
-    global ClipboardDB
+    global ClipboardDB, g_Nmer_CleanRestartPending
+    if g_Nmer_CleanRestartPending {
+        try NMER_Log("exit", "clean_restart_skip_heavy", ExitReason)
+        if (ClipboardDB && ClipboardDB != 0) {
+            try ClipboardDB.CloseDB()
+            catch as _e {
+            }
+        }
+        return
+    }
     if FuncExists("HoleTriggers_RemoveMouseHook")
         try HoleTriggers_RemoveMouseHook()
     try Send("{CapsLock up}")
