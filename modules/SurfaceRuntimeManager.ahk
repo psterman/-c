@@ -54,6 +54,8 @@ SurfaceManager_EnsureBootstrap(*) {
     SurfaceManager_RegisterSurface("clipboard_panel", "secondary", "webview", Map("area", "clipboard"))
     SurfaceManager_RegisterSurface("prompt_quick_pad", "secondary", "webview", Map("area", "prompt"))
     SurfaceManager_RegisterSurface("search_center", "primary", "webview", Map("area", "search"))
+    SurfaceManager_RegisterSurface("ai_workbench", "secondary", "webview", Map("area", "ai"))
+    SurfaceManager_RegisterSurface("cli_workbench", "secondary", "webview", Map("area", "cli"))
     SurfaceManager_RegisterSurface("virtual_keyboard", "secondary", "webview", Map("area", "vk"))
     SurfaceManager_RegisterSurface("config_webview", "secondary", "webview", Map("area", "config"))
     SurfaceManager_RegisterSurface("floating_bubble", "resident", "native", Map("area", "bubble"))
@@ -70,6 +72,10 @@ SurfaceManager_MapWarmupFuncToSurface(name) {
             return "prompt_quick_pad"
         case "SCWV_Init":
             return "search_center"
+        case "AiWb_Init":
+            return "ai_workbench"
+        case "CliWb_Init":
+            return "cli_workbench"
         case "VK_EnsureInit":
             return "virtual_keyboard"
         case "_WarmupConfigWebView":
@@ -282,7 +288,7 @@ SurfaceManager_ConflictGroupFor(surfaceId) {
             return "primary"
         case "drag_hole_overlay", "screenshot_editor":
             return "overlay"
-        case "clipboard_panel", "prompt_quick_pad", "virtual_keyboard", "config_webview":
+        case "clipboard_panel", "prompt_quick_pad", "ai_workbench", "cli_workbench", "virtual_keyboard", "config_webview":
             return "secondary"
         default:
             return ""
@@ -320,7 +326,7 @@ SurfaceManager_ConflictSurfaces(surfaceId) {
         return surfaces
     }
     if (group = "secondary") {
-        for _, other in ["clipboard_panel", "prompt_quick_pad", "virtual_keyboard", "config_webview"] {
+        for _, other in ["clipboard_panel", "prompt_quick_pad", "ai_workbench", "cli_workbench", "virtual_keyboard", "config_webview"] {
             if (other != sid)
                 surfaces.Push(other)
         }
@@ -399,6 +405,10 @@ SurfaceExecutor_Suspend(surfaceId, meta := 0) {
                 SurfaceManager_InvokeOptional("CP_Hide")
             case "prompt_quick_pad":
                 SurfaceManager_InvokeOptional("PQP_Hide")
+            case "ai_workbench":
+                SurfaceManager_InvokeOptional("AiWb_Hide")
+            case "cli_workbench":
+                SurfaceManager_InvokeOptional("CliWb_Hide")
             case "virtual_keyboard":
                 SurfaceManager_InvokeOptional("VK_Hide")
             case "config_webview":
@@ -454,6 +464,18 @@ SurfaceExecutor_Dispose(surfaceId, meta := 0) {
             case "prompt_quick_pad":
                 if !SurfaceManager_InvokeOptional("PQP_Dispose", reason)
                     SurfaceManager_InvokeOptional("PQP_Hide")
+                disposed := true
+            case "ai_workbench":
+                if FuncExists("AiWorkbenchRouter_Dispose")
+                    AiWorkbenchRouter_Dispose(reason)
+                else if !SurfaceManager_InvokeOptional("AiWb_Dispose", reason)
+                    SurfaceManager_InvokeOptional("AiWb_Hide")
+                disposed := true
+            case "cli_workbench":
+                if FuncExists("CliWorkbenchRouter_Dispose")
+                    CliWorkbenchRouter_Dispose(reason)
+                else if !SurfaceManager_InvokeOptional("CliWb_Dispose", reason)
+                    SurfaceManager_InvokeOptional("CliWb_Hide")
                 disposed := true
             case "virtual_keyboard":
                 if !SurfaceManager_InvokeOptional("VK_Dispose", reason)

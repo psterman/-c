@@ -875,6 +875,15 @@ html[data-theme="light"] #startup-splash {
   padding: 1px 6px;
   font-size: 10px;
 }
+.sc-section-web-hint {
+  margin: 0 0 10px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+.sc-open-ai-wb-btn {
+  margin-bottom: 12px;
+}
 .chip .chip-main {
   display: flex;
   flex-direction: column;
@@ -2152,28 +2161,6 @@ mark {
   margin-inline: auto;
   min-width: 0;
 }
-body.sc-cli-layout .sc-page-column {
-  max-width: none;
-  width: 100%;
-}
-body.sc-cli-layout #app.sc-container,
-body.sc-cli-layout #app {
-  padding-left: 10px;
-  padding-right: 10px;
-}
-body.sc-cli-layout .sc-body-column {
-  grid-template-rows: auto minmax(0, 1fr);
-}
-body.sc-cli-layout .search-wrapper.sc-compose-stack .search-box-anchor,
-body.sc-cli-layout .search-wrapper.sc-compose-stack #compose-hint-strip {
-  display: none !important;
-}
-body.sc-cli-layout .search-wrapper.sc-compose-stack {
-  gap: 6px;
-  padding: 10px 12px 6px;
-}
-body.sc-cli-layout .compose-context .cli-engine-tabs {
-  margin-top: 0;
 }
 .sc-search-mid {
   width: 100%;
@@ -2648,1364 +2635,6 @@ body.sc-cli-layout .compose-context .cli-engine-tabs {
   border: 1px dashed rgba(255,255,255,.12);
   background: rgba(0,0,0,.12);
 }
-.sc-web-nav-root {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.sc-web-nav-subhead {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 2px 2px 4px;
-}
-.sc-web-nav-explore {
-  font-size: 11px;
-  font-weight: 700;
-  color: rgba(255,179,71,.95);
-  letter-spacing: .02em;
-}
-.sc-web-nav-badge {
-  font-size: 9px;
-  padding: 2px 6px;
-  border-radius: 999px;
-  border: 1px solid rgba(255,141,42,.35);
-  background: rgba(255,141,42,.12);
-  color: rgba(255,200,130,.95);
-  white-space: nowrap;
-}
-.sc-web-nav-categories {
-  display: flex;
-  flex-wrap: nowrap;
-  gap: 4px;
-  padding: 0 0 2px;
-  overflow-x: auto;
-  overflow-y: hidden;
-  scrollbar-width: none;
-}
-.sc-web-nav-categories::-webkit-scrollbar { display: none; }
-.sc-web-nav-categories .chip {
-  flex: 0 0 auto;
-  min-width: 0;
-  padding: 3px 9px;
-  font-size: 10px;
-  border-radius: 999px;
-  line-height: 1.2;
-}
-.sc-web-nav-categories .chip .hotkey-hint,
-.sc-web-nav-categories .chip .count,
-.sc-web-nav-categories .chip .chip-main .hotkey-hint {
-  display: none !important;
-}
-.sc-web-nav-categories .chip .chip-title {
-  font-size: 10px;
-  font-weight: 600;
-}
-.sc-web-nav-cat-folder,
-.sc-web-nav-more-panel {
-  border-radius: 10px;
-  border: 1px solid rgba(255,255,255,.07);
-  background: rgba(0,0,0,.1);
-  overflow: hidden;
-}
-.sc-web-nav-cat-folder-sum,
-.sc-web-nav-more-panel-sum {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 8px;
-  font-size: 10px;
-  font-weight: 700;
-  color: var(--muted);
-  cursor: pointer;
-  list-style: none;
-}
-.sc-web-nav-cat-folder-sum::-webkit-details-marker,
-.sc-web-nav-more-panel-sum::-webkit-details-marker { display: none; }
-.sc-web-nav-cat-folder[open] .sc-web-nav-cat-folder-sum,
-.sc-web-nav-more-panel[open] .sc-web-nav-more-panel-sum {
-  color: var(--text);
-}
-.sc-web-nav-cat-folder-body,
-.sc-web-nav-more-panel-body {
-  padding: 0 6px 6px;
-}
-.sc-web-nav-engines {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-}
-.sc-web-nav-engines .engine-chip {
-  padding: 4px 7px;
-  font-size: 10px;
-  border-radius: 999px;
-  min-height: 0;
-}
-.sc-web-nav-engines .engine-chip .hotkey-hint,
-.sc-web-nav-engines .engine-chip .engine-icon-wrap {
-  display: none !important;
-}
-.sc-web-nav-engines .engine-chip .label {
-  font-size: 10px;
-}
-.sc-web-nav-ai-folder {
-  border-radius: 12px;
-  border: 1px solid rgba(255,255,255,.08);
-  background: rgba(0,0,0,.14);
-  overflow: hidden;
-}
-.sc-web-nav-ai-folder-sum {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 10px;
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--text);
-  cursor: pointer;
-  list-style: none;
-}
-.sc-web-nav-ai-folder-sum::-webkit-details-marker { display: none; }
-.sc-web-nav-folder-icon { opacity: .9; }
-.sc-web-nav-ai-list {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 0 6px 8px;
-}
-.sc-web-ai-count {
-  margin-left: auto;
-  font-size: 10px;
-  font-weight: 600;
-  opacity: .72;
-  padding: 1px 6px;
-  border-radius: 999px;
-  background: rgba(255,128,42,.14);
-  color: #ffb366;
-}
-.sc-web-ai-section-label {
-  font-size: 10px;
-  font-weight: 700;
-  opacity: .55;
-  padding: 2px 4px 0;
-  letter-spacing: .02em;
-}
-.sc-web-ai-pool {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
-}
-.sc-web-ai-pool-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  max-width: 100%;
-  padding: 4px 6px 4px 4px;
-  border-radius: 999px;
-  border: 1px solid rgba(255,255,255,.1);
-  background: rgba(255,255,255,.04);
-  color: var(--text);
-  cursor: pointer;
-  font-size: 10px;
-  line-height: 1.2;
-  transition: background .12s ease, border-color .12s ease;
-}
-.sc-web-ai-pool-chip:hover {
-  background: rgba(255,255,255,.08);
-  border-color: rgba(255,255,255,.16);
-}
-.sc-web-ai-pool-chip.is-on {
-  border-color: rgba(255,128,42,.45);
-  background: rgba(255,128,42,.12);
-}
-.sc-web-ai-pool-chip.is-focus {
-  box-shadow: 0 0 0 1px rgba(255,128,42,.35);
-}
-.sc-web-ai-pool-chip.is-risk {
-  opacity: .82;
-}
-.sc-web-ai-pool-chip .web-chip-icon,
-.sc-web-ai-pool-chip .web-chip-fallback {
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-.sc-web-ai-pool-chip .web-chip-fallback {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 9px;
-  font-weight: 700;
-  background: rgba(255,255,255,.08);
-}
-.sc-web-ai-pool-chip__label {
-  max-width: 72px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.sc-web-ai-pool-chip__act {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 16px;
-  height: 16px;
-  padding: 0 4px;
-  border-radius: 999px;
-  font-size: 10px;
-  font-weight: 700;
-  background: rgba(255,255,255,.08);
-  flex-shrink: 0;
-}
-.sc-web-ai-pool-chip.is-on .sc-web-ai-pool-chip__act {
-  background: rgba(255,128,42,.25);
-  color: #ffc285;
-}
-.sc-web-ai-row {
-  display: grid;
-  grid-template-columns: 32px minmax(0, 1fr) 10px;
-  gap: 8px;
-  align-items: center;
-  width: 100%;
-  padding: 8px 8px 8px 6px;
-  border: 1px solid transparent;
-  border-radius: 11px;
-  background: rgba(255,255,255,.03);
-  color: var(--text);
-  cursor: pointer;
-  text-align: left;
-  transition: background .14s ease, border-color .14s ease;
-}
-.sc-web-ai-row:hover {
-  background: rgba(255,255,255,.06);
-  border-color: rgba(255,255,255,.08);
-}
-.sc-web-ai-row.is-active {
-  border-color: rgba(96,165,250,.45);
-  background: rgba(59,130,246,.12);
-}
-.sc-web-ai-row__icon {
-  width: 28px;
-  height: 28px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 999px;
-  overflow: hidden;
-  background: rgba(255,255,255,.08);
-}
-.sc-web-ai-row__icon .web-chip-icon {
-  width: 22px;
-  height: 22px;
-  object-fit: contain;
-}
-.sc-web-ai-row__icon .web-chip-fallback {
-  font-size: 11px;
-  font-weight: 700;
-}
-.sc-web-ai-row__main {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-.sc-web-ai-row__title {
-  font-size: 11px;
-  font-weight: 700;
-  line-height: 1.25;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.sc-web-ai-row__sub {
-  font-size: 9px;
-  line-height: 1.3;
-  color: var(--muted);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.sc-web-ai-row__progress {
-  display: block;
-  height: 3px;
-  border-radius: 999px;
-  background: rgba(255,255,255,.08);
-  overflow: hidden;
-}
-.sc-web-ai-row__progress-fill {
-  display: block;
-  height: 100%;
-  width: 0%;
-  border-radius: inherit;
-  background: linear-gradient(90deg, rgba(59,130,246,.85), rgba(96,165,250,.95));
-  transition: width .28s ease;
-}
-.sc-web-ai-row__progress-fill.is-indeterminate {
-  animation: sc-web-ai-progress-pulse 1.2s ease-in-out infinite;
-}
-@keyframes sc-web-ai-progress-pulse {
-  0%, 100% { opacity: .55; }
-  50% { opacity: 1; }
-}
-.sc-web-ai-row__dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 999px;
-  background: rgba(148,163,184,.55);
-  justify-self: end;
-}
-.sc-web-ai-row__dot.dot-active {
-  background: rgba(59,130,246,.95);
-  box-shadow: 0 0 8px rgba(59,130,246,.55);
-}
-.sc-web-ai-row__dot.dot-loading {
-  background: rgba(255,179,71,.95);
-  animation: sc-web-ai-dot-pulse 1s ease-in-out infinite;
-}
-.sc-web-ai-row__dot.dot-ready {
-  background: rgba(52,211,153,.9);
-}
-@keyframes sc-web-ai-dot-pulse {
-  0%, 100% { opacity: .45; transform: scale(.92); }
-  50% { opacity: 1; transform: scale(1); }
-}
-.sc-web-nav-more-btn {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  padding: 9px 10px;
-  border-radius: 11px;
-  border: 1px dashed rgba(255,255,255,.14);
-  background: rgba(255,255,255,.03);
-  color: var(--text);
-  cursor: pointer;
-  text-align: left;
-}
-.sc-web-nav-more-btn:hover {
-  border-color: rgba(255,179,71,.35);
-  background: rgba(255,141,42,.08);
-}
-.sc-web-nav-more-icon {
-  width: 22px;
-  height: 22px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 8px;
-  background: rgba(255,255,255,.08);
-  font-size: 14px;
-  font-weight: 700;
-}
-.sc-web-nav-more-text {
-  font-size: 11px;
-  font-weight: 700;
-}
-.sc-web-nav-more-hint {
-  margin-left: auto;
-  font-size: 9px;
-  color: var(--muted);
-}
-.webllm-toolbar,
-.web-embed-chrome {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 8px 10px 10px;
-  flex-shrink: 0;
-  border-radius: 16px;
-  background:
-    linear-gradient(165deg, rgba(255,255,255,.08) 0%, rgba(255,255,255,.025) 48%, rgba(255,141,42,.04) 100%),
-    rgba(8,12,22,.55);
-  backdrop-filter: blur(18px) saturate(1.35);
-  -webkit-backdrop-filter: blur(18px) saturate(1.35);
-  border: 1px solid rgba(255,255,255,.11);
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.14),
-    0 10px 28px rgba(0,0,0,.22);
-}
-.web-omnibar-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-}
-.web-omnibar-glass {
-  flex: 1 1 auto;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-  padding: 4px 6px 4px 8px;
-  border-radius: 14px;
-  background: rgba(0,0,0,.28);
-  border: 1px solid rgba(255,255,255,.09);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.06);
-}
-.web-embed-omnibar-chips {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  flex-shrink: 0;
-  max-width: min(48vw, 320px);
-  overflow-x: auto;
-  overflow-y: hidden;
-  padding: 2px 4px 2px 2px;
-  scrollbar-width: none;
-}
-.web-embed-omnibar-chips::-webkit-scrollbar {
-  display: none;
-}
-.web-embed-omnibar-chips[hidden] {
-  display: none !important;
-}
-.web-embed-omnibar-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  flex-shrink: 0;
-  border: none;
-  border-radius: 9px;
-  padding: 3px 6px;
-  background: rgba(255,255,255,.05);
-  color: rgba(248,250,252,.88);
-  cursor: pointer;
-  transition:
-    background 0.22s cubic-bezier(0.22, 1, 0.36, 1),
-    transform 0.22s cubic-bezier(0.22, 1, 0.36, 1),
-    opacity 0.2s ease;
-}
-.web-embed-omnibar-chip.is-icon-only {
-  padding: 3px 4px;
-  opacity: 0.82;
-}
-.web-embed-omnibar-chip.is-active {
-  background: rgba(255,141,42,.14);
-  border: 1px solid rgba(255,141,42,.28);
-  padding: 2px 8px 2px 5px;
-  opacity: 1;
-}
-.web-embed-omnibar-chip:hover {
-  background: rgba(255,255,255,.1);
-  transform: translateY(-1px);
-}
-.web-embed-omnibar-chip__icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 18px;
-  height: 18px;
-  flex-shrink: 0;
-}
-.web-embed-omnibar-chip__icon .web-chip-icon,
-.web-embed-omnibar-chip__icon .web-chip-fallback {
-  width: 16px;
-  height: 16px;
-  border-radius: 4px;
-}
-.web-embed-omnibar-chip__label {
-  font-size: 11px;
-  font-weight: 600;
-  line-height: 1;
-  white-space: nowrap;
-  max-width: 88px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.web-embed-omnibar-badge {
-  display: none !important;
-}
-.web-embed-omnibar-badge__icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  flex-shrink: 0;
-}
-.web-embed-omnibar-badge__icon .web-chip-icon,
-.web-embed-omnibar-badge__icon .web-chip-fallback {
-  width: 18px;
-  height: 18px;
-  border-radius: 5px;
-}
-.web-embed-omnibar-badge__label {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.web-embed-search-slot {
-  flex: 1 1 auto;
-  min-width: 0;
-}
-.web-omnibar-actions {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  flex-shrink: 0;
-}
-.web-omnibar-actions-glass {
-  padding: 4px 5px;
-  border-radius: 14px;
-  background: rgba(0,0,0,.26);
-  border: 1px solid rgba(255,255,255,.09);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.06);
-}
-.web-chrome-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 30px;
-  height: 30px;
-  padding: 0;
-  border: none;
-  border-radius: 10px;
-  background: transparent;
-  color: rgba(226,232,240,.88);
-  font-size: 15px;
-  line-height: 1;
-  cursor: pointer;
-  opacity: .9;
-  transition:
-    background 0.22s cubic-bezier(0.22, 1, 0.36, 1),
-    color 0.2s ease,
-    opacity 0.2s ease,
-    transform 0.24s cubic-bezier(0.22, 1, 0.36, 1);
-}
-.web-chrome-btn:hover:not(:disabled) {
-  background: rgba(255,255,255,.1);
-  color: #f8fafc;
-  opacity: 1;
-  transform: translateY(-1px);
-}
-.web-chrome-btn:active:not(:disabled) {
-  transform: translateY(0) scale(0.96);
-}
-.web-chrome-btn:disabled {
-  opacity: .32;
-  cursor: not-allowed;
-}
-.web-bookmarks-bar {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  min-width: 0;
-  padding: 2px 0 0;
-  border-top: 1px solid rgba(255,255,255,.06);
-}
-.web-embed-tabbar {
-  display: flex;
-  align-items: stretch;
-  min-width: 0;
-  margin: 0;
-  padding: 4px;
-  border-radius: 14px;
-  background: rgba(0,0,0,.24);
-  border: 1px solid rgba(255,255,255,.09);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.05);
-}
-.web-embed-tab-scroll-nav {
-  display: flex;
-  flex: 0 0 auto;
-  align-items: stretch;
-  gap: 2px;
-  margin-right: 4px;
-}
-.web-embed-tab-scroll-btn {
-  flex: 0 0 auto;
-  width: 26px;
-  min-width: 26px;
-  padding: 0;
-  border: 1px solid rgba(255,255,255,.1);
-  border-radius: 10px;
-  background: rgba(255,255,255,.06);
-  color: rgba(226,232,240,.85);
-  font-size: 12px;
-  line-height: 1;
-  cursor: pointer;
-}
-.web-embed-tab-scroll-btn:hover:not(:disabled) {
-  background: rgba(255,255,255,.12);
-  border-color: rgba(255,255,255,.18);
-}
-.web-embed-tab-scroll-btn:disabled {
-  opacity: .35;
-  cursor: default;
-}
-.web-embed-tabbar-inner {
-  position: relative;
-  flex: 1 1 auto;
-  min-width: 0;
-  display: flex;
-  align-items: stretch;
-}
-.web-embed-tab-indicator {
-  position: absolute;
-  top: 4px;
-  bottom: 4px;
-  left: 0;
-  width: 0;
-  border-radius: 11px;
-  background:
-    linear-gradient(180deg, rgba(255,255,255,.16), rgba(255,255,255,.04)),
-    linear-gradient(135deg, rgba(255,141,42,.22), rgba(255,141,42,.08));
-  border: 1px solid rgba(255,141,42,.32);
-  box-shadow:
-    0 6px 18px rgba(255,141,42,.14),
-    inset 0 1px 0 rgba(255,255,255,.22);
-  pointer-events: none;
-  z-index: 0;
-  opacity: 0;
-  transform: scale(0.96);
-  transition:
-    opacity 0.3s cubic-bezier(0.22, 1, 0.36, 1),
-    transform 0.42s cubic-bezier(0.22, 1, 0.36, 1);
-  will-change: left, width, transform;
-}
-.web-embed-tab-indicator.is-visible {
-  opacity: 1;
-}
-.web-embed-tab-indicator.is-settled {
-  transform: scale(1);
-}
-.web-embed-tabs,
-.webllm-site-chips,
-.web-bookmark-chips {
-  display: flex;
-  flex-wrap: nowrap;
-  gap: 4px;
-  overflow-x: auto;
-  overflow-y: hidden;
-  flex: 1 1 auto;
-  min-width: 0;
-  padding: 4px 2px;
-  scrollbar-width: thin;
-  position: relative;
-  z-index: 1;
-}
-.web-embed-tab,
-.webllm-site-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  border: none;
-  background: transparent;
-  color: rgba(226,232,240,.72);
-  border-radius: 11px;
-  padding: 8px 12px;
-  font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
-  flex-shrink: 0;
-  max-width: 168px;
-  position: relative;
-  z-index: 1;
-  transition:
-    color 0.28s cubic-bezier(0.22, 1, 0.36, 1),
-    opacity 0.28s ease,
-    transform 0.32s cubic-bezier(0.22, 1, 0.36, 1);
-}
-.web-embed-tab:hover,
-.webllm-site-chip:hover {
-  color: rgba(248,250,252,.95);
-  transform: translateY(-1px);
-}
-.web-embed-tab.active,
-.webllm-site-chip.active {
-  background: transparent;
-  color: #f8fafc;
-  box-shadow: none;
-  z-index: 2;
-  transform: none;
-}
-.web-embed-tab.active::after,
-.webllm-site-chip.active::after {
-  display: none;
-}
-.web-embed-column-slot {
-  position: relative;
-  flex: 0 0 auto;
-  align-self: stretch;
-  min-height: 0;
-  height: 100%;
-  background: transparent;
-  transition: opacity 0.42s cubic-bezier(0.22, 1, 0.36, 1);
-}
-.web-embed-column-slot:not(.focus-active) {
-  opacity: 0.82;
-}
-.web-embed-column-slot.focus-active {
-  opacity: 1;
-}
-.web-embed-focus-frame {
-  position: absolute;
-  top: 6px;
-  left: 0;
-  width: 0;
-  height: calc(100% - 12px);
-  pointer-events: none;
-  z-index: 5;
-  border-radius: 14px;
-  opacity: 0;
-  transform: scale(0.985);
-  transition: opacity 0.34s cubic-bezier(0.22, 1, 0.36, 1),
-              transform 0.48s cubic-bezier(0.22, 1, 0.36, 1);
-  will-change: left, width, opacity, transform;
-}
-.web-embed-focus-frame.is-visible {
-  opacity: 1;
-}
-.web-embed-focus-frame.is-settled {
-  transform: scale(1);
-}
-.web-embed-focus-frame__glass {
-  display: none !important;
-}
-.web-embed-focus-frame {
-  display: none !important;
-}
-.web-embed-focus-frame__glass-unused {
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background:
-    linear-gradient(145deg, rgba(255,255,255,.11) 0%, rgba(255,255,255,.03) 38%, rgba(255,141,42,.06) 100%),
-    linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,0));
-  backdrop-filter: blur(10px) saturate(1.25);
-  -webkit-backdrop-filter: blur(10px) saturate(1.25);
-  border: 1px solid rgba(255,255,255,.16);
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.22),
-    inset 0 0 0 1px rgba(255,141,42,.14),
-    0 10px 32px rgba(0,0,0,.24),
-    0 0 0 1px rgba(255,141,42,.08);
-}
-.web-embed-focus-frame__halo {
-  display: none !important;
-  position: absolute;
-  top: 8%;
-  bottom: 8%;
-  width: 40px;
-  pointer-events: none;
-  opacity: 0;
-  transform: scaleY(0.86);
-  transition:
-    opacity 0.46s cubic-bezier(0.22, 1, 0.36, 1),
-    transform 0.58s cubic-bezier(0.22, 1, 0.36, 1);
-  filter: blur(4px);
-}
-.web-embed-focus-frame__halo-left {
-  left: -10px;
-  background: radial-gradient(
-    ellipse 78% 92% at 100% 50%,
-    rgba(255,168,92,.34) 0%,
-    rgba(255,141,42,.16) 38%,
-    rgba(255,120,40,.05) 64%,
-    transparent 80%
-  );
-}
-.web-embed-focus-frame__halo-right {
-  right: -10px;
-  background: radial-gradient(
-    ellipse 78% 92% at 0% 50%,
-    rgba(255,168,92,.34) 0%,
-    rgba(255,141,42,.16) 38%,
-    rgba(255,120,40,.05) 64%,
-    transparent 80%
-  );
-}
-.web-embed-focus-frame.is-visible .web-embed-focus-frame__halo {
-  opacity: 0.72;
-}
-.web-embed-focus-frame.is-settled .web-embed-focus-frame__halo {
-  opacity: 1;
-  transform: scaleY(1);
-}
-.web-embed-column-slot.focus-active::before,
-.web-embed-column-slot.focus-active::after {
-  display: none;
-}
-.web-embed-tab.broadcast-on:not(.active),
-.webllm-site-chip.broadcast-on:not(.active) {
-  box-shadow: inset 0 -1px 0 rgba(255,255,255,.12);
-}
-.web-embed-tab.broadcast-off,
-.webllm-site-chip.broadcast-off {
-  opacity: 0.42;
-}
-.web-embed-tab:disabled,
-.webllm-site-chip:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-}
-.web-embed-tab .web-chip-icon,
-.webllm-site-chip .web-chip-icon {
-  width: 16px;
-  height: 16px;
-  border-radius: 4px;
-  object-fit: contain;
-  flex-shrink: 0;
-}
-.webllm-site-chip .web-chip-fallback {
-  width: 16px;
-  height: 16px;
-  border-radius: 4px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 10px;
-  font-weight: 700;
-  background: rgba(255,255,255,.1);
-  flex-shrink: 0;
-}
-.webllm-site-chip .web-chip-label {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.web-bookmark-label-toggle {
-  flex-shrink: 0;
-  font-size: 11px;
-  letter-spacing: .02em;
-}
-body.web-bookmarks-hide-labels .webllm-site-chip .web-chip-label {
-  display: none;
-}
-body.web-bookmarks-hide-labels .webllm-site-chip {
-  padding: 4px 6px;
-  max-width: 32px;
-}
-.web-omnibar-status {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0,0,0,0);
-}
-.web-embed-workspace {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  min-height: 0;
-  width: 100%;
-  position: relative;
-  z-index: 3;
-}
-.web-embed-scroll-viewport {
-  position: relative;
-  flex: 1 1 auto;
-  min-height: 0;
-  min-width: 0;
-  height: 100%;
-  overflow-x: hidden;
-  overflow-y: hidden;
-  box-sizing: border-box;
-  border-radius: 14px;
-  border: 1px solid rgba(255,255,255,.1);
-  background:
-    linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.01)),
-    #0b1220;
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.08),
-    0 12px 36px rgba(0,0,0,.18);
-  scrollbar-gutter: auto;
-}
-.web-embed-hscroll-row {
-  display: flex;
-  flex: 0 0 auto;
-  align-items: center;
-  gap: 8px;
-  min-height: 28px;
-  padding: 2px 4px 0;
-  position: relative;
-  z-index: 6;
-}
-.web-embed-hscroll-row.hidden {
-  display: none !important;
-}
-.web-embed-hscroll-btn {
-  flex: 0 0 auto;
-  width: 28px;
-  min-width: 28px;
-  height: 24px;
-  padding: 0;
-  border: 1px solid rgba(255,255,255,.12);
-  border-radius: 8px;
-  background: rgba(255,255,255,.07);
-  color: rgba(226,232,240,.9);
-  font-size: 11px;
-  line-height: 1;
-  cursor: pointer;
-}
-.web-embed-hscroll-btn:hover:not(:disabled) {
-  background: rgba(255,255,255,.14);
-}
-.web-embed-hscroll-btn:disabled {
-  opacity: .35;
-  cursor: default;
-}
-.web-embed-hscroll-slider {
-  flex: 1 1 auto;
-  min-width: 0;
-  height: 24px;
-  margin: 0;
-  accent-color: #60a5fa;
-  cursor: grab;
-  touch-action: none;
-}
-.web-embed-hscroll-slider:active {
-  cursor: grabbing;
-}
-.web-embed-scroll-track {
-  display: flex;
-  flex-direction: row;
-  align-items: stretch;
-  min-height: 100%;
-  height: 100%;
-  min-width: 100%;
-}
-.web-embed-column-gap {
-  position: relative;
-  flex: 0 0 auto;
-  align-self: stretch;
-  min-height: 0;
-  height: 100%;
-  background: transparent;
-  pointer-events: none;
-}
-.web-embed-column-label {
-  position: absolute;
-  top: 8px;
-  left: 10px;
-  z-index: 2;
-  font-size: 11px;
-  font-weight: 600;
-  color: rgba(226,232,240,.72);
-  pointer-events: none;
-  user-select: none;
-}
-.web-embed-col-resize {
-  display: none !important;
-}
-body.sc-web-embed-col-resizing {
-  cursor: ew-resize;
-  user-select: none;
-  -webkit-user-select: none;
-}
-body.sc-web-embed-col-resizing .web-embed-scroll-viewport {
-  cursor: ew-resize;
-}
-.web-embed-setup {
-  border: 1px solid var(--border-subtle);
-  border-radius: 12px;
-  background: rgba(255,255,255,.02);
-  overflow: hidden;
-}
-.web-embed-setup-summary {
-  list-style: none;
-  cursor: pointer;
-  padding: 6px 10px;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--muted);
-  user-select: none;
-}
-.web-embed-setup-summary::-webkit-details-marker {
-  display: none;
-}
-.web-embed-setup-summary::before {
-  content: "▸ ";
-  display: inline-block;
-  transition: transform .15s ease;
-}
-.web-embed-setup[open] > .web-embed-setup-summary::before {
-  transform: rotate(90deg);
-}
-.web-embed-setup-body {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 0 10px 10px;
-}
-body.sc-web-embed-layout .search-wrapper.sc-compose-stack {
-  gap: 6px;
-  padding: 8px 12px 6px;
-}
-body.sc-web-embed-layout #search-box-anchor:empty {
-  display: none;
-}
-body.sc-web-embed-layout .compose-hint-strip {
-  display: none !important;
-}
-.web-embed-search-slot {
-  width: 100%;
-  min-width: 0;
-}
-.web-embed-search-compact.search-box-inner {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 0 6px 0 0;
-  height: 32px;
-  border-radius: 0;
-  border: none;
-  background: transparent;
-  box-shadow: none;
-}
-html[data-theme="light"] .web-embed-search-compact.search-box-inner {
-  background: transparent;
-  border: none;
-  box-shadow: none;
-}
-.web-embed-search-compact .search-icon-left {
-  display: none !important;
-}
-.web-embed-search-compact .search-more-menu,
-.web-embed-search-compact .engine-switch-capsule,
-.web-embed-search-compact .sc-compose-hints,
-.web-embed-search-compact #btn-run {
-  display: none !important;
-}
-.web-embed-search-compact .search-input-wrap {
-  flex: 1 1 auto;
-  min-width: 0;
-}
-.web-embed-search-compact #search {
-  height: 34px;
-  min-height: 34px;
-  max-height: 34px;
-  line-height: 34px;
-  padding: 0;
-  resize: none;
-  overflow: hidden;
-  white-space: nowrap;
-  font-size: 13px;
-  background: transparent;
-  border: none;
-  box-shadow: none;
-}
-.web-embed-toolbar.web-embed-toolbar-with-search {
-  gap: 4px;
-}
-body.sc-web-embed-layout #compose-context-web {
-  display: none !important;
-}
-body.sc-web-embed-layout .web-embed-setup:not([open]) {
-  border-color: transparent;
-  background: transparent;
-}
-body.sc-web-embed-layout .web-embed-setup:not([open]) .web-embed-setup-summary {
-  padding: 2px 4px;
-  opacity: .85;
-}
-body.sc-web-embed-layout .web-embed-setup .sc-section + .sc-section {
-  padding-top: 8px;
-  margin-top: 0;
-}
-
-.web-embed-debug-panel {
-  flex: 0 0 auto;
-  max-height: 42vh;
-  display: flex;
-  flex-direction: column;
-  border-top: 1px solid rgba(255, 154, 47, 0.28);
-  background: rgba(8, 12, 20, 0.92);
-  backdrop-filter: blur(10px);
-  font-size: 11px;
-  color: #c8d4e8;
-}
-.web-embed-debug-panel.hidden {
-  display: none !important;
-}
-.web-embed-debug-head {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 10px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-}
-.web-embed-debug-head h4 {
-  margin: 0;
-  font-size: 11px;
-  font-weight: 600;
-  color: #ffe6cc;
-  flex: 1 1 auto;
-}
-.web-embed-debug-actions {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-.web-embed-debug-btn {
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.04);
-  color: #dbe7ff;
-  border-radius: 6px;
-  padding: 2px 8px;
-  font-size: 10px;
-  cursor: pointer;
-}
-.web-embed-debug-btn:hover {
-  border-color: rgba(255, 154, 47, 0.45);
-  color: #fff;
-}
-.web-embed-debug-body {
-  display: grid;
-  grid-template-columns: minmax(220px, 1fr) minmax(280px, 1.2fr);
-  gap: 8px;
-  padding: 8px 10px 10px;
-  min-height: 0;
-  overflow: hidden;
-}
-.web-embed-debug-col {
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.web-embed-debug-issues {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  max-height: 88px;
-  overflow: auto;
-}
-.web-embed-debug-issue {
-  padding: 4px 8px;
-  border-radius: 6px;
-  line-height: 1.35;
-}
-.web-embed-debug-issue.level-error {
-  background: rgba(255, 72, 72, 0.14);
-  border: 1px solid rgba(255, 96, 96, 0.35);
-  color: #ffb4b4;
-}
-.web-embed-debug-issue.level-warn {
-  background: rgba(255, 180, 64, 0.12);
-  border: 1px solid rgba(255, 193, 100, 0.28);
-  color: #ffd9a0;
-}
-.web-embed-debug-issue.level-ok {
-  background: rgba(72, 200, 120, 0.1);
-  border: 1px solid rgba(96, 220, 140, 0.25);
-  color: #b8f0cc;
-}
-.web-embed-debug-kv {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 2px 8px;
-  font-family: ui-monospace, Consolas, monospace;
-  font-size: 10px;
-  line-height: 1.45;
-}
-.web-embed-debug-kv dt {
-  opacity: 0.72;
-}
-.web-embed-debug-kv dd {
-  margin: 0;
-  word-break: break-all;
-}
-.web-embed-debug-sites {
-  max-height: 72px;
-  overflow: auto;
-  font-family: ui-monospace, Consolas, monospace;
-  font-size: 10px;
-  line-height: 1.4;
-}
-.web-embed-debug-log-tabs {
-  display: flex;
-  gap: 4px;
-  flex-wrap: wrap;
-}
-.web-embed-debug-log-tab {
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: transparent;
-  color: #aab8d0;
-  border-radius: 999px;
-  padding: 1px 8px;
-  font-size: 10px;
-  cursor: pointer;
-}
-.web-embed-debug-log-tab.is-active {
-  border-color: rgba(255, 154, 47, 0.55);
-  color: #ffe6cc;
-  background: rgba(255, 154, 47, 0.12);
-}
-.web-embed-debug-log {
-  flex: 1 1 auto;
-  min-height: 120px;
-  max-height: 180px;
-  overflow: auto;
-  margin: 0;
-  padding: 8px;
-  border-radius: 8px;
-  background: rgba(0, 0, 0, 0.35);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  font-family: ui-monospace, Consolas, monospace;
-  font-size: 10px;
-  line-height: 1.4;
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-body.sc-web-embed-debug-open .web-embed-scroll-viewport {
-  flex: 1 1 auto;
-  min-height: 120px;
-}
-#sc-status-group-web-debug.hidden {
-  display: none !important;
-}
-
-body.sc-web-embed-layout #compose-context-web #engines {
-  display: none !important;
-}
-body.sc-web-embed-layout #section-engines {
-  display: none !important;
-}
-#layout.sc-web-embed-active {
-  display: flex;
-  flex-direction: column;
-  flex: 1 1 auto;
-  min-height: 0;
-  width: 100%;
-  max-width: none;
-  gap: 0;
-  position: relative;
-  z-index: 2;
-}
-#layout.sc-web-embed-active #results-card,
-#layout.sc-web-embed-active #local-preview-column {
-  display: none !important;
-}
-#layout.sc-web-embed-active .web-embed-workspace {
-  flex: 1 1 auto;
-  min-height: 0;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-}
-body.sc-web-embed-layout .web-embed-workspace {
-  gap: 0;
-}
-body.sc-web-embed-layout .web-embed-scroll-viewport {
-  border-color: rgba(255,255,255,.12);
-  border-radius: 14px;
-  background:
-    linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.015)),
-    rgba(11,18,32,.88);
-  backdrop-filter: blur(14px) saturate(1.2);
-  -webkit-backdrop-filter: blur(14px) saturate(1.2);
-  flex: 1 1 0;
-  min-height: 280px;
-  height: auto;
-  margin: 0;
-  padding: 0;
-}
-body.sc-web-embed-layout .web-embed-tabbar {
-  border-color: rgba(255,255,255,.1);
-}
-body.sc-web-embed-layout #web-embed-toolbar {
-  gap: 8px;
-  padding-bottom: 8px;
-}
-html[data-theme="light"] .web-embed-chrome {
-  background:
-    linear-gradient(165deg, rgba(255,255,255,.82) 0%, rgba(255,255,255,.58) 100%),
-    rgba(248,250,252,.9);
-  border-color: rgba(15,23,42,.1);
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.95),
-    0 8px 22px rgba(15,23,42,.08);
-}
-html[data-theme="light"] .web-omnibar-glass,
-html[data-theme="light"] .web-omnibar-actions-glass,
-html[data-theme="light"] .web-embed-tabbar {
-  background: rgba(255,255,255,.55);
-  border-color: rgba(15,23,42,.08);
-}
-html[data-theme="light"] .web-embed-omnibar-badge {
-  background: rgba(255,255,255,.72);
-  border-color: rgba(15,23,42,.08);
-  color: #0f172a;
-}
-html[data-theme="light"] .web-embed-tab-indicator {
-  background:
-    linear-gradient(180deg, rgba(255,255,255,.95), rgba(255,255,255,.7)),
-    linear-gradient(135deg, rgba(255,141,42,.18), rgba(255,141,42,.06));
-  border-color: rgba(255,141,42,.28);
-  box-shadow: 0 4px 14px rgba(255,141,42,.12), inset 0 1px 0 rgba(255,255,255,.9);
-}
-html[data-theme="light"] .web-embed-tab,
-html[data-theme="light"] .webllm-site-chip {
-  color: rgba(51,65,85,.78);
-}
-html[data-theme="light"] .web-embed-tab.active,
-html[data-theme="light"] .webllm-site-chip.active {
-  color: #0f172a;
-}
-body.sc-web-embed-layout .web-embed-column-label {
-  display: none;
-}
-body.sc-web-embed-layout #app.sc-container,
-body.sc-web-embed-layout #app {
-  gap: 10px;
-  padding-top: 8px;
-}
-body.sc-web-mode-layout #layout.sc-list-layout {
-  grid-template-columns: 1fr;
-}
-body.sc-web-mode-layout .sc-main-content {
-  min-height: 0;
-}
-body.sc-web-mode-layout #footer.sc-footer-stack {
-  display: none !important;
-}
-body.sc-web-mode-layout .sc-body-column {
-  grid-template-rows: auto minmax(0, 1fr);
-  padding-bottom: 0;
-  gap: 8px;
-}
-body.sc-web-mode-layout #app.sc-container,
-body.sc-web-mode-layout #app {
-  padding-bottom: 8px;
-  gap: 8px;
-}
-html[data-theme="light"] .web-embed-scroll-viewport {
-  background:
-    linear-gradient(180deg, rgba(255,255,255,.72), rgba(248,250,252,.92)),
-    #fff;
-  border-color: rgba(15,23,42,.1);
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.9),
-    0 10px 28px rgba(15,23,42,.08);
-}
-html[data-theme="light"] .web-embed-focus-frame__glass {
-  background:
-    linear-gradient(145deg, rgba(255,255,255,.78) 0%, rgba(255,255,255,.42) 42%, rgba(255,141,42,.08) 100%);
-  border-color: rgba(255,141,42,.22);
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.95),
-    inset 0 0 0 1px rgba(255,141,42,.12),
-    0 8px 24px rgba(15,23,42,.1);
-}
-html[data-theme="light"] .web-embed-column-slot:not(.focus-active) {
-  opacity: 0.9;
-}
-.web-mode-hint {
-  padding: 28px 20px;
-  text-align: center;
-  color: var(--muted);
-  line-height: 1.6;
-  font-size: 13px;
-}
 .sc-section {
   display: flex;
   flex-direction: column;
@@ -4021,16 +2650,6 @@ html[data-theme="light"] .web-embed-column-slot:not(.focus-active) {
   font-size: 11px;
   font-weight: 700;
   letter-spacing: .04em;
-  color: var(--muted);
-}
-.sc-section-cli-hint {
-  margin: 0;
-  padding: 10px 12px;
-  border-radius: 12px;
-  border: 1px dashed var(--border);
-  background: rgba(255,255,255,.02);
-  font-size: 12px;
-  line-height: 1.45;
   color: var(--muted);
 }
 .filter-drawer .sc-tag-card,
@@ -4105,11 +2724,6 @@ html[data-theme="light"] .web-embed-column-slot:not(.focus-active) {
 }
 .fulltext-context-status .ft-control-btn {
   margin-left: auto;
-}
-.compose-context .cli-engine-tabs {
-  padding: 4px 2px;
-  border-bottom: none;
-  background: transparent;
 }
 .ft-task-page {
   padding: 20px 18px 24px;
@@ -4507,231 +3121,6 @@ body.nm-dock-mounted #app.sc-container,
 body.nm-dock-mounted #app {
   padding-bottom: 0;
 }
-.cli-workspace {
-  flex: 1 1 auto;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-  width: 100%;
-}
-.cli-workspace.hidden {
-  display: none !important;
-}
-.cli-engine-tabs {
-  display: flex;
-  flex-wrap: nowrap;
-  gap: 6px;
-  padding: 8px 10px;
-  overflow-x: auto;
-  flex-shrink: 0;
-  align-items: center;
-  border-bottom: 1px solid var(--border-subtle);
-  background: rgba(0,0,0,.1);
-}
-.cli-engine-tabs::-webkit-scrollbar {
-  height: 4px;
-}
-.cli-etab {
-  flex-shrink: 0;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  max-width: 120px;
-  padding: 6px 10px;
-  border-radius: 10px;
-  border: 1px solid rgba(255,179,71,.22);
-  background: rgba(255,255,255,.04);
-  cursor: pointer;
-  font-size: 11px;
-  color: var(--text);
-  white-space: nowrap;
-  overflow: hidden;
-}
-.cli-etab:hover {
-  background: rgba(255,141,42,.08);
-}
-.cli-etab.active {
-  border-color: rgba(255,179,71,.55);
-  background: rgba(255,141,42,.14);
-  color: #fff;
-}
-.cli-etab img {
-  width: 18px;
-  height: 18px;
-  border-radius: 5px;
-  flex-shrink: 0;
-  object-fit: contain;
-}
-.cli-etab .cli-etab-label {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  min-width: 0;
-  font-weight: 600;
-}
-#cliPane.cli-pane {
-  flex: 1 1 auto;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  padding: 8px 0 0;
-  overflow: hidden;
-}
-.cli-shell {
-  flex: 1 1 auto;
-  width: 100%;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  border: 1px solid var(--border-subtle);
-  border-radius: 16px;
-  background: var(--bg-surface);
-  overflow: hidden;
-  box-shadow: var(--shadow);
-}
-.cli-bar {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 10px 12px;
-  border-bottom: 1px solid var(--border-subtle);
-  background: rgba(0,0,0,.12);
-}
-.cli-title {
-  font-size: 12px;
-  color: var(--muted);
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.cli-btns {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  flex-shrink: 0;
-  justify-content: flex-end;
-}
-.cli-btn {
-  height: 28px;
-  padding: 0 10px;
-  border-radius: 999px;
-  border: 1px solid rgba(255,179,71,.22);
-  background: rgba(255,255,255,.04);
-  color: var(--text);
-  font-size: 11px;
-  cursor: pointer;
-  white-space: nowrap;
-}
-.cli-btn:hover {
-  background: rgba(255,255,255,.09);
-  border-color: rgba(255,141,42,.45);
-  color: var(--accent);
-}
-.cli-btn.primary {
-  border-color: rgba(255,141,42,.35);
-  background: rgba(255,141,42,.12);
-}
-.cli-quick-cmds {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  padding: 6px 10px 8px;
-  border-bottom: 1px solid var(--border-subtle);
-  background: rgba(0,0,0,.1);
-  flex-shrink: 0;
-}
-.cli-quick-cmds.hidden {
-  display: none !important;
-}
-.cli-qcmd {
-  border: 1px solid var(--border-subtle);
-  background: rgba(255,255,255,.03);
-  color: var(--muted);
-  border-radius: 999px;
-  padding: 3px 10px;
-  font-size: 11px;
-  cursor: pointer;
-  white-space: nowrap;
-  max-width: 168px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.cli-qcmd:hover {
-  border-color: rgba(255,141,42,.4);
-  color: var(--accent);
-}
-.cli-frame-stack {
-  position: relative;
-  flex: 1 1 auto;
-  min-height: 0;
-  width: 100%;
-  background: #132033;
-  overflow: hidden;
-}
-.cli-frame-stack .cli-frame {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  border: none;
-  background: #132033;
-  display: block;
-  transition: opacity 120ms ease;
-}
-.cli-loading {
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
-  color: var(--muted);
-  background: rgba(19, 32, 51, 0.92);
-  pointer-events: none;
-}
-.cli-loading.hidden {
-  display: none;
-}
-html[data-theme="light"] .cli-frame-stack,
-html[data-theme="light"] .cli-frame-stack .cli-frame {
-  background: #f0f4f8;
-}
-html[data-theme="light"] .cli-loading {
-  background: rgba(240, 244, 248, 0.94);
-}
-
-#layout.sc-cli-active {
-  display: flex;
-  flex-direction: column;
-  flex: 1 1 auto;
-  min-height: 0;
-}
-#layout.sc-cli-active .cli-workspace {
-  flex: 1 1 auto;
-  min-height: 0;
-  width: 100%;
-  max-width: none;
-}
-body.sc-cli-layout .cli-shell {
-  border-radius: 12px;
-  max-width: none;
-}
-.filter-drawer.sc-mode-cli .filter-drawer-body {
-  max-height: 88px;
-}
-.filter-drawer.sc-mode-web .filter-drawer-body {
-  max-height: min(52vh, 420px);
-}
-.cli-shell {
-  min-height: 280px;
-}
-#layout.sc-cli-active #results-card {
-  display: none !important;
-}
 html[data-theme="light"] .search-wrapper.sc-compose-stack,
 html[data-theme="light"] .search-box-inner,
 html[data-theme="light"] .filter-drawer,
@@ -4897,8 +3286,10 @@ html[data-theme="light"] .sc-web-ai-row.is-active {
         </div>
         <div class="compose-context-slot hidden" data-mode="web" id="compose-context-web">
           <details id="web-embed-setup" class="web-embed-setup" open>
-            <summary class="web-embed-setup-summary">分类与搜索引擎</summary>
+            <summary class="web-embed-setup-summary">外部搜索引擎</summary>
             <div class="web-embed-setup-body">
+              <p class="sc-section-web-hint">在系统浏览器中打开所选引擎；多 AI 同问请使用 AI 工作台。</p>
+              <button type="button" class="btn primary sc-open-ai-wb-btn" id="btn-open-ai-workbench">打开 AI 工作台</button>
               <section class="sc-section sc-section-web-cats" id="section-web-cats">
                 <h4 class="sc-section-label">联网分类</h4>
                 <div id="tag-card" class="sc-tag-card">
@@ -4950,8 +3341,8 @@ html[data-theme="light"] .sc-web-ai-row.is-active {
               <button type="button" id="chrome-topmost" class="btn">窗口置顶</button>
               <button type="button" id="btn-ft-settings-top" class="btn">搜索设置</button>
               <button id="btn-hotkey-plus" class="btn btn-hotkey-plus" type="button" title="快捷键+：快速进入 Caps 热键提示与绑定">快捷键+</button>
-              <button id="btn-web-search" class="btn" type="button">网页搜索</button>
-              <button id="btn-open-cli" class="btn" type="button">打开所选终端</button>
+              <button id="btn-web-search" class="btn" type="button">AI 工作台</button>
+              <button id="btn-open-cli" class="btn" type="button">CLI 工作台</button>
             </div>
           </details>
         </div>
@@ -5001,7 +3392,7 @@ html[data-theme="light"] .sc-web-ai-row.is-active {
         </div>
       </div>
     </div>
-    <div id="cli-workspace" class="cli-workspace hidden" aria-label="CLI 终端">
+    <div id="cli-workspace" class="cli-workspace hidden" aria-hidden="true" hidden aria-label="CLI 终端（已迁移至 CLI 工作台）">
       <section id="cliPane" class="cli-pane">
         <div class="cli-shell">
           <div class="cli-bar">
@@ -5022,7 +3413,7 @@ html[data-theme="light"] .sc-web-ai-row.is-active {
         </div>
       </section>
     </div>
-    <div id="web-embed-workspace" class="web-embed-workspace hidden" aria-label="内嵌浏览器">
+    <div id="web-embed-workspace" class="web-embed-workspace hidden" aria-hidden="true" hidden aria-label="内嵌浏览器（已迁移至 AI 工作台）">
       <div id="web-embed-toolbar" class="web-embed-chrome hidden" aria-label="内嵌浏览器控制">
         <div class="web-omnibar-row">
           <div class="web-omnibar-glass">
@@ -5038,16 +3429,6 @@ html[data-theme="light"] .sc-web-ai-row.is-active {
             <button type="button" class="web-chrome-btn" id="webllm-btn-home" title="首页" aria-label="首页">&#8962;</button>
             <button type="button" class="web-chrome-btn" id="webllm-btn-copyurl" title="复制链接" aria-label="复制链接">&#128279;</button>
             <button type="button" class="web-chrome-btn" id="webllm-btn-debug" title="内嵌 AI 调试面板" aria-label="调试">&#128027;</button>
-          </div>
-        </div>
-        <div class="web-embed-tabbar" aria-label="AI 页面标签">
-          <div id="web-embed-tab-scroll-nav" class="web-embed-tab-scroll-nav hidden" aria-label="列滚动">
-            <button type="button" id="web-embed-scroll-prev" class="web-embed-tab-scroll-btn" title="上一个 AI 页" aria-label="上一个 AI 页">&#9664;</button>
-            <button type="button" id="web-embed-scroll-next" class="web-embed-tab-scroll-btn" title="下一个 AI 页" aria-label="下一个 AI 页">&#9654;</button>
-          </div>
-          <div class="web-embed-tabbar-inner">
-            <div id="web-embed-tab-indicator" class="web-embed-tab-indicator" aria-hidden="true"></div>
-            <div id="webllm-site-chips" class="web-embed-tabs" role="tablist" aria-label="AI 站点标签"></div>
           </div>
         </div>
         <span id="webllm-status" class="web-omnibar-status" aria-live="polite"></span>
@@ -5229,6 +3610,7 @@ html[data-theme="light"] .sc-web-ai-row.is-active {
 
 <script src="https://app.local/assets/nm-bottom-dock.js"></script>
 <script src="https://app.local/assets/js/NmModal.js"></script>
+<script src="https://app.local/assets/js/sc-chunk-loader.js"></script>
 <script>
 if (typeof BasePanel === 'undefined') {
   window.BasePanel = {
@@ -5242,6 +3624,92 @@ if (typeof BasePanel === 'undefined') {
     }
   };
 }
+
+/* --- PR2 lazy chunks: web-embed / cli (see assets/js/sc-*.js) --- */
+function scStubDismissWebEmbed(dispose = true) {
+  try { postToAhk({ type: "webLlmDismiss", dispose: !!dispose }); } catch (_) {}
+}
+function scStubNoop() {}
+
+const SC_CHUNK_STUBS = [
+  "isWebEmbedActive", "isWebEmbedCategory", "dismissWebEmbedHost", "cancelWebEmbedRectTimers",
+  "syncWebEmbedLayout", "syncWebEmbedToolbarVisibility", "renderWebLlmToolbar", "renderWebEmbedTabBar",
+  "renderWebModeNavBody", "syncWebModeNavAiRows", "scheduleWebEmbedContentRect", "postWebEmbedContentRect",
+  "renderWebExternalHint", "openWebEmbedSetupFromNav", "scWebEmbedPrepareWebMode", "scWebEmbedInvalidateContentRect",
+  "isWebEmbedDebugPanelOpen", "initWebLlmToolbar", "validateWebEmbedCatalog",
+  "normalizeCliEngineId", "getActiveCliEngine", "sendComposeToCli", "scheduleSyncCliWorkspace",
+  "syncCliWorkspace", "renderCliEngineTabs", "renderCliQuickCmds", "setCliTerminalFocusLock",
+  "handleTtydHostMessage", "ensureCliControlsInited", "getCliEnginesForTabs", "isKnownCliEngineId"
+];
+SC_CHUNK_STUBS.forEach((name) => {
+  if (typeof globalThis[name] !== "function") {
+    if (name === "isWebEmbedActive" || name === "isWebEmbedCategory" || name === "isWebEmbedDebugPanelOpen" || name === "isKnownCliEngineId") {
+      globalThis[name] = () => false;
+    } else if (name === "handleTtydHostMessage") {
+      globalThis[name] = () => false;
+    } else if (name === "dismissWebEmbedHost") {
+      globalThis[name] = scStubDismissWebEmbed;
+    } else if (name === "normalizeCliEngineId") {
+      globalThis[name] = (v) => {
+        const s = String(v || "").trim().toLowerCase();
+        return s || "codex_cli";
+      };
+    } else if (name === "getActiveCliEngine") {
+      globalThis[name] = () => normalizeCliEngineId(state.activeCliEngine);
+    } else if (name === "getCliEnginesForTabs") {
+      globalThis[name] = () => [];
+    } else if (name === "ensureCliControlsInited") {
+      globalThis[name] = scStubNoop;
+    } else {
+      globalThis[name] = scStubNoop;
+    }
+  }
+});
+
+/** 搜索中心 web 模式：仅外开搜索，不依赖 sc-web-embed chunk */
+function scRenderWebExternalHint() {
+  if (getUIMode() !== "web") return;
+  const list = document.getElementById("result-list");
+  if (!list) return;
+  const engines = Array.isArray(state.selectedEngines) ? state.selectedEngines.filter(Boolean) : [];
+  const names = engines.map((v) => {
+    const row = (state.engines || []).find((e) => String(e && e.value || "") === String(v));
+    return row && row.name ? String(row.name) : String(v);
+  });
+  const engLine = names.length
+    ? ("当前引擎：" + names.join("、"))
+    : "请先在上方选择外部搜索引擎";
+  list.innerHTML =
+    "<div class=\"empty web-mode-hint\">" + escapeHtml(engLine)
+    + "<br>输入关键词后按 Enter 或点「搜索」，将在系统浏览器打开。"
+    + "<br><button type=\"button\" class=\"btn primary sc-open-ai-wb-inline\" style=\"margin-top:12px\">打开 AI 工作台（多站同问）</button></div>";
+  const btn = list.querySelector(".sc-open-ai-wb-inline");
+  if (btn) {
+    btn.addEventListener("click", () => {
+      postToAhk({
+        type: "openAiWorkbench",
+        keyword: state.keyword || "",
+        selectedEngines: (state.selectedEngines || []).slice()
+      });
+    });
+  }
+  const count = document.getElementById("result-count");
+  if (count) count.textContent = "外开搜索";
+}
+globalThis.renderWebExternalHint = scRenderWebExternalHint;
+
+function ensureScChunkThen(fn) {
+  const mode = String(fn.__scChunk || "");
+  if (!mode || !globalThis.ScChunkLoader) {
+    fn();
+    return;
+  }
+  ScChunkLoader.ensureScChunk(mode).then(fn).catch((e) => {
+    console.error("[SearchCenter] chunk load failed:", mode, e);
+    fn();
+  });
+}
+
 const SC_ENGINE_MODE_KEY = "sc_engine_mode";
 const SC_HOTKEY_BINDINGS_KEY = "sc_hotkey_bindings_v1";
 const SC_COMPOSE_BINDINGS_KEY = "sc_compose_bindings_v1";
@@ -5264,113 +3732,12 @@ const SC_UI_MODE_KEY = "sc_ui_mode_v1";
 const SC_LAST_NON_CLIPBOARD_UI_MODE_KEY = "sc_last_non_clipboard_ui_mode_v1";
 const SC_ACTIVE_CLI_ENGINE_KEY = "sc_active_cli_engine_v1";
 const SC_NOVICE_SORT_PREF_KEY = "sc_novice_sort_pref_v1";
-const SC_WEB_SEARCH_HIDDEN = false;
+const SC_WEB_SEARCH_HIDDEN = true;
 const SC_WEB_CATEGORY_KEYS = new Set([
-  "ai", "academic", "baidu", "image", "audio", "video", "book", "price", "medical", "cloud"
+  "academic", "baidu", "image", "audio", "video", "book", "price", "medical", "cloud"
 ]);
-const SC_CLI_PORTS = {
-  codex_cli: 7681,
-  gemini_cli: 7682,
-  openclaw_cli: 7683,
-  qwen_cli: 7684,
-  ollama_cli: 7685,
-  claude_cli: 7686,
-  deepseek_cli: 7687,
-  kimi_cli: 7688,
-  zhipu_cli: 7689,
-  copilot_cli: 7690
-};
-const SC_CLI_ENGINE_ORDER = [
-  "codex_cli", "gemini_cli", "openclaw_cli", "qwen_cli", "ollama_cli",
-  "claude_cli", "deepseek_cli", "kimi_cli", "zhipu_cli", "copilot_cli"
-];
-/** 联网引擎 value → ttyd 引擎 id（避免 deepseek 误落到 7681 codex） */
-const SC_WEB_TO_CLI_ENGINE = {
-  codex: "codex_cli",
-  chatgpt: "codex_cli",
-  gemini: "gemini_cli",
-  openclaw: "openclaw_cli",
-  qwen: "qwen_cli",
-  qianwen: "qwen_cli",
-  ollama: "ollama_cli",
-  claude: "claude_cli",
-  deepseek: "deepseek_cli",
-  kimi: "kimi_cli",
-  zhipu: "zhipu_cli",
-  copilot: "copilot_cli"
-};
 
-function normalizeCliEngineId(v) {
-  const s = String(v || "").trim().toLowerCase();
-  if (!s) return "codex_cli";
-  if (Object.prototype.hasOwnProperty.call(SC_CLI_PORTS, s)) return s;
-  if (SC_WEB_TO_CLI_ENGINE[s]) return SC_WEB_TO_CLI_ENGINE[s];
-  if (s.endsWith("_cli")) {
-    const bare = s.slice(0, -4);
-    if (SC_WEB_TO_CLI_ENGINE[bare]) return SC_WEB_TO_CLI_ENGINE[bare];
-  }
-  return s;
-}
-
-function isKnownCliEngineId(v) {
-  const id = normalizeCliEngineId(v);
-  return Object.prototype.hasOwnProperty.call(SC_CLI_PORTS, id);
-}
-
-function getCliEnginesForTabs() {
-  const rows = Array.isArray(state.engines) ? state.engines : [];
-  const byId = new Map();
-  rows.forEach((e) => {
-    if (!e || !e.value) return;
-    const id = normalizeCliEngineId(e.value);
-    if (!SC_CLI_PORTS[id]) return;
-    if (!byId.has(id)) byId.set(id, Object.assign({}, e, { value: id }));
-  });
-  // 固定全量引擎标签，避免后端偶发返回不全导致标签消失
-  return SC_CLI_ENGINE_ORDER.map((id) => {
-    const base = byId.get(id) || {};
-    return Object.assign({
-      value: id,
-      name: id.replace(/_cli$/, "").replace(/^./, (c) => c.toUpperCase()),
-      iconUrl: ""
-    }, base, { value: id });
-  });
-}
-const _cliOpenThrottleByEngine = new Map();
-const _cliUrlByEngine = new Map(); // engineId -> 最近 ttyd_ready 的 URL（切标签可立即挂载）
-const _cliAutoBootDone = new Set(); // 本会话是否已自动注入启动 CLI
-/** ttyd 用轻量 cmd 时，iframe 就绪后自动注入的首条命令（与 codex 的 cmd /k 行为等价） */
-const SC_CLI_AUTO_BOOT_CMD = {
-  codex_cli: "codex",
-  gemini_cli: "gemini",
-  openclaw_cli: "openclaw",
-  qwen_cli: "qwen",
-  ollama_cli: "ollama",
-  claude_cli: "claude",
-  deepseek_cli: "deepseek",
-  kimi_cli: "kimi",
-  zhipu_cli: "chelper",
-  copilot_cli: "copilot"
-};
-/** FinalShell 风格：终端下方快捷命令（点击即注入并回车） */
-const SC_CLI_QUICK_CMDS_COMMON = [
-  { label: "清屏", cmd: "cls" },
-  { label: "当前目录", cmd: "cd" },
-  { label: "列文件", cmd: "dir" },
-  { label: "Git 状态", cmd: "git status" },
-  { label: "查看 IP", cmd: "ipconfig" }
-];
-const SC_CLI_QUICK_PANEL_KEY = "sc_cli_quick_panel_v1";
-let _cliSyncDebounceTimer = 0;
-let _cliTerminalFocusLock = false;
-let _cliFrameLoadedPort = 0;
-const _cliFrameCache = new Map(); // engineId -> iframe（保活）
 let _localInitKickAt = 0; // 本地首屏空结果兜底补拉节流
-let _cliAutoRetryTimer = 0;
-const _cliAutoRetryCountByEngine = new Map();
-let _cliConnectFallbackTimer = 0;
-let _cliLoadingPollTimer = 0;
-const _cliLoadingPollCountByEngine = new Map();
 let _lastFtUiApplyAt = 0;
 const SC_CLI_OPEN_THROTTLE_MS = 1200;
 const SC_CLI_READY_TTL_MS = 300000;
@@ -6379,26 +4746,6 @@ function insertNewlineInCompose(el) {
   } catch (_) {}
 }
 
-function sendComposeToCli() {
-  const input = document.getElementById("search");
-  const keyword = input ? String(input.value || "") : "";
-  state.keyword = keyword;
-  if (!keyword.trim()) {
-    const st = document.getElementById("status");
-    if (st) st.textContent = "请输入要发送的内容";
-    return;
-  }
-  const eng = getActiveCliEngine();
-  const ready = isCliEngineReady(eng) && cliFrameUrlLooksLiveForPort(cliPortForEngine(eng));
-  if (!ready) {
-    setCliLoadingVisible(true, "终端初始化中，请稍候…");
-    throttledNiumaCliOpen(false);
-  }
-  postToAhk({ type: "cliSend", prompt: keyword, engine: eng });
-  try {
-    input.focus();
-  } catch (_) {}
-}
 
 function runVkComposeAction(action) {
   const act = String(action || "").toLowerCase();
@@ -6481,1864 +4828,33 @@ const COMPOSE_MODE_CHROME = Object.freeze({
   cli: { icon: "&#9000;", btnRun: "发送", hint: "输入内容发送到下方终端" }
 });
 
-const SC_WEB_BOOKMARK_LABELS_KEY = "sc_web_bookmark_labels_v1";
-const SC_WEB_BROADCAST_SITES_KEY = "sc_web_broadcast_sites_v1";
-const SC_WEB_EMBED_COL_WIDTHS_KEY = "sc_web_embed_col_widths_v1";
-const SC_WEB_EMBED_COL_MIN_WIDTH = 280;
-const SC_WEB_EMBED_COL_MIN_WIDTH_FIT = 200;
-const SC_WEB_EMBED_COL_DEFAULT_WIDTH = 390;
-const SC_WEB_EMBED_COL_GAP = 8;
-const SC_WEB_EMBED_MAX_COLUMNS = 8;
-
-const WEB_EMBED_ID_ALIASES = Object.freeze({
-  qwen: "qianwen",
-  tongyi: "qianwen"
-});
-
-function scWebEmbedMakeSite(id, label, homeUrl, opts) {
-  return Object.assign({
-    id: id,
-    label: label,
-    homeUrl: homeUrl,
-    embedEnabled: true,
-    defaultOpen: false,
-    iconKey: id,
-    kind: "chat",
-    queryMode: "inject",
-    uaMode: "mobile",
-    profileMode: "shared",
-    embedRisk: "untested",
-    submitDelayMs: 0
-  }, opts || {});
-}
-
-const SC_WEB_EMBED_SITES = Object.freeze([
-  scWebEmbedMakeSite("deepseek", "DeepSeek", "https://chat.deepseek.com/", { defaultOpen: true, embedRisk: "none", submitDelayMs: 550 }),
-  scWebEmbedMakeSite("doubao", "豆包", "https://www.doubao.com/chat/", { defaultOpen: true, embedRisk: "none" }),
-  scWebEmbedMakeSite("gemini", "Gemini", "https://gemini.google.com/app", { defaultOpen: true, uaMode: "desktop", embedRisk: "login", submitDelayMs: 550 }),
-  scWebEmbedMakeSite("grok", "Grok", "https://grok.com/", { defaultOpen: true, queryMode: "url", uaMode: "desktop", embedRisk: "none" }),
-  scWebEmbedMakeSite("perplexity", "Perplexity", "https://www.perplexity.ai/", { defaultOpen: true, kind: "search", queryMode: "url", uaMode: "desktop", profileMode: "isolated", embedRisk: "none" }),
-  scWebEmbedMakeSite("kimi", "Kimi", "https://kimi.moonshot.cn/", { embedRisk: "none" }),
-  scWebEmbedMakeSite("claude", "Claude", "https://claude.ai/", { uaMode: "desktop", embedRisk: "login" }),
-  scWebEmbedMakeSite("yuanbao", "元宝", "https://yuanbao.tencent.com/", { embedRisk: "none" }),
-  scWebEmbedMakeSite("aistudio", "AI Studio", "https://aistudio.google.com/", { iconKey: "gemini", uaMode: "desktop", embedRisk: "login" }),
-  scWebEmbedMakeSite("nami", "纳米 AI", "https://www.n.cn/", { kind: "search", queryMode: "url", uaMode: "desktop" }),
-  scWebEmbedMakeSite("mita", "秘塔", "https://metaso.cn/", { kind: "search", queryMode: "url", uaMode: "desktop", embedRisk: "none" }),
-  scWebEmbedMakeSite("qianwen", "千问", "https://tongyi.aliyun.com/qianwen/", { iconKey: "qwen", embedRisk: "none" }),
-  scWebEmbedMakeSite("copilot", "Copilot", "https://copilot.microsoft.com/", { uaMode: "desktop", embedRisk: "login" }),
-  scWebEmbedMakeSite("lmarena", "LMArena", "https://lmarena.ai/", { uaMode: "desktop" }),
-  scWebEmbedMakeSite("manus", "Manus", "https://manus.im/", { uaMode: "desktop" }),
-  scWebEmbedMakeSite("mistral", "Mistral", "https://chat.mistral.ai/", { uaMode: "desktop" }),
-  scWebEmbedMakeSite("yupp", "Yupp", "https://yupp.ai/", { uaMode: "desktop" }),
-  scWebEmbedMakeSite("zai", "Z.ai", "https://z.ai/", { uaMode: "desktop" }),
-  scWebEmbedMakeSite("coze", "扣子", "https://www.coze.cn/", { embedRisk: "none" }),
-  scWebEmbedMakeSite("tiangong", "天工", "https://www.tiangong.cn/", { uaMode: "desktop" }),
-  scWebEmbedMakeSite("wenxin", "文心一言", "https://yiyan.baidu.com/", { embedRisk: "none" })
-]);
-
-function normalizeWebEmbedSiteId(rawId) {
-  const s = String(rawId || "").trim().toLowerCase();
-  return WEB_EMBED_ID_ALIASES[s] || s;
-}
-
-function findWebEmbedSite(siteId) {
-  const id = normalizeWebEmbedSiteId(siteId);
-  return SC_WEB_EMBED_SITES.find((s) => s.id === id) || null;
-}
-
-function isWebEmbedSiteEnabled(site) {
-  if (!site) return false;
-  if (site.embedEnabled === false) return false;
-  if (site.enabled === false) return false;
-  return true;
-}
-
-function getWebEmbedPoolSites() {
-  return SC_WEB_EMBED_SITES.filter(isWebEmbedSiteEnabled);
-}
-
-function getWebEmbedDefaultOpenSiteIds() {
-  const pool = getWebEmbedPoolSites();
-  const defs = pool.filter((s) => s.defaultOpen).map((s) => s.id);
-  return defs.length ? defs : (pool[0] ? [pool[0].id] : ["deepseek"]);
-}
-
-function normalizeWebEmbedBroadcastSites(rawIds) {
-  const allowed = new Set(getWebEmbedPoolSites().map((s) => s.id));
-  const base = Array.isArray(rawIds) && rawIds.length
-    ? rawIds.map(normalizeWebEmbedSiteId)
-    : getWebEmbedDefaultOpenSiteIds();
-  const result = [];
-  for (const id of base) {
-    if (!allowed.has(id)) continue;
-    if (result.includes(id)) continue;
-    result.push(id);
-    if (result.length >= SC_WEB_EMBED_MAX_COLUMNS) break;
-  }
-  return result.length ? result : getWebEmbedDefaultOpenSiteIds();
-}
-
-function validateWebEmbedCatalog() {
-  const ids = SC_WEB_EMBED_SITES.map((s) => s.id);
-  const duplicated = ids.filter((id, i) => ids.indexOf(id) !== i);
-  const missingDefault = getWebEmbedDefaultOpenSiteIds().filter((id) => !ids.includes(id));
-  const missingHome = SC_WEB_EMBED_SITES.filter((s) => !s.homeUrl).map((s) => s.id);
-  if (duplicated.length || missingDefault.length || missingHome.length) {
-    scWebEmbedDebugLog("warn", "catalog validate dup=" + duplicated.join(",") + " missingDefault=" + missingDefault.join(",") + " missingHome=" + missingHome.join(","));
-  }
-}
-
-function webEmbedAssetUrl(relPath) {
-  const p = String(relPath || "").replace(/^\/+/, "");
-  return "https://app.local/assets/" + p;
-}
-
-function webEmbedSiteIconCandidates(siteOrId) {
-  const site = typeof siteOrId === "object" ? siteOrId : findWebEmbedSite(siteOrId);
-  const id = site ? site.id : normalizeWebEmbedSiteId(siteOrId);
-  const iconKey = site && site.iconKey ? site.iconKey : id;
-  const urls = [];
-  const fromEngine = (state.engines || []).find((e) => normalizeWebEmbedSiteId(e && e.value) === id);
-  if (fromEngine && fromEngine.iconUrl) urls.push(String(fromEngine.iconUrl));
-  const names = [iconKey, id];
-  const exts = [".svg", ".png", ".webp", ".jpg", ".jpeg"];
-  for (const name of names) {
-    if (!name) continue;
-    for (const ext of exts) {
-      urls.push(webEmbedAssetUrl("icons/ai/" + name + ext));
-      urls.push(webEmbedAssetUrl("icons/app/" + name + ext));
-    }
-  }
-  urls.push(webEmbedAssetUrl("icons/app/chat-ai-fallback.svg"));
-  const seen = new Set();
-  return urls.filter((u) => {
-    if (!u || seen.has(u)) return false;
-    seen.add(u);
-    return true;
-  });
-}
-
-function mountWebChipIcon(btn, site) {
-  const meta = typeof site === "object" ? site : findWebEmbedSite(site);
-  const urls = webEmbedSiteIconCandidates(meta || site);
-  let idx = 0;
-  const showFallback = () => {
-    if (btn.querySelector(".web-chip-fallback")) return;
-    const fb = document.createElement("span");
-    fb.className = "web-chip-fallback";
-    fb.textContent = String((meta && meta.label) || site.label || site.id || site || "?").slice(0, 1).toUpperCase();
-    btn.insertBefore(fb, btn.firstChild);
-  };
-  const tryNext = () => {
-    if (idx >= urls.length) {
-      showFallback();
-      return;
-    }
-    const img = document.createElement("img");
-    img.className = "web-chip-icon";
-    img.alt = "";
-    img.src = urls[idx++];
-    img.addEventListener("error", () => {
-      img.remove();
-      tryNext();
-    });
-    btn.insertBefore(img, btn.firstChild);
-  };
-  tryNext();
-}
-
-function isWebEmbedCategory() {
-  return String(state.currentCategoryKey || "").toLowerCase() === "ai";
-}
-
-function isWebEmbedActive() {
-  return getUIMode() === "web" && isWebEmbedCategory();
-}
-
-function getWebEmbedLayoutSites() {
-  const list = getWebEmbedBroadcastSites();
-  return list.length ? list.slice(0, SC_WEB_EMBED_MAX_COLUMNS) : defaultWebEmbedBroadcastSites();
-}
-
-function loadWebEmbedColumnWidthsPref() {
-  try {
-    const raw = localStorage.getItem(SC_WEB_EMBED_COL_WIDTHS_KEY);
-    if (!raw) return {};
-    const parsed = JSON.parse(raw);
-    return parsed && typeof parsed === "object" ? parsed : {};
-  } catch (_) {}
-  return {};
-}
-
-function saveWebEmbedColumnWidthsPref(map) {
-  try {
-    localStorage.setItem(SC_WEB_EMBED_COL_WIDTHS_KEY, JSON.stringify(map && typeof map === "object" ? map : {}));
-  } catch (_) {}
-}
-
-let _scWebEmbedColumnWidths = loadWebEmbedColumnWidthsPref();
-let _scWebEmbedAutoFitWidths = null;
-let _scWebEmbedAutoFitKey = "";
-let _scWebEmbedAutoFitDisabled = true;
-
-function clampWebEmbedColumnWidth(widthPx, allowFitMin) {
-  const minW = allowFitMin ? SC_WEB_EMBED_COL_MIN_WIDTH_FIT : SC_WEB_EMBED_COL_MIN_WIDTH;
-  return Math.max(minW, Math.round(Number(widthPx) || SC_WEB_EMBED_COL_DEFAULT_WIDTH));
-}
-
-function getWebEmbedStoredColumnWidth(siteId) {
-  const id = String(siteId || "").trim();
-  const saved = _scWebEmbedColumnWidths[id];
-  if (saved && Number(saved) >= SC_WEB_EMBED_COL_MIN_WIDTH) return clampWebEmbedColumnWidth(saved);
-  return SC_WEB_EMBED_COL_DEFAULT_WIDTH;
-}
-
-function refreshWebEmbedAutoFit(forceResetScroll) {
-  _scWebEmbedAutoFitWidths = null;
-  _scWebEmbedAutoFitKey = "";
-  return false;
-}
-
-function getWebEmbedColumnWidth(siteId) {
-  const id = String(siteId || "").trim();
-  if (_scWebEmbedAutoFitWidths && _scWebEmbedAutoFitWidths[id])
-    return _scWebEmbedAutoFitWidths[id];
-  return getWebEmbedStoredColumnWidth(id);
-}
-
-function setWebEmbedColumnWidth(siteId, widthPx, persist) {
-  const id = String(siteId || "").trim();
-  if (!id) return;
-  if (persist) {
-    _scWebEmbedAutoFitDisabled = true;
-    _scWebEmbedAutoFitWidths = null;
-    _scWebEmbedAutoFitKey = "";
-  }
-  _scWebEmbedColumnWidths[id] = clampWebEmbedColumnWidth(widthPx);
-  if (persist) saveWebEmbedColumnWidthsPref(_scWebEmbedColumnWidths);
-}
-
-function getWebEmbedViewportWidthPx() {
-  const viewport = document.getElementById("web-embed-scroll-viewport");
-  return viewport ? Math.max(0, Math.round(viewport.clientWidth || 0)) : 0;
-}
-
-function getWebEmbedMaxScrollPx() {
-  const vpW = getWebEmbedViewportWidthPx();
-  const stripW = getWebEmbedStripWidth(getWebEmbedLayoutSites());
-  return Math.max(0, stripW - vpW);
-}
-
-function webEmbedNeedsHorizontalScroll(siteIds) {
-  const ids = siteIds || getWebEmbedLayoutSites();
-  if (!ids.length) return false;
-  return getWebEmbedStripWidth(ids) > getWebEmbedViewportWidthPx() + 1;
-}
-
-function healWebEmbedColumnWidthsForScroll(siteIds) {
-  const ids = siteIds || getWebEmbedLayoutSites();
-  if (!ids.length || !webEmbedNeedsHorizontalScroll(ids)) return false;
-  let healed = false;
-  ids.forEach((id, index) => {
-    const saved = Number(_scWebEmbedColumnWidths[id]);
-    if (!Number.isFinite(saved) || saved < SC_WEB_EMBED_COL_DEFAULT_WIDTH) {
-      _scWebEmbedColumnWidths[id] = SC_WEB_EMBED_COL_DEFAULT_WIDTH;
-      healed = true;
-    } else if (ids.length > 1 && index === ids.length - 1 && saved > SC_WEB_EMBED_COL_DEFAULT_WIDTH + 100) {
-      _scWebEmbedColumnWidths[id] = SC_WEB_EMBED_COL_DEFAULT_WIDTH;
-      healed = true;
-    }
-  });
-  if (healed) saveWebEmbedColumnWidthsPref(_scWebEmbedColumnWidths);
-  return healed;
-}
-
-function getWebEmbedTrackWidthPx() {
-  const viewport = document.getElementById("web-embed-scroll-viewport");
-  const siteIds = getWebEmbedLayoutSites();
-  const contentW = getWebEmbedStripWidth(siteIds) + getWebEmbedViewportFillExtra();
-  const vpW = viewport ? Math.max(0, Math.round(viewport.clientWidth || 0)) : 0;
-  return Math.max(vpW, contentW, 1);
-}
-
-function syncWebEmbedViewportScroll(resetWhenFit) {
-  const viewport = document.getElementById("web-embed-scroll-viewport");
-  if (!viewport) return;
-  const fit = !webEmbedNeedsHorizontalScroll()
-    && (getWebEmbedViewportFillExtra() > 0
-      || getWebEmbedStripWidth(getWebEmbedLayoutSites()) <= getWebEmbedViewportWidthPx() + 1);
-  if (resetWhenFit && fit) {
-    if ((viewport.scrollLeft || 0) > 0) viewport.scrollLeft = 0;
-    return;
-  }
-  const maxScroll = getWebEmbedMaxScrollPx();
-  if ((viewport.scrollLeft || 0) > maxScroll) viewport.scrollLeft = maxScroll;
-}
-
-function getWebEmbedViewportFillExtra() {
-  const viewport = document.getElementById("web-embed-scroll-viewport");
-  const siteIds = getWebEmbedLayoutSites();
-  if (!viewport || !siteIds.length) return 0;
-  if (siteIds.length > 1) return 0;
-  if (webEmbedNeedsHorizontalScroll(siteIds)) return 0;
-  const strip = getWebEmbedStripWidth(siteIds);
-  const vp = Math.max(0, Math.round(viewport.clientWidth || 0));
-  return (vp > strip + 1) ? Math.max(0, vp - strip) : 0;
-}
-
-function getWebEmbedLayoutColumnWidth(siteId, siteIndex) {
-  const w = getWebEmbedColumnWidth(siteId);
-  const sites = getWebEmbedLayoutSites();
-  const extra = getWebEmbedViewportFillExtra();
-  if (extra > 0 && siteIndex === sites.length - 1) return w + extra;
-  return w;
-}
-
-function getWebEmbedStripWidth(siteIds) {
-  const ids = siteIds || [];
-  if (!ids.length) return 0;
-  const gaps = Math.max(0, ids.length - 1) * SC_WEB_EMBED_COL_GAP;
-  return ids.reduce((sum, sid) => sum + getWebEmbedColumnWidth(sid), 0) + gaps;
-}
-
-function buildWebEmbedColumnLayoutPayload() {
-  refreshWebEmbedAutoFit(false);
-  const viewport = document.getElementById("web-embed-scroll-viewport");
-  syncWebEmbedViewportScroll(false);
-  const siteIds = getWebEmbedLayoutSites();
-  const fillExtra = getWebEmbedViewportFillExtra();
-  const vpW = getWebEmbedViewportWidthPx();
-  const stripW = getWebEmbedStripWidth(siteIds);
-  const maxScroll = Math.max(0, stripW - vpW);
-  const scrollX = viewport ? Math.min(Math.max(0, Math.round(viewport.scrollLeft || 0)), maxScroll) : 0;
-  return {
-    scrollX,
-    viewportWidth: vpW,
-    stripWidth: stripW,
-    columns: siteIds.map((id) => ({
-      id,
-      width: getWebEmbedColumnWidth(id)
-    })),
-    fillExtra
-  };
-}
-
-function postWebEmbedColumnLayout(force) {
-  if (!isWebEmbedActive() || _scWebEmbedLayoutFromHost) return;
-  const layout = buildWebEmbedColumnLayoutPayload();
-  const key = layout.scrollX + "|" + layout.columns.map((c) => c.id + ":" + c.width).join(",");
-  if (!force && key === _scWebEmbedLastLayoutKey) return;
-  _scWebEmbedLastLayoutKey = key;
-  postToAhk({ type: "webLlmColumnLayout", columnLayout: layout });
-}
-
-function renderWebEmbedColumnTrack() {
-  refreshWebEmbedAutoFit(true);
-  const track = document.getElementById("web-embed-scroll-track");
-  if (!track) return;
-  const siteIds = getWebEmbedLayoutSites();
-  healWebEmbedColumnWidthsForScroll(siteIds);
-  track.innerHTML = "";
-  track.style.width = getWebEmbedTrackWidthPx() + "px";
-  siteIds.forEach((siteId, index) => {
-    const meta = SC_WEB_EMBED_SITES.find((s) => s.id === siteId);
-    const slot = document.createElement("div");
-    slot.className = "web-embed-column-slot";
-    slot.setAttribute("data-site", siteId);
-    slot.style.width = getWebEmbedLayoutColumnWidth(siteId, index) + "px";
-    const label = document.createElement("div");
-    label.className = "web-embed-column-label";
-    label.textContent = meta ? meta.label : siteId;
-    slot.appendChild(label);
-    track.appendChild(slot);
-    if (index < siteIds.length - 1) {
-      const gap = document.createElement("div");
-      gap.className = "web-embed-column-gap";
-      gap.style.width = SC_WEB_EMBED_COL_GAP + "px";
-      gap.setAttribute("aria-hidden", "true");
-      track.appendChild(gap);
-    }
-  });
-  _scWebEmbedLastLayoutKey = "";
-  if (!_scWebEmbedLayoutFromHost) postWebEmbedColumnLayout(true);
-  renderWebEmbedTabBar();
-  animateWebEmbedFocusFrame(getWebEmbedActiveEngine(), true);
-  syncWebEmbedHScrollUi();
-}
-
-function syncWebEmbedColumnSlotWidths(columns) {
-  if (!Array.isArray(columns) || !columns.length) return;
-  const track = document.getElementById("web-embed-scroll-track");
-  if (!track) return;
-  columns.forEach((col) => {
-    const id = String(col && col.id || "").trim();
-    if (!id) return;
-    if (col.width != null) setWebEmbedColumnWidth(id, col.width, false);
-    const sites = getWebEmbedLayoutSites();
-    const idx = sites.indexOf(id);
-    const slot = track.querySelector('.web-embed-column-slot[data-site="' + id + '"]');
-    if (slot) slot.style.width = getWebEmbedLayoutColumnWidth(id, idx >= 0 ? idx : 0) + "px";
-  });
-  track.style.width = getWebEmbedTrackWidthPx() + "px";
-  syncWebEmbedHScrollUi();
-  syncWebEmbedViewportScroll(true);
-}
-
-function applyWebLlmColumnLayoutState(payload) {
-  if (!payload || !Array.isArray(payload.columns)) return;
-  _scWebEmbedLayoutFromHost = true;
-  try {
-    const fillExtra = Math.max(0, Number(payload.fillExtra) || 0);
-    for (const col of payload.columns) {
-      const id = String(col && col.id || "").trim();
-      if (!id) continue;
-      let w = Number(col.width);
-      if (!Number.isFinite(w)) w = getWebEmbedColumnWidth(id);
-      const sites = getWebEmbedLayoutSites();
-      const isLast = sites.length && id === sites[sites.length - 1];
-      if (isLast && fillExtra > 0) w = Math.max(SC_WEB_EMBED_COL_MIN_WIDTH, w - fillExtra);
-      setWebEmbedColumnWidth(id, w, false);
-    }
-    if (payload.scrollX != null) {
-      const viewport = document.getElementById("web-embed-scroll-viewport");
-      if (viewport) {
-        const target = Math.max(0, Math.round(Number(payload.scrollX) || 0));
-        if (Math.abs((viewport.scrollLeft || 0) - target) > 1)
-          viewport.scrollLeft = target;
-      }
-    }
-    syncWebEmbedHScrollUi();
-    if (payload.dragging) {
-      syncWebEmbedColumnSlotWidths(payload.columns);
-      document.body.classList.add("sc-web-embed-col-resizing");
-    } else {
-      document.body.classList.remove("sc-web-embed-col-resizing");
-      syncWebEmbedColumnSlotWidths(payload.columns);
-    }
-    if (isWebEmbedActive()) {
-      animateWebEmbedFocusFrame(getWebEmbedActiveEngine(), !!payload.dragging);
-    }
-    if (payload.persist) saveWebEmbedColumnWidthsPref(_scWebEmbedColumnWidths);
-  } finally {
-    _scWebEmbedLayoutFromHost = false;
-  }
-}
-
-function getWebEmbedActiveEngine() {
-  const sid = String(state.webEmbedSiteId || "").trim();
-  if (sid) return sid;
-  const chip = document.querySelector(".webllm-site-chip.active");
-  const fromChip = chip ? String(chip.getAttribute("data-site") || "").trim() : "";
-  if (fromChip) return fromChip;
-  const list = getWebEmbedBroadcastSites();
-  if (list.length) return list[0];
-  return "deepseek";
-}
-
-function defaultWebEmbedBroadcastSites() {
-  return normalizeWebEmbedBroadcastSites(null);
-}
-
-function loadWebEmbedBroadcastSitesPref() {
-  try {
-    const raw = localStorage.getItem(SC_WEB_BROADCAST_SITES_KEY);
-    if (!raw) return defaultWebEmbedBroadcastSites();
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return defaultWebEmbedBroadcastSites();
-    return normalizeWebEmbedBroadcastSites(parsed);
-  } catch (_) {}
-  return defaultWebEmbedBroadcastSites();
-}
-
-function saveWebEmbedBroadcastSitesPref(list) {
-  try {
-    localStorage.setItem(SC_WEB_BROADCAST_SITES_KEY, JSON.stringify(normalizeWebEmbedBroadcastSites(list)));
-  } catch (_) {}
-}
-
-function getWebEmbedBroadcastSites() {
-  if (Array.isArray(state.webEmbedBroadcastSites) && state.webEmbedBroadcastSites.length)
-    return normalizeWebEmbedBroadcastSites(state.webEmbedBroadcastSites);
-  return loadWebEmbedBroadcastSitesPref();
-}
-
-let _scWebEmbedFocusAnim = 0;
-let _scWebEmbedFocusState = { left: 0, width: 0, leftV: 0, widthV: 0, siteId: "" };
-
-function ensureWebEmbedFocusFrame() {
-  const track = document.getElementById("web-embed-scroll-track");
-  if (!track) return null;
-  let frame = document.getElementById("web-embed-focus-frame");
-  if (!frame) {
-    frame = document.createElement("div");
-    frame.id = "web-embed-focus-frame";
-    frame.className = "web-embed-focus-frame";
-    frame.setAttribute("aria-hidden", "true");
-    track.appendChild(frame);
-  }
-  if (!frame.querySelector(".web-embed-focus-frame__halo-left")) {
-    frame.innerHTML =
-      '<div class="web-embed-focus-frame__glass"></div>' +
-      '<div class="web-embed-focus-frame__halo web-embed-focus-frame__halo-left"></div>' +
-      '<div class="web-embed-focus-frame__halo web-embed-focus-frame__halo-right"></div>';
-  }
-  return frame;
-}
-
-function getWebEmbedColumnSlotMetrics(siteId) {
-  const track = document.getElementById("web-embed-scroll-track");
-  const slot = document.querySelector('.web-embed-column-slot[data-site="' + String(siteId || "") + '"]');
-  if (!track || !slot) return null;
-  const padX = 5;
-  const padY = 6;
-  const left = slot.offsetLeft + padX;
-  const width = Math.max(28, slot.offsetWidth - padX * 2);
-  const height = Math.max(0, track.clientHeight - padY * 2);
-  return { left, width, top: padY, height };
-}
-
-function _scWebEmbedSpringStep(current, target, velocity, stiffness, damping, dt) {
-  const accel = -stiffness * (current - target) - damping * velocity;
-  velocity += accel * dt;
-  current += velocity * dt;
-  return { current, velocity };
-}
-
-function animateWebEmbedFocusFrame(siteId, immediate) {
-  const frame = ensureWebEmbedFocusFrame();
-  if (!frame) return;
-  const sid = String(siteId || "").trim();
-  if (!sid || !isWebEmbedActive()) {
-    frame.classList.remove("is-visible", "is-settled");
-    if (_scWebEmbedFocusAnim) {
-      cancelAnimationFrame(_scWebEmbedFocusAnim);
-      _scWebEmbedFocusAnim = 0;
-    }
-    _scWebEmbedFocusState.siteId = "";
-    return;
-  }
-  const metrics = getWebEmbedColumnSlotMetrics(sid);
-  if (!metrics) return;
-  const targetLeft = metrics.left;
-  const targetWidth = metrics.width;
-  const targetTop = metrics.top;
-  const targetHeight = metrics.height;
-
-  const applyMetrics = (left, width, settled) => {
-    frame.style.left = Math.round(left) + "px";
-    frame.style.width = Math.round(width) + "px";
-    frame.style.top = targetTop + "px";
-    frame.style.height = targetHeight + "px";
-    frame.classList.add("is-visible");
-    frame.classList.toggle("is-settled", !!settled);
-  };
-
-  if (immediate || !_scWebEmbedFocusState.siteId) {
-    if (_scWebEmbedFocusAnim) {
-      cancelAnimationFrame(_scWebEmbedFocusAnim);
-      _scWebEmbedFocusAnim = 0;
-    }
-    _scWebEmbedFocusState = {
-      left: targetLeft,
-      width: targetWidth,
-      leftV: 0,
-      widthV: 0,
-      siteId: sid
-    };
-    applyMetrics(targetLeft, targetWidth, true);
-    return;
-  }
-
-  let animState = _scWebEmbedFocusState;
-  animState.siteId = sid;
-  const stiffness = immediate ? 280 : 164;
-  const damping = immediate ? 32 : 30;
-  let lastTs = 0;
-
-  const tick = (ts) => {
-    if (!lastTs) lastTs = ts;
-    const dt = Math.min(0.034, (ts - lastTs) / 1000);
-    lastTs = ts;
-
-    const leftStep = _scWebEmbedSpringStep(animState.left, targetLeft, animState.leftV || 0, stiffness, damping, dt);
-    const widthStep = _scWebEmbedSpringStep(animState.width, targetWidth, animState.widthV || 0, stiffness, damping, dt);
-    animState.left = leftStep.current;
-    animState.leftV = leftStep.velocity;
-    animState.width = widthStep.current;
-    animState.widthV = widthStep.velocity;
-
-    const done = Math.abs(animState.left - targetLeft) < 0.45
-      && Math.abs(animState.width - targetWidth) < 0.45
-      && Math.abs(animState.leftV) < 1.8
-      && Math.abs(animState.widthV) < 1.8;
-
-    if (done) {
-      animState.left = targetLeft;
-      animState.width = targetWidth;
-      animState.leftV = 0;
-      animState.widthV = 0;
-      _scWebEmbedFocusState = animState;
-      applyMetrics(targetLeft, targetWidth, true);
-      _scWebEmbedFocusAnim = 0;
-      return;
-    }
-
-    applyMetrics(animState.left, animState.width, false);
-    _scWebEmbedFocusAnim = requestAnimationFrame(tick);
-  };
-
-  if (_scWebEmbedFocusAnim) cancelAnimationFrame(_scWebEmbedFocusAnim);
-  frame.classList.remove("is-settled");
-  _scWebEmbedFocusAnim = requestAnimationFrame(tick);
-}
-
-function syncWebEmbedColumnFocus(immediate) {
-  const focus = getWebEmbedActiveEngine();
-  document.querySelectorAll(".web-embed-column-slot").forEach((slot) => {
-    const sid = String(slot.getAttribute("data-site") || "");
-    slot.classList.toggle("focus-active", sid === focus);
-  });
-  animateWebEmbedFocusFrame(focus, immediate !== false);
-}
-
-function syncWebEmbedTabBar() {
-  const focus = getWebEmbedActiveEngine();
-  const broadcast = new Set(getWebEmbedBroadcastSites());
-  document.querySelectorAll(".web-embed-tab, .webllm-site-chip").forEach((btn) => {
-    const sid = String(btn.getAttribute("data-site") || "");
-    const on = broadcast.has(sid);
-    btn.classList.toggle("active", sid === focus);
-    btn.classList.toggle("broadcast-on", on);
-    btn.classList.toggle("broadcast-off", !on);
-    btn.setAttribute("aria-selected", sid === focus ? "true" : "false");
-    btn.tabIndex = sid === focus ? 0 : -1;
-    const meta = SC_WEB_EMBED_SITES.find((s) => s.id === sid);
-    const label = meta ? meta.label : sid;
-    btn.title = label + (on ? " · 已参与同问" : " · 未参与同问") + "（点击切换页面，Ctrl+点击切换参与）";
-  });
-  syncWebEmbedColumnFocus(true);
-  syncWebEmbedOmnibarBadge(focus);
-  animateWebEmbedTabIndicator(focus, true);
-  syncWebModeNavAiRows();
-}
-
-const SC_WEB_EMBED_INPUT_HINT = "输入问题，向所有AI提问";
-
-function syncWebEmbedOmnibarChips(siteId) {
-  const host = document.getElementById("web-embed-omnibar-chips");
-  if (!host) return;
-  if (!isWebEmbedActive()) {
-    host.innerHTML = "";
-    host.hidden = true;
-    return;
-  }
-  const focus = String(siteId || getWebEmbedActiveEngine() || "").trim();
-  const sites = getWebEmbedLayoutSites();
-  if (!sites.length) {
-    host.innerHTML = "";
-    host.hidden = true;
-    return;
-  }
-  host.hidden = false;
-  host.setAttribute("aria-hidden", "false");
-  const existing = new Map();
-  host.querySelectorAll(".web-embed-omnibar-chip").forEach((btn) => {
-    existing.set(String(btn.getAttribute("data-site") || ""), btn);
-  });
-  const nextIds = sites.slice();
-  host.querySelectorAll(".web-embed-omnibar-chip").forEach((btn) => {
-    const sid = String(btn.getAttribute("data-site") || "");
-    if (!nextIds.includes(sid)) btn.remove();
-  });
-  nextIds.forEach((sid) => {
-    const site = SC_WEB_EMBED_SITES.find((s) => s.id === sid);
-    if (!site) return;
-    const isActive = sid === focus;
-    let btn = existing.get(sid);
-    if (!btn) {
-      btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "web-embed-omnibar-chip";
-      btn.setAttribute("data-site", sid);
-      btn.addEventListener("click", (e) => {
-        if (e.ctrlKey || e.metaKey) {
-          toggleWebEmbedBroadcastSite(sid);
-          return;
-        }
-        setWebEmbedFocusSite(sid, true);
-      });
-      host.appendChild(btn);
-    }
-    btn.className = "web-embed-omnibar-chip" + (isActive ? " is-active" : " is-icon-only");
-    btn.title = site.label + "（点击切换，Ctrl+点击增删同问）";
-    btn.setAttribute("aria-pressed", isActive ? "true" : "false");
-    btn.innerHTML = "";
-    const iconWrap = document.createElement("span");
-    iconWrap.className = "web-embed-omnibar-chip__icon";
-    mountWebChipIcon(iconWrap, site);
-    btn.appendChild(iconWrap);
-    if (isActive) {
-      const label = document.createElement("span");
-      label.className = "web-embed-omnibar-chip__label";
-      label.textContent = site.label;
-      btn.appendChild(label);
-    }
-  });
-}
-
-function syncWebEmbedOmnibarBadge(siteId) {
-  syncWebEmbedOmnibarChips(siteId);
-}
-
-function applyScCpuUsage(payload) {
-  const pctRaw = Number(payload && payload.percent);
-  const pct = Number.isFinite(pctRaw) ? Math.max(0, Math.min(100, pctRaw)) : 0;
-  const gauge = document.getElementById("sc-cpu-gauge");
-  const cap = document.getElementById("sc-cpu-cap");
-  if (!gauge) return;
-  gauge.style.setProperty("--cpu-pct", String(Math.round(pct)));
-  gauge.classList.remove("level-ok", "level-warn", "level-hot");
-  if (pct <= 10) gauge.classList.add("level-ok");
-  else if (pct <= 30) gauge.classList.add("level-warn");
-  else gauge.classList.add("level-hot");
-  if (cap) cap.textContent = "CPU " + (Number.isFinite(pctRaw) ? pct.toFixed(pct >= 10 ? 0 : 1) : "—") + "%";
-  gauge.title = "搜索中心 CPU " + (Number.isFinite(pctRaw) ? pct + "%" : "—");
-}
-
-let _scWebEmbedTabIndAnim = 0;
-let _scWebEmbedTabIndState = { left: 0, width: 0, leftV: 0, widthV: 0, siteId: "" };
-
-function getWebEmbedTabMetrics(siteId) {
-  const host = document.getElementById("webllm-site-chips");
-  const inner = host ? host.closest(".web-embed-tabbar-inner") : null;
-  const btn = host ? host.querySelector('.web-embed-tab[data-site="' + String(siteId || "") + '"], .webllm-site-chip[data-site="' + String(siteId || "") + '"]') : null;
-  if (!inner || !btn) return null;
-  const innerRect = inner.getBoundingClientRect();
-  const btnRect = btn.getBoundingClientRect();
-  const pad = 2;
-  return {
-    left: btnRect.left - innerRect.left + pad,
-    width: Math.max(28, btnRect.width - pad * 2)
-  };
-}
-
-function animateWebEmbedTabIndicator(siteId, immediate) {
-  const indicator = document.getElementById("web-embed-tab-indicator");
-  if (!indicator) return;
-  const sid = String(siteId || "").trim();
-  if (!sid || !isWebEmbedActive()) {
-    indicator.classList.remove("is-visible", "is-settled");
-    if (_scWebEmbedTabIndAnim) {
-      cancelAnimationFrame(_scWebEmbedTabIndAnim);
-      _scWebEmbedTabIndAnim = 0;
-    }
-    _scWebEmbedTabIndState.siteId = "";
-    return;
-  }
-  const metrics = getWebEmbedTabMetrics(sid);
-  if (!metrics) return;
-  const targetLeft = metrics.left;
-  const targetWidth = metrics.width;
-
-  const apply = (left, width, settled) => {
-    indicator.style.left = Math.round(left) + "px";
-    indicator.style.width = Math.round(width) + "px";
-    indicator.classList.add("is-visible");
-    indicator.classList.toggle("is-settled", !!settled);
-  };
-
-  if (immediate || !_scWebEmbedTabIndState.siteId) {
-    if (_scWebEmbedTabIndAnim) {
-      cancelAnimationFrame(_scWebEmbedTabIndAnim);
-      _scWebEmbedTabIndAnim = 0;
-    }
-    _scWebEmbedTabIndState = { left: targetLeft, width: targetWidth, leftV: 0, widthV: 0, siteId: sid };
-    apply(targetLeft, targetWidth, true);
-    return;
-  }
-
-  let anim = _scWebEmbedTabIndState;
-  anim.siteId = sid;
-  const stiffness = immediate ? 300 : 210;
-  const damping = immediate ? 32 : 26;
-  let lastTs = 0;
-
-  const tick = (ts) => {
-    if (!lastTs) lastTs = ts;
-    const dt = Math.min(0.034, (ts - lastTs) / 1000);
-    lastTs = ts;
-    const leftStep = _scWebEmbedSpringStep(anim.left, targetLeft, anim.leftV || 0, stiffness, damping, dt);
-    const widthStep = _scWebEmbedSpringStep(anim.width, targetWidth, anim.widthV || 0, stiffness, damping, dt);
-    anim.left = leftStep.current;
-    anim.leftV = leftStep.velocity;
-    anim.width = widthStep.current;
-    anim.widthV = widthStep.velocity;
-    const done = Math.abs(anim.left - targetLeft) < 0.45
-      && Math.abs(anim.width - targetWidth) < 0.45
-      && Math.abs(anim.leftV) < 1.8
-      && Math.abs(anim.widthV) < 1.8;
-    if (done) {
-      anim.left = targetLeft;
-      anim.width = targetWidth;
-      anim.leftV = 0;
-      anim.widthV = 0;
-      _scWebEmbedTabIndState = anim;
-      apply(targetLeft, targetWidth, true);
-      _scWebEmbedTabIndAnim = 0;
-      return;
-    }
-    apply(anim.left, anim.width, false);
-    _scWebEmbedTabIndAnim = requestAnimationFrame(tick);
-  };
-
-  if (_scWebEmbedTabIndAnim) cancelAnimationFrame(_scWebEmbedTabIndAnim);
-  indicator.classList.remove("is-settled");
-  _scWebEmbedTabIndAnim = requestAnimationFrame(tick);
-}
-
-let _scWebEmbedLastBroadcastSyncKey = "";
-let _scWebEmbedLayoutBootstrapped = false;
-
-function syncWebEmbedBroadcastUi(postHost = false, rebuildTrack = false) {
-  const broadcast = new Set(normalizeWebEmbedBroadcastSites(getWebEmbedBroadcastSites()));
-  state.webEmbedBroadcastSites = Array.from(broadcast);
-  syncWebEmbedTabBar();
-  state.selectedEngines = state.webEmbedBroadcastSites.slice();
-  if (rebuildTrack && isWebEmbedActive()) renderWebEmbedColumnTrack();
-  if (postHost) {
-    const syncKey = state.selectedEngines.join(",");
-    if (syncKey !== _scWebEmbedLastBroadcastSyncKey) {
-      _scWebEmbedLastBroadcastSyncKey = syncKey;
-      postToAhk({ type: "syncSelectedEngines", selectedEngines: state.selectedEngines.slice() });
-      scWebEmbedDebugLog("info", "syncSelectedEngines → [" + state.selectedEngines.join(",") + "]");
-    }
-    if (isWebEmbedActive()) {
-      postToAhk({ type: "webLlmColumnLayout", columnLayout: buildWebEmbedColumnLayoutPayload() });
-    }
-  }
-}
-
-function scrollWebEmbedColumnIntoView(siteId, postLayout = false) {
-  const viewport = document.getElementById("web-embed-scroll-viewport");
-  if (!viewport) return;
-  const sites = getWebEmbedLayoutSites();
-  const idx = sites.indexOf(String(siteId || ""));
-  if (idx < 0) return;
-  healWebEmbedColumnWidthsForScroll(sites);
-  const fit = !webEmbedNeedsHorizontalScroll(sites)
-    && (getWebEmbedViewportFillExtra() > 0
-      || getWebEmbedStripWidth(sites) <= getWebEmbedViewportWidthPx() + 1);
-  if (fit) {
-    if ((viewport.scrollLeft || 0) > 0) viewport.scrollLeft = 0;
-    if (postLayout) postWebEmbedColumnLayout(true);
-    return;
-  }
-  let x = 0;
-  for (let i = 0; i < idx; i++) {
-    x += getWebEmbedLayoutColumnWidth(sites[i], i) + SC_WEB_EMBED_COL_GAP;
-  }
-  const maxScroll = getWebEmbedMaxScrollPx();
-  const target = Math.min(Math.max(0, x), maxScroll);
-  if (Math.abs((viewport.scrollLeft || 0) - target) > 2) {
-    // 与宿主 WebView 列同步须即时滚动；smooth 会导致 scrollX 滞后、页面只露出窄条
-    viewport.scrollLeft = target;
-  }
-  syncWebEmbedHScrollUi();
-  if (postLayout) {
-    postWebEmbedColumnLayout(true);
-    requestAnimationFrame(() => postWebEmbedColumnLayout(true));
-  }
-}
-
-function focusAdjacentWebEmbedSite(delta) {
-  const sites = getWebEmbedLayoutSites();
-  if (sites.length < 2) return;
-  const step = Number(delta) || 0;
-  if (!step) return;
-  const cur = getWebEmbedActiveEngine();
-  let idx = sites.indexOf(cur);
-  if (idx < 0) idx = 0;
-  const nextIdx = (idx + step + sites.length * 8) % sites.length;
-  setWebEmbedFocusSite(sites[nextIdx], true);
-}
-
-function postWebEmbedHostScroll(siteId, deltaCss, deltaCols) {
-  if (siteId) {
-    postToAhk({ type: "webLlmScroll", siteId: String(siteId) });
-    return;
-  }
-  if (deltaCols != null && Number.isFinite(Number(deltaCols))) {
-    postToAhk({ type: "webLlmScroll", adjacent: Math.round(Number(deltaCols)) });
-    return;
-  }
-  if (deltaCss != null && Number.isFinite(Number(deltaCss))) {
-    postToAhk({ type: "webLlmScroll", deltaCss: Math.round(Number(deltaCss)) });
-  }
-}
-
-function setWebEmbedScrollPx(px, postHost = true, options = null) {
-  const viewport = document.getElementById("web-embed-scroll-viewport");
-  if (!viewport) return;
-  const isDrag = !!(options && options.drag);
-  const maxScroll = getWebEmbedMaxScrollPx();
-  const target = Math.min(Math.max(0, Math.round(Number(px) || 0)), maxScroll);
-  if (Math.abs((viewport.scrollLeft || 0) - target) > 1) viewport.scrollLeft = target;
-  syncWebEmbedHScrollUi();
-  if (!postHost || _scWebEmbedLayoutFromHost) return;
-  const vpW = getWebEmbedViewportWidthPx();
-  const stripW = getWebEmbedStripWidth(getWebEmbedLayoutSites());
-  const payload = {
-    type: "webLlmScroll",
-    scrollX: target,
-    viewportWidth: vpW,
-    stripWidth: stripW
-  };
-  if (isDrag) scheduleWebEmbedScrollHostSync(payload);
-  else flushWebEmbedScrollHostSync(payload);
-  if (!isDrag && maxScroll > 0 && target >= maxScroll - 2) {
-    const sites = getWebEmbedLayoutSites();
-    const last = sites.length ? sites[sites.length - 1] : "";
-    if (last) postToAhk({ type: "webLlmFocusSite", siteId: last });
-  }
-}
-
-function syncWebEmbedHScrollUi() {
-  const row = document.getElementById("web-embed-hscroll-row");
-  const slider = document.getElementById("web-embed-hscroll-slider");
-  const viewport = document.getElementById("web-embed-scroll-viewport");
-  if (!row || !slider || !viewport) return;
-  const show = isWebEmbedActive() && webEmbedNeedsHorizontalScroll();
-  row.classList.toggle("hidden", !show);
-  if (!show) return;
-  const maxScroll = getWebEmbedMaxScrollPx();
-  slider.max = String(maxScroll);
-  slider.value = String(Math.min(Math.max(0, Math.round(viewport.scrollLeft || 0)), maxScroll));
-  const prev = document.getElementById("web-embed-hscroll-prev");
-  const next = document.getElementById("web-embed-hscroll-next");
-  const cur = Number(slider.value) || 0;
-  if (prev) prev.disabled = cur <= 0;
-  if (next) next.disabled = cur >= maxScroll;
-}
-
-function initWebEmbedHScroll() {
-  const slider = document.getElementById("web-embed-hscroll-slider");
-  const prev = document.getElementById("web-embed-hscroll-prev");
-  const next = document.getElementById("web-embed-hscroll-next");
-  if (slider && slider.getAttribute("data-hscroll-ready") !== "1") {
-    slider.setAttribute("data-hscroll-ready", "1");
-    const endDrag = () => {
-      _scWebEmbedHScrollDragging = false;
-      setWebEmbedScrollPx(slider.value, true);
-    };
-    slider.addEventListener("pointerdown", () => { _scWebEmbedHScrollDragging = true; });
-    slider.addEventListener("pointerup", endDrag);
-    slider.addEventListener("pointercancel", endDrag);
-    slider.addEventListener("input", () => setWebEmbedScrollPx(slider.value, true, { drag: true }));
-    slider.addEventListener("change", endDrag);
-  }
-  if (prev && prev.getAttribute("data-hscroll-ready") !== "1") {
-    prev.setAttribute("data-hscroll-ready", "1");
-    prev.addEventListener("click", (e) => {
-      e.preventDefault();
-      const viewport = document.getElementById("web-embed-scroll-viewport");
-      const step = SC_WEB_EMBED_COL_DEFAULT_WIDTH + SC_WEB_EMBED_COL_GAP;
-      setWebEmbedScrollPx((viewport ? viewport.scrollLeft : 0) - step, true);
-    });
-  }
-  if (next && next.getAttribute("data-hscroll-ready") !== "1") {
-    next.setAttribute("data-hscroll-ready", "1");
-    next.addEventListener("click", (e) => {
-      e.preventDefault();
-      const viewport = document.getElementById("web-embed-scroll-viewport");
-      const step = SC_WEB_EMBED_COL_DEFAULT_WIDTH + SC_WEB_EMBED_COL_GAP;
-      setWebEmbedScrollPx((viewport ? viewport.scrollLeft : 0) + step, true);
-    });
-  }
-}
-
-function syncWebEmbedScrollNav() {
-  const nav = document.getElementById("web-embed-tab-scroll-nav");
-  if (!nav) return;
-  const sites = getWebEmbedLayoutSites();
-  const show = isWebEmbedActive() && sites.length > 1
-    && (sites.length > 5 || webEmbedNeedsHorizontalScroll());
-  nav.classList.toggle("hidden", !show);
-  if (!show) return;
-  const prev = document.getElementById("web-embed-scroll-prev");
-  const next = document.getElementById("web-embed-scroll-next");
-  if (prev) prev.disabled = false;
-  if (next) next.disabled = false;
-  syncWebEmbedHScrollUi();
-}
-
-function initWebEmbedScrollNav() {
-  const tabbar = document.querySelector(".web-embed-tabbar");
-  const prev = document.getElementById("web-embed-scroll-prev");
-  const next = document.getElementById("web-embed-scroll-next");
-  if (prev && prev.getAttribute("data-scroll-ready") !== "1") {
-    prev.setAttribute("data-scroll-ready", "1");
-    prev.addEventListener("click", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      focusAdjacentWebEmbedSite(-1);
-    });
-  }
-  if (next && next.getAttribute("data-scroll-ready") !== "1") {
-    next.setAttribute("data-scroll-ready", "1");
-    next.addEventListener("click", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      focusAdjacentWebEmbedSite(1);
-    });
-  }
-  if (tabbar && tabbar.getAttribute("data-wheel-ready") !== "1") {
-    tabbar.setAttribute("data-wheel-ready", "1");
-    tabbar.addEventListener("wheel", (e) => {
-      if (!isWebEmbedActive()) return;
-      const sites = getWebEmbedLayoutSites();
-      if (sites.length < 2) return;
-      if (sites.length <= 5 && !webEmbedNeedsHorizontalScroll()) return;
-      let step = 0;
-      if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) step = e.deltaX > 0 ? 1 : -1;
-      else if (Math.abs(e.deltaY) >= 1) step = e.deltaY > 0 ? 1 : -1;
-      if (!step) return;
-      e.preventDefault();
-      focusAdjacentWebEmbedSite(step);
-    }, { passive: false });
-  }
-}
-
-function setWebEmbedFocusSite(siteId, postHost = true) {
-  const eng = String(siteId || "").trim();
-  if (!eng) return;
-  state.webEmbedSiteId = eng;
-  syncWebEmbedTabBar();
-  if (isWebEmbedActive()) {
-    if (healWebEmbedColumnWidthsForScroll()) {
-      const track = document.getElementById("web-embed-scroll-track");
-      if (track) {
-        track.style.width = getWebEmbedTrackWidthPx() + "px";
-        getWebEmbedLayoutSites().forEach((sid, index) => {
-          const slot = track.querySelector('.web-embed-column-slot[data-site="' + sid + '"]');
-          if (slot) slot.style.width = getWebEmbedLayoutColumnWidth(sid, index) + "px";
-        });
-      }
-    }
-    scrollWebEmbedColumnIntoView(eng, false);
-    if (postHost) {
-      const sites = getWebEmbedLayoutSites();
-      const inLayout = sites.indexOf(eng) >= 0;
-      if (!inLayout) {
-        postToAhk({ type: "syncSelectedEngines", selectedEngines: sites.slice() });
-      }
-      postToAhk({ type: "webLlmFocusSite", siteId: eng });
-    } else {
-      scrollWebEmbedColumnIntoView(eng, true);
-    }
-    syncWebEmbedScrollNav();
-  } else if (postHost) {
-    postToAhk({ type: "webLlmFocusSite", siteId: eng });
-  }
-}
-
-function toggleWebEmbedBroadcastSite(siteId) {
-  const id = normalizeWebEmbedSiteId(siteId);
-  if (!id) return;
-  let list = normalizeWebEmbedBroadcastSites(getWebEmbedBroadcastSites());
-  const i = list.indexOf(id);
-  const wasAdd = i < 0;
-  if (i >= 0) {
-    if (list.length <= 1) {
-      scWebEmbedDebugLog("warn", "无法移除最后一个 AI 页面: " + id);
-      return;
-    }
-    list = list.filter((v) => v !== id);
-    scWebEmbedDebugLog("info", "移除 AI 页面: " + id + " → [" + list.join(",") + "]");
-  } else {
-    if (list.length >= SC_WEB_EMBED_MAX_COLUMNS) {
-      scWebEmbedDebugLog("warn", "已达最大列数 " + SC_WEB_EMBED_MAX_COLUMNS + "，请先关闭一个 AI 页面");
-      try {
-        if (typeof showToast === "function") showToast("已达最大列数 " + SC_WEB_EMBED_MAX_COLUMNS + "，请先关闭一个 AI 页面");
-      } catch (_) {}
-      return;
-    }
-    list = list.concat([id]);
-    scWebEmbedDebugLog("info", "添加 AI 页面: " + id + " → [" + list.join(",") + "]");
-  }
-  state.webEmbedBroadcastSites = list;
-  saveWebEmbedBroadcastSitesPref(list);
-  syncWebEmbedBroadcastUi(true, true);
-  renderWebModeNavBody();
-  if (isWebEmbedActive()) {
-    renderWebEmbedTabBar();
-    if (wasAdd) setWebEmbedFocusSite(id, true);
-  }
-}
-
-function syncWebEmbedSelectedEngine(engineId, postHost = true) {
-  setWebEmbedFocusSite(engineId, postHost);
-}
-
-function loadWebBookmarkLabelsPref() {
-  try {
-    const v = localStorage.getItem(SC_WEB_BOOKMARK_LABELS_KEY);
-    if (v === "1") return true;
-    if (v === "0") return false;
-  } catch (_) {}
-  return false;
-}
-
-function saveWebBookmarkLabelsPref(show) {
-  try {
-    localStorage.setItem(SC_WEB_BOOKMARK_LABELS_KEY, show ? "1" : "0");
-  } catch (_) {}
-}
-
-function syncWebBookmarkLabelsUi() {
-  const show = !!state.webBookmarkShowLabels;
-  document.body.classList.toggle("web-bookmarks-hide-labels", !show);
-  const btn = document.getElementById("web-bookmark-label-toggle");
-  if (btn) {
-    btn.setAttribute("aria-pressed", show ? "true" : "false");
-    btn.title = show ? "隐藏站点名称" : "显示站点名称";
-  }
-}
-
-function dismissWebEmbedHost() {
-  cancelWebEmbedRectTimers();
-  _scWebEmbedLastRectKey = "";
-  _scWebEmbedHostBootstrapped = false;
-  try { postToAhk({ type: "webLlmDismiss" }); } catch (_) {}
-}
-
-function cancelWebEmbedRectTimers() {
-  if (_scWebEmbedRectDebounce) {
-    clearTimeout(_scWebEmbedRectDebounce);
-    _scWebEmbedRectDebounce = 0;
-  }
-  _scWebEmbedRectRetries = 0;
-}
-
-function syncWebEmbedSearchDock(embed) {
-  const box = document.getElementById("searchBoxInner");
-  const anchor = document.getElementById("search-box-anchor");
-  const slot = document.getElementById("web-embed-search-slot");
-  const toolbar = document.getElementById("web-embed-toolbar");
-  const workspace = document.getElementById("web-embed-workspace");
-  const icon = document.getElementById("search-icon-inline");
-  if (!box || !anchor || !slot) return;
-  if (workspace && embed) workspace.classList.remove("hidden");
-  const target = embed ? slot : anchor;
-  if (box.parentElement !== target) target.appendChild(box);
-  box.classList.toggle("web-embed-search-compact", embed);
-  if (toolbar) toolbar.classList.toggle("web-embed-toolbar-with-search", embed);
-  if (icon) icon.innerHTML = embed ? "&#127760;" : "&#128269;";
-  const input = document.getElementById("search");
-  if (input) {
-    if (embed) {
-      input.setAttribute("rows", "1");
-      input.setAttribute("aria-label", "地址栏");
-    } else {
-      input.removeAttribute("aria-label");
-    }
-  }
-  if (embed) {
-    scheduleWebEmbedContentRect();
-  } else {
-    dismissWebEmbedHost();
-  }
-}
-
-function measureWebEmbedHostRect() {
-  const viewport = document.getElementById("web-embed-scroll-viewport");
-  const ws = document.getElementById("web-embed-workspace");
-  if (!viewport || !ws || ws.classList.contains("hidden")) return null;
-  const box = viewport.getBoundingClientRect();
-  const cs = getComputedStyle(viewport);
-  const borderL = parseFloat(cs.borderLeftWidth) || 0;
-  const borderT = parseFloat(cs.borderTopWidth) || 0;
-  const width = Math.max(0, Math.round(viewport.clientWidth || 0));
-  let height = Math.max(0, Math.round(viewport.clientHeight || 0));
-  const track = document.getElementById("web-embed-scroll-track");
-  if (track && height > 0) {
-    const trackH = Math.max(0, Math.round(track.clientHeight || 0));
-    if (trackH > height + 8) height = trackH;
-  }
-  if (width < 140 || height < 100) return null;
-  return {
-    left: box.left + borderL,
-    top: box.top + borderT,
-    width,
-    height
-  };
-}
-
-let _scWebEmbedLayoutRo = null;
-function ensureWebEmbedLayoutObserver() {
-  if (_scWebEmbedLayoutRo) return;
-  const ws = document.getElementById("web-embed-workspace");
-  if (!ws || typeof ResizeObserver !== "function") return;
-  _scWebEmbedLayoutRo = new ResizeObserver(() => {
-    scheduleWebEmbedContentRect();
-    if (isWebEmbedActive()) syncWebEmbedHScrollUi();
-  });
-  _scWebEmbedLayoutRo.observe(ws);
-  const frame = document.getElementById("web-embed-scroll-viewport");
-  if (frame) _scWebEmbedLayoutRo.observe(frame);
-  const track = document.getElementById("web-embed-scroll-track");
-  if (track) _scWebEmbedLayoutRo.observe(track);
-  const bar = document.getElementById("web-embed-toolbar");
-  if (bar) _scWebEmbedLayoutRo.observe(bar);
-  const nav = document.getElementById("sc-mode-nav");
-  if (nav) _scWebEmbedLayoutRo.observe(nav);
-}
-
-let _scWebEmbedRectRetries = 0;
-let _scWebEmbedRectDebounce = 0;
-let _scWebEmbedLastRectKey = "";
-let _scWebEmbedLastLayoutKey = "";
-let _scWebEmbedLayoutFromHost = false;
-let _scWebEmbedHostBootstrapped = false;
-let _scWebEmbedHScrollDragging = false;
-let _scWebEmbedScrollHostRaf = 0;
-let _scWebEmbedScrollHostPending = null;
-
-function scheduleWebEmbedScrollHostSync(payload) {
-  _scWebEmbedScrollHostPending = payload;
-  if (_scWebEmbedScrollHostRaf) return;
-  _scWebEmbedScrollHostRaf = requestAnimationFrame(() => {
-    _scWebEmbedScrollHostRaf = 0;
-    const p = _scWebEmbedScrollHostPending;
-    _scWebEmbedScrollHostPending = null;
-    if (p && !_scWebEmbedLayoutFromHost) postToAhk(p);
-  });
-}
-
-function flushWebEmbedScrollHostSync(payload) {
-  if (_scWebEmbedScrollHostRaf) {
-    cancelAnimationFrame(_scWebEmbedScrollHostRaf);
-    _scWebEmbedScrollHostRaf = 0;
-  }
-  _scWebEmbedScrollHostPending = null;
-  if (payload && !_scWebEmbedLayoutFromHost) postToAhk(payload);
-}
-
-function scheduleWebEmbedContentRect() {
-  if (!isWebEmbedActive()) return;
-  if (_scWebEmbedRectDebounce) return;
-  _scWebEmbedRectDebounce = setTimeout(() => {
-    _scWebEmbedRectDebounce = 0;
-    requestAnimationFrame(() => {
-      postWebEmbedContentRect();
-    });
-  }, 120);
-}
-
-function syncWebEmbedToolbarVisibility() {
-  const bar = document.getElementById("web-embed-toolbar");
-  if (!bar) return;
-  const embed = isWebEmbedActive();
-  bar.classList.toggle("hidden", !embed);
-  if (embed) bar.classList.remove("hidden");
-}
-
-function syncWebEmbedLayout() {
-  const embed = isWebEmbedActive();
-  const mode = getUIMode();
-  document.body.classList.toggle("sc-web-embed-layout", embed);
-  document.body.classList.toggle("sc-web-mode-layout", mode === "web");
-  syncWebEmbedDebugStatusBar();
-  const layout = document.getElementById("layout");
-  if (layout) layout.classList.toggle("sc-web-embed-active", embed);
-  const ws = document.getElementById("web-embed-workspace");
-  if (ws) ws.classList.toggle("hidden", !embed);
-  const setup = document.getElementById("web-embed-setup");
-  if (setup) {
-    if (embed) {
-      if (!setup.hasAttribute("data-user-toggled")) setup.open = false;
-    } else if (!setup.hasAttribute("data-user-toggled")) {
-      setup.open = true;
-    }
-  }
-  syncWebEmbedSearchDock(embed);
-  syncWebEmbedToolbarVisibility();
-  syncWebBookmarkLabelsUi();
-  if (embed) {
-    if (!Array.isArray(state.webEmbedBroadcastSites) || !state.webEmbedBroadcastSites.length)
-      state.webEmbedBroadcastSites = loadWebEmbedBroadcastSitesPref();
-    state.selectedEngines = state.webEmbedBroadcastSites.slice();
-    if (!_scWebEmbedLayoutBootstrapped) {
-      _scWebEmbedLayoutBootstrapped = true;
-      saveWebEmbedBroadcastSitesPref(state.webEmbedBroadcastSites);
-      renderWebEmbedColumnTrack();
-      renderWebEmbedTabBar();
-      syncWebEmbedBroadcastUi(true);
-      ensureWebEmbedLayoutObserver();
-      scheduleWebEmbedContentRect();
-      setTimeout(scheduleWebEmbedContentRect, 120);
-      setTimeout(scheduleWebEmbedContentRect, 300);
-      if (!String(state.webEmbedSiteId || "").trim())
-        setWebEmbedFocusSite(getWebEmbedActiveEngine(), true);
-    } else {
-      renderWebEmbedTabBar();
-      syncWebEmbedHScrollUi();
-      syncWebEmbedScrollNav();
-    }
-    syncWebEmbedViewportScroll(false);
-  } else {
-    _scWebEmbedLayoutBootstrapped = false;
-  }
-  if (mode === "web" && !embed) renderWebExternalHint();
-  if (mode === "web") {
-    renderWebModeNavBody();
-    renderEngines();
-  }
-}
-
-function buildWebExternalEmptyStateHtml() {
-  const engines = Array.isArray(state.selectedEngines) ? state.selectedEngines.filter(Boolean) : [];
-  const names = engines.map((v) => {
-    const row = (state.engines || []).find((e) => String(e && e.value || "") === String(v));
-    return row && row.name ? String(row.name) : String(v);
-  });
-  const engLine = names.length
-    ? ("当前引擎：" + names.join("、"))
-    : "请先在上方展开「分类与搜索引擎」并选择引擎";
-  return "<div class=\"empty web-mode-hint\">" + escapeHtml(engLine)
-    + "<br>输入关键词后按 Enter 或点「搜索」，将在系统浏览器打开。</div>";
-}
-
-function renderWebExternalHint() {
-  if (getUIMode() !== "web" || isWebEmbedActive()) return;
-  const list = document.getElementById("result-list");
-  if (!list) return;
-  list.innerHTML = buildWebExternalEmptyStateHtml();
-  const count = document.getElementById("result-count");
-  if (count) count.textContent = "外开搜索";
-}
-
-function postWebEmbedLayoutResync() {
-  if (!isWebEmbedActive()) return;
-  refreshWebEmbedAutoFit(true);
-  syncWebEmbedViewportScroll(true);
-  postWebEmbedColumnLayout(true);
-  const measured = measureWebEmbedHostRect();
-  const el = document.getElementById("web-embed-scroll-viewport");
-  let r = measured;
-  if (!r && el) {
-    const box = el.getBoundingClientRect();
-    const cs = getComputedStyle(el);
-    const borderL = parseFloat(cs.borderLeftWidth) || 0;
-    const borderT = parseFloat(cs.borderTopWidth) || 0;
-    r = {
-      left: box.left + borderL,
-      top: box.top + borderT,
-      width: Math.max(0, Math.round(el.clientWidth || 0)),
-      height: Math.max(0, Math.round(el.clientHeight || 0))
-    };
-  }
-  if (!r || r.width < 80 || r.height < 60) return;
-  postToAhk({
-    type: "webLlmContentRect",
-    rect: {
-      left: Math.round(r.left),
-      top: Math.round(r.top),
-      width: Math.max(200, Math.round(r.width)),
-      height: Math.max(140, Math.round(r.height)),
-      dpr: Number(window.devicePixelRatio) || 1
-    },
-    columnLayout: buildWebEmbedColumnLayoutPayload()
-  });
-}
-
-function scheduleWebEmbedLayoutResync() {
-  [280, 640].forEach((ms) => {
-    setTimeout(() => {
-      if (isWebEmbedActive()) postWebEmbedLayoutResync();
-    }, ms);
-  });
-}
-
-function postWebEmbedContentRect(force) {
-  if (!isWebEmbedActive()) return;
-  const measured = measureWebEmbedHostRect();
-  const el = document.getElementById("web-embed-scroll-viewport");
-  let r = measured;
-  if (!r && el) {
-    const box = el.getBoundingClientRect();
-    const cs = getComputedStyle(el);
-    const borderL = parseFloat(cs.borderLeftWidth) || 0;
-    const borderT = parseFloat(cs.borderTopWidth) || 0;
-    r = {
-      left: box.left + borderL,
-      top: box.top + borderT,
-      width: Math.max(0, Math.round(el.clientWidth || 0)),
-      height: Math.max(0, Math.round(el.clientHeight || 0))
-    };
-  }
-  if (!r || r.width < 80 || r.height < 60) {
-    if (_scWebEmbedRectRetries < 20) {
-      _scWebEmbedRectRetries += 1;
-      if (_scWebEmbedRectRetries === 1 || _scWebEmbedRectRetries === 6 || _scWebEmbedRectRetries >= 20) {
-        scWebEmbedDebugLog("warn", "内嵌视口矩形无效 " + (r ? (r.width + "×" + r.height) : "null") + " retry=" + _scWebEmbedRectRetries);
-      }
-      setTimeout(scheduleWebEmbedContentRect, _scWebEmbedRectRetries < 6 ? 80 : 200);
-    }
-    return;
-  }
-  _scWebEmbedRectRetries = 0;
-  refreshWebEmbedAutoFit(true);
-  const key = [Math.round(r.left), Math.round(r.top), Math.round(r.width), Math.round(r.height)].join("x");
-  const rectPayload = {
-    left: Math.round(r.left),
-    top: Math.round(r.top),
-    width: Math.max(200, Math.round(r.width)),
-    height: Math.max(140, Math.round(r.height)),
-    dpr: Number(window.devicePixelRatio) || 1
-  };
-  const layoutPayload = buildWebEmbedColumnLayoutPayload();
-  if (!force && key === _scWebEmbedLastRectKey) {
-    syncWebEmbedViewportScroll(true);
-    postWebEmbedColumnLayout(true);
-    postToAhk({
-      type: "webLlmContentRect",
-      rect: rectPayload,
-      columnLayout: layoutPayload
-    });
-    return;
-  }
-  _scWebEmbedLastRectKey = key;
-  syncWebEmbedViewportScroll(true);
-  if (_scWebEmbedHostBootstrapped && !force) {
-    postToAhk({
-      type: "webLlmContentRect",
-      rect: rectPayload,
-      columnLayout: layoutPayload
-    });
-    scheduleWebEmbedLayoutResync();
-    return;
-  }
-  _scWebEmbedHostBootstrapped = true;
-  scWebEmbedDebugLog("info", "webLlmBootstrap " + rectPayload.width + "×" + rectPayload.height + " sites=[" + getWebEmbedLayoutSites().join(",") + "]");
-  postToAhk({
-    type: "webLlmBootstrap",
-    rect: rectPayload,
-    selectedEngines: getWebEmbedLayoutSites().slice(),
-    columnLayout: layoutPayload
-  });
-  scheduleWebEmbedLayoutResync();
-}
-
-function applyWebLlmChromeState(payload) {
-  if (!payload || typeof payload !== "object") return;
-  const back = document.getElementById("webllm-btn-back");
-  const fwd = document.getElementById("webllm-btn-forward");
-  const status = document.getElementById("webllm-status");
-  if (back) back.disabled = !payload.canGoBack;
-  if (fwd) fwd.disabled = !payload.canGoForward;
-  const title = String(payload.title || "").trim();
-  const url = String(payload.url || "").trim();
-  const loading = !!payload.loading;
-  if (status) status.textContent = loading ? "加载中…" : (title || url || "多栏移动版 · 点击书签切换焦点");
-  const input = document.getElementById("search");
-  if (input && isWebEmbedActive() && !String(input.value || "").trim()) {
-    input.placeholder = SC_WEB_EMBED_INPUT_HINT;
-  }
-  const sid = String(payload.siteId || "").trim();
-  if (sid) {
-    if (!state.webEmbedSiteChrome || typeof state.webEmbedSiteChrome !== "object")
-      state.webEmbedSiteChrome = {};
-    state.webEmbedSiteChrome[sid] = { loading, title, url };
-  }
-  syncWebModeNavAiRows();
-  const cur = String(state.webEmbedSiteId || "").trim();
-  if (sid && sid !== cur) setWebEmbedFocusSite(sid, false);
-}
-
-function renderWebEmbedTabBar() {
-  const host = document.getElementById("webllm-site-chips");
-  if (!host) return;
-  const layoutSites = getWebEmbedLayoutSites();
-  const existing = new Map();
-  host.querySelectorAll(".web-embed-tab, .webllm-site-chip").forEach((btn) => {
-    existing.set(String(btn.getAttribute("data-site") || ""), btn);
-  });
-  const nextIds = layoutSites.slice();
-  host.querySelectorAll(".web-embed-tab, .webllm-site-chip").forEach((btn) => {
-    const sid = String(btn.getAttribute("data-site") || "");
-    if (!nextIds.includes(sid)) btn.remove();
-  });
-  nextIds.forEach((siteId) => {
-    const site = SC_WEB_EMBED_SITES.find((s) => s.id === siteId);
-    if (!site) return;
-    let btn = existing.get(site.id);
-    if (!btn) {
-      btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "web-embed-tab";
-      btn.setAttribute("data-site", site.id);
-      btn.setAttribute("role", "tab");
-      mountWebChipIcon(btn, site);
-      const label = document.createElement("span");
-      label.className = "web-chip-label";
-      label.textContent = site.label;
-      btn.appendChild(label);
-      btn.addEventListener("click", (e) => {
-        if (!isWebEmbedSiteEnabled(site)) return;
-        e.preventDefault();
-        e.stopPropagation();
-        if (e.ctrlKey || e.metaKey) {
-          toggleWebEmbedBroadcastSite(site.id);
-          return;
-        }
-        setWebEmbedFocusSite(site.id, true);
-      });
-      host.appendChild(btn);
-    } else {
-      const label = btn.querySelector(".web-chip-label");
-      if (label) label.textContent = site.label;
-      btn.classList.add("web-embed-tab");
-      btn.disabled = !isWebEmbedSiteEnabled(site);
-    }
-  });
-  if (!Array.isArray(state.webEmbedBroadcastSites) || !state.webEmbedBroadcastSites.length) {
-    state.webEmbedBroadcastSites = loadWebEmbedBroadcastSitesPref();
-  }
-  syncWebEmbedTabBar();
-  animateWebEmbedTabIndicator(getWebEmbedActiveEngine(), true);
-  syncWebEmbedScrollNav();
-  renderWebModeNavBody();
-}
-
-function ensureWebEmbedTabScrollSync() {
-  const host = document.getElementById("webllm-site-chips");
-  if (!host || host.getAttribute("data-tab-scroll-ready") === "1") return;
-  host.setAttribute("data-tab-scroll-ready", "1");
-  host.addEventListener("scroll", () => {
-    if (isWebEmbedActive() && _scWebEmbedTabIndState.siteId) {
-      animateWebEmbedTabIndicator(_scWebEmbedTabIndState.siteId, true);
-    }
-  }, { passive: true });
-}
-
-function renderWebLlmToolbar() {
-  validateWebEmbedCatalog();
-  renderWebEmbedTabBar();
-}
-
-const _scWebEmbedDebugEvents = [];
-const _scWebEmbedDebugState = { open: false, logTab: "js", hostSnap: null, pollTimer: 0 };
-
-function scWebEmbedDebugLog(level, msg) {
-  const line = "[" + new Date().toLocaleTimeString() + "][" + String(level || "info") + "] " + String(msg || "");
-  _scWebEmbedDebugEvents.push(line);
-  if (_scWebEmbedDebugEvents.length > 120) _scWebEmbedDebugEvents.shift();
-  if (_scWebEmbedDebugState.open) renderWebEmbedDebugLogPane();
-}
-
-function buildWebEmbedClientDebugSnapshot() {
-  const viewport = document.getElementById("web-embed-scroll-viewport");
-  const ws = document.getElementById("web-embed-workspace");
-  const measured = measureWebEmbedHostRect();
-  const vpRect = viewport ? viewport.getBoundingClientRect() : null;
-  return {
-    mode: getUIMode(),
-    category: String(state.currentCategoryKey || ""),
-    embedActive: isWebEmbedActive(),
-    broadcastSites: getWebEmbedBroadcastSites().slice(),
-    layoutSites: getWebEmbedLayoutSites().slice(),
-    focusSite: String(state.webEmbedSiteId || ""),
-    hostRectNull: !measured,
-    hostRect: measured,
-    viewport: viewport ? {
-      clientW: viewport.clientWidth,
-      clientH: viewport.clientHeight,
-      scrollW: viewport.scrollWidth,
-      scrollLeft: viewport.scrollLeft,
-      boxW: vpRect ? Math.round(vpRect.width) : 0,
-      boxH: vpRect ? Math.round(vpRect.height) : 0
-    } : null,
-    workspaceHidden: !!(ws && ws.classList.contains("hidden")),
-    hostBootstrapped: !!_scWebEmbedHostBootstrapped,
-    lastRectKey: String(_scWebEmbedLastRectKey || "")
-  };
-}
-
-function syncWebEmbedDebugStatusBar() {
-  const grp = document.getElementById("sc-status-group-web-debug");
-  if (!grp) return;
-  grp.classList.toggle("hidden", getUIMode() !== "web");
-}
-
-function renderWebEmbedDebugIssues(issues) {
-  const host = document.getElementById("web-embed-debug-issues");
-  if (!host) return;
-  const list = Array.isArray(issues) ? issues : [];
-  if (!list.length) {
-    host.innerHTML = '<div class="web-embed-debug-issue level-ok">未发现明显异常 · 若仍无法加页，查看右侧日志</div>';
-    return;
-  }
-  host.innerHTML = list.map((it) => {
-    const lv = String(it && it.level || "warn");
-    const msg = escapeHtml(String(it && it.msg || it && it.code || "?"));
-    return '<div class="web-embed-debug-issue level-' + lv + '">' + msg + "</div>";
-  }).join("");
-}
-
-function renderWebEmbedDebugKv(client, snap) {
-  const host = document.getElementById("web-embed-debug-kv");
-  if (!host) return;
-  const flags = snap && snap.flags ? snap.flags : {};
-  const rect = snap && snap.contentRect ? snap.contentRect : {};
-  const rows = [
-    ["页面模式", String(client.mode || "") + " / cat=" + String(client.category || "")],
-    ["内嵌激活", client.embedActive ? "是" : "否"],
-    ["页面 AI 列", (client.broadcastSites || []).join(", ") || "(空)"],
-    ["宿主 engines", (snap && snap.selectedEngines || []).join(", ") || "(空)"],
-    ["layoutIds", (snap && snap.layoutSiteIds || []).join(", ") || "(空)"],
-    ["rectReady", flags.contentRectReady ? "是" : "否"],
-    ["宿主 rect", (rect.width || 0) + "×" + (rect.height || 0)],
-    ["页面 rect", client.hostRect ? (client.hostRect.width + "×" + client.hostRect.height) : "未测到"],
-    ["bootstrap", "boot=" + (flags.embedBootstrapped ? "1" : "0") + " wait=" + (flags.bootstrapWaitCount || 0)],
-    ["canBootstrap", flags.canBootstrap ? "是" : "否"]
-  ];
-  host.innerHTML = rows.map(([k, v]) => "<dt>" + escapeHtml(k) + "</dt><dd>" + escapeHtml(String(v)) + "</dd>").join("");
-}
-
-function renderWebEmbedDebugSites(snap) {
-  const host = document.getElementById("web-embed-debug-sites");
-  if (!host) return;
-  const sites = snap && Array.isArray(snap.sites) ? snap.sites : [];
-  if (!sites.length) {
-    host.textContent = "无 layout 站点记录";
-    return;
-  }
-  host.textContent = sites.map((s) => {
-    const st = [];
-    st.push(String(s.id || "?"));
-    st.push(s.ready ? "ready" : (s.createInFlight ? "creating" : "missing"));
-    if (s.createAgeMs) st.push(String(s.createAgeMs) + "ms");
-    if (s.lastNavError) st.push("err:" + s.lastNavError);
-    return st.join(" · ");
-  }).join("\n");
-}
-
-function renderWebEmbedDebugLogPane() {
-  const pre = document.getElementById("web-embed-debug-log");
-  if (!pre) return;
-  const tab = _scWebEmbedDebugState.logTab || "js";
-  if (tab === "js") {
-    pre.textContent = _scWebEmbedDebugEvents.length
-      ? _scWebEmbedDebugEvents.join("\n")
-      : "(暂无页面事件 — 尝试添加/切换 AI 页面后刷新)";
-    pre.scrollTop = pre.scrollHeight;
-    return;
-  }
-  const snap = _scWebEmbedDebugState.hostSnap;
-  const logs = snap && snap.logs ? snap.logs : {};
-  pre.textContent = String(logs[tab] || "(无日志)") || "(无日志)";
-  pre.scrollTop = pre.scrollHeight;
-}
-
-function renderWebEmbedDebugPanel(client, snap) {
-  _scWebEmbedDebugState.hostSnap = snap || null;
-  renderWebEmbedDebugIssues(snap && snap.issues);
-  renderWebEmbedDebugKv(client, snap);
-  renderWebEmbedDebugSites(snap);
-  renderWebEmbedDebugLogPane();
-}
-
-function requestWebEmbedDebugSnapshot() {
-  const client = buildWebEmbedClientDebugSnapshot();
-  scWebEmbedDebugLog("info", "请求宿主诊断快照…");
-  try {
-    postToAhk({ type: "webEmbedDebugRequest", client });
-  } catch (e) {
-    scWebEmbedDebugLog("error", "postToAhk 失败: " + (e && e.message ? e.message : e));
-    renderWebEmbedDebugPanel(client, null);
-  }
-}
-
-function buildWebEmbedDebugActionPayload() {
-  const rect = measureWebEmbedHostRect();
-  return {
-    client: buildWebEmbedClientDebugSnapshot(),
-    rect: rect || undefined,
-    selectedEngines: getWebEmbedLayoutSites().slice(),
-    columnLayout: buildWebEmbedColumnLayoutPayload()
-  };
-}
-
-function toggleWebEmbedDebugPanel(forceOpen) {
-  const panel = document.getElementById("web-embed-debug-panel");
-  if (!panel) return;
-  const next = typeof forceOpen === "boolean" ? forceOpen : !panel.classList.contains("hidden");
-  _scWebEmbedDebugState.open = next;
-  panel.classList.toggle("hidden", !next);
-  document.body.classList.toggle("sc-web-embed-debug-open", next);
-  if (next) {
-    if (getUIMode() !== "web") setUIMode("web", true);
-    if (!isWebEmbedCategory()) selectCategoryLocal("ai", true);
-    requestWebEmbedDebugSnapshot();
-    if (_scWebEmbedDebugState.pollTimer) clearInterval(_scWebEmbedDebugState.pollTimer);
-    _scWebEmbedDebugState.pollTimer = setInterval(() => {
-      if (!_scWebEmbedDebugState.open) return;
-      requestWebEmbedDebugSnapshot();
-    }, 2500);
-  } else if (_scWebEmbedDebugState.pollTimer) {
-    clearInterval(_scWebEmbedDebugState.pollTimer);
-    _scWebEmbedDebugState.pollTimer = 0;
-  }
-}
-
-function initWebEmbedDebugPanel() {
-  syncWebEmbedDebugStatusBar();
-  const bind = (id, fn) => {
-    const el = document.getElementById(id);
-    if (el) el.addEventListener("click", fn);
-  };
-  bind("webllm-btn-debug", () => toggleWebEmbedDebugPanel(true));
-  bind("btn-web-embed-debug", () => toggleWebEmbedDebugPanel(true));
-  bind("web-embed-debug-close", () => toggleWebEmbedDebugPanel(false));
-  bind("web-embed-debug-refresh", () => requestWebEmbedDebugSnapshot());
-  bind("web-embed-debug-rebootstrap", () => {
-    _scWebEmbedHostBootstrapped = false;
-    scWebEmbedDebugLog("info", "手动触发 webLlmBootstrap");
-    scheduleWebEmbedContentRect(true);
-    try {
-      postToAhk({ type: "webEmbedDebugAction", action: "rebootstrap", ...buildWebEmbedDebugActionPayload() });
-    } catch (e) {
-      scWebEmbedDebugLog("error", "rebootstrap 发送失败");
-    }
-  });
-  bind("web-embed-debug-copy", () => {
-    try {
-      postToAhk({ type: "webEmbedDebugAction", action: "copy_trace", client: buildWebEmbedClientDebugSnapshot() });
-    } catch (_) {}
-  });
-  bind("web-embed-debug-open-log", () => {
-    try { postToAhk({ type: "webEmbedDebugAction", action: "open_log_dir" }); } catch (_) {}
-  });
-  document.querySelectorAll("#web-embed-debug-log-tabs .web-embed-debug-log-tab").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      document.querySelectorAll("#web-embed-debug-log-tabs .web-embed-debug-log-tab").forEach((b) => {
-        b.classList.toggle("is-active", b === btn);
-      });
-      _scWebEmbedDebugState.logTab = String(btn.getAttribute("data-log-tab") || "js");
-      renderWebEmbedDebugLogPane();
-    });
-  });
-}
-
-function initWebLlmToolbar() {
-  syncWebEmbedSearchDock(isWebEmbedActive());
-  ensureWebEmbedTabScrollSync();
-  initWebEmbedScrollNav();
-  renderWebLlmToolbar();
-  initWebEmbedColumnLayout();
-  const map = {
-    "webllm-btn-back": "back",
-    "webllm-btn-forward": "forward",
-    "webllm-btn-reload": "reload",
-    "webllm-btn-reload-all": "reload_all",
-    "webllm-btn-home": "home",
-    "webllm-btn-copyurl": "copyurl"
-  };
-  Object.keys(map).forEach((id) => {
-    const el = document.getElementById(id);
-    if (!el) return;
-    el.addEventListener("click", () => postToAhk({ type: "webLlmNav", action: map[id] }));
-  });
-  const setup = document.getElementById("web-embed-setup");
-  if (setup) {
-    setup.addEventListener("toggle", () => {
-      setup.setAttribute("data-user-toggled", "1");
-      if (isWebEmbedActive()) scheduleWebEmbedContentRect();
-    });
-  }
-  const labelToggle = document.getElementById("web-bookmark-label-toggle");
-  if (labelToggle) {
-    labelToggle.addEventListener("click", () => {
-      state.webBookmarkShowLabels = !state.webBookmarkShowLabels;
-      saveWebBookmarkLabelsPref(state.webBookmarkShowLabels);
-      syncWebBookmarkLabelsUi();
-      scheduleWebEmbedContentRect();
-    });
-  }
-  if (state.webBookmarkShowLabels == null) state.webBookmarkShowLabels = loadWebBookmarkLabelsPref();
-  syncWebBookmarkLabelsUi();
-  syncWebEmbedLayout();
-  renderWebEmbedTabBar();
-  initWebEmbedDebugPanel();
-}
-
-function initWebEmbedColumnResizeHandles() {
-  /* 列宽拖动由宿主 AHK 拖条处理 */
-}
-
-let _scWebEmbedScrollDebounce = 0;
-let _scWebEmbedScrollSyncTimer = 0;
-
-function syncWebEmbedScrollToHost() {
-  if (!isWebEmbedActive() || _scWebEmbedLayoutFromHost) return;
-  const viewport = document.getElementById("web-embed-scroll-viewport");
-  if (!viewport) return;
-  syncWebEmbedViewportScroll(false);
-  const vpW = getWebEmbedViewportWidthPx();
-  const stripW = getWebEmbedStripWidth(getWebEmbedLayoutSites());
-  const maxScroll = Math.max(0, stripW - vpW);
-  const scrollX = Math.min(Math.max(0, Math.round(viewport.scrollLeft || 0)), maxScroll);
-  postToAhk({
-    type: "webLlmScroll",
-    scrollX,
-    viewportWidth: vpW,
-    stripWidth: stripW
-  });
-}
-
-function initWebEmbedColumnLayout() {
-  initWebEmbedHScroll();
-  const viewport = document.getElementById("web-embed-scroll-viewport");
-  if (!viewport || viewport.getAttribute("data-layout-ready") === "1") return;
-  viewport.setAttribute("data-layout-ready", "1");
-  viewport.addEventListener("scroll", () => {
-    if (_scWebEmbedLayoutFromHost) return;
-    syncWebEmbedHScrollUi();
-    if (_scWebEmbedHScrollDragging) return;
-    if (_scWebEmbedScrollSyncTimer) clearTimeout(_scWebEmbedScrollSyncTimer);
-    _scWebEmbedScrollSyncTimer = setTimeout(() => {
-      _scWebEmbedScrollSyncTimer = 0;
-      syncWebEmbedScrollToHost();
-    }, 36);
-    if (isWebEmbedActive() && _scWebEmbedFocusState.siteId) {
-      animateWebEmbedFocusFrame(_scWebEmbedFocusState.siteId, true);
-    }
-  }, { passive: true });
-  viewport.addEventListener("pointerup", () => {
-    if (_scWebEmbedLayoutFromHost) return;
-    syncWebEmbedScrollToHost();
-  }, { passive: true });
-  renderWebEmbedColumnTrack();
-  if (typeof ResizeObserver === "function") {
-    const track = document.getElementById("web-embed-scroll-track");
-    if (track && !viewport._scWebEmbedResizeObs) {
-      viewport._scWebEmbedResizeObs = new ResizeObserver(() => {
-        if (isWebEmbedActive() && _scWebEmbedFocusState.siteId) {
-          animateWebEmbedFocusFrame(_scWebEmbedFocusState.siteId, true);
-        }
-      });
-      viewport._scWebEmbedResizeObs.observe(track);
-    }
-  }
-}
 
 function normalizeUiMode(mode) {
   const m = String(mode || "").toLowerCase();
-  if (m === "cli") return "cli";
-  if (m === "web" && !SC_WEB_SEARCH_HIDDEN) return "web";
   if (m === "clipboard") return "clipboard";
   if (m === "fulltext") return "fulltext";
   return "local";
+}
+
+function scRedirectToWorkbench(mode) {
+  const m = String(mode || "").toLowerCase();
+  if (m === "cli") {
+    postToAhk({
+      type: "openCliWorkbench",
+      keyword: state.keyword || "",
+      engine: state.activeCliEngine || "codex_cli"
+    });
+    return true;
+  }
+  if (m === "ai") {
+    postToAhk({
+      type: "openAiWorkbench",
+      keyword: state.keyword || "",
+      selectedEngines: (state.selectedEngines || []).slice()
+    });
+    return true;
+  }
+  return false;
 }
 
 function syncComposeContext() {
@@ -8797,8 +5313,7 @@ function isScNarrow() {
 function loadLastNonClipboardUiMode() {
   try {
     const v = localStorage.getItem(SC_LAST_NON_CLIPBOARD_UI_MODE_KEY);
-    if (v === "local" || v === "cli" || v === "fulltext") return v;
-    if (v === "web" && !SC_WEB_SEARCH_HIDDEN) return "web";
+    if (v === "local" || v === "fulltext") return v;
   } catch (_) {}
   return "local";
 }
@@ -8815,8 +5330,8 @@ function rememberUiModePref(mode, persist) {
 function loadUIModePref() {
   try {
     const v = localStorage.getItem(SC_UI_MODE_KEY);
-    if (v === "local" || v === "cli" || v === "clipboard" || v === "fulltext") state.uiMode = v;
-    else if (v === "web" && !SC_WEB_SEARCH_HIDDEN) state.uiMode = "web";
+    if (v === "local" || v === "clipboard" || v === "fulltext") state.uiMode = v;
+    else if (v === "cli" || v === "ai") scRedirectToWorkbench(v);
   } catch (_) {}
   if (!state.uiMode) state.uiMode = loadLastNonClipboardUiMode();
   try {
@@ -8826,27 +5341,26 @@ function loadUIModePref() {
 }
 
 function resolveInitUiMode(hostUiMode, msgType) {
-  let um = String(hostUiMode || "").toLowerCase();
+  let um = normalizeUiMode(hostUiMode);
   if (msgType !== "init" || state.clipboardHomeLock) return um;
   let saved = "";
   try { saved = String(localStorage.getItem(SC_UI_MODE_KEY) || "").toLowerCase(); } catch (_) {}
-  const fallback = loadLastNonClipboardUiMode();
-  const prefer = (saved === "web" || saved === "cli") ? saved : fallback;
-  if (um === "local" && (prefer === "web" || prefer === "cli")) return prefer;
+  if (saved === "cli" || saved === "ai") {
+    scRedirectToWorkbench(saved);
+    return loadLastNonClipboardUiMode();
+  }
+  const prefer = loadLastNonClipboardUiMode();
+  if (um === "local" && prefer !== "local") return prefer;
   return um;
 }
 
 function inferUIModeFromCategory(key) {
-  const k = String(key || "");
-  if (k === "cli") return "cli";
-  return SC_WEB_SEARCH_HIDDEN ? "local" : "web";
+  return "local";
 }
 
 function getUIMode() {
-  const m = String(state.uiMode || "");
+  const m = normalizeUiMode(state.uiMode || "");
   if (m === "clipboard" || m === "fulltext") return m;
-  if (m === "cli") return "cli";
-  if (m === "web" && !SC_WEB_SEARCH_HIDDEN) return "web";
   if (m === "local") return "local";
   const ft = String(state.filterType || "");
   if (ft === "clipboard") return "clipboard";
@@ -8884,45 +5398,39 @@ function bridgeUiModeFilterType(m, skipHostPost) {
 
 function syncModeSections() {
   const mode = getUIMode();
-  const embed = isWebEmbedActive();
   const resultsCard = document.getElementById("results-card");
   const previewColumn = document.getElementById("local-preview-column");
   const cliWorkspace = document.getElementById("cli-workspace");
   const layout = document.getElementById("layout");
   const isSearchResults = mode === "local" || mode === "clipboard" || mode === "fulltext";
-  if (resultsCard) resultsCard.classList.toggle("hidden", mode === "cli" || embed);
-  if (previewColumn) previewColumn.classList.toggle("hidden", mode === "cli" || mode === "web");
-  if (cliWorkspace) cliWorkspace.classList.toggle("hidden", mode !== "cli");
-  if (layout) layout.classList.toggle("sc-cli-active", mode === "cli");
-  document.body.classList.toggle("sc-cli-layout", mode === "cli");
-  syncWebEmbedLayout();
-  if (mode === "cli") scheduleSyncCliWorkspace(true);
-  if (mode === "cli") renderCliQuickCmds();
-  if (mode === "cli") unmountInlinePreview();
-  else if (isSearchResults) mountInlinePreview();
+  if (resultsCard) resultsCard.classList.toggle("hidden", false);
+  if (previewColumn) previewColumn.classList.toggle("hidden", false);
+  if (cliWorkspace) {
+    cliWorkspace.classList.add("hidden");
+    cliWorkspace.setAttribute("aria-hidden", "true");
+    cliWorkspace.hidden = true;
+  }
+  if (layout) layout.classList.remove("sc-cli-active", "sc-web-embed-active");
+  document.body.classList.remove("sc-cli-layout", "sc-web-embed-layout");
+  dismissWebEmbedHost();
+  if (isSearchResults) mountInlinePreview();
   else unmountInlinePreview();
-  if (!embed) dismissWebEmbedHost();
-  if (mode === "web" && !embed) renderWebExternalHint();
-  if (embed) scheduleWebEmbedContentRect();
 }
 
 function getModeBarItems() {
-  const items = [
+  return [
     { id: "local", label: "本地搜索", desc: "文件、配置与提示词库" },
     { id: "clipboard", label: "剪贴板", desc: "复制历史与时间线" },
-    { id: "fulltext", label: "全文搜索", desc: "索引检索" },
-    { id: "web", label: "联网搜索", desc: "大模型与搜索引擎" },
-    { id: "cli", label: "终端 CLI", desc: "ttyd 多终端" }
+    { id: "fulltext", label: "全文搜索", desc: "索引检索" }
   ];
-  return items.filter((m) => m.id !== "web" || !SC_WEB_SEARCH_HIDDEN);
 }
 
 const SC_MODE_NAV_META = Object.freeze({
   local: { icon: "📁", statHint: "文件 · 配置 · 提示词" },
   clipboard: { icon: "📋", statHint: "复制历史与时间线" },
   fulltext: { icon: "🔍", statHint: "索引检索" },
-  web: { icon: "🌐", statHint: "大模型与搜索引擎" },
-  cli: { icon: ">_", statHint: "ttyd 多终端" }
+  web: { icon: "🌐", statHint: "外部搜索引擎 · 浏览器打开" },
+  cli: { icon: ">_", statHint: "打开 CLI 工作台" }
 });
 
 const SC_MODE_NAV_PLACEHOLDER = Object.freeze({
@@ -8948,194 +5456,6 @@ function syncModeNavCards() {
   });
 }
 
-function openWebEmbedSetupFromNav() {
-  if (getUIMode() !== "web") setUIMode("web", true);
-  const catFolder = document.getElementById("sc-web-nav-cat-folder");
-  const morePanel = document.getElementById("sc-web-nav-more-panel");
-  if (catFolder) catFolder.open = true;
-  if (morePanel) {
-    morePanel.open = true;
-    morePanel.classList.remove("hidden");
-    morePanel.scrollIntoView({ behavior: "smooth", block: "nearest" });
-  }
-}
-
-function ensureWebModeNavBodyShell(body) {
-  if (!body) return;
-  if (body.querySelector(".sc-web-nav-root") && body.querySelector("#sc-web-nav-cat-folder")) return;
-  body.innerHTML = "";
-  body.innerHTML =
-    "<div class=\"sc-web-nav-root\">" +
-      "<details class=\"sc-web-nav-cat-folder\" id=\"sc-web-nav-cat-folder\">" +
-        "<summary class=\"sc-web-nav-cat-folder-sum\">联网分类</summary>" +
-        "<div class=\"sc-web-nav-cat-folder-body\">" +
-          "<div id=\"web-nav-categories\" class=\"sc-web-nav-categories\" aria-label=\"联网分类\"></div>" +
-        "</div>" +
-      "</details>" +
-      "<details class=\"sc-web-nav-ai-folder\" open>" +
-        "<summary class=\"sc-web-nav-ai-folder-sum\"><span class=\"sc-web-nav-folder-icon\">📁</span> AI 页面 <span id=\"sc-web-ai-count\" class=\"sc-web-ai-count\">0/8</span></summary>" +
-        "<div id=\"sc-web-nav-ai-list\" class=\"sc-web-nav-ai-list\" role=\"list\"></div>" +
-      "</details>" +
-      "<details class=\"sc-web-nav-more-panel hidden\" id=\"sc-web-nav-more-panel\">" +
-        "<summary class=\"sc-web-nav-more-panel-sum\">搜索引擎</summary>" +
-        "<div class=\"sc-web-nav-more-panel-body\">" +
-          "<div id=\"web-nav-engines\" class=\"sc-web-nav-engines\" aria-label=\"搜索引擎\"></div>" +
-        "</div>" +
-      "</details>" +
-      "<button type=\"button\" class=\"sc-web-nav-more-btn\" id=\"sc-web-nav-more-btn\">" +
-        "<span class=\"sc-web-nav-more-icon\">+</span>" +
-        "<span class=\"sc-web-nav-more-text\">更多 AI…</span>" +
-        "<span class=\"sc-web-nav-more-hint\">分类与引擎</span>" +
-      "</button>" +
-    "</div>";
-  const moreBtn = body.querySelector("#sc-web-nav-more-btn");
-  if (moreBtn) moreBtn.addEventListener("click", openWebEmbedSetupFromNav);
-}
-
-function updateWebEmbedAiCount() {
-  const el = document.getElementById("sc-web-ai-count");
-  if (!el) return;
-  const n = getWebEmbedBroadcastSites().length;
-  el.textContent = n + "/" + SC_WEB_EMBED_MAX_COLUMNS;
-}
-
-function appendWebEmbedPoolSection(listEl, label) {
-  const lab = document.createElement("div");
-  lab.className = "sc-web-ai-section-label";
-  lab.textContent = label;
-  listEl.appendChild(lab);
-  const pool = document.createElement("div");
-  pool.className = "sc-web-ai-pool";
-  listEl.appendChild(pool);
-  return pool;
-}
-
-function createWebEmbedPoolChip(site, isOn, isFocus) {
-  const btn = document.createElement("button");
-  btn.type = "button";
-  btn.className = "sc-web-ai-pool-chip" + (isOn ? " is-on" : "") + (isFocus ? " is-focus" : "") + (site.embedRisk && site.embedRisk !== "none" ? " is-risk" : "");
-  btn.setAttribute("data-site", site.id);
-  btn.setAttribute("role", "listitem");
-  mountWebChipIcon(btn, site);
-  const label = document.createElement("span");
-  label.className = "sc-web-ai-pool-chip__label";
-  label.textContent = site.label;
-  btn.appendChild(label);
-  const act = document.createElement("span");
-  act.className = "sc-web-ai-pool-chip__act";
-  act.textContent = isOn ? "✓" : "+";
-  act.setAttribute("aria-hidden", "true");
-  btn.appendChild(act);
-  const riskHint = site.embedRisk === "login" ? " · 可能需登录" : (site.embedRisk === "untested" ? " · 实验性" : "");
-  btn.title = site.label + (isOn ? " · 已参与同问" : " · 点击添加") + riskHint;
-  btn.addEventListener("click", (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (!isWebEmbedSiteEnabled(site)) return;
-    if (e.ctrlKey || e.metaKey) {
-      toggleWebEmbedBroadcastSite(site.id);
-      return;
-    }
-    const broadcast = getWebEmbedBroadcastSites();
-    if (broadcast.includes(site.id)) {
-      if (getUIMode() !== "web") setUIMode("web", true);
-      if (!isWebEmbedCategory()) selectCategoryLocal("ai", true);
-      setWebEmbedFocusSite(site.id, true);
-      return;
-    }
-    toggleWebEmbedBroadcastSite(site.id);
-  });
-  return btn;
-}
-
-function renderWebModeNavBody() {
-  const card = document.querySelector('.sc-mode-card[data-mode="web"]');
-  if (!card) return;
-  const body = card.querySelector(".sc-mode-card-body");
-  if (!body) return;
-  ensureWebModeNavBodyShell(body);
-  const list = document.getElementById("sc-web-nav-ai-list");
-  if (!list) return;
-  const broadcast = getWebEmbedBroadcastSites();
-  const pool = getWebEmbedPoolSites();
-  const focus = getWebEmbedActiveEngine();
-  list.innerHTML = "";
-  updateWebEmbedAiCount();
-
-  const onSites = broadcast.map((id) => findWebEmbedSite(id)).filter(Boolean);
-  if (onSites.length) {
-    const onPool = appendWebEmbedPoolSection(list, "已开启");
-    onSites.forEach((site) => {
-      onPool.appendChild(createWebEmbedPoolChip(site, true, site.id === focus));
-    });
-  }
-
-  const addable = pool.filter((s) => !broadcast.includes(s.id));
-  const stableAdd = addable.filter((s) => s.embedRisk === "none" || !s.embedRisk);
-  const riskyAdd = addable.filter((s) => s.embedRisk && s.embedRisk !== "none");
-
-  if (stableAdd.length) {
-    const addPool = appendWebEmbedPoolSection(list, "可添加");
-    stableAdd.forEach((site) => addPool.appendChild(createWebEmbedPoolChip(site, false, false)));
-  }
-  if (riskyAdd.length) {
-    const riskPool = appendWebEmbedPoolSection(list, "实验性 / 需登录");
-    riskyAdd.forEach((site) => riskPool.appendChild(createWebEmbedPoolChip(site, false, false)));
-  }
-
-  renderCategories();
-  syncWebModeNavAiRows();
-}
-
-function syncWebModeNavAiRows() {
-  const focus = getWebEmbedActiveEngine();
-  const broadcast = new Set(getWebEmbedBroadcastSites());
-  updateWebEmbedAiCount();
-  document.querySelectorAll(".sc-web-ai-pool-chip").forEach((chip) => {
-    const sid = String(chip.getAttribute("data-site") || "");
-    const on = broadcast.has(sid);
-    chip.classList.toggle("is-on", on);
-    chip.classList.toggle("is-focus", sid === focus);
-    const act = chip.querySelector(".sc-web-ai-pool-chip__act");
-    if (act) act.textContent = on ? "✓" : "+";
-  });
-  const chromeMap = (state.webEmbedSiteChrome && typeof state.webEmbedSiteChrome === "object")
-    ? state.webEmbedSiteChrome
-    : {};
-  document.querySelectorAll(".sc-web-ai-row").forEach((row) => {
-    const sid = String(row.getAttribute("data-site") || "");
-    const chrome = chromeMap[sid] || {};
-    const isFocus = sid === focus;
-    const loading = isFocus && !!chrome.loading;
-    row.classList.toggle("is-active", isFocus);
-    row.classList.toggle("is-loading", loading);
-    row.classList.toggle("broadcast-on", broadcast.has(sid));
-    row.classList.toggle("broadcast-off", !broadcast.has(sid));
-    const site = SC_WEB_EMBED_SITES.find((s) => s.id === sid);
-    const label = site ? site.label : sid;
-    row.title = label + (broadcast.has(sid) ? " · 已参与同问" : " · 未参与同问") + "（点击切换，Ctrl+点击增删同问）";
-    const sub = row.querySelector(".sc-web-ai-row__sub");
-    if (sub) {
-      if (loading) sub.textContent = "加载中…";
-      else if (isFocus && (chrome.title || chrome.url)) sub.textContent = chrome.title || chrome.url;
-      else sub.textContent = "待命";
-    }
-    const fill = row.querySelector(".sc-web-ai-row__progress-fill");
-    if (fill) {
-      fill.classList.toggle("is-indeterminate", loading);
-      if (loading) fill.style.width = "60%";
-      else if (isFocus) fill.style.width = "100%";
-      else fill.style.width = "0%";
-    }
-    const dot = row.querySelector(".sc-web-ai-row__dot");
-    if (dot) {
-      dot.classList.remove("dot-active", "dot-loading", "dot-ready");
-      if (loading) dot.classList.add("dot-loading");
-      else if (isFocus) dot.classList.add("dot-active");
-      else dot.classList.add("dot-ready");
-    }
-  });
-}
 
 function renderModeBar() {
   const bar = document.getElementById("mode-bar");
@@ -9179,8 +5499,7 @@ function renderModeBar() {
     }
   });
   syncModeNavCards();
-  if (mode === "web") renderWebModeNavBody();
-  else syncWebModeNavAiRows();
+  if (mode !== "web") syncWebModeNavAiRows();
 }
 
 const scModeResultsCache = {};
@@ -9227,6 +5546,33 @@ function kickModeResultsRefresh(mode, skipHostPost, force) {
 }
 
 function setUIMode(mode, persist, skipHostPost, skipCategoryReset) {
+  const raw = String(mode || "").toLowerCase();
+  if (raw === "cli" || raw === "ai") {
+    scRedirectToWorkbench(raw);
+    state.uiMode = loadLastNonClipboardUiMode();
+    renderModeBar();
+    syncModeSections();
+    syncComposeChrome();
+    return;
+  }
+  if (raw === "web") {
+    state.uiMode = "local";
+    renderModeBar();
+    syncModeSections();
+    syncComposeChrome();
+    return;
+  }
+  const m0 = normalizeUiMode(mode);
+  const chunk = "";
+  if (chunk && globalThis.ScChunkLoader && !ScChunkLoader.isScChunkLoaded(chunk)) {
+    ScChunkLoader.ensureScChunk(chunk).then(() => setUIModeCore(m0, persist, skipHostPost, skipCategoryReset))
+      .catch((e) => { console.error("[SearchCenter] chunk", chunk, e); setUIModeCore(m0, persist, skipHostPost, skipCategoryReset); });
+    return;
+  }
+  setUIModeCore(m0, persist, skipHostPost, skipCategoryReset);
+}
+
+function setUIModeCore(mode, persist, skipHostPost, skipCategoryReset) {
   const prevMode = getUIMode();
   const m = normalizeUiMode(mode);
   const searchInput = document.getElementById("search");
@@ -9242,16 +5588,11 @@ function setUIMode(mode, persist, skipHostPost, skipCategoryReset) {
     }
   }
   state.uiMode = m;
-  if (m !== "web")
+  if (m !== "web") {
     dismissWebEmbedHost();
-  if (m === "local" || m === "clipboard" || m === "fulltext" || m === "cli") {
-    cancelWebEmbedRectTimers();
-  } else if (m === "web") {
-    _scWebEmbedLastRectKey = "";
-    _scWebEmbedLastLayoutKey = "";
-    _scWebEmbedHostBootstrapped = false;
-    const viewport = document.getElementById("web-embed-scroll-viewport");
-    if (viewport) viewport.scrollLeft = 0;
+    if (typeof cancelWebEmbedRectTimers === "function") cancelWebEmbedRectTimers();
+  } else if (typeof scWebEmbedPrepareWebMode === "function") {
+    scWebEmbedPrepareWebMode();
   }
   if (m !== "clipboard" && state.clipboardViewFilter !== "all") {
     state.clipboardViewFilter = "all";
@@ -9285,6 +5626,7 @@ function setUIMode(mode, persist, skipHostPost, skipCategoryReset) {
     if (!skipHostPost) kickModeResultsRefresh(m, false, !restored);
   }
   if (m === "cli") {
+    if (typeof ensureCliControlsInited === "function") ensureCliControlsInited();
     setCliTerminalFocusLock(true);
     if (searchInput) {
       try { searchInput.blur(); } catch (_) {}
@@ -9303,12 +5645,12 @@ function setUIMode(mode, persist, skipHostPost, skipCategoryReset) {
       if (m === "web") {
         const catKey = String(state.currentCategoryKey || "");
         if (catKey === "cli" || !SC_WEB_CATEGORY_KEYS.has(catKey)) {
-          state.currentCategoryKey = "ai";
-          postToAhk({ type: "setCategory", category: "ai" });
+          state.currentCategoryKey = "academic";
+          postToAhk({ type: "setCategory", category: "academic" });
         }
       } else if (state.currentCategoryKey === "cli") {
-        state.currentCategoryKey = "ai";
-        postToAhk({ type: "setCategory", category: "ai" });
+        state.currentCategoryKey = "academic";
+        postToAhk({ type: "setCategory", category: "academic" });
       }
     }
   }
@@ -9320,8 +5662,8 @@ function setUIMode(mode, persist, skipHostPost, skipCategoryReset) {
   renderEngines();
   syncWebEmbedLayout();
   if (m === "web" && isWebEmbedCategory()) {
-    _scWebEmbedHostBootstrapped = false;
-    renderWebLlmToolbar();
+    if (typeof initWebLlmToolbar === "function") initWebLlmToolbar();
+    else renderWebLlmToolbar();
     scheduleWebEmbedContentRect();
   }
   if (m === "web" && !isWebEmbedCategory()) {
@@ -9343,7 +5685,7 @@ function setUIMode(mode, persist, skipHostPost, skipCategoryReset) {
         const guardMs = Math.max(200, Number(state.modeSwitchGuardMs || 120));
         postToAhk({ type: "modeSwitchGuard", active: false, ms: guardMs, heavy: "web" });
         if (isWebEmbedCategory()) {
-          _scWebEmbedLastRectKey = "";
+          if (typeof scWebEmbedInvalidateContentRect === "function") scWebEmbedInvalidateContentRect();
           postWebEmbedContentRect(true);
         }
       }, 96);
@@ -9417,613 +5759,34 @@ function initComposeStack() {
   initComposeClipFilters();
   initFulltextContextControls();
   const initMode = getUIMode();
-  setUIMode(initMode, false, true);
-  try { postToAhk({ type: "setUiMode", mode: initMode }); } catch (_) {}
-  renderModeBar();
-  syncModeSections();
-  syncComposeChrome();
-}
-
-function cliPortForEngine(engine) {
-  const k = normalizeCliEngineId(engine);
-  return SC_CLI_PORTS[k] || 7681;
-}
-
-function cliBaseUrlForEngine(engine) {
-  return "http://127.0.0.1:" + cliPortForEngine(engine) + "/";
-}
-
-function cliThemePayload() {
-  const light = String(document.documentElement.getAttribute("data-theme") || "").toLowerCase() === "light";
-  return light
-    ? {
-        scrollbarSliderBackground: "rgba(214,111,26,0.36)",
-        scrollbarSliderHoverBackground: "rgba(211,84,0,0.56)",
-        scrollbarSliderActiveBackground: "rgba(211,84,0,0.72)"
-      }
-    : {
-        scrollbarSliderBackground: "rgba(255,120,48,0.4)",
-        scrollbarSliderHoverBackground: "rgba(255,132,64,0.6)",
-        scrollbarSliderActiveBackground: "rgba(255,150,80,0.76)"
-      };
-}
-
-function cliUrlWithTheme(rawUrl) {
-  const u = String(rawUrl || "").trim();
-  if (!u) return "";
-  try {
-    const obj = new URL(u, window.location.href);
-    obj.searchParams.set("theme", JSON.stringify(cliThemePayload()));
-    return obj.toString();
-  } catch (_) {
-    return u;
-  }
-}
-
-function getActiveCliEngine() {
-  const engines = getCliEnginesForTabs();
-  const active = normalizeCliEngineId(state.activeCliEngine);
-  if (active && engines.some((e) => e && e.value === active)) return active;
-  const sel = Array.isArray(state.selectedEngines) ? state.selectedEngines : [];
-  for (let i = 0; i < sel.length; i++) {
-    const id = normalizeCliEngineId(sel[i]);
-    if (engines.some((e) => e && e.value === id)) return id;
-  }
-  if (engines.length && engines[0].value) return String(engines[0].value);
-  return "codex_cli";
-}
-
-/** 焦点在 ttyd iframe 或终端区域时，勿拦截 Enter/Space/Esc，交给 xterm */
-function isCliTerminalInputTarget() {
-  if (getUIMode() !== "cli") return false;
-  if (_cliTerminalFocusLock) return true;
-  const ae = document.activeElement;
-  if (!ae) return false;
-  if (ae.id === "cliFrame") return true;
-  if (ae.classList && ae.classList.contains("cli-frame")) return true;
-  if (ae.closest && ae.closest(".cli-frame-stack")) return true;
-  return false;
-}
-
-function setCliTerminalFocusLock(on) {
-  _cliTerminalFocusLock = !!on;
-  try {
-    postToAhk({ type: "cliTerminalFocus", active: _cliTerminalFocusLock });
-  } catch (_) {}
-}
-
-function shouldYieldKeysToCliTerminal(event) {
-  if (getUIMode() !== "cli") return false;
-  const ae = document.activeElement;
-  const tag = ae ? ae.tagName : "";
-  const searchFocused = ae && ae.id === "search";
-  if (searchFocused) return false;
-  if (_cliTerminalFocusLock || isCliTerminalInputTarget()) return true;
-  const k = String(event.key || "");
-  if (k === "Enter") return true;
-  if (k === "Escape") return false; // ESC 交给宿主关闭搜索中心，避免关闭后状态悬挂
-  if (k !== " ") return false;
-  if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || tag === "BUTTON") return false;
-  if (!ae || ae === document.body || ae === document.documentElement) return true;
-  return false;
-}
-
-function focusCliTerminalFrame() {
-  const fr = getActiveCliFrameEl();
-  if (!fr) return;
-  try { fr.focus(); } catch (_) {}
-}
-
-function getCliFrameStackEl() {
-  return document.getElementById("cli-frame-stack");
-}
-
-function getActiveCliFrameEl() {
-  return getCliFrameElForEngine(getActiveCliEngine());
-}
-
-function getCliFrameElForEngine(engine) {
-  const k = normalizeCliEngineId(engine);
-  if (!k) return null;
-  if (_cliFrameCache.has(k)) return _cliFrameCache.get(k);
-  return null;
-}
-
-function ensureCliFrameForEngine(engine) {
-  const k = normalizeCliEngineId(engine);
-  if (!k) return null;
-  const stack = getCliFrameStackEl();
-  if (!stack) return null;
-  if (_cliFrameCache.has(k)) return _cliFrameCache.get(k);
-  const legacy = document.getElementById("cliFrame");
-  if (legacy && !_cliFrameCache.size) {
-    legacy.id = "cliFrame_" + k;
-    legacy.dataset.engine = k;
-    legacy.title = "CLI ttyd 终端 - " + k;
-    _cliFrameCache.set(k, legacy);
-    return legacy;
-  }
-  const fr = document.createElement("iframe");
-  fr.className = "cli-frame";
-  fr.id = "cliFrame_" + k;
-  fr.dataset.engine = k;
-  fr.src = "about:blank";
-  fr.title = "CLI ttyd 终端 - " + k;
-  fr.setAttribute("tabindex", "0");
-  fr.style.display = "none";
-  fr.style.opacity = "0";
-  fr.style.pointerEvents = "none";
-  fr.addEventListener("load", () => {
-    if (normalizeCliEngineId(getActiveCliEngine()) !== k) return;
-    const cur = String(fr.src || "");
-    if (cur && cur.indexOf("about:blank") !== 0) setCliLoadingVisible(false);
-  });
-  stack.appendChild(fr);
-  _cliFrameCache.set(k, fr);
-  return fr;
-}
-
-function setActiveCliFrame(engine) {
-  const active = normalizeCliEngineId(engine);
-  _cliFrameCache.forEach((fr, k) => {
-    const on = (k === active);
-    fr.style.display = on ? "block" : "none";
-    fr.style.opacity = on ? "1" : "0";
-    fr.style.pointerEvents = on ? "auto" : "none";
-  });
-}
-
-function stopCliLoadingPoll() {
-  if (_cliLoadingPollTimer) {
-    clearInterval(_cliLoadingPollTimer);
-    _cliLoadingPollTimer = 0;
-  }
-}
-
-function startCliLoadingPoll() {
-  stopCliLoadingPoll();
-  const engine = normalizeCliEngineId(getActiveCliEngine());
-  _cliLoadingPollCountByEngine.set(engine, 0);
-  _cliLoadingPollTimer = setInterval(() => {
-    const el = document.getElementById("cliLoading");
-    if (!el || el.classList.contains("hidden") || getUIMode() !== "cli") {
-      stopCliLoadingPoll();
-      return;
-    }
-    const active = normalizeCliEngineId(getActiveCliEngine());
-    if (active !== engine) {
-      stopCliLoadingPoll();
-      return;
-    }
-    const n = Number(_cliLoadingPollCountByEngine.get(engine) || 0) + 1;
-    _cliLoadingPollCountByEngine.set(engine, n);
-    // 轮询期间持续轻量请求 open，避免首个 open 丢失后永久卡住
-    throttledNiumaCliOpen(false);
-    // 约 6 秒仍未就绪时自动重启一次该引擎
-    if (n === 5) {
+  const bootChunk = "";
+  const boot = () => {
+    if (initMode === "cli") {
       postToAhk({
-        type: "niuma_cli_restart",
-        engine,
-        baseUrl: cliBaseUrlForEngine(engine),
-        reqId: "sc_poll_r_" + Date.now()
+        type: "openCliWorkbench",
+        keyword: state.keyword || "",
+        engine: state.activeCliEngine || "codex_cli"
       });
+      state.uiMode = loadLastNonClipboardUiMode();
+      if (state.uiMode === "cli") state.uiMode = "local";
+    } else {
+      setUIMode(initMode, false, true);
     }
-    syncCliWorkspace(false);
-  }, 450);
-}
-
-function setCliLoadingVisible(on, msg) {
-  const el = document.getElementById("cliLoading");
-  if (!el) return;
-  el.classList.toggle("hidden", !on);
-  if (msg) el.textContent = msg;
-  if (on) startCliLoadingPoll();
-  else stopCliLoadingPoll();
-  if (!on && _cliAutoRetryTimer) {
-    clearTimeout(_cliAutoRetryTimer);
-    _cliAutoRetryTimer = 0;
-  }
-}
-
-function cliFrameCurrentPort() {
-  const fr = getActiveCliFrameEl();
-  if (!fr) return 0;
-  try {
-    return parseInt(new URL(String(fr.src || ""), "http://127.0.0.1/").port, 10) || 0;
-  } catch (_) {
-    return _cliFrameLoadedPort || 0;
-  }
-}
-
-function cliFrameElForPort(port) {
-  port = Number(port) || 0;
-  if (!port) return null;
-  for (const eng of Object.keys(SC_CLI_PORTS)) {
-    if (Number(SC_CLI_PORTS[eng]) === port) {
-      const fr = getCliFrameElForEngine(eng);
-      if (fr) return fr;
-    }
-  }
-  return getActiveCliFrameEl();
-}
-
-function cliFrameUrlLooksLiveForPort(port) {
-  port = Number(port) || 0;
-  const fr = cliFrameElForPort(port);
-  if (!fr || !port) return false;
-  const u = String(fr.src || "").trim();
-  if (!u || u === "about:blank") return false;
-  try {
-    return parseInt(new URL(u, "http://127.0.0.1/").port, 10) === port;
-  } catch (_) {
-    return _cliFrameLoadedPort === port;
-  }
-}
-
-function cliUrlBaseKey(u) {
-  try {
-    const o = new URL(String(u || ""), "http://127.0.0.1/");
-    return o.origin + o.pathname;
-  } catch (_) {
-    return String(u || "");
-  }
-}
-
-function applyCliFrameUrl(u, engine) {
-  u = String(u || "").trim();
-  if (!u) return;
-  const eng = normalizeCliEngineId(engine || getActiveCliEngine());
-  const fr = ensureCliFrameForEngine(eng) || getCliFrameElForEngine(eng);
-  if (!fr) return;
-  if (eng) _cliUrlByEngine.set(eng, u);
-  const cur = String(fr.src || "").trim();
-  if (cur && cliUrlBaseKey(cur) === cliUrlBaseKey(u)) return;
-  fr.src = u;
-  try {
-    _cliFrameLoadedPort = parseInt(new URL(u, "http://127.0.0.1/").port, 10) || 0;
-  } catch (_) {}
-}
-
-function markCliEngineReady(engine) {
-  const k = normalizeCliEngineId(engine);
-  if (!k || !SC_CLI_PORTS[k]) return;
-  if (!state.cliReadyEngines || typeof state.cliReadyEngines !== "object") state.cliReadyEngines = {};
-  state.cliReadyEngines[k] = Date.now();
-}
-
-function clearCliEngineReady(engine) {
-  const k = normalizeCliEngineId(engine);
-  if (!k || !state.cliReadyEngines) return;
-  delete state.cliReadyEngines[k];
-}
-
-function isCliEngineReady(engine) {
-  const k = normalizeCliEngineId(engine);
-  if (!k || !state.cliReadyEngines || typeof state.cliReadyEngines !== "object") return false;
-  const t = Number(state.cliReadyEngines[k]) || 0;
-  if (!t) return false;
-  return Date.now() - t < SC_CLI_READY_TTL_MS;
-}
-
-function scheduleSyncCliWorkspace(spawnIfNeeded) {
-  if (_cliSyncDebounceTimer) clearTimeout(_cliSyncDebounceTimer);
-  _cliSyncDebounceTimer = setTimeout(() => {
-    _cliSyncDebounceTimer = 0;
-    syncCliWorkspace(!!spawnIfNeeded);
-  }, spawnIfNeeded ? 80 : 160);
-}
-
-function cliFrameUrlLooksLive() {
-  return cliFrameUrlLooksLiveForPort(cliPortForEngine(getActiveCliEngine()));
-}
-
-function throttledNiumaCliOpen(force) {
-  const now = Date.now();
-  const engine = getActiveCliEngine();
-  const last = Number(_cliOpenThrottleByEngine.get(engine) || 0);
-  if (!force && now - last < SC_CLI_OPEN_THROTTLE_MS) return;
-  _cliOpenThrottleByEngine.set(engine, now);
-  postToAhk({ type: "niuma_cli_open", engine, reqId: "sc_" + now });
-}
-
-function resetCliOpenThrottle(engine) {
-  const eng = normalizeCliEngineId(engine || getActiveCliEngine());
-  _cliOpenThrottleByEngine.delete(eng);
-}
-
-function scheduleCliAutoBoot(engine, bootCmd) {
-  const eng = normalizeCliEngineId(engine);
-  const cmd = String(bootCmd || SC_CLI_AUTO_BOOT_CMD[eng] || "").trim();
-  if (!cmd || _cliAutoBootDone.has(eng)) return;
-  _cliAutoBootDone.add(eng);
-  setTimeout(() => {
-    if (normalizeCliEngineId(getActiveCliEngine()) !== eng) return;
-    if (!isCliEngineReady(eng)) return;
-    postToAhk({ type: "cliSend", prompt: cmd, engine: eng, autoBoot: true });
-  }, 900);
-}
-
-function syncCliWorkspace(spawnIfNeeded) {
-  if (getUIMode() !== "cli") return;
-  if (state.hostMinimized) return;
-  const engine = getActiveCliEngine();
-  try { localStorage.setItem(SC_ACTIVE_CLI_ENGINE_KEY, String(engine || "codex_cli")); } catch (_) {}
-  ensureCliFrameForEngine(engine);
-  setActiveCliFrame(engine);
-  state.activeCliEngine = engine;
-  const engRow = getCliEnginesForTabs().find((e) => e && e.value === engine);
-  const titleEl = document.getElementById("cliTitle");
-  if (titleEl) {
-    titleEl.textContent = (engRow ? engRow.name : engine) + " · 端口 " + cliPortForEngine(engine);
-  }
-  renderCliQuickCmds();
-  const port = cliPortForEngine(engine);
-  ensureCliFrameForEngine(engine);
-  setActiveCliFrame(engine);
-  const engineReady = isCliEngineReady(engine);
-  const cachedUrl = _cliUrlByEngine.get(engine) || "";
-  const mountUrl = cachedUrl || cliUrlWithTheme(cliBaseUrlForEngine(engine));
-  const frameLive = engineReady && cliFrameUrlLooksLiveForPort(port);
-  if (frameLive) {
-    applyCliFrameUrl(mountUrl, engine);
-    setCliLoadingVisible(false);
-    if (_cliConnectFallbackTimer) {
-      clearTimeout(_cliConnectFallbackTimer);
-      _cliConnectFallbackTimer = 0;
-    }
-  } else if (engineReady && mountUrl) {
-    // 后端已 ttyd_ready，但 iframe 尚未加载：挂载 URL，勿回到「正在连接」
-    applyCliFrameUrl(mountUrl, engine);
-    setCliLoadingVisible(true, "终端加载中…");
+    try {
+      const postMode = initMode === "cli" ? state.uiMode : initMode;
+      postToAhk({ type: "setUiMode", mode: postMode });
+    } catch (_) {}
+    renderModeBar();
+    syncModeSections();
+    syncComposeChrome();
+  };
+  if (bootChunk && globalThis.ScChunkLoader) {
+    ScChunkLoader.ensureScChunk(bootChunk).then(boot).catch((e) => { console.error(e); boot(); });
   } else {
-    // 未就绪时保持 about:blank，避免出现“127.0.0.1 拒绝连接”错误页
-    const fr = getCliFrameElForEngine(engine);
-    if (fr) {
-      const cur = String(fr.src || "");
-      if (!cur || cur.indexOf("about:blank") !== 0) {
-        try { fr.src = "about:blank"; } catch (_) {}
-      }
-    }
-    setCliLoadingVisible(true, "正在连接 ttyd…");
-    if (spawnIfNeeded) throttledNiumaCliOpen(false);
-  }
-  if ((_cliTerminalFocusLock || spawnIfNeeded) && !state.hostMinimized) {
-    setTimeout(() => {
-      focusCliTerminalFrame();
-      setCliTerminalFocusLock(true);
-    }, 0);
+    boot();
   }
 }
 
-function renderCliEngineTabs() {
-  const wrap = document.getElementById("cli-engine-tabs");
-  if (!wrap) return;
-  if (getUIMode() !== "cli") {
-    wrap.innerHTML = "";
-    return;
-  }
-  const engines = getCliEnginesForTabs();
-  const active = getActiveCliEngine();
-  wrap.innerHTML = "";
-  engines.forEach((engine) => {
-    if (!engine || !engine.value) return;
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "cli-etab" + (engine.value === active ? " active" : "");
-    btn.setAttribute("role", "tab");
-    btn.setAttribute("aria-selected", engine.value === active ? "true" : "false");
-    btn.dataset.engine = String(engine.value);
-    const icon = engine.iconUrl
-      ? "<img src=\"" + escapeAttr(engine.iconUrl) + "\" alt=\"\">"
-      : "";
-    btn.innerHTML = icon + "<span class=\"cli-etab-label\">" + escapeHtml(engine.name || engine.value) + "</span>";
-    btn.addEventListener("click", () => {
-      const id = String(engine.value);
-      if (normalizeCliEngineId(state.activeCliEngine) === normalizeCliEngineId(id)) return;
-      setCliTerminalFocusLock(true);
-      state.activeCliEngine = id;
-      wrap.querySelectorAll(".cli-etab").forEach((t) => {
-        const on = normalizeCliEngineId(t.dataset.engine) === normalizeCliEngineId(id);
-        t.classList.toggle("active", on);
-        t.setAttribute("aria-selected", on ? "true" : "false");
-      });
-      syncCliWorkspace(true);
-      renderCliQuickCmds();
-    });
-    wrap.appendChild(btn);
-  });
-}
-
-function getCliQuickCmdsForEngine(engine) {
-  const eng = normalizeCliEngineId(engine);
-  const cmds = [];
-  const boot = String(SC_CLI_AUTO_BOOT_CMD[eng] || "").trim();
-  if (boot) {
-    const row = getCliEnginesForTabs().find((e) => e && e.value === eng);
-    cmds.push({ label: (row && row.name) ? String(row.name) : boot, cmd: boot });
-  }
-  return cmds.concat(SC_CLI_QUICK_CMDS_COMMON);
-}
-
-function isCliQuickPanelOpen() {
-  try {
-    const v = localStorage.getItem(SC_CLI_QUICK_PANEL_KEY);
-    if (v === "0") return false;
-    if (v === "1") return true;
-  } catch (_) {}
-  return true;
-}
-
-function setCliQuickPanelOpen(open) {
-  try { localStorage.setItem(SC_CLI_QUICK_PANEL_KEY, open ? "1" : "0"); } catch (_) {}
-  renderCliQuickCmds();
-}
-
-function sendCliQuickCmd(cmd) {
-  const text = String(cmd || "").trim();
-  if (!text) return;
-  const eng = getActiveCliEngine();
-  const ready = isCliEngineReady(eng) && cliFrameUrlLooksLiveForPort(cliPortForEngine(eng));
-  if (!ready) {
-    setCliLoadingVisible(true, "终端初始化中，请稍候…");
-    throttledNiumaCliOpen(false);
-  }
-  setCliTerminalFocusLock(true);
-  postToAhk({ type: "cliSend", prompt: text, engine: eng });
-  focusCliTerminalFrame();
-}
-
-function renderCliQuickCmds() {
-  const wrap = document.getElementById("cliQuickCmds");
-  const toggleBtn = document.getElementById("cliQuickToggleBtn");
-  if (!wrap) return;
-  if (getUIMode() !== "cli") {
-    wrap.innerHTML = "";
-    wrap.classList.add("hidden");
-    return;
-  }
-  const open = isCliQuickPanelOpen();
-  wrap.classList.toggle("hidden", !open);
-  if (toggleBtn) toggleBtn.classList.toggle("primary", open);
-  if (!open) {
-    wrap.innerHTML = "";
-    return;
-  }
-  const engine = getActiveCliEngine();
-  const cmds = getCliQuickCmdsForEngine(engine);
-  wrap.innerHTML = "";
-  cmds.forEach((item) => {
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "cli-qcmd";
-    btn.title = item.cmd;
-    btn.textContent = item.label;
-    btn.addEventListener("click", () => sendCliQuickCmd(item.cmd));
-    wrap.appendChild(btn);
-  });
-}
-
-function initCliTerminalControls() {
-  const workDirBtn = document.getElementById("cliWorkDirBtn");
-  const pasteBtn = document.getElementById("cliPasteBtn");
-  const interruptBtn = document.getElementById("cliInterruptBtn");
-  const quickToggleBtn = document.getElementById("cliQuickToggleBtn");
-  const popBtn = document.getElementById("cliPopBtn");
-  if (workDirBtn) {
-    workDirBtn.addEventListener("click", () => {
-      const engine = getActiveCliEngine();
-      postToAhk({ type: "niuma_cli_open_workdir", engine, reqId: "sc_wd_" + Date.now() });
-    });
-  }
-  if (pasteBtn) {
-    pasteBtn.addEventListener("click", () => {
-      const engine = getActiveCliEngine();
-      setCliTerminalFocusLock(true);
-      postToAhk({ type: "cliPaste", engine });
-      focusCliTerminalFrame();
-    });
-  }
-  if (interruptBtn) {
-    interruptBtn.addEventListener("click", () => {
-      const engine = getActiveCliEngine();
-      setCliTerminalFocusLock(true);
-      postToAhk({ type: "cliInterrupt", engine });
-      focusCliTerminalFrame();
-    });
-  }
-  if (quickToggleBtn) {
-    quickToggleBtn.addEventListener("click", () => {
-      setCliQuickPanelOpen(!isCliQuickPanelOpen());
-    });
-  }
-  if (popBtn) {
-    popBtn.addEventListener("click", () => {
-      const engine = getActiveCliEngine();
-      postToAhk({
-        type: "niuma_cli_open_external",
-        engine,
-        baseUrl: cliUrlWithTheme(cliBaseUrlForEngine(engine)),
-        reqId: "sc_x_" + Date.now()
-      });
-    });
-  }
-  const fr = getActiveCliFrameEl();
-  if (fr) {
-    fr.setAttribute("tabindex", "0");
-  }
-  const stack = getCliFrameStackEl();
-  if (stack) {
-    stack.addEventListener("pointerdown", () => {
-      setCliTerminalFocusLock(true);
-      focusCliTerminalFrame();
-    });
-  }
-  document.addEventListener("pointerdown", (e) => {
-    if (getUIMode() !== "cli") return;
-    const t = e.target;
-    if (t && t.closest && (t.closest(".cli-frame-stack") || t.closest("#cli-engine-tabs") || t.closest("#compose-context-cli") || t.closest(".cli-bar") || t.closest("#cliQuickCmds"))) {
-      setCliTerminalFocusLock(true);
-      if (t.closest(".cli-frame-stack")) {
-        focusCliTerminalFrame();
-      }
-      return;
-    }
-    setCliTerminalFocusLock(false);
-  }, true);
-  renderCliQuickCmds();
-}
-
-function handleTtydHostMessage(payload) {
-  if (!payload || !payload.type) return false;
-  if (payload.type === "ttyd_ready") {
-    const eng = normalizeCliEngineId(payload.engine || getActiveCliEngine());
-    if (eng) {
-      markCliEngineReady(eng);
-      ensureCliFrameForEngine(eng);
-    }
-    resetCliOpenThrottle(eng);
-    _cliAutoRetryCountByEngine.delete(eng);
-    _cliLoadingPollCountByEngine.delete(eng);
-    let turl = String(payload.baseUrl || "").trim();
-    if (!turl) turl = cliUrlWithTheme(cliBaseUrlForEngine(eng));
-    else turl = cliUrlWithTheme(turl);
-    if (turl && eng) _cliUrlByEngine.set(eng, turl);
-    const active = normalizeCliEngineId(getActiveCliEngine());
-    if (turl && active === eng) {
-      setActiveCliFrame(eng);
-      applyCliFrameUrl(turl, eng);
-      setCliLoadingVisible(false);
-      stopCliLoadingPoll();
-    }
-    const bootCmd = String(payload.autoBootCmd || "").trim();
-    if (bootCmd) scheduleCliAutoBoot(eng, bootCmd);
-    if (active !== eng) return true;
-    const st = document.getElementById("status");
-    if (st) st.textContent = "ttyd 终端已就绪";
-    return true;
-  }
-  if (payload.type === "ttyd_error") {
-    const eng = normalizeCliEngineId(payload.engine || "");
-    if (eng && eng !== getActiveCliEngine()) return true;
-    if (eng) clearCliEngineReady(eng);
-    resetCliOpenThrottle(eng);
-    _cliAutoRetryCountByEngine.delete(eng);
-    _cliLoadingPollCountByEngine.delete(eng);
-    if (eng === getActiveCliEngine()) setCliLoadingVisible(true, "ttyd 连接失败，可点「打开」重试");
-    const st = document.getElementById("status");
-    const msg = String(payload.message || "启动失败");
-    if (st) {
-      st.textContent = msg.indexOf("timeout") >= 0
-        ? "ttyd 连接超时，可点「打开」或「重启」重试"
-        : "ttyd：" + msg;
-    }
-    return true;
-  }
-  if (payload.type === "ttyd_status") {
-    return true;
-  }
-  return false;
-}
 
 function initFilterDrawer() {
   initComposeStack();
@@ -11824,8 +7587,16 @@ function renderSubtagPanel() {
 function selectCategoryLocal(categoryKey, postHost = true) {
   const key = String(categoryKey || "").trim();
   if (!key) return;
+  if (key === "ai") {
+    postToAhk({ type: "openAiWorkbench", keyword: state.keyword || "", selectedEngines: (state.selectedEngines || []).slice() });
+    return;
+  }
   if (key === "cli") {
-    setUIMode("cli", true);
+    postToAhk({
+      type: "openCliWorkbench",
+      keyword: state.keyword || "",
+      engine: state.activeCliEngine || "codex_cli"
+    });
     return;
   }
   state.currentCategoryKey = key;
@@ -11855,7 +7626,8 @@ function renderCategories() {
   targets.forEach((wrap) => { wrap.innerHTML = ""; });
   if (SC_WEB_SEARCH_HIDDEN) return;
   state.categories.forEach((cat) => {
-    if (String(cat.key || "") === "cli") return;
+    const key = String(cat.key || "");
+    if (key === "cli" || key === "ai") return;
     const hotkey = getHintHotkey("category", cat.key);
     targets.forEach((wrap) => {
       const el = document.createElement("button");
@@ -13951,6 +9723,13 @@ function applyStateNow(payload) {
   const incomingFilter = String(payload.filterType || "");
   const msgType = String(payload.type || "");
   const activeUiMode = normalizeUiMode(state.uiMode || getUIMode());
+  const rawIncomingHostMode = payload.uiMode != null ? String(payload.uiMode).toLowerCase() : "";
+  if (rawIncomingHostMode === "cli" || rawIncomingHostMode === "ai") {
+    scRedirectToWorkbench(rawIncomingHostMode);
+    payload.uiMode = "local";
+  } else if (rawIncomingHostMode === "web") {
+    payload.uiMode = "local";
+  }
   const incomingHostMode = payload.uiMode != null ? normalizeUiMode(payload.uiMode) : "";
   const staleClipboardHost =
     !state.clipboardHomeLock
@@ -13959,25 +9738,6 @@ function applyStateNow(payload) {
   if (staleClipboardHost) {
     payload.uiMode = activeUiMode;
     payload.filterType = activeUiMode === "fulltext" ? "fulltext" : "";
-  }
-  const staleLocalHostWhileWeb =
-    !state.clipboardHomeLock
-    && activeUiMode === "web"
-    && incomingHostMode === "local"
-    && String(state.filterType || "") !== "clipboard"
-    && String(state.filterType || "") !== "fulltext";
-  if (staleLocalHostWhileWeb) {
-    payload.uiMode = "web";
-    scheduleHostWebModeResync();
-  }
-  const staleWebHostWhileLocal =
-    !state.clipboardHomeLock
-    && activeUiMode === "local"
-    && incomingHostMode === "web"
-    && String(state.filterType || "") !== "clipboard"
-    && String(state.filterType || "") !== "fulltext";
-  if (staleWebHostWhileLocal) {
-    payload.uiMode = "local";
   }
   const lockBlocksFilter =
     state.clipboardHomeLock
@@ -13993,9 +9753,18 @@ function applyStateNow(payload) {
   applied = true;
   if (payload.uiMode != null) {
     let um = resolveInitUiMode(payload.uiMode, msgType);
-    if (um === "local" || um === "cli" || um === "clipboard" || um === "fulltext") state.uiMode = um;
+    if (um === "cli") {
+      postToAhk({
+        type: "openCliWorkbench",
+        keyword: String(payload.keyword || state.keyword || ""),
+        engine: state.activeCliEngine || "codex_cli"
+      });
+      um = loadLastNonClipboardUiMode();
+      if (um === "cli") um = "local";
+    }
+    if (um === "local" || um === "clipboard" || um === "fulltext") state.uiMode = um;
     else if (um === "web" && !SC_WEB_SEARCH_HIDDEN) state.uiMode = "web";
-    if (um === "web" || um === "cli") rememberUiModePref(um, true);
+    if (um === "web") rememberUiModePref(um, true);
     state.unifiedMode = (um === "clipboard") ? "clipboard" : "search";
     if (um !== "clipboard") state.clipboardHomeLock = false;
   }
@@ -14143,50 +9912,35 @@ function applyStateNow(payload) {
   }
   syncResultCountLabel();
   syncComposeChrome();
-  document.getElementById("btn-open-cli").style.display = state.isCliCategory ? "inline-flex" : "none";
+  document.getElementById("btn-open-cli").style.display = "inline-flex";
   syncFooterHint();
   syncRecycleBadge();
   if (document.getElementById("recycle-overlay") && document.getElementById("recycle-overlay").classList.contains("open")) {
     renderRecycleModalList();
   }
 
-  if ((payload.uiMode == null || payload.uiMode === "") && state.currentCategoryKey === "cli" && state.uiMode !== "local") {
-    state.uiMode = "cli";
+  if ((payload.uiMode == null || payload.uiMode === "") && state.currentCategoryKey === "cli") {
+    scRedirectToWorkbench("cli");
+    state.uiMode = "local";
+    state.currentCategoryKey = "academic";
   }
-  if (state.uiMode === "web" && SC_WEB_SEARCH_HIDDEN) state.uiMode = "local";
-  if (getUIMode() === "cli") {
-    if (state.activeCliEngine) state.activeCliEngine = normalizeCliEngineId(state.activeCliEngine);
-    else {
-      const tabs = getCliEnginesForTabs();
-      if (tabs.length) state.activeCliEngine = String(tabs[0].value || "codex_cli");
-    }
-    const tabs = getCliEnginesForTabs();
-    if (tabs.length && !tabs.some((e) => e && e.value === state.activeCliEngine)) {
-      state.activeCliEngine = String(tabs[0].value || "codex_cli");
-    }
+  if (state.uiMode === "cli" || state.uiMode === "ai") {
+    scRedirectToWorkbench(state.uiMode);
+    state.uiMode = "local";
+  } else if (state.uiMode === "web") {
+    state.uiMode = "local";
   }
   renderModeBar();
   syncModeSections();
   renderCategories();
   renderEngines();
-  if (getUIMode() === "web" && isWebEmbedCategory()) {
-    if (!Array.isArray(state.webEmbedBroadcastSites) || !state.webEmbedBroadcastSites.length)
-      state.webEmbedBroadcastSites = loadWebEmbedBroadcastSitesPref();
-    renderWebLlmToolbar();
-    if (msgType === "init" || payload.uiMode != null || payload.selectedEngines != null) {
-      scheduleWebEmbedContentRect();
-      setTimeout(scheduleWebEmbedContentRect, 80);
-    }
-  }
   renderCliEngineTabs();
   renderFilters();
   syncComposeChrome();
   scheduleScHotkeyBindingsSyncFromState(500);
-  if (getUIMode() !== "cli" && getUIMode() !== "web") {
-    renderResults();
-    if (msgType === "init" && scResultsNeedDefaultSearchKick()) {
-      scRequestSearchHomeRefresh(true);
-    }
+  renderResults();
+  if (msgType === "init" && scResultsNeedDefaultSearchKick()) {
+    scRequestSearchHomeRefresh(true);
   }
   syncEngineModeButton();
   syncFtDrawerSummary();
@@ -14392,12 +10146,30 @@ document.getElementById("btn-run").addEventListener("click", () => {
 });
 
 document.getElementById("btn-web-search").addEventListener("click", () => {
-  postToAhk({ type: "webSearch" });
+  postToAhk({
+    type: "openAiWorkbench",
+    keyword: state.keyword || "",
+    selectedEngines: (state.selectedEngines || []).slice()
+  });
 });
 
 document.getElementById("btn-open-cli").addEventListener("click", () => {
-  postToAhk({ type: "cliOpen" });
+  postToAhk({
+    type: "openCliWorkbench",
+    keyword: state.keyword || "",
+    engine: state.activeCliEngine || "codex_cli"
+  });
 });
+const btnOpenAiWb = document.getElementById("btn-open-ai-workbench");
+if (btnOpenAiWb) {
+  btnOpenAiWb.addEventListener("click", () => {
+    postToAhk({
+      type: "openAiWorkbench",
+      keyword: state.keyword || "",
+      selectedEngines: (state.selectedEngines || []).slice()
+    });
+  });
+}
 const btnFtToggle = document.getElementById("btn-ft-toggle");
 if (btnFtToggle) {
   btnFtToggle.addEventListener("click", () => {
@@ -14536,7 +10308,6 @@ updateChromeTopMostButton();
 syncFulltextSchemeUi();
 initFilterDrawer();
 initResultsMoreCollapse();
-initCliTerminalControls();
 initSearchWrapperFocus();
 initSearchHostFocusRelease();
 document.querySelectorAll(".sc-compose-hint[data-compose-action]").forEach((el) => {
@@ -14739,7 +10510,7 @@ if (window.chrome && window.chrome.webview) {
       } else {
         scWebEmbedDebugLog("error", "操作失败 " + act + ": " + String(payload.error || ""));
       }
-      if (_scWebEmbedDebugState.open) requestWebEmbedDebugSnapshot();
+      if (typeof isWebEmbedDebugPanelOpen === "function" && isWebEmbedDebugPanelOpen()) requestWebEmbedDebugSnapshot();
       return;
     }
     if (payload.type === "webLlmColumnLayoutState") {
@@ -15086,7 +10857,7 @@ if (window.chrome && window.chrome.webview) {
     }
   });
   installGlobalWheelScrollRouting();
-  initWebLlmToolbar();
+  if (getUIMode() === "web" && typeof initWebLlmToolbar === "function") initWebLlmToolbar();
   scSendReadyOnce();
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible") return;

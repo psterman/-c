@@ -1,0 +1,498 @@
+/* 独立工作台（AI / CLI）— 左侧目录 + 右侧主内容，对齐 SearchCenter sc-shell-with-nav */
+:root {
+  --wb-sidebar-w: minmax(248px, 280px);
+  --wb-sidebar-bg:
+    linear-gradient(165deg, rgba(255,255,255,.07) 0%, rgba(255,255,255,.02) 48%, rgba(255,141,42,.03) 100%),
+    rgba(8,12,22,.52);
+  --wb-sidebar-border: rgba(255,255,255,.1);
+}
+
+html[data-theme="light"] {
+  --wb-sidebar-bg:
+    linear-gradient(165deg, rgba(255,255,255,.82), rgba(248,250,252,.92)),
+    rgba(255,255,255,.65);
+  --wb-sidebar-border: rgba(15,23,42,.1);
+}
+
+.wb-app {
+  display: grid;
+  grid-template-columns: var(--wb-sidebar-w) minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  gap: 12px;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  padding: 12px 14px 14px 12px;
+}
+
+/* 独立工作台：侧栏必须在左侧；sc-web-embed / sc-cli 的 column flex 仅用于搜索中心内嵌 */
+#layout.wb-app.sc-web-embed-active,
+#layout.wb-app.sc-cli-active {
+  display: grid !important;
+  flex-direction: unset !important;
+  grid-template-columns: var(--wb-sidebar-w) minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+}
+
+#layout.wb-app.sc-web-embed-active .web-embed-workspace,
+#layout.wb-app.sc-cli-active .cli-workspace {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+  width: 100%;
+  max-width: none;
+}
+
+.wb-sidebar {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 141, 42, 0.28);
+  background:
+    linear-gradient(165deg, rgba(255,255,255,.06) 0%, rgba(255,255,255,.02) 48%, rgba(255,141,42,.04) 100%),
+    rgba(8,12,22,.62);
+  backdrop-filter: blur(18px) saturate(1.3);
+  -webkit-backdrop-filter: blur(18px) saturate(1.3);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.1),
+    0 10px 28px rgba(0,0,0,.2);
+  overflow: hidden;
+}
+
+.wb-sidebar-panel {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.wb-sidebar-panel-sum {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  cursor: pointer;
+  list-style: none;
+  border-bottom: 1px solid rgba(255,255,255,.08);
+  background: rgba(0,0,0,.12);
+}
+
+.wb-sidebar-panel-sum::-webkit-details-marker { display: none; }
+
+.wb-sidebar-panel-title {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.wb-sidebar-panel-chev {
+  font-size: 10px;
+  color: var(--muted);
+  opacity: .85;
+}
+
+.wb-sidebar-panel-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px;
+  overflow: hidden;
+}
+
+.wb-sidebar-panel-body .sc-web-nav-subhead {
+  flex-shrink: 0;
+}
+
+.wb-sidebar-panel-body .sc-web-nav-ai-folder {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.wb-sidebar-panel-body .sc-web-nav-ai-folder[open] > .sc-web-nav-tabs-scroll,
+.wb-sidebar-panel-body .sc-web-nav-ai-folder[open] > .cli-engine-sidebar-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.wb-sidebar-panel-body .sc-web-nav-tabs-scroll,
+.wb-sidebar-panel-body .cli-engine-sidebar-scroll {
+  max-height: none;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.wb-sidebar-panel-body .sc-web-nav-tabs,
+.wb-sidebar-panel-body .cli-engine-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 4px;
+  min-height: 0;
+}
+
+.wb-sidebar-panel-body .sc-web-ai-row,
+.wb-sidebar-panel-body .cli-nav-row {
+  width: 100%;
+  margin: 0;
+}
+
+.wb-sidebar-panel-body .sc-web-nav-ai-folder-sum .sc-web-ai-count {
+  margin-left: auto;
+}
+
+.wb-sidebar-panel-body .sc-web-nav-more-btn {
+  flex-shrink: 0;
+}
+
+.wb-sidebar-panel-body .sc-web-nav-add-folder {
+  flex-shrink: 0;
+  max-height: min(36vh, 280px);
+  overflow: auto;
+}
+
+.wb-sidebar-brand {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 8px 10px;
+  border-bottom: 1px solid rgba(255,255,255,.08);
+  margin-bottom: 8px;
+}
+
+.wb-sidebar-icon {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  font-size: 16px;
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.08);
+}
+
+.wb-sidebar-title {
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--text);
+}
+
+.wb-sidebar-sub {
+  display: block;
+  font-size: 10px;
+  line-height: 1.3;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.wb-sidebar-nav {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow: hidden;
+}
+
+.wb-sidebar-nav .sc-web-nav-tabs-block {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.wb-sidebar-nav .sc-web-nav-tabs-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.wb-sidebar-nav .sc-web-nav-add-folder {
+  flex-shrink: 0;
+}
+
+.wb-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+.wb-topbar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border-subtle, rgba(255,255,255,.08));
+  background: rgba(13,16,22,.55);
+}
+
+.wb-topbar-title {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wb-topbar-status {
+  flex-shrink: 0;
+  font-size: 11px;
+  color: var(--muted);
+  max-width: 42%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wb-close {
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  border: 1px solid rgba(255,255,255,.14);
+  background: rgba(255,255,255,.04);
+  color: var(--text);
+  cursor: pointer;
+  border-radius: 8px;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.wb-close:hover {
+  border-color: rgba(255,179,71,.45);
+  color: var(--accent, #ff8d2a);
+}
+
+.wb-compose {
+  flex-shrink: 0;
+  padding: 8px 10px 0;
+}
+
+.wb-compose-inner {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 12px;
+  background: rgba(255,255,255,.04);
+  padding: 6px 8px;
+}
+
+.wb-compose-inner textarea {
+  flex: 1;
+  min-height: 34px;
+  max-height: 120px;
+  resize: none;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  line-height: 1.4;
+}
+
+.wb-compose-icon {
+  flex-shrink: 0;
+  width: 24px;
+  text-align: center;
+  opacity: .75;
+  align-self: center;
+}
+
+.wb-content {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 8px 10px 10px;
+  overflow: hidden;
+}
+
+.wb-status-line {
+  flex-shrink: 0;
+  padding: 4px 12px 6px;
+  font-size: 12px;
+  color: var(--muted);
+  min-height: 22px;
+}
+
+/* AI 工作台：侧栏内嵌 nav 占满高度 */
+body.wb-ai-layout .web-embed-workspace {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+body.wb-ai-layout .wb-content {
+  padding-top: 4px;
+}
+
+body.wb-ai-layout #search-box-anchor:empty {
+  display: none;
+}
+
+/* CLI 工作台：侧栏纵向引擎列表 */
+.cli-engine-sidebar {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  gap: 4px;
+  padding: 4px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.cli-sidebar-section-head {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px 6px;
+}
+
+.cli-sidebar-section-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.cli-sidebar-count {
+  margin-left: auto;
+  font-size: 10px;
+  font-weight: 600;
+  opacity: .72;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: rgba(255,128,42,.14);
+  color: #ffb366;
+}
+
+.cli-nav-item {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  max-width: none;
+  padding: 8px 8px 8px 10px;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 10px;
+  background: rgba(255,255,255,.03);
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+  transition: background .14s ease, border-color .14s ease, transform .14s ease;
+}
+
+.cli-nav-item:hover {
+  background: rgba(255,255,255,.07);
+  border-color: rgba(255,179,71,.22);
+  transform: translateX(2px);
+}
+
+.cli-nav-item.active {
+  border-color: rgba(255,179,71,.48);
+  background: linear-gradient(180deg, rgba(255,179,71,.14), rgba(255,141,42,.08));
+  box-shadow: 0 0 0 1px rgba(255,141,42,.1);
+}
+
+.cli-nav-item img {
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  flex-shrink: 0;
+  object-fit: contain;
+}
+
+.cli-nav-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cli-nav-label {
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cli-nav-sub {
+  font-size: 9px;
+  line-height: 1.25;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cli-nav-dot {
+  flex-shrink: 0;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: rgba(148,163,184,.45);
+}
+
+.cli-nav-item.active .cli-nav-dot {
+  background: rgba(255,179,71,.95);
+  box-shadow: 0 0 8px rgba(255,141,42,.45);
+}
+
+.cli-nav-item.is-ready .cli-nav-dot {
+  background: rgba(52,211,153,.85);
+}
+
+.cli-sidebar-indicator {
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  height: 0;
+  border-radius: 10px;
+  background: linear-gradient(180deg, rgba(255,179,71,.18), rgba(255,141,42,.1));
+  border: 1px solid rgba(255,179,71,.28);
+  pointer-events: none;
+  transition: top .18s ease, height .18s ease;
+  z-index: 0;
+}
+
+body.wb-cli-layout .cli-workspace {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+body.wb-cli-layout .cli-shell {
+  border-radius: 12px;
+  min-height: 0;
+}

@@ -261,7 +261,7 @@ _Telemetry_DiagnosticsProbe(*) {
 
 _Telemetry_RequiredFillProbe(*) {
     meta := Map("source", "telemetry_auto_trigger")
-    for sid in ["config_webview", "search_center", "clipboard_panel", "command_palette", "prompt_quick_pad", "chord_pad"] {
+    for sid in ["config_webview", "search_center", "ai_workbench", "cli_workbench", "clipboard_panel", "command_palette", "prompt_quick_pad", "chord_pad"] {
         _Telemetry_EmitSurfaceEvent(sid, "open", meta, true)
         _Telemetry_EmitSurfaceEvent(sid, "close", meta, true)
     }
@@ -277,7 +277,7 @@ _Telemetry_RequiredFillProbe(*) {
 }
 
 _Telemetry_SurfaceFillProbe(*) {
-    for sid in ["config_webview", "search_center", "clipboard_panel", "command_palette", "prompt_quick_pad", "chord_pad"] {
+    for sid in ["config_webview", "search_center", "ai_workbench", "cli_workbench", "clipboard_panel", "command_palette", "prompt_quick_pad", "chord_pad"] {
         meta := Map("source", "telemetry_auto_trigger")
         _Telemetry_SurfaceOpen(sid)
         Sleep(40)
@@ -479,12 +479,60 @@ VK_ExecCursorHelperCmd(cmdId) {
                 }
                 executed := true
             case "sc_cat_ai":
-                if (_VK_H("IsSearchCenterActive"))
-                    VK_SearchCenterSetCategory("ai")
+                meta := Map()
+                if (_VK_H("IsSearchCenterActive")) {
+                    try {
+                        global SearchCenterWebKeyword, SearchCenterSelectedEngines
+                        if IsSet(SearchCenterWebKeyword)
+                            meta["keyword"] := String(SearchCenterWebKeyword)
+                        if IsSet(SearchCenterSelectedEngines) && IsObject(SearchCenterSelectedEngines)
+                            meta["selectedEngines"] := SearchCenterSelectedEngines.Clone()
+                    } catch {
+                    }
+                }
+                try SurfaceIntent_Open("ai_workbench", meta)
+                catch {
+                    try AiWb_Show(meta)
+                    catch as _e {
+                        NmerCatch(A_ThisFunc, _e)
+                    }
+                }
+                executed := true
+            case "ftb_ai_workbench":
+                try SurfaceIntent_Open("ai_workbench")
+                catch {
+                    try AiWb_Show()
+                    catch as _e {
+                        NmerCatch(A_ThisFunc, _e)
+                    }
+                }
                 executed := true
             case "sc_cat_cli":
-                if (_VK_H("IsSearchCenterActive"))
-                    VK_SearchCenterSetCategory("cli")
+                meta := Map()
+                if (_VK_H("IsSearchCenterActive")) {
+                    try {
+                        global SearchCenterWebKeyword
+                        if IsSet(SearchCenterWebKeyword)
+                            meta["keyword"] := String(SearchCenterWebKeyword)
+                    } catch {
+                    }
+                }
+                try SurfaceIntent_Open("cli_workbench", meta)
+                catch {
+                    try CliWb_Show(meta)
+                    catch as _e {
+                        NmerCatch(A_ThisFunc, _e)
+                    }
+                }
+                executed := true
+            case "ftb_cli_workbench":
+                try SurfaceIntent_Open("cli_workbench")
+                catch {
+                    try CliWb_Show()
+                    catch as _e {
+                        NmerCatch(A_ThisFunc, _e)
+                    }
+                }
                 executed := true
             case "sc_cat_academic":
                 if (_VK_H("IsSearchCenterActive"))
@@ -625,15 +673,21 @@ VK_ExecCursorHelperCmd(cmdId) {
                     VK_SearchCenterSetUiModeWithFilter("local", "pinned")
                 executed := true
             case "sc_compose_send":
-                if (_VK_H("IsSearchCenterActive"))
+                if FuncExists("CliWb_IsVisible") && CliWb_IsVisible()
+                    VK_CliWorkbenchPost('{"type":"vk_compose","action":"send"}')
+                else if (_VK_H("IsSearchCenterActive"))
                     VK_SearchCenterPost('{"type":"vk_compose","action":"send"}')
                 executed := true
             case "sc_compose_newline":
-                if (_VK_H("IsSearchCenterActive"))
+                if FuncExists("CliWb_IsVisible") && CliWb_IsVisible()
+                    VK_CliWorkbenchPost('{"type":"vk_compose","action":"newline"}')
+                else if (_VK_H("IsSearchCenterActive"))
                     VK_SearchCenterPost('{"type":"vk_compose","action":"newline"}')
                 executed := true
             case "sc_compose_run":
-                if (_VK_H("IsSearchCenterActive"))
+                if FuncExists("CliWb_IsVisible") && CliWb_IsVisible()
+                    VK_CliWorkbenchPost('{"type":"vk_compose","action":"run"}')
+                else if (_VK_H("IsSearchCenterActive"))
                     VK_SearchCenterPost('{"type":"vk_compose","action":"run"}')
                 executed := true
 
@@ -775,7 +829,22 @@ VK_ExecCursorHelperCmd(cmdId) {
                     VK_ClipboardSetFilter("all")
                     executed := true
                 } else if (_VK_H("IsSearchCenterActive")) {
-                    VK_SearchCenterSetCategory("ai")
+                    meta := Map()
+                    try {
+                        global SearchCenterWebKeyword, SearchCenterSelectedEngines
+                        if IsSet(SearchCenterWebKeyword)
+                            meta["keyword"] := String(SearchCenterWebKeyword)
+                        if IsSet(SearchCenterSelectedEngines) && IsObject(SearchCenterSelectedEngines)
+                            meta["selectedEngines"] := SearchCenterSelectedEngines.Clone()
+                    } catch {
+                    }
+                    try SurfaceIntent_Open("ai_workbench", meta)
+                    catch {
+                        try AiWb_Show(meta)
+                        catch as _e {
+                            NmerCatch(A_ThisFunc, _e)
+                        }
+                    }
                     executed := true
                 } else {
                     HandleDynamicHotkey(HotkeyQ != "" ? HotkeyQ : "q", "Q")
@@ -867,7 +936,13 @@ VK_ExecCursorHelperCmd(cmdId) {
                     VK_ClipboardSetFilter("text")
                     executed := true
                 } else if (_VK_H("IsSearchCenterActive")) {
-                    VK_SearchCenterSetCategory("cli")
+                    try SurfaceIntent_Open("cli_workbench", Map("keyword", IsSet(SearchCenterWebKeyword) ? String(SearchCenterWebKeyword) : ""))
+                    catch {
+                        try CliWb_Show(Map("keyword", IsSet(SearchCenterWebKeyword) ? String(SearchCenterWebKeyword) : ""))
+                        catch as _e {
+                            NmerCatch(A_ThisFunc, _e)
+                        }
+                    }
                     executed := true
                 } else {
                     CapsLock2 := false
@@ -1249,6 +1324,18 @@ VK_SearchCenterPost(payloadJson) {
         return true
     } catch as e {
         OutputDebug("[VK-Exec] SearchCenter post failed: " . e.Message)
+        return false
+    }
+}
+
+VK_CliWorkbenchPost(payloadJson) {
+    if !(FuncExists("CliWb_IsVisible") && CliWb_IsVisible())
+        return false
+    try {
+        CliWb_PostJson(payloadJson)
+        return true
+    } catch as e {
+        OutputDebug("[VK-Exec] CliWorkbench post failed: " . e.Message)
         return false
     }
 }

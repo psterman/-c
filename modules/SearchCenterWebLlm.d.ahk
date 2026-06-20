@@ -114,6 +114,9 @@ SearchCenterWebLlm_CanBootstrapEmbed() {
 SearchCenterWebLlm_Hide() {
 }
 
+SearchCenterWebLlm_TeardownEmbed(preservePrefs := true) {
+}
+
 SearchCenterWebLlm_Dispose() {
 }
 

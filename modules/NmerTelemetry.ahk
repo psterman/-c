@@ -33,11 +33,42 @@ global g_NmerTelemetry_MirrorGuard := false
 global g_NmerTelemetry_DeferWriteDepth := 0
 global g_NmerTelemetry_WriteBusy := false
 global g_NmerTelemetry_WritePending := false
+global g_NmerTelemetry_WriteScheduled := false
 
 Nmer_Telemetry_WriteDeferred(*) {
     global g_NmerTelemetry_WritePending
     g_NmerTelemetry_WritePending := false
     Nmer_Telemetry_Write()
+}
+
+Nmer_Telemetry_ScheduleWrite(snap := 0) {
+    global g_NmerTelemetry_LastState, g_NmerTelemetry_WriteScheduled, g_NmerTelemetry_DeferWriteDepth
+    if (g_NmerTelemetry_DeferWriteDepth > 0)
+        return
+    if (snap is Map) && snap.Count
+        g_NmerTelemetry_LastState := snap
+    if g_NmerTelemetry_WriteScheduled
+        return
+    g_NmerTelemetry_WriteScheduled := true
+    try SetTimer(Nmer_Telemetry_FlushScheduledWrite, -280)
+    catch as _e {
+        NmerTelemetry_Catch(_e)
+        g_NmerTelemetry_WriteScheduled := false
+        try Nmer_Telemetry_Write(snap)
+        catch as _e2 {
+            NmerTelemetry_Catch(_e2)
+        }
+    }
+}
+
+Nmer_Telemetry_FlushScheduledWrite(*) {
+    global g_NmerTelemetry_WriteScheduled, g_NmerTelemetry_LastState
+    g_NmerTelemetry_WriteScheduled := false
+    snap := (g_NmerTelemetry_LastState is Map) ? g_NmerTelemetry_LastState : Map()
+    try Nmer_Telemetry_Write(snap)
+    catch as _e {
+        NmerTelemetry_Catch(_e)
+    }
 }
 
 Nmer_Telemetry_BeginDeferWrite() {
@@ -49,7 +80,7 @@ Nmer_Telemetry_EndDeferWrite(flush := true) {
     global g_NmerTelemetry_DeferWriteDepth
     g_NmerTelemetry_DeferWriteDepth := Max(0, g_NmerTelemetry_DeferWriteDepth - 1)
     if flush && g_NmerTelemetry_DeferWriteDepth = 0
-        Nmer_Telemetry_Write()
+        Nmer_Telemetry_ScheduleWrite()
 }
 
 Nmer_Telemetry_SanitizeMeta(scope, action, meta := 0) {
@@ -239,16 +270,36 @@ Nmer_Telemetry_Write(snap := 0) {
         }
         if (json = "")
             return false
-        try FileDelete(path)
+        tmpPath := path . ".tmp"
+        try FileDelete(tmpPath)
         catch as _e3 {
             NmerTelemetry_Catch(_e3)
         }
         try {
-            FileAppend(json, path, "UTF-8")
+            f := FileOpen(tmpPath, "w", "UTF-8")
+            if !IsObject(f)
+                return false
+            f.Write(json)
+            f.Close()
+            try FileMove(tmpPath, path, true)
+            catch as _eMove {
+                NmerTelemetry_Catch(_eMove)
+                try FileDelete(path)
+                catch {
+                }
+                try FileMove(tmpPath, path, true)
+                catch as _eMove2 {
+                    NmerTelemetry_Catch(_eMove2)
+                    return false
+                }
+            }
             ok := true
         } catch as _e4 {
             NmerTelemetry_Catch(_e4)
             ok := false
+            try FileDelete(tmpPath)
+            catch {
+            }
         }
     } finally {
         g_NmerTelemetry_WriteBusy := false
@@ -472,7 +523,7 @@ Nmer_Telemetry_Record(scope, action, ok := true, meta := 0) {
     global g_NmerTelemetry_DeferWriteDepth
     g_NmerTelemetry_LastState := snap
     if (g_NmerTelemetry_DeferWriteDepth <= 0)
-        Nmer_Telemetry_Write(snap)
+        Nmer_Telemetry_ScheduleWrite(snap)
     return snap
 }
 
@@ -570,7 +621,7 @@ Nmer_Telemetry_CiRequiredFill() {
     meta := Map("source", "telemetry_auto_trigger")
     Nmer_Telemetry_BeginDeferWrite()
     try {
-        for sid in ["config_webview", "search_center", "clipboard_panel", "command_palette", "prompt_quick_pad", "chord_pad"] {
+        for sid in ["config_webview", "search_center", "ai_workbench", "cli_workbench", "clipboard_panel", "command_palette", "prompt_quick_pad", "chord_pad"] {
             try Nmer_Telemetry_Record("surface", sid . "_open", true, meta)
             catch as _e1
                 NmerTelemetry_Catch(_e1)

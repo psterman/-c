@@ -272,8 +272,10 @@ _VK_BuiltinCommandCatalog() {
             Map("id", "ch_f", "name", "搜索中心 / 语音搜索", "desc", "CapsLock+F：打开搜索中心或语音搜索", "fn", "CH_RUN", "suggested", "f"),
             Map("id", "ch_g", "name", "显示虚拟键盘", "desc", "CapsLock+G：打开 VK KeyBinder（搜索中心内语义以面板为准）", "fn", "CH_RUN", "suggested", "g"),
             Map("id", "sc_activate_search", "name", "搜索", "desc", "打开并激活搜索中心", "fn", "CH_RUN"),
-            Map("id", "sc_cat_ai", "name", "分类 / AI", "desc", "切换到 AI 分类", "fn", "CH_RUN", "suggested", "q"),
-            Map("id", "sc_cat_cli", "name", "分类 / CLI", "desc", "切换到 CLI 分类", "fn", "CH_RUN", "suggested", "w"),
+            Map("id", "ftb_ai_workbench", "name", "AI 工作台", "desc", "悬浮条按钮：打开 AI 工作台", "fn", "CH_RUN", "iconClass", "fa-brain", "iconPath", Nmer_AssetsIconPath("app", "brain.svg")),
+            Map("id", "ftb_cli_workbench", "name", "CLI 工作台", "desc", "悬浮条按钮：打开 CLI 终端工作台", "fn", "CH_RUN", "iconClass", "fa-terminal"),
+            Map("id", "sc_cat_ai", "name", "AI 工作台", "desc", "打开独立 AI 工作台", "fn", "CH_RUN", "suggested", "q"),
+            Map("id", "sc_cat_cli", "name", "CLI 工作台", "desc", "打开 ttyd 多终端工作台", "fn", "CH_RUN", "suggested", "w"),
             Map("id", "sc_cat_academic", "name", "分类 / 学术", "desc", "切换到学术分类", "fn", "CH_RUN", "suggested", "e"),
             Map("id", "sc_cat_baidu", "name", "分类 / 百度", "desc", "切换到百度分类", "fn", "CH_RUN", "suggested", "r"),
             Map("id", "sc_cat_image", "name", "分类 / 图片", "desc", "切换到图片分类", "fn", "CH_RUN"),
@@ -466,6 +468,7 @@ _VK_BuiltinCommandCatalog() {
             Map("id", "tray_exit_app", "name", "托盘/退出程序", "desc", "系统托盘右键菜单项", "fn", "CH_RUN"),
             ; 下列 cmd 供悬浮条/场景条专用绑定；VK 网页「快捷键」标签由 HOTKEY_TAB_PRESET 展示，不再重复列出
             Map("id", "ftb_scratchpad", "name", "草稿本", "desc", "悬浮条按钮：打开 HubCapsule", "fn", "CH_RUN", "iconClass", "fa-note-sticky"),
+            ; ftb_ai/cli 已在 search 分类注册；此处不重复
             Map("id", "ftb_screenshot", "name", "截图", "desc", "悬浮条按钮：截图智能菜单", "fn", "CH_RUN", "iconClass", "fa-camera"),
             Map("id", "ftb_cloud_player", "name", "云盘", "desc", "悬浮条按钮：打开牛马云", "fn", "CH_RUN", "iconClass", "fa-cloud"),
             Map("id", "ftb_cursor_menu", "name", "Cursor", "desc", "悬浮条按钮：Cursor 快捷入口", "fn", "CH_RUN", "iconClass", "fa-compass", "iconPath", Nmer_AssetsIconPath("app", "cursor.png"))
@@ -1215,6 +1218,8 @@ _VK_DashboardPinnedJson() {
 ; 与旧 FloatingToolbarButtonItems 顺序对应的默认 cmdId（Search→…→VirtualKeyboard）
 _VK_DefaultToolbarLayoutCmdIds() {
     return [
+        "ftb_ai_workbench",
+        "ftb_cli_workbench",
         "sc_activate_search",
         "qa_clipboard",
         "ch_b",
@@ -1234,6 +1239,8 @@ _VK_SceneIdToToolbarCmdId(sceneId) {
     if !IsObject(m) {
         m := Map(
             "search", "sc_activate_search",
+            "ai_workbench", "ftb_ai_workbench",
+            "cli_workbench", "ftb_cli_workbench",
             "clipboard", "qa_clipboard",
             "prompts", "ch_b",
             "scratchpad", "ftb_scratchpad",
@@ -1255,6 +1262,8 @@ _VK_SceneIdToToolbarIconClass(sceneId) {
     if !IsObject(m) {
         m := Map(
             "search", "fa-magnifying-glass",
+            "ai_workbench", "fa-brain",
+            "cli_workbench", "fa-terminal",
             "clipboard", "fa-clipboard",
             "prompts", "fa-lightbulb",
             "scratchpad", "fa-note-sticky",
@@ -1362,16 +1371,17 @@ _VK_SyncToolbarLayoutFromSceneToolbar() {
 
 _VK_DefaultSceneToolbarLayoutRows() {
     return [
-        Map("sceneId", "ai", "visible_in_bar", true, "order_bar", 0),
-        Map("sceneId", "search", "visible_in_bar", true, "order_bar", 1),
-        Map("sceneId", "clipboard", "visible_in_bar", true, "order_bar", 2),
-        Map("sceneId", "prompts", "visible_in_bar", true, "order_bar", 3),
-        Map("sceneId", "scratchpad", "visible_in_bar", true, "order_bar", 4),
-        Map("sceneId", "screenshot", "visible_in_bar", true, "order_bar", 5),
-        Map("sceneId", "settings", "visible_in_bar", true, "order_bar", 6),
-        Map("sceneId", "hotkeys", "visible_in_bar", true, "order_bar", 7),
-        Map("sceneId", "cursor", "visible_in_bar", true, "order_bar", 8),
-        Map("sceneId", "cloudplayer", "visible_in_bar", true, "order_bar", 9)
+        Map("sceneId", "ai_workbench", "visible_in_bar", true, "order_bar", 0),
+        Map("sceneId", "cli_workbench", "visible_in_bar", true, "order_bar", 1),
+        Map("sceneId", "search", "visible_in_bar", true, "order_bar", 2),
+        Map("sceneId", "clipboard", "visible_in_bar", true, "order_bar", 3),
+        Map("sceneId", "prompts", "visible_in_bar", true, "order_bar", 4),
+        Map("sceneId", "scratchpad", "visible_in_bar", true, "order_bar", 5),
+        Map("sceneId", "screenshot", "visible_in_bar", true, "order_bar", 6),
+        Map("sceneId", "settings", "visible_in_bar", true, "order_bar", 7),
+        Map("sceneId", "hotkeys", "visible_in_bar", true, "order_bar", 8),
+        Map("sceneId", "cursor", "visible_in_bar", true, "order_bar", 9),
+        Map("sceneId", "cloudplayer", "visible_in_bar", true, "order_bar", 10)
     ]
 }
 
@@ -1393,10 +1403,14 @@ _VK_EnsureSceneToolbarLayout() {
         if !(item is Map) || !item.Has("sceneId")
             continue
         sid := Trim(String(item["sceneId"]))
+        if (sid = "ai")
+            sid := "ai_workbench"
+        if (sid = "cli")
+            sid := "cli_workbench"
         if (sid = "" || seen.Has(sid))
             continue
         seen[sid] := true
-        def := defaultByScene.Has(sid) ? defaultByScene[sid] : 0
+        def := defaultByScene.Has(sid) ? defaultByScene[sid] : (defaultByScene.Has("ai_workbench") ? defaultByScene["ai_workbench"] : 0)
         vb := item.Has("visible_in_bar") ? !!item["visible_in_bar"] : (def is Map ? !!def["visible_in_bar"] : true)
         ob := item.Has("order_bar") ? Integer(item["order_bar"]) : (def is Map ? Integer(def["order_bar"]) : 999999)
         out.Push(Map("sceneId", sid, "visible_in_bar", vb, "order_bar", ob))
@@ -1968,7 +1982,7 @@ _VK_SceneCtxActMap(sceneKey) {
     }
     if (sk = "floating_bar") {
         m := Map()
-        for c in ["ftm_reset_scale", "ftm_search_center", "ftm_switch_hole", "ftm_clipboard", "ftm_minimize_to_edge", "ftm_exit_app", "ftm_hide_toolbar", "ftm_open_config", "ftm_toggle_toolbar", "ftm_reload_script", "ftb_scratchpad", "ftb_screenshot", "ftb_cursor_menu", "ftb_cloud_player", "hub_capsule", "pqp_capture", "qa_clipboard", "sc_activate_search", "sys_show_vk"]
+        for c in ["ftm_reset_scale", "ftm_search_center", "ftm_switch_hole", "ftm_clipboard", "ftm_minimize_to_edge", "ftm_exit_app", "ftm_hide_toolbar", "ftm_open_config", "ftm_toggle_toolbar", "ftm_reload_script", "ftb_ai_workbench", "ftb_cli_workbench", "ftb_scratchpad", "ftb_screenshot", "ftb_cursor_menu", "ftb_cloud_player", "hub_capsule", "pqp_capture", "qa_clipboard", "sc_activate_search", "sys_show_vk"]
             m[c] := c
         return m
     }

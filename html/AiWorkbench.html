@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI 工作台</title>
+<link rel="stylesheet" href="https://app.local/assets/css/sc-workbench-shell.css">
+<link rel="stylesheet" href="https://app.local/assets/css/sc-web-embed.css">
+<style>
+@font-face {
+  font-family: "AppUi";
+  src: local("Segoe UI");
+}
+@font-face {
+  font-family: "AppUi";
+  src: local("DengXian"), local("Microsoft YaHei UI"), local("Microsoft YaHei");
+}
+:root {
+  --bg: #0d1016;
+  --bg-surface: #121a26;
+  --border-subtle: rgba(255,255,255,.08);
+  --text: #e7ebef;
+  --muted: #93a0ad;
+  --accent: #ff8d2a;
+  --font-ui: "AppUi", "Segoe UI", "DengXian", "Microsoft YaHei UI", system-ui, sans-serif;
+}
+html[data-theme="light"] {
+  --bg: #f4f6f8;
+  --text: #1f2a34;
+  --muted: #5f6d7c;
+  --border-subtle: rgba(20,32,48,.1);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  width: 100%; height: 100%;
+  background: radial-gradient(circle at top right, rgba(58,107,168,.18), transparent 34%), linear-gradient(180deg, #0c1119 0%, #132238 100%);
+  color: var(--text);
+  font-family: var(--font-ui);
+  overflow: hidden;
+}
+html[data-theme="light"], html[data-theme="light"] body {
+  background: linear-gradient(180deg, #f4f6f8 0%, #eef2f7 100%);
+}
+#layout.sc-web-embed-active {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+.web-embed-workspace.hidden { display: none !important; }
+</style>
+</head>
+<body class="sc-web-embed-layout wb-ai-layout" data-theme="dark">
+<div id="layout" class="sc-web-embed-active wb-app">
+  <aside class="wb-sidebar" aria-label="AI 目录">
+    <details class="wb-sidebar-panel" open>
+      <summary class="wb-sidebar-panel-sum">
+        <span class="wb-sidebar-panel-title"><span aria-hidden="true">🌐</span> 联网搜索</span>
+        <span class="wb-sidebar-panel-chev" aria-hidden="true">▼</span>
+      </summary>
+      <div class="wb-sidebar-panel-body sc-web-nav-root">
+        <div class="sc-web-nav-subhead">
+          <span class="sc-web-nav-explore">联网搜索 Explore</span>
+          <span class="sc-web-nav-badge">当前页面完整信息</span>
+        </div>
+        <details class="sc-web-nav-ai-folder" id="sc-web-nav-ai-folder" open>
+          <summary class="sc-web-nav-ai-folder-sum">
+            <span class="sc-web-nav-folder-icon" aria-hidden="true">📁</span>
+            <span>AI 页面</span>
+            <span id="sc-web-ai-count" class="sc-web-ai-count">0/8</span>
+          </summary>
+          <div class="sc-web-nav-tabs-scroll" id="sc-web-nav-tabs-scroll">
+            <div class="sc-web-nav-tabs-inner web-embed-tabbar-inner">
+              <div id="web-embed-tab-indicator" class="web-embed-tab-indicator sc-web-nav-tab-indicator" aria-hidden="true"></div>
+              <div id="webllm-site-chips" class="sc-web-nav-tabs web-embed-tabs" role="tablist" aria-label="AI 站点标签"></div>
+            </div>
+          </div>
+        </details>
+        <button type="button" class="sc-web-nav-more-btn" id="sc-web-nav-more-btn">
+          <span class="sc-web-nav-more-icon" aria-hidden="true">+</span>
+          <span class="sc-web-nav-more-text">更多 AI…</span>
+          <span class="sc-web-nav-more-hint">可展开更多模型</span>
+        </button>
+        <details class="sc-web-nav-add-folder" id="sc-web-nav-add-folder">
+          <summary class="sc-web-nav-add-folder-sum">+ 添加 AI</summary>
+          <div id="sc-web-nav-ai-list" class="sc-web-nav-ai-list" role="list"></div>
+        </details>
+      </div>
+    </details>
+  </aside>
+
+  <div class="wb-main">
+    <header class="wb-topbar">
+      <div class="wb-topbar-title" id="wb-focus-title">多站同问</div>
+      <span class="wb-topbar-status" id="webllm-status-top" aria-live="polite"></span>
+      <button type="button" class="wb-close" id="ai-wb-close" title="关闭" aria-label="关闭">×</button>
+    </header>
+    <div class="wb-compose">
+      <div id="search-box-anchor" class="search-box-anchor">
+        <div class="wb-compose-inner" id="searchBoxInner">
+          <span class="wb-compose-icon" id="search-icon-inline">&#127760;</span>
+          <textarea id="search" rows="1" placeholder="输入问题，向所有已选 AI 提问…" autocomplete="off" spellcheck="false"></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="wb-content">
+      <div id="web-embed-workspace" class="web-embed-workspace" aria-label="内嵌浏览器">
+        <div id="web-embed-toolbar" class="web-embed-chrome" aria-label="内嵌浏览器控制">
+          <div class="web-omnibar-row">
+            <div class="web-omnibar-glass">
+              <div id="web-embed-omnibar-chips" class="web-embed-omnibar-chips" hidden aria-label="已选 AI"></div>
+              <div id="web-embed-omnibar-badge" class="web-embed-omnibar-badge" hidden aria-hidden="true"></div>
+              <div id="web-embed-search-slot" class="web-embed-search-slot" aria-label="地址栏"></div>
+            </div>
+            <div class="web-omnibar-actions web-omnibar-actions-glass" aria-label="浏览器操作">
+              <button type="button" class="web-chrome-btn" id="webllm-btn-back" title="后退">&#8592;</button>
+              <button type="button" class="web-chrome-btn" id="webllm-btn-forward" title="前进">&#8594;</button>
+              <button type="button" class="web-chrome-btn" id="webllm-btn-reload" title="刷新">&#8635;</button>
+              <button type="button" class="web-chrome-btn" id="webllm-btn-reload-all" title="刷新全部">&#10227;</button>
+              <button type="button" class="web-chrome-btn" id="webllm-btn-home" title="首页">&#8962;</button>
+              <button type="button" class="web-chrome-btn" id="webllm-btn-copyurl" title="复制链接">&#128279;</button>
+              <button type="button" class="web-chrome-btn" id="webllm-btn-debug" title="调试">&#128027;</button>
+            </div>
+          </div>
+          <span id="webllm-status" class="web-omnibar-status" aria-live="polite"></span>
+        </div>
+        <div id="web-embed-scroll-viewport" class="web-embed-scroll-viewport" aria-label="内嵌浏览器横向滚动">
+          <div id="web-embed-scroll-track" class="web-embed-scroll-track"></div>
+        </div>
+        <div id="web-embed-hscroll-row" class="web-embed-hscroll-row hidden" aria-label="横向滚动条">
+          <button type="button" id="web-embed-hscroll-prev" class="web-embed-hscroll-btn">&#9664;</button>
+          <input type="range" id="web-embed-hscroll-slider" class="web-embed-hscroll-slider" min="0" max="0" value="0" step="1" />
+          <button type="button" id="web-embed-hscroll-next" class="web-embed-hscroll-btn">&#9654;</button>
+        </div>
+        <div id="web-embed-debug-panel" class="web-embed-debug-panel hidden" aria-label="联网内嵌调试">
+          <div class="web-embed-debug-head">
+            <h4>联网内嵌 · 调试</h4>
+            <div class="web-embed-debug-actions">
+              <button type="button" class="web-embed-debug-btn" id="web-embed-debug-refresh">刷新</button>
+              <button type="button" class="web-embed-debug-btn" id="web-embed-debug-rebootstrap">重试 Bootstrap</button>
+              <button type="button" class="web-embed-debug-btn" id="web-embed-debug-copy">复制诊断</button>
+              <button type="button" class="web-embed-debug-btn" id="web-embed-debug-open-log">打开日志目录</button>
+              <button type="button" class="web-embed-debug-btn" id="web-embed-debug-close">关闭</button>
+            </div>
+          </div>
+          <div class="web-embed-debug-body">
+            <div class="web-embed-debug-col">
+              <div id="web-embed-debug-issues" class="web-embed-debug-issues"></div>
+              <dl id="web-embed-debug-kv" class="web-embed-debug-kv"></dl>
+              <div id="web-embed-debug-sites" class="web-embed-debug-sites"></div>
+            </div>
+            <div class="web-embed-debug-col">
+              <div class="web-embed-debug-log-tabs" id="web-embed-debug-log-tabs">
+                <button type="button" class="web-embed-debug-log-tab is-active" data-log-tab="js">页面事件</button>
+                <button type="button" class="web-embed-debug-log-tab" data-log-tab="webLlm">webLlm</button>
+                <button type="button" class="web-embed-debug-log-tab" data-log-tab="scwv">scwv</button>
+                <button type="button" class="web-embed-debug-log-tab" data-log-tab="wv2">wv2</button>
+              </div>
+              <pre id="web-embed-debug-log" class="web-embed-debug-log"></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+window.BasePanel = {
+  PROTO_VERSION: 1,
+  postToAhk(obj) {
+    if (!window.chrome || !window.chrome.webview) return;
+    const src = (obj && typeof obj === "object" && !Array.isArray(obj)) ? obj : {} ;
+    const p = Object.assign({ v: 1, timestamp: Date.now() }, src);
+    if (p.action === undefined && p.type !== undefined) p.action = p.type;
+    window.chrome.webview.postMessage(p);
+  }
+};
+const postToAhk = (obj) => BasePanel.postToAhk(obj);
+function getUIMode() { return "web"; }
+function isWebEmbedCategory() { return true; }
+function setUIMode(mode) {
+  state.uiMode = "web";
+  state.currentCategoryKey = "ai";
+}
+function selectCategoryLocal(categoryKey, postHost) {
+  state.currentCategoryKey = String(categoryKey || "ai").trim() || "ai";
+  if (postHost !== false) postToAhk({ type: "setCategory", category: state.currentCategoryKey });
+}
+function renderCategories() {}
+function renderEngines() {}
+function escapeHtml(text) {
+  return String(text || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+function escapeAttr(text) { return escapeHtml(text); }
+
+const state = {
+  themeMode: "dark",
+  keyword: "",
+  uiMode: "web",
+  currentCategoryKey: "ai",
+  engines: [],
+  selectedEngines: [],
+  webEmbedSiteId: "",
+  webEmbedSiteChrome: {},
+  webEmbedBroadcastSites: [],
+  webBookmarkShowLabels: null
+};
+
+function applyTheme(mode) {
+  const tm = String(mode || "").toLowerCase() === "light" ? "light" : "dark";
+  state.themeMode = tm;
+  document.documentElement.setAttribute("data-theme", tm);
+  document.body.setAttribute("data-theme", tm);
+}
+
+function syncAiWbFocusTitle() {
+  const el = document.getElementById("wb-focus-title");
+  if (!el) return;
+  const sid = String(state.webEmbedSiteId || "").trim();
+  if (!sid) {
+    el.textContent = "多站同问";
+    return;
+  }
+  const site = (typeof SC_WEB_EMBED_SITES !== "undefined" ? SC_WEB_EMBED_SITES : []).find((s) => s.id === sid);
+  el.textContent = site ? site.label : sid;
+}
+
+function mirrorWebLlmStatus() {
+  const src = document.getElementById("webllm-status");
+  const top = document.getElementById("webllm-status-top");
+  if (src && top) top.textContent = src.textContent || "";
+}
+
+let _aiWbUiPaintReadyAt = 0;
+function nudgeAiWebEmbedLoad(force) {
+  if (typeof scheduleWebEmbedContentRect === "function") scheduleWebEmbedContentRect(!!force);
+  else if (typeof postWebEmbedContentRect === "function") postWebEmbedContentRect(!!force);
+}
+function handleAiHostPaintNudge() {
+  const now = Date.now();
+  if (now - _aiWbUiPaintReadyAt < 280) return;
+  _aiWbUiPaintReadyAt = now;
+  requestAnimationFrame(function () {
+    requestAnimationFrame(function () {
+      try { void document.body.offsetHeight; } catch (_) {}
+      nudgeAiWebEmbedLoad(true);
+    });
+  });
+}
+function handleAiHostLayout() {
+  requestAnimationFrame(function () {
+    try { window.dispatchEvent(new Event("resize")); } catch (_) {}
+    nudgeAiWebEmbedLoad(true);
+  });
+}
+
+function applyInit(payload) {
+  if (!payload || typeof payload !== "object") return;
+  if (payload.themeMode) applyTheme(payload.themeMode);
+  if (Array.isArray(payload.engines)) state.engines = payload.engines.slice();
+  if (Array.isArray(payload.selectedEngines)) {
+    state.selectedEngines = payload.selectedEngines.filter(Boolean).slice();
+    state.webEmbedBroadcastSites = state.selectedEngines.slice();
+  }
+  if (payload.keyword != null) {
+    state.keyword = String(payload.keyword || "");
+    const input = document.getElementById("search");
+    if (input && state.keyword) input.value = state.keyword;
+  }
+  state.uiMode = "web";
+  state.currentCategoryKey = "ai";
+  if (typeof validateWebEmbedCatalog === "function") validateWebEmbedCatalog();
+  if (typeof initWebLlmToolbar === "function") initWebLlmToolbar();
+  if (typeof renderWebEmbedTabBar === "function") renderWebEmbedTabBar();
+  if (typeof renderWebModeNavBody === "function") renderWebModeNavBody();
+  if (typeof syncWebModeNavAiRows === "function") syncWebModeNavAiRows();
+  if (typeof syncWebEmbedLayout === "function") syncWebEmbedLayout();
+  syncAiWbFocusTitle();
+  mirrorWebLlmStatus();
+  if (typeof scheduleWebEmbedContentRect === "function") scheduleWebEmbedContentRect(true);
+  else if (typeof postWebEmbedContentRect === "function") postWebEmbedContentRect(true);
+}
+
+function runAiSearch() {
+  const input = document.getElementById("search");
+  const kw = input ? String(input.value || "").trim() : String(state.keyword || "").trim();
+  state.keyword = kw;
+  postToAhk({ type: "search", keyword: kw });
+}
+
+document.getElementById("ai-wb-close").addEventListener("click", () => postToAhk({ type: "close" }));
+const moreAiBtn = document.getElementById("sc-web-nav-more-btn");
+if (moreAiBtn) {
+  moreAiBtn.addEventListener("click", () => {
+    const addFolder = document.getElementById("sc-web-nav-add-folder");
+    if (addFolder) {
+      addFolder.open = true;
+      addFolder.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  });
+}
+const searchEl = document.getElementById("search");
+if (searchEl) {
+  searchEl.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      runAiSearch();
+    }
+  });
+}
+if (window.chrome && window.chrome.webview) {
+  window.chrome.webview.addEventListener("message", (ev) => {
+    let payload = ev.data;
+    if (typeof payload === "string") {
+      try { payload = JSON.parse(payload); } catch (_) { return; }
+    }
+    if (!payload || typeof payload !== "object") return;
+    if (payload.type === "hostPaintNudge") {
+      handleAiHostPaintNudge();
+      return;
+    }
+    if (payload.type === "hostLayout") {
+      handleAiHostLayout();
+      return;
+    }
+    if (payload.type === "init" || payload.type === "state") applyInit(payload);
+    if (payload.type === "webLlmChromeState" && typeof applyWebLlmChromeState === "function") {
+      applyWebLlmChromeState(payload);
+      syncAiWbFocusTitle();
+      mirrorWebLlmStatus();
+    }
+    if (payload.type === "webLlmColumnLayoutState" && typeof applyWebLlmColumnLayoutState === "function") {
+      applyWebLlmColumnLayoutState(payload);
+      if (typeof syncWebEmbedScrollNav === "function") syncWebEmbedScrollNav();
+    }
+    if (payload.type === "webEmbedDebugResult" && typeof handleWebEmbedDebugResult === "function")
+      handleWebEmbedDebugResult(payload);
+  });
+}
+</script>
+<script src="https://app.local/assets/js/sc-web-embed.js"></script>
+<script>
+applyTheme(state.themeMode);
+if (typeof syncWebEmbedLayout === "function") syncWebEmbedLayout();
+if (typeof syncWebEmbedSearchDock === "function") syncWebEmbedSearchDock(true);
+if (typeof renderWebEmbedTabBar === "function") renderWebEmbedTabBar();
+if (typeof syncWebModeNavAiRows === "function") syncWebModeNavAiRows();
+postToAhk({ type: "ready" });
+requestAnimationFrame(function () {
+  requestAnimationFrame(function () { nudgeAiWebEmbedLoad(true); });
+});
+setTimeout(function () { nudgeAiWebEmbedLoad(true); }, 450);
+window.addEventListener("resize", () => {
+  if (typeof scheduleWebEmbedContentRect === "function") scheduleWebEmbedContentRect(false);
+});
+setInterval(mirrorWebLlmStatus, 400);
+</script>
+</body>
+</html>

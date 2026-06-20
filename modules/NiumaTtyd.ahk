@@ -1163,9 +1163,11 @@ NiumaTtyd_OpenExternal(url := "") {
 
 ; WebMessage 里同步长逻辑会卡 UI：延期到独立定时器
 NiumaTtyd_DeferredOpenJob(reqId := "", engine := "codex_cli", wv2 := 0) {
-    global g_FTB_WV2, g_SCWV_WV2, ConfigWV2, g_NiumaTtydOpenRetryOnce
+    global g_FTB_WV2, g_SCWV_WV2, g_CliWb_WV2, ConfigWV2, g_NiumaTtydOpenRetryOnce
     if !wv2
         wv2 := ConfigWV2
+    if !wv2
+        wv2 := g_CliWb_WV2
     if !wv2
         wv2 := g_FTB_WV2
     if !wv2
@@ -1205,9 +1207,11 @@ NiumaTtyd_DeferredOpenJob(reqId := "", engine := "codex_cli", wv2 := 0) {
 }
 
 NiumaTtyd_DeferredRestartJob(reqId := "", engine := "codex_cli", wv2 := 0) {
-    global g_FTB_WV2, g_SCWV_WV2, ConfigWV2
+    global g_FTB_WV2, g_SCWV_WV2, g_CliWb_WV2, ConfigWV2
     if !wv2
         wv2 := ConfigWV2
+    if !wv2
+        wv2 := g_CliWb_WV2
     if !wv2
         wv2 := g_FTB_WV2
     if !wv2
@@ -1234,9 +1238,11 @@ NiumaTtyd_DeferredRestartJob(reqId := "", engine := "codex_cli", wv2 := 0) {
 }
 
 NiumaTtyd_DeferredExternalOpenJob(reqId := "", expectedBaseUrl := "", engine := "codex_cli", wv2 := 0) {
-    global g_FTB_WV2, g_SCWV_WV2, ConfigWV2
+    global g_FTB_WV2, g_SCWV_WV2, g_CliWb_WV2, ConfigWV2
     if !wv2
         wv2 := ConfigWV2
+    if !wv2
+        wv2 := g_CliWb_WV2
     if !wv2
         wv2 := g_FTB_WV2
     if !wv2

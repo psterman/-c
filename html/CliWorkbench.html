@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CLI 工作台</title>
+<link rel="stylesheet" href="https://app.local/assets/css/sc-workbench-shell.css">
+<link rel="stylesheet" href="https://app.local/assets/css/sc-web-embed.css">
+<link rel="stylesheet" href="https://app.local/assets/css/sc-cli.css">
+<style>
+@font-face { font-family: "AppUi"; src: local("Segoe UI"); }
+@font-face { font-family: "AppUi"; src: local("DengXian"), local("Microsoft YaHei UI"), local("Microsoft YaHei"); }
+:root {
+  --bg: #0d1016;
+  --bg-surface: #121a26;
+  --border-subtle: rgba(255,255,255,.08);
+  --border: #2a3f5a;
+  --text: #e7ebef;
+  --muted: #93a0ad;
+  --accent: #ff8d2a;
+  --shadow: 0 18px 42px rgba(4, 10, 20, 0.4);
+  --font-ui: "AppUi", "Segoe UI", "DengXian", "Microsoft YaHei UI", system-ui, sans-serif;
+}
+html[data-theme="light"] {
+  --bg: #f4f6f8;
+  --text: #1f2a34;
+  --muted: #5f6d7c;
+  --border-subtle: rgba(20,32,48,.1);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  width: 100%; height: 100%;
+  background: radial-gradient(circle at top right, rgba(58,107,168,.18), transparent 34%), linear-gradient(180deg, #0c1119 0%, #132238 100%);
+  color: var(--text);
+  font-family: var(--font-ui);
+  overflow: hidden;
+}
+html[data-theme="light"], html[data-theme="light"] body {
+  background: linear-gradient(180deg, #f4f6f8 0%, #eef2f7 100%);
+}
+#layout.sc-cli-active {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+.cli-workspace.hidden { display: none !important; }
+</style>
+</head>
+<body class="sc-cli-layout wb-cli-layout" data-theme="dark">
+<div id="layout" class="sc-cli-active wb-app">
+  <aside class="wb-sidebar" aria-label="CLI 引擎目录">
+    <details class="wb-sidebar-panel" open>
+      <summary class="wb-sidebar-panel-sum">
+        <span class="wb-sidebar-panel-title"><span aria-hidden="true">&gt;_</span> 终端 CLI</span>
+        <span class="wb-sidebar-panel-chev" aria-hidden="true">▼</span>
+      </summary>
+      <div class="wb-sidebar-panel-body sc-web-nav-root">
+        <div class="sc-web-nav-subhead">
+          <span class="sc-web-nav-explore">CLI Explore</span>
+          <span class="sc-web-nav-badge">ttyd 多终端</span>
+        </div>
+        <details class="sc-web-nav-ai-folder" id="sc-cli-nav-folder" open>
+          <summary class="sc-web-nav-ai-folder-sum">
+            <span class="sc-web-nav-folder-icon" aria-hidden="true">📁</span>
+            <span>终端引擎</span>
+            <span id="cli-engine-count" class="sc-web-ai-count">10</span>
+          </summary>
+          <div class="sc-web-nav-tabs-scroll cli-engine-sidebar-scroll">
+            <div id="cli-engine-sidebar" class="sc-web-nav-tabs cli-engine-sidebar" role="tablist" aria-label="CLI 引擎标签"></div>
+          </div>
+        </details>
+      </div>
+    </details>
+    <div id="cli-engine-tabs" class="cli-engine-tabs" hidden aria-hidden="true"></div>
+  </aside>
+
+  <div class="wb-main">
+    <header class="wb-topbar">
+      <div class="wb-topbar-title">CLI 终端</div>
+      <span class="wb-topbar-status" id="wb-topbar-status" aria-live="polite"></span>
+      <button type="button" class="wb-close" id="cli-wb-close" title="关闭" aria-label="关闭">×</button>
+    </header>
+    <div class="wb-compose">
+      <div class="wb-compose-inner">
+        <span class="wb-compose-icon">&gt;</span>
+        <textarea id="search" rows="1" placeholder="输入命令或问题，Enter 发送到当前终端…" autocomplete="off" spellcheck="false"></textarea>
+      </div>
+    </div>
+    <div id="status" class="wb-status-line" aria-live="polite"></div>
+    <div class="wb-content">
+      <div id="cli-workspace" class="cli-workspace" aria-label="CLI 终端">
+        <section id="cliPane" class="cli-pane">
+          <div class="cli-shell">
+            <div class="cli-bar">
+              <div class="cli-title" id="cliTitle">CLI 终端</div>
+              <div class="cli-btns" role="toolbar" aria-label="终端工具栏">
+                <button type="button" class="cli-btn" id="cliWorkDirBtn" title="在资源管理器中打开工作目录">工作目录</button>
+                <button type="button" class="cli-btn" id="cliPasteBtn" title="将剪贴板内容粘贴到终端">粘贴</button>
+                <button type="button" class="cli-btn" id="cliInterruptBtn" title="向终端发送 Ctrl+C 中断">中断</button>
+                <button type="button" class="cli-btn" id="cliQuickToggleBtn" title="显示/隐藏快捷命令">快捷命令</button>
+                <button type="button" class="cli-btn" id="cliPopBtn" title="在系统浏览器中打开 ttyd">外部打开</button>
+              </div>
+            </div>
+            <div id="cliQuickCmds" class="cli-quick-cmds" aria-label="快捷命令"></div>
+            <div id="cli-frame-stack" class="cli-frame-stack" aria-label="CLI ttyd 终端">
+              <div id="cliLoading" class="cli-loading hidden">正在连接 ttyd…</div>
+              <iframe id="cliFrame" class="cli-frame" src="about:blank" title="CLI ttyd 终端"></iframe>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+window.BasePanel = {
+  PROTO_VERSION: 1,
+  postToAhk(obj) {
+    if (!window.chrome || !window.chrome.webview) return;
+    const src = (obj && typeof obj === "object" && !Array.isArray(obj)) ? obj : {};
+    const p = Object.assign({ v: 1, timestamp: Date.now() }, src);
+    if (p.action === undefined && p.type !== undefined) p.action = p.type;
+    window.chrome.webview.postMessage(p);
+  }
+};
+const postToAhk = (obj) => BasePanel.postToAhk(obj);
+function getUIMode() { return "cli"; }
+function escapeHtml(text) {
+  return String(text || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+function escapeAttr(text) { return escapeHtml(text); }
+
+const state = {
+  themeMode: "dark",
+  keyword: "",
+  uiMode: "cli",
+  currentCategoryKey: "cli",
+  engines: [],
+  activeCliEngine: "codex_cli",
+  selectedEngines: [],
+  cliReadyEngines: {},
+  hostMinimized: false,
+  hostForeground: true
+};
+
+function applyTheme(mode) {
+  const tm = String(mode || "").toLowerCase() === "light" ? "light" : "dark";
+  state.themeMode = tm;
+  document.documentElement.setAttribute("data-theme", tm);
+  document.body.setAttribute("data-theme", tm);
+}
+
+function applyInit(payload) {
+  if (!payload || typeof payload !== "object") return;
+  if (payload.themeMode) applyTheme(payload.themeMode);
+  if (Array.isArray(payload.engines)) state.engines = payload.engines.slice();
+  if (payload.activeCliEngine) state.activeCliEngine = String(payload.activeCliEngine);
+  if (payload.keyword != null) {
+    state.keyword = String(payload.keyword || "");
+    const input = document.getElementById("search");
+    if (input && state.keyword) input.value = state.keyword;
+  }
+  state.uiMode = "cli";
+  state.currentCategoryKey = "cli";
+  state.hostMinimized = false;
+  state.hostForeground = true;
+  if (typeof ensureCliControlsInited === "function") ensureCliControlsInited();
+  if (typeof renderCliEngineTabs === "function") renderCliEngineTabs();
+  if (typeof renderCliQuickCmds === "function") renderCliQuickCmds();
+  if (typeof scheduleSyncCliWorkspace === "function") scheduleSyncCliWorkspace(true);
+}
+
+let _cliWbUiPaintReadyAt = 0;
+function nudgeCliWorkspaceLoad() {
+  if (typeof scheduleSyncCliWorkspace === "function") scheduleSyncCliWorkspace(true);
+}
+function handleCliHostPaintNudge() {
+  const now = Date.now();
+  if (now - _cliWbUiPaintReadyAt < 280) return;
+  _cliWbUiPaintReadyAt = now;
+  requestAnimationFrame(function () {
+    requestAnimationFrame(function () {
+      try { void document.body.offsetHeight; } catch (_) {}
+      nudgeCliWorkspaceLoad();
+    });
+  });
+}
+function handleCliHostLayout() {
+  requestAnimationFrame(function () {
+    try { window.dispatchEvent(new Event("resize")); } catch (_) {}
+    nudgeCliWorkspaceLoad();
+  });
+}
+
+function runVkComposeAction(action) {
+  const act = String(action || "").toLowerCase();
+  if (act === "send" && typeof sendComposeToCli === "function") {
+    sendComposeToCli();
+    return;
+  }
+}
+
+document.getElementById("cli-wb-close").addEventListener("click", () => postToAhk({ type: "close" }));
+const searchEl = document.getElementById("search");
+if (searchEl) {
+  searchEl.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      if (typeof sendComposeToCli === "function") sendComposeToCli();
+    }
+  });
+}
+if (window.chrome && window.chrome.webview) {
+  window.chrome.webview.addEventListener("message", (ev) => {
+    let payload = ev.data;
+    if (typeof payload === "string") {
+      try { payload = JSON.parse(payload); } catch (_) { return; }
+    }
+    if (!payload || typeof payload !== "object") return;
+    if (payload.type === "hostPaintNudge") {
+      handleCliHostPaintNudge();
+      return;
+    }
+    if (payload.type === "hostLayout") {
+      handleCliHostLayout();
+      return;
+    }
+    if (payload.type === "init" || payload.type === "state") applyInit(payload);
+    if (typeof handleTtydHostMessage === "function" && handleTtydHostMessage(payload)) return;
+    if (payload.type === "focusCliFrame") {
+      const eng = typeof normalizeCliEngineId === "function"
+        ? normalizeCliEngineId(payload.engine || state.activeCliEngine)
+        : String(payload.engine || state.activeCliEngine || "codex_cli");
+      state.activeCliEngine = eng;
+      if (typeof setActiveCliFrame === "function") setActiveCliFrame(eng);
+      if (typeof renderCliEngineTabs === "function") renderCliEngineTabs();
+      if (typeof setCliTerminalFocusLock === "function") setCliTerminalFocusLock(true);
+      if (typeof focusCliTerminalFrame === "function") focusCliTerminalFrame();
+      return;
+    }
+    if (payload.type === "vk_compose") runVkComposeAction(payload.action);
+  });
+}
+window.addEventListener("resize", () => {
+  if (typeof syncCliSidebarIndicator === "function") syncCliSidebarIndicator();
+});
+</script>
+<script src="https://app.local/assets/js/sc-cli.js"></script>
+<script>
+applyTheme(state.themeMode);
+if (typeof ensureCliControlsInited === "function") ensureCliControlsInited();
+if (typeof renderCliEngineTabs === "function") renderCliEngineTabs();
+if (typeof scheduleSyncCliWorkspace === "function") scheduleSyncCliWorkspace(true);
+postToAhk({ type: "ready" });
+requestAnimationFrame(function () {
+  requestAnimationFrame(function () { nudgeCliWorkspaceLoad(); });
+});
+setTimeout(function () { nudgeCliWorkspaceLoad(); }, 450);
+</script>
+</body>
+</html>

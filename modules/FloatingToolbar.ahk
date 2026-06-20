@@ -281,6 +281,8 @@ global FloatingToolbarLastClosedX := 0
 global FloatingToolbarLastClosedY := 0
 global g_FTB_BlockedCmdIds := Map("ch_t", true, "pqp_capture", true, "ss_menu", true)
 global g_FTB_AllowedCmdIds := Map(
+    "ftb_ai_workbench", true,
+    "ftb_cli_workbench", true,
     "sc_activate_search", true,
     "qa_clipboard", true,
     "ch_b", true,
@@ -897,6 +899,8 @@ FloatingToolbar_PushLayoutDeferred(*) {
 
 FloatingToolbar_GetFallbackCmdIds() {
     return [
+        "ftb_ai_workbench",
+        "ftb_cli_workbench",
         "sc_activate_search",
         "qa_clipboard",
         "ch_b",
@@ -929,7 +933,7 @@ FloatingToolbar_CmdIdToSceneId(cmdId) {
     cid := Trim(String(cmdId))
     if (cid = "")
         return ""
-    static sceneIds := ["search", "clipboard", "prompts", "scratchpad", "screenshot", "settings", "hotkeys", "cursor", "cloudplayer"]
+    static sceneIds := ["ai_workbench", "cli_workbench", "search", "clipboard", "prompts", "scratchpad", "screenshot", "settings", "hotkeys", "cursor", "cloudplayer"]
     for sid in sceneIds {
         if (FloatingToolbar_ResolveSceneCmdId(sid) = cid)
             return sid
@@ -959,7 +963,15 @@ FloatingToolbar_BuildToolbarItemPayload(cid, cmdList, sceneId := "") {
     rowPayload := Map("cmdId", cid, "name", nm, "iconClass", ic)
     if (cid = "ftb_cursor_menu")
         rowPayload["iconPath"] := FloatingToolbar_GetCursorIconPath()
-    else if (cid = "hub_capsule") {
+    else if (cid = "ftb_ai_workbench") {
+        try {
+            brainUrl := BuildAppAssetUrl("icons/app/brain.svg")
+            if (brainUrl != "")
+                rowPayload["iconPath"] := brainUrl
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e)
+        }
+    } else if (cid = "hub_capsule") {
         try {
             nu := BuildAppAssetUrl("牛马.png")
             if (nu != "")
@@ -1011,8 +1023,10 @@ FloatingToolbar_BuildItemsFromSceneToolbarLayout() {
         if !row.Has("visible_in_bar") || !row["visible_in_bar"]
             continue
         sid := Trim(String(row["sceneId"]))
-        if (sid = "" || sid = "ai")
+        if (sid = "" || sid = "ai" || sid = "cli")
             continue
+        if (sid = "ai_workbench" && !row.Has("visible_in_bar"))
+            row["visible_in_bar"] := true
         cid := Trim(String(FloatingToolbar_ResolveSceneCmdId(sid)))
         if (cid = "" && IsSet(_VK_SceneIdToToolbarCmdId))
             cid := Trim(String(_VK_SceneIdToToolbarCmdId(sid)))
@@ -7675,6 +7689,24 @@ FloatingToolbar_DeferredToolbarCmd(cmdId) {
     }
     if (c = "ch_b" || c = "qa_batch") {
         FloatingToolbarToggleButtonAction("Prompt")
+        return
+    }
+    if (c = "ftb_cli_workbench") {
+        try SurfaceIntent_Open("cli_workbench")
+        catch as e {
+            try OutputDebug("[FloatingToolbar] cli workbench open failed: " . e.Message)
+            catch {
+            }
+        }
+        return
+    }
+    if (c = "ftb_ai_workbench") {
+        try SurfaceIntent_Open("ai_workbench")
+        catch as e {
+            try OutputDebug("[FloatingToolbar] ai workbench open failed: " . e.Message)
+            catch {
+            }
+        }
         return
     }
     if (c = "ftb_scratchpad" || c = "hub_capsule") {

@@ -471,7 +471,7 @@ ScWebLlm_LazyLoadEnabled() {
 }
 
 ScWebLlm_LazyPrefetchColumns() {
-    return 1
+    return 2
 }
 
 SearchCenterWebLlm_ListSitesToLoad(parentHwnd := 0) {
@@ -799,7 +799,12 @@ ScWebLlm_FocusAdjacentEmbedSite(step) {
     return ScWebLlm_ScrollEmbedToSite(siteIds[nextIdx])
 }
 
-ScWebLlm_ApplyEmbedScrollCss(scrollX, viewportCss := 0, stripCss := 0) {
+ScWebLlm_InvalidateScrollClipCaches() {
+    global g_SCWebLlm_HostClipCache
+    g_SCWebLlm_HostClipCache := Map()
+}
+
+ScWebLlm_ApplyEmbedScrollCss(scrollX, viewportCss := 0, stripCss := 0, finalize := false) {
     global g_SCWebLlm_ScrollX, g_SCWebLlm_LastBoundsKey, g_SCWebLlm_Visible, g_SCWebLlm_ParentHwnd, g_SCWebLlm_ScrollOnlyPass
     siteIds := SearchCenterWebLlm_ListLayoutSiteIds()
     embedWCss := ScWebLlm_ResolveEmbedViewportCss(0)
@@ -810,21 +815,31 @@ ScWebLlm_ApplyEmbedScrollCss(scrollX, viewportCss := 0, stripCss := 0) {
     strip := stripCss > 0 ? stripCss : ScWebLlm_ComputeMinStripWidthCss(siteIds)
     maxScroll := Max(0, strip - embedWCss)
     nx := Max(0, Min(maxScroll, Integer(scrollX)))
-    if (nx != g_SCWebLlm_ScrollX) {
+    scrollChanged := (nx != g_SCWebLlm_ScrollX)
+    if scrollChanged {
         g_SCWebLlm_ScrollX := nx
         g_SCWebLlm_LastBoundsKey := ""
+        ScWebLlm_InvalidateScrollClipCaches()
     }
     h := ScWebLlm_ResolveEmbedHostHwnd()
     if h {
         g_SCWebLlm_ParentHwnd := h
         g_SCWebLlm_Visible := true
     }
-    g_SCWebLlm_ScrollOnlyPass := true
-    try SearchCenterWebLlm_ApplyBounds(h)
-    catch as e {
-        ScWebLlm_Catch(e)
+    if finalize {
+        g_SCWebLlm_ScrollOnlyPass := false
+        try SearchCenterWebLlm_ApplyBounds(h)
+        catch as e {
+            ScWebLlm_Catch(e)
+        }
+    } else {
+        g_SCWebLlm_ScrollOnlyPass := true
+        try SearchCenterWebLlm_ApplyBounds(h)
+        catch as e {
+            ScWebLlm_Catch(e)
+        }
+        g_SCWebLlm_ScrollOnlyPass := false
     }
-    g_SCWebLlm_ScrollOnlyPass := false
     if h {
         try SearchCenterWebLlm_EnsureMissingSites(false, h)
         catch as e {
@@ -1157,7 +1172,7 @@ ScWebLlm_PushColumnLayoutToWebDragTick(persist) {
 
 ScWebLlm_PushColumnLayoutToWeb(persist := false, dragging := false) {
     global g_SCWebLlm_ScrollX, g_SCWebLlm_ColumnWidths, g_SCWebLlm_RailDrag, g_SCWebLlm_LastColFillCss
-    if !FuncExists("SCWV_PostJson")
+    if !FuncExists("ScWebLlm_PostJsonToHost") && !FuncExists("SCWV_PostJson")
         return
     if !dragging && (g_SCWebLlm_RailDrag is Map)
         dragging := true
@@ -1171,14 +1186,20 @@ ScWebLlm_PushColumnLayoutToWeb(persist := false, dragging := false) {
             w += fillExtra
         cols.Push(Map("id", sid, "width", w))
     }
-    try SCWV_PostJson(Map(
+    payload := Map(
         "type", "webLlmColumnLayoutState",
         "scrollX", g_SCWebLlm_ScrollX,
         "columns", cols,
         "fillExtra", fillExtra,
         "persist", !!persist,
         "dragging", !!dragging
-    ))
+    )
+    try {
+        if FuncExists("ScWebLlm_PostJsonToHost")
+            ScWebLlm_PostJsonToHost(payload)
+        else if FuncExists("SCWV_PostJson")
+            SCWV_PostJson(payload)
+    }
     catch as e {
         ScWebLlm_Catch(e)
     }
@@ -2376,26 +2397,49 @@ SearchCenterWebLlm_IsEmbedChildHwnd(hwnd) {
 }
 
 ScWebLlm_Trace(action, ok := true, meta := 0) {
-    fn := "Nmer_Telemetry_Record"
-    if FuncExists(fn) {
-        try {
-            (%fn%)("web_llm", action, !!ok, meta is Map ? meta : Map())
-        } catch as e {
-            ScWebLlm_Catch(e)
-        }
+    act := String(action)
+    metaCopy := Map()
+    if (meta is Map) {
+        for k, v in meta
+            metaCopy[String(k)] := v
     }
+    try SetTimer(ScWebLlm_TraceDeferred.Bind(act, !!ok, metaCopy), -1)
+    catch {
+    }
+}
+
+ScWebLlm_TraceDeferred(action, ok, meta, *) {
+    static tracing := false
+    if tracing
+        return
+    tracing := true
     try {
-        line := "[" . FormatTime(A_Now, "yyyy-MM-dd HH:mm:ss") . "][" . action . "] ok=" . (ok ? "1" : "0")
-        if (meta is Map) {
-            for k, v in meta
-                line .= " " . k . "=" . String(v)
+        fn := "Nmer_Telemetry_Record"
+        if FuncExists(fn) {
+            try {
+                (%fn%)("web_llm", action, !!ok, meta is Map ? meta : Map())
+            } catch {
+            }
         }
-        dir := A_ScriptDir . "\Cache\debug"
-        if !DirExist(dir)
-            DirCreate(dir)
-        FileAppend(line . "`n", dir . "\sc_web_llm_runtime.log", "UTF-8")
-    } catch as e {
-        ScWebLlm_Catch(e)
+        try {
+            line := "[" . FormatTime(A_Now, "yyyy-MM-dd HH:mm:ss") . "][" . String(action) . "] ok=" . (ok ? "1" : "0")
+            if (meta is Map) {
+                for k, v in meta
+                    line .= " " . String(k) . "=" . String(v)
+            }
+            dir := A_ScriptDir . "\Cache\debug"
+            if !DirExist(dir)
+                DirCreate(dir)
+            path := dir . "\sc_web_llm_runtime.log"
+            f := FileOpen(path, "a", "UTF-8")
+            if IsObject(f) {
+                f.Write(line . "`n")
+                f.Close()
+            }
+        } catch {
+        }
+    } finally {
+        tracing := false
     }
 }
 
@@ -2973,8 +3017,8 @@ SearchCenterWebLlm_DisposeSiteController(siteId, preserveCreateInFlight := false
         catch {
         }
     }
-    if IsObject(rec["wv2"]) && rec["tokenGotFocus"] {
-        try rec["wv2"].remove_GotFocus(rec["tokenGotFocus"])
+    if IsObject(rec["ctrl"]) && rec["tokenGotFocus"] {
+        try rec["ctrl"].remove_GotFocus(rec["tokenGotFocus"])
         catch {
         }
     }
@@ -3172,7 +3216,12 @@ SearchCenterWebLlm_PushChromeState() {
     try payload["title"] := Trim(String(g_SCWebLlm_WV2.DocumentTitle))
     catch {
     }
-    if FuncExists("SCWV_PostJson") {
+    if FuncExists("ScWebLlm_PostJsonToHost") {
+        try ScWebLlm_PostJsonToHost(payload)
+        catch as e {
+            ScWebLlm_Catch(e)
+        }
+    } else if FuncExists("SCWV_PostJson") {
         try SCWV_PostJson(payload)
         catch as e {
             ScWebLlm_Catch(e)
@@ -3246,8 +3295,8 @@ SearchCenterWebLlm_OnControllerReady(ctrl, siteId, url, expectedHost := 0) {
         ScWebLlm_Catch(e)
     }
     try {
-        if !rec["tokenGotFocus"]
-            rec["tokenGotFocus"] := rec["wv2"].add_GotFocus(SearchCenterWebLlm_MakeSiteGotFocusHandler(sid))
+        if !rec["tokenGotFocus"] && IsObject(rec["ctrl"])
+            rec["tokenGotFocus"] := rec["ctrl"].add_GotFocus(SearchCenterWebLlm_MakeSiteGotFocusHandler(sid))
     } catch as e {
         ScWebLlm_Catch(e)
     }
@@ -3266,8 +3315,7 @@ SearchCenterWebLlm_OnControllerReady(ctrl, siteId, url, expectedHost := 0) {
         ScWebLlm_Catch(e)
     }
     SearchCenterWebLlm_SyncActiveGlobals()
-    SearchCenterWebLlm_ApplyBounds()
-    ScWebLlm_ScheduleBoundsRetries()
+    SetTimer(SearchCenterWebLlm_OnControllerReadyLayoutTick.Bind(sid), -1)
     if IsObject(rec["wv2"]) && FuncExists("WebView2_NotifyShown") {
         try WebView2_NotifyShown(rec["wv2"])
         catch {
@@ -3276,6 +3324,18 @@ SearchCenterWebLlm_OnControllerReady(ctrl, siteId, url, expectedHost := 0) {
     if (sid = ScWebLlm_NormalizeSiteId(g_SCWebLlm_ActiveSiteId))
         SearchCenterWebLlm_PushChromeState()
     ScWebLlm_Trace("site_open", true, Map("site", sid, "multi", !!g_SCWebLlm_MultiMobile))
+}
+
+SearchCenterWebLlm_OnControllerReadyLayoutTick(siteId, *) {
+    sid := ScWebLlm_NormalizeSiteId(siteId)
+    rec := SearchCenterWebLlm_SiteRecord(sid)
+    if !(rec is Map) || !rec.Get("ready", false)
+        return
+    try SearchCenterWebLlm_ApplyBounds()
+    catch as e {
+        ScWebLlm_Catch(e)
+    }
+    ScWebLlm_ScheduleBoundsRetries()
 }
 
 SearchCenterWebLlm_QueueOpenSite(siteId, forceNavigate := false, navigateUrl := "") {
@@ -3796,7 +3856,7 @@ SearchCenterWebLlm_ApplyContentRectNow(rect) {
     if !(rect is Map)
         return
     if !ScWebLlm_ShouldShowWebEmbed() {
-        SearchCenterWebLlm_Hide()
+        SearchCenterWebLlm_TeardownEmbed()
         return
     }
     if FuncExists("_SCWV_ArmWebEmbedMinimizeGuard") {
@@ -3900,7 +3960,7 @@ SearchCenterWebLlm_ApplyBounds(parentHwnd := 0) {
     global g_SCWebLlm_LastBoundsKey, g_SCWebLlm_Visible, g_SCWebLlm_ActiveSiteId, g_SCWebLlm_MultiMobile
     global g_SCWebLlm_ContentRectReady, g_SCWebLlm_SiteBoundsSig, g_SCWebLlm_LastColFillCss, g_SCWebLlm_ScrollOnlyPass
     if !ScWebLlm_ShouldShowWebEmbed() {
-        SearchCenterWebLlm_Hide()
+        SearchCenterWebLlm_TeardownEmbed()
         return false
     }
     if !g_SCWebLlm_ContentRectReady
@@ -3988,8 +4048,7 @@ SearchCenterWebLlm_ApplyBounds(parentHwnd := 0) {
         if hostHwnd {
             showCol := inView && (colW > 0 && colH > 0)
             if showCol {
-                moveFlags := g_SCWebLlm_ScrollOnlyPass ? 0x0100 : 0
-                SearchCenterWebLlm_PositionChildHost(hostHwnd, colL, colT, colW, colH, true, hwnd, moveFlags)
+                SearchCenterWebLlm_PositionChildHost(hostHwnd, colL, colT, colW, colH, true, hwnd)
                 ScWebLlm_ApplyHostViewportClip(hostHwnd, colL, colW, colH, embedLeft, embedW)
             } else {
                 ScWebLlm_ClearHostViewportClip(hostHwnd)
@@ -4022,6 +4081,14 @@ SearchCenterWebLlm_ApplyBounds(parentHwnd := 0) {
                 try WebView2_NotifyShown(rec["wv2"])
                 catch {
                 }
+            }
+        } else if IsObject(rec["ctrl"]) && hostHwnd && inView && skipWebBounds {
+            try rec["ctrl"].NotifyParentWindowPositionChanged()
+            catch as e {
+                ScWebLlm_Catch(e)
+            }
+            try rec["ctrl"].IsVisible := true
+            catch {
             }
         } else if IsObject(rec["ctrl"]) && hostHwnd && !inView {
             try rec["ctrl"].IsVisible := false
@@ -4408,6 +4475,57 @@ SearchCenterWebLlm_Hide() {
             }
         }
     }
+}
+
+SearchCenterWebLlm_TeardownEmbed(preservePrefs := true) {
+    global g_SCWebLlm_Visible, g_SCWebLlm_LastBoundsKey, g_SCWebLlm_ContentRectReady, g_SCWebLlm_SiteHosts
+    global g_SCWebLlm_BootstrapScheduled, g_SCWebLlm_BootstrapInFlight, g_SCWebLlm_BootstrapWaitCount
+    global g_SCWebLlm_WatchdogToken, g_SCWebLlm_BoundsRetryScheduled, g_SCWebLlm_ChildHostBoundsCache, g_SCWebLlm_HostClipCache
+    global g_SCWebLlm_SiteBoundsSig, g_SCWebLlm_EmbedBootstrapped, g_SCWebLlm_LastColFillCss, g_SCWebLlm_LastRaisedHostHwnd
+    global g_SCWebLlm_BroadcastSynced, g_SCWebLlm_LayoutSiteIds
+    ScWebLlm_EndEmbedFocusGuard()
+    g_SCWebLlm_Visible := false
+    SearchCenterWebLlm_ClearEmbedRequested()
+    g_SCWebLlm_ContentRectReady := false
+    g_SCWebLlm_LastBoundsKey := ""
+    g_SCWebLlm_ChildHostBoundsCache := Map()
+    g_SCWebLlm_HostClipCache := Map()
+    g_SCWebLlm_SiteBoundsSig := Map()
+    g_SCWebLlm_LastColFillCss := 0
+    g_SCWebLlm_PendingOpenRequest := 0
+    g_SCWebLlm_BootstrapScheduled := false
+    g_SCWebLlm_BootstrapInFlight := false
+    g_SCWebLlm_BootstrapWaitCount := 0
+    g_SCWebLlm_BoundsRetryScheduled := false
+    g_SCWebLlm_WatchdogToken := 0
+    g_SCWebLlm_LastRaisedHostHwnd := 0
+    g_SCWebLlm_EmbedBootstrapped := false
+    g_SCWebLlm_BroadcastSynced := false
+    g_SCWebLlm_LayoutSiteIds := []
+    SetTimer(ScWebLlm_BoundsRetryTick, 0)
+    SetTimer(ScWebLlm_EmbedBootstrapTick, 0)
+    SearchCenterWebLlm_SaveState()
+    for sid, rec in g_SCWebLlm_SiteHosts {
+        if !(rec is Map)
+            continue
+        SearchCenterWebLlm_DisposeSiteController(sid)
+        if IsObject(rec["hostGui"]) {
+            try rec["hostGui"].Destroy()
+            catch as e {
+                ScWebLlm_Catch(e)
+            }
+        }
+        rec["hostGui"] := 0
+        rec["hostHwnd"] := 0
+    }
+    global g_SCWebLlm_Ctrl, g_SCWebLlm_WV2, g_SCWebLlm_Ready, g_SCWebLlm_TokenNavCompleted
+    g_SCWebLlm_Ctrl := 0
+    g_SCWebLlm_WV2 := 0
+    g_SCWebLlm_Ready := false
+    g_SCWebLlm_TokenNavCompleted := 0
+    SearchCenterWebLlm_HideResizeRails()
+    ScWebLlm_HideEmbedBackdrop()
+    SearchCenterWebLlm_RestoreMainWebView()
 }
 
 SearchCenterWebLlm_Dispose() {

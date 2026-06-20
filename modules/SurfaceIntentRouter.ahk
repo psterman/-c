@@ -117,6 +117,16 @@ SurfaceIntent_ExecuteOpen(surfaceId, meta := 0) {
             SurfaceManager_InvokeOptional("CP_Show")
         case "prompt_quick_pad":
             SurfaceManager_InvokeOptional("PQP_Show")
+        case "ai_workbench":
+            if FuncExists("AiWorkbenchRouter_Open")
+                AiWorkbenchRouter_Open(m)
+            else
+                SurfaceManager_InvokeOptional("AiWb_Show", m)
+        case "cli_workbench":
+            if FuncExists("CliWorkbenchRouter_Open")
+                CliWorkbenchRouter_Open(m)
+            else
+                SurfaceManager_InvokeOptional("CliWb_Show", m)
         case "virtual_keyboard":
             SurfaceManager_InvokeOptional("VK_Show")
         case "config_webview":
@@ -153,6 +163,16 @@ SurfaceIntent_ExecuteClose(surfaceId, meta := 0) {
             SurfaceManager_InvokeOptional("CP_Hide")
         case "prompt_quick_pad":
             SurfaceManager_InvokeOptional("PQP_Hide")
+        case "ai_workbench":
+            if FuncExists("AiWorkbenchRouter_Hide")
+                AiWorkbenchRouter_Hide(m)
+            else
+                SurfaceManager_InvokeOptional("AiWb_Hide")
+        case "cli_workbench":
+            if FuncExists("CliWorkbenchRouter_Hide")
+                CliWorkbenchRouter_Hide(m)
+            else
+                SurfaceManager_InvokeOptional("CliWb_Hide")
         case "virtual_keyboard":
             SurfaceManager_InvokeOptional("VK_Hide")
         case "config_webview":

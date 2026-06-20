@@ -313,7 +313,11 @@ global g_CmdPal_AgentPullDebugDispatch := CommandPaletteSearchDebug_PullAgentDeb
 #Include modules\AIListPanel.ahk
 #Include modules\PromptQuickPadCore.ahk
 #Include modules\SearchCenterWebLlm.ahk
+#Include modules\SearchCenterWebLlmBridge.ahk
+#Include modules\SearchCenterCliBridge.ahk
 #Include modules\SearchCenterWebViewCore.ahk
+#Include modules\AiWorkbenchWebViewCore.ahk
+#Include modules\CliWorkbenchWebViewCore.ahk
 #Include modules\DomainCSurfaceRouter.ahk
 #Include modules\DomainCWailsHost.ahk
 #Include modules\SelectionSenseCore.ahk
