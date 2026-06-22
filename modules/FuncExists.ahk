@@ -5,15 +5,26 @@ FuncExists(fnName) {
     fnName := Trim(String(fnName))
     if (fnName = "")
         return false
+    static cache := Map()
+    if cache.Has(fnName)
+        return cache[fnName]
+    try {
+        if IsSet(g_Nmer_AppShuttingDown) && (g_Nmer_AppShuttingDown || g_Nmer_WailsBridgeShuttingDown)
+            return false
+    } catch {
+    }
+    exists := false
     try {
         fnRef := %fnName%
-        return IsObject(fnRef)
+        exists := IsObject(fnRef)
     } catch as _e1 {
+        try {
+            Func(fnName)
+            exists := true
+        } catch as _e2 {
+            exists := false
+        }
     }
-    try {
-        Func(fnName)
-        return true
-    } catch as _e2 {
-        return false
-    }
+    cache[fnName] := exists
+    return exists
 }

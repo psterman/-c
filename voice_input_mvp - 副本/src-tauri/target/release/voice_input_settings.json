@@ -1,12 +1,13 @@
 {
   "version": 2,
-  "recordKey": "RAlt",
+  "recordKey": "AutoTrigger",
   "intervalMs": 1200,
   "enterDelayMs": 5000,
   "cancelEnabled": true,
   "autoEnterEnabled": true,
   "debounceMs": 80,
   "keyPressDurationMs": 50,
+  "targetKey": "Ctrl+4",
   "triggerSource": null,
   "actions": null,
   "scenes": null

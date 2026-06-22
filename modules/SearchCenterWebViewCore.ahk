@@ -10016,11 +10016,6 @@ _SCWV_BoundsMapToScreen(boundsMap, &rx, &ry, &rw, &rh) {
         ct := Float(boundsMap["top"])
         cw := Float(boundsMap["width"])
         ch := Float(boundsMap["height"])
-        if (boundsMap.Has("dpr")) {
-            dpr := Float(boundsMap["dpr"])
-            if (dpr > 0.1 && dpr < 10)
-                sc := dpr
-        }
     }
     if !(_SCWV_WebViewClientScreenOrigin(&psx, &psy))
         return false

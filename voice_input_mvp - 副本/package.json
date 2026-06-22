@@ -1,0 +1,9 @@
+{
+  "name": "voice-pilot",
+  "private": true,
+  "version": "1.0.0",
+  "description": "一键超人 · Voice Pilot — Tauri edition",
+  "scripts": {
+    "tauri": "tauri"
+  }
+}

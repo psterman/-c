@@ -169,6 +169,11 @@ ScWebLlm_PostJsonToHost(payload) {
 SearchCenterWebLlmBridge_HandleMessage(msg, context := "ai_workbench") {
     if !(msg is Map)
         return false
+    if FuncExists("Nmer_IsAppShuttingDown") && Nmer_IsAppShuttingDown() {
+        typEarly := msg.Has("type") ? String(msg["type"]) : ""
+        if (typEarly != "webLlmDismiss")
+            return false
+    }
     typ := msg.Has("type") ? String(msg["type"]) : ""
     if (typ = "")
         return false

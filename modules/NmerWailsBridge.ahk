@@ -61,6 +61,11 @@ Nmer_BeginAppShutdown(*) {
     if g_Nmer_AppShuttingDown
         return
     g_Nmer_AppShuttingDown := true
+    if FuncExists("SearchCenterWebLlm_SuspendEmbedWinOps") {
+        try SearchCenterWebLlm_SuspendEmbedWinOps()
+        catch {
+        }
+    }
     if FuncExists("Nmer_WailsBridgePrepareForScriptReload") {
         try Nmer_WailsBridgePrepareForScriptReload()
         catch {
@@ -96,6 +101,11 @@ Nmer_BeginAppShutdown(*) {
     }
     if FuncExists("SearchCenterWebLlm_CancelPendingTimers") {
         try SearchCenterWebLlm_CancelPendingTimers()
+        catch {
+        }
+    }
+    if FuncExists("SearchCenterWebLlm_TeardownEmbed") {
+        try SearchCenterWebLlm_TeardownEmbed()
         catch {
         }
     }

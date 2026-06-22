@@ -531,6 +531,34 @@ class AhkInterface {
 
     /** 探测设置页宿主对象是否可用 */
     PingStudioBridge(_hint := "") => "ok"
+
+    /** 统一工作台：拖动列宽时同步重定位 AI 嵌入（避免 postMessage 滞后） */
+    UnifiedWbApplyLayoutLive(payloadJson) {
+        try {
+            if FuncExists("Nmer_IsAppShuttingDown") && Nmer_IsAppShuttingDown()
+                return "skip"
+            if !FuncExists("ScWebLlm_IsUnifiedWorkbenchHost") || !ScWebLlm_IsUnifiedWorkbenchHost()
+                return "skip"
+            if !FuncExists("SearchCenterWebLlm_ApplyUnifiedMultiColumnFromWeb")
+                return "err:no_fn"
+            raw := Trim(String(payloadJson))
+            if (raw = "")
+                return "err:empty"
+            msg := Jxon_Load(raw)
+            if !(msg is Map)
+                return "err:bad_json"
+            cols := msg.Has("aiColumns") ? msg["aiColumns"] : 0
+            if !(cols is Array) || !cols.Length
+                return "err:no_cols"
+            maxActive := msg.Has("maxActiveAiEmbeds") ? Integer(msg["maxActiveAiEmbeds"]) : 0
+            focusSid := msg.Has("focusSiteId") ? Trim(String(msg["focusSiteId"])) : ""
+            embedVp := msg.Has("embedViewport") ? msg["embedViewport"] : 0
+            SearchCenterWebLlm_ApplyUnifiedMultiColumnFromWeb(cols, maxActive, focusSid, embedVp, true)
+            return "ok"
+        } catch as e {
+            return "err:" . e.Message
+        }
+    }
 }
 
 _AhkBridge_AgentSubmitReady() {

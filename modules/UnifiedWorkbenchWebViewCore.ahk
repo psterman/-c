@@ -204,6 +204,8 @@ _UnifiedWb_OnWV2Created(ctrl) {
     try g_UnifiedWb_Ctrl.DefaultBackgroundColor := 0xFF0D1016
     try g_UnifiedWb_Ctrl.IsVisible := true
     _UnifiedWb_ApplyBounds()
+    SetTimer(UnifiedWb_RefreshRasterizationScale, -50)
+    SetTimer(UnifiedWb_RefreshRasterizationScale, -180)
     s := g_UnifiedWb_WV2.Settings
     s.AreDefaultContextMenusEnabled := false
     s.AreDevToolsEnabled := false
@@ -232,6 +234,18 @@ _UnifiedWb_OnWV2Created(ctrl) {
     }
 }
 
+UnifiedWb_RefreshRasterizationScale(*) {
+    global g_UnifiedWb_Ctrl
+    if !IsObject(g_UnifiedWb_Ctrl)
+        return
+    try {
+        sc := g_UnifiedWb_Ctrl.RasterizationScale
+        if (sc > 0.1 && sc < 10)
+            g_UnifiedWb_Ctrl.RasterizationScale := sc
+    } catch {
+    }
+}
+
 _UnifiedWb_ApplyBounds() {
     global g_UnifiedWb_Gui, g_UnifiedWb_Ctrl
     if !g_UnifiedWb_Ctrl || !g_UnifiedWb_Gui
@@ -246,6 +260,7 @@ _UnifiedWb_ApplyBounds() {
     rc.right := cw
     rc.bottom := ch
     g_UnifiedWb_Ctrl.Bounds := rc
+    SetTimer(UnifiedWb_RefreshRasterizationScale, -1)
 }
 
 UnifiedWb_EnsureAiEmbedLayering() {
@@ -342,7 +357,11 @@ UnifiedWb_FinalizeAiEmbed(parentHwnd := 0, forceNavHome := false) {
 }
 
 UnifiedWb_ScheduleAiEmbedFinalize(parentHwnd := 0, forceNavHome := false) {
-    global g_UnifiedWb_AiFinalizeGeneration
+    if FuncExists("Nmer_IsAppShuttingDown") && Nmer_IsAppShuttingDown()
+        return
+    global g_UnifiedWb_AiFinalizeGeneration, g_UnifiedWb_Visible
+    if !g_UnifiedWb_Visible
+        return
     ph := Integer(parentHwnd)
     gen := ++g_UnifiedWb_AiFinalizeGeneration
     UnifiedWb_FinalizeAiEmbed(ph, forceNavHome)
@@ -445,6 +464,8 @@ _UnifiedWb_OnGuiResize(GuiObj, MinMax, Width, Height) {
     if (MinMax = -1)
         return
     _UnifiedWb_ApplyBounds()
+    global g_SCWebLlm_LastBoundsKey
+    g_SCWebLlm_LastBoundsKey := ""
     if UnifiedWb_IsVisible() {
         UnifiedWb_EnsureAiEmbedLayering()
     }
@@ -509,6 +530,11 @@ UnifiedWb_MarkShutdown(*) {
     global g_UnifiedWb_Visible
     g_UnifiedWb_Visible := false
     _UnifiedWb_CancelBootstrapTimers()
+    if FuncExists("SearchCenterWebLlm_SuspendEmbedWinOps") {
+        try SearchCenterWebLlm_SuspendEmbedWinOps()
+        catch {
+        }
+    }
     if FuncExists("SearchCenterWebLlm_SuspendUnifiedEmbed") {
         try SearchCenterWebLlm_SuspendUnifiedEmbed()
         catch {
@@ -529,6 +555,8 @@ _UnifiedWb_ScheduleBootstrapOnce(delayMs := 220) {
 
 _UnifiedWb_NudgeBootstrap(gen, pass, *) {
     global g_UnifiedWb_Visible, g_UnifiedWb_WV2, g_UnifiedWb_NudgeGeneration, g_UnifiedWb_Gui, g_SCWebLlm_Visible, g_SCWebLlm_UnifiedMultiRectActive
+    if FuncExists("Nmer_IsAppShuttingDown") && Nmer_IsAppShuttingDown()
+        return
     if (gen != g_UnifiedWb_NudgeGeneration)
         return
     if !g_UnifiedWb_Visible || !IsObject(g_UnifiedWb_WV2)
@@ -551,9 +579,10 @@ _UnifiedWb_NudgeBootstrap(gen, pass, *) {
         try ph := g_UnifiedWb_Gui.Hwnd
         catch {
         }
-        if ph && g_SCWebLlm_UnifiedMultiRectActive && FuncExists("UnifiedWb_ScheduleAiEmbedFinalize")
-            UnifiedWb_ScheduleAiEmbedFinalize(ph, false)
-        else if ph && g_SCWebLlm_UnifiedMultiRectActive && FuncExists("SearchCenterWebLlm_EnsureMissingSites") {
+        if ph && g_SCWebLlm_UnifiedMultiRectActive && FuncExists("UnifiedWb_ScheduleAiEmbedFinalize") {
+            if !(FuncExists("Nmer_IsAppShuttingDown") && Nmer_IsAppShuttingDown())
+                UnifiedWb_ScheduleAiEmbedFinalize(ph, false)
+        } else if ph && g_SCWebLlm_UnifiedMultiRectActive && FuncExists("SearchCenterWebLlm_EnsureMissingSites") {
             try SearchCenterWebLlm_EnsureMissingSites(false, ph)
             catch {
             }
@@ -829,6 +858,8 @@ _UnifiedWb_OnWebMessage(sender, args) {
     }
     if !(msg is Map)
         return
+    if FuncExists("Nmer_IsAppShuttingDown") && Nmer_IsAppShuttingDown()
+        return
     typ := msg.Has("type") ? String(msg["type"]) : ""
     if (typ = "" && msg.Has("action"))
         typ := String(msg["action"])
@@ -842,6 +873,8 @@ _UnifiedWb_OnWebMessage(sender, args) {
         return
     }
     if (typ = "webLlmLayoutLive") {
+        if FuncExists("Nmer_IsAppShuttingDown") && Nmer_IsAppShuttingDown()
+            return
         if !msg.Has("aiColumns") || !FuncExists("SearchCenterWebLlm_ApplyUnifiedMultiColumnFromWeb")
             return
         maxActive := msg.Has("maxActiveAiEmbeds") ? Integer(msg["maxActiveAiEmbeds"]) : 0
@@ -881,6 +914,30 @@ _UnifiedWb_OnWebMessage(sender, args) {
             g_UnifiedWb_FocusedCliEngine := Trim(String(msg["engine"]))
         if msg.Has("siteId")
             g_UnifiedWb_FocusedAiSite := Trim(String(msg["siteId"]))
+        return
+    }
+    if (typ = "column_reload") {
+        if FuncExists("Nmer_IsAppShuttingDown") && Nmer_IsAppShuttingDown()
+            return
+        colType := msg.Has("columnType") ? String(msg["columnType"]) : ""
+        if (colType = "ai") {
+            sid := msg.Has("siteId") ? Trim(String(msg["siteId"])) : ""
+            if (sid != "" && FuncExists("SearchCenterWebLlm_ReloadSites")) {
+                try SearchCenterWebLlm_ReloadSites([sid])
+                catch {
+                }
+            }
+        } else if (colType = "cli") {
+            global g_UnifiedWb_WV2
+            reqId := msg.Has("reqId") ? String(msg["reqId"]) : ""
+            eng := msg.Has("engine") ? Trim(String(msg["engine"])) : "codex_cli"
+            try eng := NiumaTtyd_NormalizeEngine(eng)
+            catch {
+                eng := "codex_cli"
+            }
+            if IsObject(g_UnifiedWb_WV2) && FuncExists("NiumaTtyd_DeferredRestartJob")
+                SetTimer(NiumaTtyd_DeferredRestartJob.Bind(reqId, eng, g_UnifiedWb_WV2), -10)
+        }
         return
     }
     if (typ = "broadcast_ai") {
@@ -958,6 +1015,8 @@ _UnifiedWb_OnWebMessage(sender, args) {
 
 _UnifiedWb_HandleWebLlmBootstrap(msg) {
     global g_UnifiedWb_LastWebBootstrapSig, g_UnifiedWb_LastWebBootstrapTick, g_UnifiedWb_Gui, g_SCWebLlm_EmbedBootstrapped
+    if FuncExists("Nmer_IsAppShuttingDown") && Nmer_IsAppShuttingDown()
+        return false
     if !(msg is Map)
         return false
     if !msg.Has("aiColumns") {
@@ -982,6 +1041,11 @@ _UnifiedWb_HandleWebLlmBootstrap(msg) {
     g_UnifiedWb_LastWebBootstrapTick := nowTick
     UnifiedWb_Trace("web_bootstrap_msg", true, Map("cols", colCount, "focus", focusSid))
     embedVp := (msg.Has("embedViewport") && (msg["embedViewport"] is Map)) ? msg["embedViewport"] : 0
+    if FuncExists("UnifiedWb_RefreshRasterizationScale") {
+        try UnifiedWb_RefreshRasterizationScale()
+        catch {
+        }
+    }
     if FuncExists("SearchCenterWebLlm_ApplyUnifiedMultiColumnFromWeb") {
         try SearchCenterWebLlm_ApplyUnifiedMultiColumnFromWeb(cols, maxActive, focusSid, embedVp)
         catch as e {

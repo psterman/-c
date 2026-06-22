@@ -52,6 +52,10 @@ html[data-theme="light"], html[data-theme="light"] body {
 .uwb-sidebar {
   position: relative;
   z-index: 20;
+  flex-shrink: 0;
+  width: 276px;
+  min-width: 276px;
+  max-width: 276px;
   min-height: 0;
   border-radius: 16px;
   border: 1px solid rgba(255, 141, 42, 0.28);
@@ -98,6 +102,98 @@ html[data-theme="light"], html[data-theme="light"] body {
 .uwb-add:disabled:hover { border-color: var(--border-subtle); background: rgba(255,255,255,.04); }
 .uwb-add-main { display: block; font-size: 12px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .uwb-add-sub { display: block; margin-top: 2px; font-size: 10px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.uwb-nav-group { margin-bottom: 12px; border: 1px solid var(--border-subtle); border-radius: 12px; background: rgba(255,255,255,.03); overflow: hidden; }
+.uwb-nav-group-head {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  padding: 10px 11px;
+  cursor: pointer;
+  text-align: left;
+}
+.uwb-nav-group-head:hover { background: rgba(255,255,255,.04); }
+.uwb-nav-group-label { font-size: 12px; font-weight: 800; }
+.uwb-nav-group-meta { font-size: 10px; color: var(--muted); white-space: nowrap; }
+.uwb-nav-group-chevron { color: var(--muted); font-size: 11px; transition: transform .18s ease; }
+.uwb-nav-group.is-collapsed .uwb-nav-group-chevron { transform: rotate(-90deg); }
+.uwb-nav-group.is-collapsed .uwb-nav-list,
+.uwb-nav-group.is-collapsed .uwb-nav-foot { display: none; }
+.uwb-nav-list { display: flex; flex-direction: column; gap: 4px; padding: 0 8px 8px; }
+.uwb-nav-item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  width: 100%;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: rgba(255,255,255,.02);
+  color: var(--text);
+  padding: 8px 8px 8px 9px;
+  cursor: pointer;
+  text-align: left;
+}
+.uwb-nav-item:hover { border-color: rgba(255,141,42,.28); background: rgba(255,141,42,.06); }
+.uwb-nav-item.is-active { border-color: rgba(85,183,255,.45); background: rgba(85,183,255,.1); box-shadow: inset 0 0 0 1px rgba(85,183,255,.12); }
+.uwb-nav-item.is-slot-off { opacity: .78; }
+.uwb-nav-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  font-size: 13px;
+  font-weight: 800;
+  background: rgba(255,255,255,.06);
+  color: var(--accent);
+}
+.uwb-nav-item.is-active .uwb-nav-icon { background: rgba(85,183,255,.18); color: #9ed4ff; }
+.uwb-nav-main { min-width: 0; }
+.uwb-nav-title { font-size: 12px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.uwb-nav-sub { margin-top: 2px; font-size: 10px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.uwb-nav-status { display: inline-flex; align-items: center; gap: 5px; }
+.uwb-nav-dot { width: 6px; height: 6px; border-radius: 50%; background: #6b7785; flex: none; }
+.uwb-nav-dot.ok { background: #3ecf8e; }
+.uwb-nav-dot.busy { background: #ffb347; }
+.uwb-nav-dot.focus { background: #55b7ff; }
+.uwb-nav-actions { display: flex; align-items: center; gap: 2px; opacity: .72; }
+.uwb-nav-item:hover .uwb-nav-actions,
+.uwb-nav-item.is-active .uwb-nav-actions { opacity: 1; }
+.uwb-nav-act {
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
+}
+.uwb-nav-act:hover { background: rgba(255,255,255,.08); color: var(--text); }
+.uwb-nav-act.danger:hover { color: #ff8a80; }
+.uwb-nav-foot { padding: 0 8px 8px; }
+.uwb-nav-add {
+  width: 100%;
+  min-height: 34px;
+  border: 1px dashed rgba(255,141,42,.35);
+  border-radius: 9px;
+  background: rgba(255,141,42,.05);
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.uwb-nav-add:hover { border-color: rgba(255,141,42,.55); background: rgba(255,141,42,.1); color: var(--accent); }
+.uwb-nav-add:disabled { opacity: .42; cursor: not-allowed; }
+.uwb-nav-empty { padding: 8px 10px 10px; color: var(--muted); font-size: 11px; line-height: 1.45; }
+.uwb-nav-picker { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; }
+.uwb-nav-picker.hidden { display: none; }
 .uwb-main {
   min-width: 0;
   min-height: 0;
@@ -155,7 +251,7 @@ html[data-theme="light"], html[data-theme="light"] body {
   height: 100%;
   min-height: 0;
   display: flex;
-  gap: 10px;
+  gap: 0;
   padding: 10px;
   overflow-x: auto;
   overflow-y: hidden;
@@ -183,10 +279,11 @@ html[data-theme="light"], html[data-theme="light"] body {
 }
 .uwb-column {
   position: relative;
-  flex: 0 0 var(--col-w, 600px);
+  flex: 0 0 auto;
+  flex-shrink: 0;
   width: var(--col-w, 600px);
-  min-width: var(--col-min, 480px);
-  max-width: 820px;
+  min-width: var(--col-min, 240px);
+  max-width: none;
   height: 100%;
   min-height: 0;
   display: flex;
@@ -201,17 +298,115 @@ html[data-theme="light"], html[data-theme="light"] body {
   border-color: rgba(255, 141, 42, 0.55);
   box-shadow: inset 0 0 0 1px rgba(255, 141, 42, 0.12);
 }
+.uwb-col-head {
+  position: relative;
+  z-index: 60;
+  flex-shrink: 0;
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 9px;
+  border-bottom: 1px solid var(--border-subtle);
+  background: rgba(0,0,0,.14);
+}
+.uwb-col-head-split {
+  position: absolute;
+  top: 0;
+  right: -7px;
+  width: 14px;
+  height: 100%;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  cursor: ew-resize;
+  touch-action: none;
+  z-index: 70;
+}
+.uwb-col-head-split:hover,
+.uwb-col-head-split.dragging {
+  background: rgba(255, 141, 42, 0.24);
+}
+.uwb-col-head-split::after {
+  content: "";
+  position: absolute;
+  top: 12%;
+  bottom: 12%;
+  left: 50%;
+  width: 3px;
+  transform: translateX(-50%);
+  border-radius: 2px;
+  background: rgba(255, 141, 42, 0.55);
+  opacity: 0.45;
+}
+.uwb-col-head-split:hover::after,
+.uwb-col-head-split.dragging::after { opacity: 1; }
+.uwb-col-boundary-split-left {
+  right: auto;
+  left: -7px;
+}
+.uwb-col-foot-split.uwb-col-boundary-split-left::after,
+.uwb-col-head-split.uwb-col-boundary-split-left::after {
+  opacity: 0.55;
+}
 .uwb-col-resize {
   position: absolute;
   top: 0;
   bottom: 0;
-  width: 10px;
-  z-index: 12;
+  width: 14px;
+  z-index: 80;
   cursor: ew-resize;
   touch-action: none;
+  pointer-events: none;
 }
-.uwb-col-resize-left { left: -5px; }
-.uwb-col-resize-right { right: -5px; }
+.uwb-col-resize-head,
+.uwb-col-resize-foot {
+  pointer-events: auto;
+  z-index: 90;
+}
+.uwb-col-resize-foot {
+  top: auto;
+  height: 100%;
+}
+.uwb-col-resize-left { left: -7px; }
+.uwb-col-resize-right { right: -7px; }
+.uwb-col-divider {
+  flex: 0 0 14px;
+  width: 14px;
+  align-self: stretch;
+  position: relative;
+  z-index: 55;
+  cursor: ew-resize;
+  touch-action: none;
+  flex-shrink: 0;
+}
+.uwb-columns.virtualized .uwb-col-divider {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  flex: none;
+}
+.uwb-col-divider:hover,
+.uwb-col-divider.dragging {
+  background: rgba(255, 141, 42, 0.22);
+}
+.uwb-col-divider::after {
+  content: "";
+  position: absolute;
+  top: 8%;
+  bottom: 8%;
+  left: 50%;
+  width: 3px;
+  transform: translateX(-50%);
+  border-radius: 2px;
+  background: rgba(255, 141, 42, 0.5);
+  opacity: 0.35;
+  transition: opacity 0.15s;
+}
+.uwb-col-divider:hover::after,
+.uwb-col-divider.dragging::after { opacity: 1; }
 .uwb-col-resize:hover,
 .uwb-col-resize.dragging {
   background: rgba(255, 141, 42, 0.28);
@@ -219,10 +414,10 @@ html[data-theme="light"], html[data-theme="light"] body {
 .uwb-col-resize::after {
   content: "";
   position: absolute;
-  top: 18%;
-  bottom: 18%;
+  top: 8%;
+  bottom: 8%;
   left: 50%;
-  width: 2px;
+  width: 3px;
   transform: translateX(-50%);
   border-radius: 2px;
   background: rgba(255, 141, 42, 0.45);
@@ -236,16 +431,15 @@ html[data-theme="light"], html[data-theme="light"] body {
   cursor: ew-resize;
   user-select: none;
 }
-.uwb-col-head {
-  flex-shrink: 0;
-  min-height: 38px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 8px 9px;
-  border-bottom: 1px solid var(--border-subtle);
-  background: rgba(0,0,0,.14);
+.uwb-columns.uwb-resizing .uwb-col-divider,
+.uwb-columns.uwb-resizing .uwb-col-head-split,
+.uwb-columns.uwb-resizing .uwb-col-foot-split,
+.uwb-columns.uwb-resizing .uwb-col-resize-head,
+.uwb-columns.uwb-resizing .uwb-col-resize-foot {
+  z-index: 200;
+}
+.uwb-columns.uwb-resizing .uwb-column {
+  pointer-events: auto;
 }
 .uwb-col-title { font-size: 12px; font-weight: 800; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .uwb-col-meta { color: var(--muted); font-size: 10px; margin-left: 5px; }
@@ -266,13 +460,63 @@ html[data-theme="light"], html[data-theme="light"] body {
   overflow: hidden;
   background: #101928;
 }
+.uwb-col-foot {
+  position: relative;
+  z-index: 65;
+  flex-shrink: 0;
+  height: 24px;
+  border-top: 1px solid var(--border-subtle);
+  background: rgba(0, 0, 0, 0.28);
+}
+.uwb-col-foot-split {
+  position: absolute;
+  top: 0;
+  right: -7px;
+  width: 14px;
+  height: 100%;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  cursor: ew-resize;
+  touch-action: none;
+  z-index: 70;
+}
+.uwb-col-foot-split:hover,
+.uwb-col-foot-split.dragging {
+  background: rgba(255, 141, 42, 0.28);
+}
+.uwb-col-foot-split::after {
+  content: "";
+  position: absolute;
+  top: 15%;
+  bottom: 15%;
+  left: 50%;
+  width: 3px;
+  transform: translateX(-50%);
+  border-radius: 2px;
+  background: rgba(255, 141, 42, 0.65);
+  opacity: 0.55;
+}
+.uwb-col-foot-split:hover::after,
+.uwb-col-foot-split.dragging::after { opacity: 1; }
+.uwb-col-foot-hint {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+  color: var(--muted);
+  font-size: 10px;
+  user-select: none;
+  pointer-events: none;
+}
 .uwb-ai-column .uwb-col-body:has(.uwb-ai-embed-slot) {
   background: transparent;
 }
 .uwb-ai-embed-slot {
   position: absolute;
   inset: 0;
-  min-height: 280px;
+  min-height: 0;
 }
 .uwb-ai-placeholder {
   position: absolute;
@@ -464,17 +708,25 @@ html[data-theme="light"], html[data-theme="light"] body {
 <div class="uwb-app">
   <aside class="uwb-sidebar">
     <div class="uwb-side-head">
-      <div class="uwb-side-title">Column Workbench</div>
-      <div class="uwb-side-sub">Phase4：最多 21 列虚拟滚动；AI 并行嵌入默认可至 8 路（低内存自动降档）。</div>
+      <div class="uwb-side-title">列目录</div>
+      <div class="uwb-side-sub">查看、切换、刷新与关闭当前 AI / CLI 列。</div>
     </div>
     <div class="uwb-side-body">
-      <section class="uwb-group">
-        <div class="uwb-group-title"><span>AI</span><span id="ai-count">0</span></div>
-        <div class="uwb-list" id="ai-list"></div>
+      <section class="uwb-nav-group" id="ai-nav-group" data-group="ai">
+        <button type="button" class="uwb-nav-group-head" id="ai-nav-toggle" aria-expanded="true">
+          <span class="uwb-nav-group-label">AI 列</span>
+          <span class="uwb-nav-group-meta"><span id="ai-count">0</span><span class="uwb-nav-group-chevron">▾</span></span>
+        </button>
+        <div class="uwb-nav-list" id="ai-nav-list"></div>
+        <div class="uwb-nav-foot" id="ai-nav-foot"></div>
       </section>
-      <section class="uwb-group">
-        <div class="uwb-group-title"><span>CLI</span><span id="cli-count">0</span></div>
-        <div class="uwb-list" id="cli-list"></div>
+      <section class="uwb-nav-group" id="cli-nav-group" data-group="cli">
+        <button type="button" class="uwb-nav-group-head" id="cli-nav-toggle" aria-expanded="true">
+          <span class="uwb-nav-group-label">CLI 列</span>
+          <span class="uwb-nav-group-meta"><span id="cli-count">0</span><span class="uwb-nav-group-chevron">▾</span></span>
+        </button>
+        <div class="uwb-nav-list" id="cli-nav-list"></div>
+        <div class="uwb-nav-foot" id="cli-nav-foot"></div>
       </section>
     </div>
   </aside>
@@ -544,6 +796,7 @@ function postToAhk(obj) {
   return window.BasePanel.postToAhk(obj);
 }
 const UWB_COL_GAP = 10;
+const UWB_COL_DIVIDER_W = 14;
 const UWB_COL_PAD = 10;
 const UWB_VIRTUAL_BUFFER = 1;
 const CLI_PORTS = {
@@ -573,7 +826,9 @@ const state = {
   aiFocusLru: {},
   hostLive: false,
   hostArmed: false,
-  initGen: 0
+  initGen: 0,
+  sidebarExpanded: { ai: true, cli: true },
+  sidebarPicker: { ai: false, cli: false }
 };
 let seq = 0;
 function armHostBootstrap() {
@@ -678,19 +933,21 @@ function invalidateColumnMetrics() {
   columnMetrics._sig = "";
 }
 function columnStateSig() {
-  return state.columns.map(function (c) { return c.id + ":" + (c.width || 0); }).join("|");
+  return state.columns.map(function (c) { return c.id + ":" + columnWidthPx(c); }).join("|");
 }
 function columnMetrics() {
   const sig = columnStateSig();
   if (columnMetrics._cache && columnMetrics._sig === sig) return columnMetrics._cache;
   const items = [];
   let left = UWB_COL_PAD;
-  state.columns.forEach(function (col) {
-    const w = col.width || defaultColumnWidth();
+  state.columns.forEach(function (col, idx) {
+    const w = columnWidthPx(col);
     items.push({ col: col, left: left, width: w, right: left + w });
-    left += w + UWB_COL_GAP;
+    left += w;
+    if (idx < state.columns.length - 1)
+      left += UWB_COL_DIVIDER_W;
   });
-  const totalWidth = items.length ? left - UWB_COL_GAP + UWB_COL_PAD : UWB_COL_PAD * 2;
+  const totalWidth = items.length ? left + UWB_COL_PAD : UWB_COL_PAD * 2;
   columnMetrics._cache = { items: items, totalWidth: totalWidth };
   columnMetrics._sig = sig;
   return columnMetrics._cache;
@@ -817,19 +1074,98 @@ function getPreviousColumn(id) {
   return idx > 0 ? state.columns[idx - 1] : null;
 }
 function clampColumnWidth(w) {
-  return Math.max(effectiveColumnMinWidth(), Math.min(effectiveColumnMaxWidth(), Math.round(w)));
+  const n = Number(w);
+  if (!Number.isFinite(n)) return defaultColumnWidth();
+  return Math.max(columnResizeMinWidth(), Math.min(columnResizeMaxWidth(), Math.round(n)));
+}
+function columnWidthPx(col) {
+  if (!col) return defaultColumnWidth();
+  const n = Number(col.width);
+  if (!Number.isFinite(n) || n <= 0) return defaultColumnWidth();
+  return clampColumnWidth(n);
+}
+function normalizeColumnWidths() {
+  state.columns.forEach(function (col) {
+    col.width = columnWidthPx(col);
+  });
+}
+function resizeCoupledPair(leftCol, rightCol, startLeftW, startRightW, dx) {
+  const minW = columnResizeMinWidth();
+  const maxW = columnResizeMaxWidth();
+  const total = Number(startLeftW) + Number(startRightW);
+  let leftW = Number(startLeftW) + Number(dx);
+  leftW = Math.max(minW, Math.min(maxW, leftW));
+  let rightW = total - leftW;
+  if (rightW < minW) {
+    rightW = minW;
+    leftW = Math.max(minW, Math.min(maxW, total - rightW));
+  } else if (rightW > maxW) {
+    rightW = maxW;
+    leftW = Math.max(minW, Math.min(maxW, total - rightW));
+  }
+  leftCol.width = Math.round(leftW);
+  rightCol.width = Math.round(rightW);
+  applyColumnWidthLive(leftCol, rightCol);
+}
+function applyColumnWidthToDom(col) {
+  if (!col) return;
+  const w = columnWidthPx(col);
+  col.width = w;
+  const root = document.querySelector("[data-column-id='" + col.id + "']");
+  if (!root) return;
+  const minW = columnResizeMinWidth();
+  const wpx = w + "px";
+  const minpx = minW + "px";
+  root.style.setProperty("--col-w", wpx);
+  root.style.setProperty("--col-min", minpx);
+  root.style.width = wpx;
+  root.style.flexBasis = wpx;
+  root.style.minWidth = minpx;
+  root.style.maxWidth = "none";
+}
+function syncAllColumnWidthsToDom() {
+  state.columns.forEach(applyColumnWidthToDom);
+}
+function columnResizeMinWidth() {
+  const stage = document.getElementById("columns");
+  const viewW = stage ? stage.clientWidth : 1200;
+  const n = Math.max(1, state.columns.length);
+  const fitMin = Math.floor((viewW - UWB_COL_PAD * 2 - UWB_COL_DIVIDER_W * Math.max(0, n - 1)) / n);
+  return Math.max(240, Math.min(360, fitMin));
+}
+function columnResizeMaxWidth() {
+  const stage = document.getElementById("columns");
+  const viewW = stage ? stage.clientWidth : 1200;
+  return Math.max(columnResizeMinWidth() + 80, Math.min(1600, Math.round(viewW * 0.92)));
+}
+function patchVirtualColumnWidthsLive() {
+  if (!shouldVirtualizeColumns()) return;
+  const track = document.querySelector("#columns .uwb-columns-track");
+  if (!track) return;
+  const { items, totalWidth } = columnMetrics();
+  items.forEach(function (m) {
+    const root = track.querySelector("[data-column-id='" + m.col.id + "']");
+    if (!root) return;
+    root.style.left = m.left + "px";
+    root.style.width = m.width + "px";
+    root.style.setProperty("--col-w", m.width + "px");
+  });
+  track.style.width = totalWidth + "px";
+  syncVirtualDividers();
 }
 function applyColumnWidthLive(col, partner) {
-  if (!col) return;
+  if (!col && !partner) return;
   invalidateColumnMetrics();
-  [col, partner].filter(Boolean).forEach(function (c) {
-    const root = document.querySelector("[data-column-id='" + c.id + "']");
-    if (root) {
-      root.style.setProperty("--col-w", String(c.width || defaultColumnWidth()) + "px");
-      root.style.setProperty("--col-min", String(effectiveColumnMinWidth()) + "px");
-    }
-  });
-  if (shouldVirtualizeColumns()) refreshVirtualColumnWindow();
+  if (col) col.width = columnWidthPx(col);
+  if (partner) partner.width = columnWidthPx(partner);
+  syncAllColumnWidthsToDom();
+  if (shouldVirtualizeColumns()) {
+    if (isColumnResizing()) patchVirtualColumnWidthsLive();
+    else refreshVirtualColumnWindow();
+  }
+  if (isColumnResizing()) {
+    syncAllColumnWidthsToDom();
+  }
 }
 function buildSessionSnapshot() {
   const stage = document.getElementById("columns");
@@ -842,7 +1178,7 @@ function buildSessionSnapshot() {
         siteId: c.siteId || "",
         engine: c.engine || "",
         url: c.url || "",
-        width: c.width || defaultColumnWidth()
+        width: columnWidthPx(c)
       };
     }),
     focusedColumnId: state.focusedColumnId || "",
@@ -926,7 +1262,7 @@ function applySavedScrollLeft() {
   stage.scrollLeft = left;
   delete restoreColumnsFromSession._scrollLeft;
 }
-function collectAiEmbedPayload() {
+function collectAiEmbedPayload(fast) {
   if (!state.columns.length || !canAutoBootstrap()) return null;
   const targets = listAiEmbedColumns();
   if (!targets.length) return null;
@@ -934,7 +1270,7 @@ function collectAiEmbedPayload() {
   const seenSites = new Set();
   for (let i = 0; i < targets.length; i++) {
     const col = targets[i];
-    const rect = measureAiColumnRect(col);
+    const rect = fast ? measureAiColumnRectFast(col) : measureAiColumnRect(col);
     if (!rect) return null;
     const siteId = String(col.siteId || "deepseek");
     if (seenSites.has(siteId)) continue;
@@ -956,26 +1292,27 @@ function collectAiEmbedPayload() {
     focusSiteId: focusSiteId
   };
 }
-function syncAiEmbedsLive(force) {
-  if (!isColumnResizing()) return;
-  const payload = collectAiEmbedPayload();
-  if (!payload) return;
-  const vp = payload.embedViewport;
-  const vpSig = vp ? vp.left + "," + vp.top + "," + vp.width + "," + vp.height : "";
-  const sig = vpSig + "|" + payload.aiColumns.map(function (c) {
-    return c.siteId + "@" + c.rect.left + "," + c.rect.top + "," + c.rect.width + "," + c.rect.height;
-  }).join("|");
-  if (!force && syncAiEmbedsLive._lastSig === sig) return;
-  syncAiEmbedsLive._lastSig = sig;
+function pushAiEmbedsLayoutLive(payload) {
+  if (!payload) return false;
+  try {
+    const hoSync = window.chrome && window.chrome.webview && window.chrome.webview.hostObjects && window.chrome.webview.hostObjects.sync;
+    if (hoSync && hoSync.ahk && typeof hoSync.ahk.UnifiedWbApplyLayoutLive === "function") {
+      const ret = String(hoSync.ahk.UnifiedWbApplyLayoutLive(JSON.stringify(payload)));
+      if (ret === "ok" || ret === "skip") return true;
+    }
+  } catch (_) {}
   postToAhk(Object.assign({ type: "webLlmLayoutLive" }, payload));
+  return false;
+}
+function syncAiEmbedsLive() {
+  if (!isColumnResizing()) return;
+  const payload = collectAiEmbedPayload(true);
+  if (!payload) return;
+  pushAiEmbedsLayoutLive(payload);
 }
 function scheduleAiEmbedsLiveSync() {
   if (!isColumnResizing()) return;
-  if (scheduleAiEmbedsLiveSync._raf) return;
-  scheduleAiEmbedsLiveSync._raf = requestAnimationFrame(function () {
-    scheduleAiEmbedsLiveSync._raf = 0;
-    syncAiEmbedsLive(false);
-  });
+  syncAiEmbedsLive();
 }
 function isColumnResizing() {
   return !!state.columnResizeActive || !!document.getElementById("columns")?.classList.contains("uwb-resizing");
@@ -988,68 +1325,149 @@ function cancelPendingLayoutSync() {
 function setAiEmbedLayoutPaused(paused) {
   postToAhk({ type: "webLlmLayoutPause", paused: !!paused });
 }
+function attachColumnBoundarySplit(container, leftCol, rightCol, className, side) {
+  if (!container || !leftCol || !rightCol) return;
+  const boundary = leftCol.id + "|" + rightCol.id;
+  const sideTag = side === "left" ? "left" : "right";
+  if (container.querySelector("[data-boundary='" + boundary + "'][data-boundary-side='" + sideTag + "']")) return;
+  const split = document.createElement("button");
+  split.type = "button";
+  split.className = className + (sideTag === "left" ? " uwb-col-boundary-split-left" : "");
+  split.dataset.boundary = boundary;
+  split.dataset.boundarySide = sideTag;
+  split.title = "拖动调整「" + (leftCol.title || "") + "」与「" + (rightCol.title || "") + "」列宽";
+  split.setAttribute("aria-label", "拖动调整列宽");
+  split.addEventListener("pointerdown", function (e) {
+    startDividerResize(e, leftCol, rightCol, split);
+  });
+  container.appendChild(split);
+}
 function attachColumnResizeHandles(root, col) {
-  if (!root || root.querySelector(".uwb-col-resize-right")) return;
-  const left = document.createElement("div");
-  left.className = "uwb-col-resize uwb-col-resize-left";
-  left.title = "拖动调整列宽";
-  const right = document.createElement("div");
-  right.className = "uwb-col-resize uwb-col-resize-right";
-  right.title = "拖动调整列宽";
-  root.appendChild(left);
-  root.appendChild(right);
-  left.addEventListener("pointerdown", function (e) { startColumnResize(e, col, "left", left); });
-  right.addEventListener("pointerdown", function (e) { startColumnResize(e, col, "right", right); });
+  if (!root) return;
+  const head = root.querySelector(".uwb-col-head");
+  const foot = root.querySelector(".uwb-col-foot");
+  const idx = state.columns.findIndex(function (c) { return c.id === col.id; });
+  const prevCol = idx > 0 ? state.columns[idx - 1] : null;
+  const nextCol = idx >= 0 ? state.columns[idx + 1] : null;
+  if (nextCol) {
+    attachColumnBoundarySplit(head, col, nextCol, "uwb-col-head-split", "right");
+    attachColumnBoundarySplit(foot, col, nextCol, "uwb-col-foot-split", "right");
+  }
+  if (prevCol) {
+    attachColumnBoundarySplit(head, prevCol, col, "uwb-col-head-split", "left");
+    attachColumnBoundarySplit(foot, prevCol, col, "uwb-col-foot-split", "left");
+  }
+  function addHandle(container, side, layer) {
+    if (!container) return;
+    const sel = ".uwb-col-resize-" + side + (layer ? "." + layer : "");
+    if (container.querySelector(sel)) return;
+    const el = document.createElement("div");
+    el.className = "uwb-col-resize uwb-col-resize-" + side + (layer ? " " + layer : "");
+    el.title = side === "left" ? "拖动调整左边缘列宽" : "拖动调整右边缘列宽";
+    el.addEventListener("pointerdown", function (e) { startColumnResize(e, col, side, el); });
+    container.appendChild(el);
+  }
+  addHandle(head, "left", "uwb-col-resize-head");
+  addHandle(head, "right", "uwb-col-resize-head");
+  addHandle(foot, "left", "uwb-col-resize-foot");
+  addHandle(foot, "right", "uwb-col-resize-foot");
+}
+function createColumnDivider(leftCol, rightCol) {
+  const div = document.createElement("div");
+  div.className = "uwb-col-divider";
+  div.title = "拖动调整「" + (leftCol.title || "") + "」与「" + (rightCol.title || "") + "」列宽";
+  div.dataset.leftCol = leftCol.id;
+  div.dataset.rightCol = rightCol.id;
+  div.dataset.boundary = leftCol.id + "|" + rightCol.id;
+  div.addEventListener("pointerdown", function (e) {
+    startDividerResize(e, leftCol, rightCol, div);
+  });
+  return div;
+}
+function beginColumnResizeSession(handleEl) {
+  cancelPendingLayoutSync();
+  state.columnResizeActive = true;
+  syncAiEmbedsLive._lastSig = "";
+  setAiEmbedLayoutPaused(true);
+  const stage = document.getElementById("columns");
+  if (stage) stage.classList.add("uwb-resizing");
+  if (handleEl) handleEl.classList.add("dragging");
+}
+function endColumnResizeSession(handleEl, ev) {
+  const stage = document.getElementById("columns");
+  if (handleEl) handleEl.classList.remove("dragging");
+  if (stage) stage.classList.remove("uwb-resizing");
+  state.columnResizeActive = false;
+  if (ev && handleEl) {
+    try { handleEl.releasePointerCapture(ev.pointerId); } catch (_) {}
+  }
+  syncAllAiEmbeds._lastSig = "";
+  syncAiEmbedsLive._lastSig = "";
+  normalizeColumnWidths();
+  syncAllColumnWidthsToDom();
+  setAiEmbedLayoutPaused(false);
+  syncAllAiEmbeds(true);
+  schedulePersistSession(80);
+}
+function applyCoupledColumnWidths(leftCol, rightCol, leftW, rightW) {
+  const dx = clampColumnWidth(leftW) - columnWidthPx(leftCol);
+  resizeCoupledPair(leftCol, rightCol, columnWidthPx(leftCol), columnWidthPx(rightCol), dx);
+}
+function startDividerResize(e, leftCol, rightCol, handleEl) {
+  e.preventDefault();
+  e.stopPropagation();
+  beginColumnResizeSession(handleEl);
+  const startX = e.clientX;
+  const startLeftW = columnWidthPx(leftCol);
+  const startRightW = columnWidthPx(rightCol);
+  try { handleEl.setPointerCapture(e.pointerId); } catch (_) {}
+  function onMove(ev) {
+    resizeCoupledPair(leftCol, rightCol, startLeftW, startRightW, ev.clientX - startX);
+  }
+  function onUp(ev) {
+    handleEl.removeEventListener("pointermove", onMove);
+    handleEl.removeEventListener("pointerup", onUp);
+    handleEl.removeEventListener("pointercancel", onUp);
+    endColumnResizeSession(handleEl, ev);
+  }
+  handleEl.addEventListener("pointermove", onMove);
+  handleEl.addEventListener("pointerup", onUp);
+  handleEl.addEventListener("pointercancel", onUp);
 }
 function startColumnResize(e, col, side, handleEl) {
   e.preventDefault();
   e.stopPropagation();
-  cancelPendingLayoutSync();
-  state.columnResizeActive = true;
-  syncAiEmbedsLive._lastSig = "";
-  const stage = document.getElementById("columns");
+  beginColumnResizeSession(handleEl);
   const startX = e.clientX;
-  const startW = col.width || defaultColumnWidth();
+  const startW = columnWidthPx(col);
   const prevCol = side === "left" ? getPreviousColumn(col.id) : null;
-  const startPrevW = prevCol ? (prevCol.width || defaultColumnWidth()) : 0;
-  handleEl.classList.add("dragging");
-  if (stage) stage.classList.add("uwb-resizing");
+  const nextCol = side === "right" ? state.columns[state.columns.findIndex(function (c) { return c.id === col.id; }) + 1] : null;
+  const startPrevW = prevCol ? columnWidthPx(prevCol) : 0;
+  const startNextW = nextCol ? columnWidthPx(nextCol) : 0;
   try { handleEl.setPointerCapture(e.pointerId); } catch (_) {}
   function onMove(ev) {
     const dx = ev.clientX - startX;
+    if (side === "right" && nextCol) {
+      resizeCoupledPair(col, nextCol, startW, startNextW, dx);
+      return;
+    }
     if (side === "right") {
       col.width = clampColumnWidth(startW + dx);
       applyColumnWidthLive(col);
-      scheduleAiEmbedsLiveSync();
       return;
     }
     if (prevCol) {
-      let nextPrev = clampColumnWidth(startPrevW + dx);
-      let nextCur = clampColumnWidth(startW - (nextPrev - startPrevW));
-      if (nextCur !== clampColumnWidth(startW - (nextPrev - startPrevW))) {
-        nextPrev = clampColumnWidth(startPrevW + (startW - nextCur));
-      }
-      prevCol.width = nextPrev;
-      col.width = nextCur;
-      applyColumnWidthLive(col, prevCol);
+      resizeCoupledPair(prevCol, col, startPrevW, startW, dx);
     } else {
-      col.width = clampColumnWidth(startW + dx);
+      col.width = clampColumnWidth(startW - dx);
       applyColumnWidthLive(col);
     }
-    scheduleAiEmbedsLiveSync();
   }
   function onUp(ev) {
-    handleEl.classList.remove("dragging");
-    if (stage) stage.classList.remove("uwb-resizing");
-    state.columnResizeActive = false;
-    try { handleEl.releasePointerCapture(ev.pointerId); } catch (_) {}
     handleEl.removeEventListener("pointermove", onMove);
     handleEl.removeEventListener("pointerup", onUp);
     handleEl.removeEventListener("pointercancel", onUp);
-    syncAllAiEmbeds._lastSig = "";
-    syncAiEmbedsLive._lastSig = "";
-    syncAllAiEmbeds(true);
-    schedulePersistSession(80);
+    endColumnResizeSession(handleEl, ev);
   }
   handleEl.addEventListener("pointermove", onMove);
   handleEl.addEventListener("pointerup", onUp);
@@ -1060,16 +1478,24 @@ function createColumnRoot(col, idx, oldCliFrames) {
   root.className = "uwb-column " + (col.type === "ai" ? "uwb-ai-column" : "uwb-cli-column") + (col.id === state.focusedColumnId ? " focused" : "");
   root.dataset.columnId = col.id;
   root.dataset.index = String(idx);
-  root.style.setProperty("--col-w", String(col.width || 600) + "px");
-  root.style.setProperty("--col-min", String(effectiveColumnMinWidth()) + "px");
+  root.style.setProperty("--col-w", String(columnWidthPx(col)) + "px");
+  root.style.setProperty("--col-min", String(columnResizeMinWidth()) + "px");
+  root.style.width = columnWidthPx(col) + "px";
+  root.style.flexBasis = columnWidthPx(col) + "px";
+  root.style.minWidth = columnResizeMinWidth() + "px";
   root.innerHTML =
     "<header class=\"uwb-col-head\">" +
       "<div class=\"uwb-col-title\">" + esc(col.title) + "<span class=\"uwb-col-meta\">" + esc(col.type === "cli" ? col.engine : col.siteId) + "</span></div>" +
       "<div class=\"uwb-col-actions\">" +
         "<button type=\"button\" class=\"uwb-col-btn\" data-act=\"close\" title=\"关闭\">×</button>" +
       "</div>" +
-    "</header><div class=\"uwb-col-body\"></div>";
-  root.addEventListener("pointerdown", function () { setFocus(col.id); });
+    "</header><div class=\"uwb-col-body\"></div>" +
+    "<footer class=\"uwb-col-foot\"><span class=\"uwb-col-foot-hint\">列底拖动列宽</span></footer>";
+  root.addEventListener("pointerdown", function (e) {
+    if (e.target.closest(".uwb-col-resize, .uwb-col-head-split, .uwb-col-foot-split, .uwb-col-divider")) return;
+    if (isColumnResizing()) return;
+    setFocus(col.id);
+  });
   root.querySelector("[data-act='close']").addEventListener("click", function (e) { e.stopPropagation(); removeColumn(col.id); });
   mountColumnBody(root, col, oldCliFrames);
   attachColumnResizeHandles(root, col);
@@ -1078,21 +1504,57 @@ function createColumnRoot(col, idx, oldCliFrames) {
 }
 function updateColumnRoot(root, col) {
   root.classList.toggle("focused", col.id === state.focusedColumnId);
-  root.style.setProperty("--col-w", String(col.width || 600) + "px");
-  root.style.setProperty("--col-min", String(effectiveColumnMinWidth()) + "px");
+  if (!root.querySelector(".uwb-col-foot")) {
+    const foot = document.createElement("footer");
+    foot.className = "uwb-col-foot";
+    foot.innerHTML = "<span class=\"uwb-col-foot-hint\">列底拖动列宽</span>";
+    root.appendChild(foot);
+  }
+  root.style.setProperty("--col-w", String(columnWidthPx(col)) + "px");
+  root.style.setProperty("--col-min", String(columnResizeMinWidth()) + "px");
+  root.style.width = columnWidthPx(col) + "px";
+  root.style.flexBasis = columnWidthPx(col) + "px";
+  root.style.minWidth = columnResizeMinWidth() + "px";
   attachColumnResizeHandles(root, col);
   const title = root.querySelector(".uwb-col-title");
   if (title) {
     title.innerHTML = esc(col.title) + "<span class=\"uwb-col-meta\">" + esc(col.type === "cli" ? col.engine : col.siteId) + "</span>";
   }
 }
+function syncVirtualDividers() {
+  const wrap = document.getElementById("columns");
+  if (!wrap || !wrap.classList.contains("virtualized")) return;
+  const track = wrap.querySelector(".uwb-columns-track");
+  if (!track) return;
+  const { items } = columnMetrics();
+  const keep = new Set();
+  for (let i = 0; i < state.columns.length - 1; i++) {
+    const leftCol = state.columns[i];
+    const rightCol = state.columns[i + 1];
+    const m = items[i];
+    if (!m) continue;
+    const key = leftCol.id + "|" + rightCol.id;
+    keep.add(key);
+    let div = track.querySelector(".uwb-col-divider[data-boundary='" + key + "']");
+    if (!div) {
+      div = createColumnDivider(leftCol, rightCol);
+      track.appendChild(div);
+    }
+    div.style.left = (m.right + (UWB_COL_GAP - UWB_COL_DIVIDER_W) / 2) + "px";
+    div.style.width = UWB_COL_DIVIDER_W + "px";
+  }
+  track.querySelectorAll(".uwb-col-divider").forEach(function (el) {
+    if (!keep.has(el.dataset.boundary || "")) el.remove();
+  });
+}
 function renderColumnsFlex(oldCliFrames) {
   const wrap = document.getElementById("columns");
   wrap.classList.remove("virtualized");
   wrap.innerHTML = "";
   state.columns.forEach(function (col, idx) {
-    const root = createColumnRoot(col, idx, oldCliFrames);
-    wrap.appendChild(root);
+    wrap.appendChild(createColumnRoot(col, idx, oldCliFrames));
+    if (idx < state.columns.length - 1)
+      wrap.appendChild(createColumnDivider(col, state.columns[idx + 1]));
   });
 }
 function renderColumnsVirtual(oldCliFrames) {
@@ -1133,7 +1595,9 @@ function renderColumnsVirtual(oldCliFrames) {
     }
     root.style.left = m.left + "px";
     root.style.width = m.width + "px";
+    root.style.setProperty("--col-w", m.width + "px");
   });
+  syncVirtualDividers();
   wrap.scrollLeft = scrollLeft;
 }
 function refreshVirtualColumnWindow() {
@@ -1200,19 +1664,6 @@ function nextAvailableAiEngine() {
     if (sid && !used.has(sid)) return e;
   }
   return firstAi();
-}
-function effectiveColumnMinWidth() {
-  const aiN = state.columns.filter(function (c) { return c.type === "ai"; }).length;
-  if (aiN >= 9) return 320;
-  if (aiN >= 7) return 360;
-  if (aiN >= 5) return 400;
-  if (aiN >= 4) return 420;
-  return 480;
-}
-function effectiveColumnMaxWidth() {
-  const aiN = state.columns.filter(function (c) { return c.type === "ai"; }).length;
-  if (aiN >= 6) return 720;
-  return 820;
 }
 function defaultColumnWidth() {
   const n = Math.max(1, state.defaultAiColumns + state.defaultCliColumns);
@@ -1388,6 +1839,7 @@ function removeColumn(id) {
   schedulePersistSession();
 }
 function setFocus(id) {
+  if (isColumnResizing()) return;
   const col = getColumn(id);
   if (!col) return;
   const slotBefore = aiEmbedSlotSig();
@@ -1397,7 +1849,10 @@ function setFocus(id) {
     touchAiFocusLru(id);
   }
   if (col.type === "cli") state.lastCliColumnId = id;
-  if (aiEmbedSlotSig() !== slotBefore) ensureAiSlotDom();
+  if (aiEmbedSlotSig() !== slotBefore) {
+    ensureAiSlotDom();
+    renderSidebar();
+  }
   postToAhk({ type: "column_focus", columnId: id, columnType: col.type, engine: col.engine || "", siteId: col.siteId || "" });
   updateFocusUi();
   if (col.type === "ai") {
@@ -1410,41 +1865,213 @@ function setFocus(id) {
 function updateFocusUi() {
   const col = focusedColumn();
   document.querySelectorAll(".uwb-column").forEach((el) => el.classList.toggle("focused", el.dataset.columnId === state.focusedColumnId));
+  if (isColumnResizing()) return;
   updateComposeTargetUi();
+  updateSidebarFocus();
   const status = document.getElementById("status");
   status.textContent = col ? ("焦点：" + col.title) : "无焦点列";
 }
-function renderSidebar() {
-  const aiWrap = document.getElementById("ai-list");
-  const cliWrap = document.getElementById("cli-list");
-  aiWrap.innerHTML = "";
-  cliWrap.innerHTML = "";
-  document.getElementById("ai-count").textContent = String(state.columns.filter((c) => c.type === "ai").length) + " 列";
-  document.getElementById("cli-count").textContent = String(state.columns.filter((c) => c.type === "cli").length) + " 列";
-  const cap = state.maxVirtualColumns || state.maxColumns || 21;
-  const aiRows = aiEnginePool().length ? aiEnginePool() : (state.aiEngines.length ? state.aiEngines : [firstAi()]);
-  aiRows.slice(0, cap).forEach((e) => {
-    const sid = String(e.value || e.id || "").trim();
-    const used = state.columns.some(function (c) { return c.type === "ai" && c.siteId === sid; });
-    const b = document.createElement("button");
-    b.type = "button";
-    b.className = "uwb-add";
-    b.disabled = used;
-    b.innerHTML = "<span class=\"uwb-add-main\">" + esc(e.name || e.label || e.value || e.id) + "</span><span class=\"uwb-add-sub\">" + (used ? "已在列中" : "新增 AI 列") + "</span>";
-    if (!used) {
-      b.addEventListener("click", () => addColumn("ai", { siteId: sid, title: e.name || e.label, url: e.homeUrl || e.url }));
+function columnIcon(col) {
+  if (!col) return "?";
+  if (col.type === "cli") return "⌘";
+  const sid = String(col.siteId || "ai").toLowerCase();
+  const icons = { deepseek: "DS", doubao: "豆", gemini: "G", chatgpt: "GPT", kimi: "K", qwen: "Q", claude: "C" };
+  return icons[sid] || sid.slice(0, 2).toUpperCase();
+}
+function columnStatusMeta(col) {
+  if (!col) return { text: "未知", dot: "" };
+  if (col.type === "ai") {
+    const focused = state.focusedColumnId === col.id;
+    const embedded = isAiEmbedSlot(col);
+    if (focused) return { text: "焦点 · " + (embedded ? "嵌入中" : "占位"), dot: "focus" };
+    if (embedded) return { text: "嵌入中 · 可切换", dot: "ok" };
+    return { text: "占位 · 点击换入嵌入槽", dot: "busy" };
+  }
+  const eng = normalizeCliEngine(col.engine);
+  if (state.cliReady[eng]) return { text: "已连接 · " + eng, dot: state.focusedColumnId === col.id ? "focus" : "ok" };
+  return { text: "连接 ttyd 中…", dot: "busy" };
+}
+function refreshColumn(col, opts) {
+  if (!col) return;
+  const silent = !!(opts && opts.silent);
+  if (col.type === "ai") {
+    setFocus(col.id);
+    postToAhk({ type: "column_reload", columnType: "ai", siteId: col.siteId || "", columnId: col.id });
+    scheduleAiEmbedSync(120);
+  } else {
+    const eng = normalizeCliEngine(col.engine);
+    delete state.cliReady[eng];
+    if (ensureCli._sent) ensureCli._sent[eng] = 0;
+    const fr = document.querySelector("iframe[data-column-id='" + col.id + "']");
+    if (fr) {
+      try { fr.src = "about:blank"; } catch (_) {}
     }
-    aiWrap.appendChild(b);
+    const ld = document.getElementById("loading-" + col.id);
+    if (ld) {
+      ld.textContent = "正在重新连接 ttyd…";
+      ld.classList.remove("hidden");
+    }
+    postToAhk({
+      type: "column_reload",
+      columnType: "cli",
+      engine: eng,
+      reqId: cliReqId(eng),
+      columnId: col.id
+    });
+    ensureCli(col);
+  }
+  if (!silent) toast("已刷新「" + (col.title || col.siteId || col.engine) + "」");
+  renderSidebar();
+}
+function switchToColumn(col) {
+  if (!col) return;
+  setFocus(col.id);
+  requestAnimationFrame(function () {
+    if (shouldVirtualizeColumns()) scrollColumnIntoView(col.id);
+    else document.querySelector("[data-column-id='" + col.id + "']")?.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "smooth" });
   });
-  const cliRows = state.cliEngines.length ? state.cliEngines : [firstCli()];
-  cliRows.forEach((e) => {
-    const b = document.createElement("button");
-    b.type = "button";
-    b.className = "uwb-add";
-    b.innerHTML = "<span class=\"uwb-add-main\">" + esc(e.name || e.value) + "</span><span class=\"uwb-add-sub\">" + esc(normalizeCliEngine(e.value)) + "</span>";
-    b.addEventListener("click", () => addColumn("cli", { engine: e.value, title: e.name }));
-    cliWrap.appendChild(b);
+}
+function createNavAction(label, className, handler) {
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "uwb-nav-act" + (className ? " " + className : "");
+  btn.title = label;
+  btn.setAttribute("aria-label", label);
+  btn.textContent = label === "刷新" ? "↻" : (label === "关闭" ? "×" : label);
+  btn.addEventListener("click", function (e) {
+    e.preventDefault();
+    e.stopPropagation();
+    handler();
   });
+  return btn;
+}
+function createColumnNavItem(col) {
+  const meta = columnStatusMeta(col);
+  const item = document.createElement("button");
+  item.type = "button";
+  item.className = "uwb-nav-item" + (state.focusedColumnId === col.id ? " is-active" : "") + (col.type === "ai" && !isAiEmbedSlot(col) ? " is-slot-off" : "");
+  item.dataset.columnId = col.id;
+  item.dataset.columnType = col.type;
+  const icon = document.createElement("span");
+  icon.className = "uwb-nav-icon";
+  icon.textContent = columnIcon(col);
+  const main = document.createElement("span");
+  main.className = "uwb-nav-main";
+  main.innerHTML = "<span class=\"uwb-nav-title\">" + esc(col.title || col.siteId || col.engine) + "</span>"
+    + "<span class=\"uwb-nav-sub uwb-nav-status\"><span class=\"uwb-nav-dot " + esc(meta.dot) + "\"></span>" + esc(meta.text) + "</span>";
+  const actions = document.createElement("span");
+  actions.className = "uwb-nav-actions";
+  actions.appendChild(createNavAction("刷新", "", function () { refreshColumn(col); }));
+  actions.appendChild(createNavAction("关闭", "danger", function () { removeColumn(col.id); }));
+  item.appendChild(icon);
+  item.appendChild(main);
+  item.appendChild(actions);
+  item.addEventListener("click", function () { switchToColumn(col); });
+  item.addEventListener("contextmenu", function (e) {
+    e.preventDefault();
+    refreshColumn(col);
+  });
+  return item;
+}
+function renderNavAddFoot(container, type) {
+  if (!container) return;
+  container.innerHTML = "";
+  const cap = state.maxVirtualColumns || state.maxColumns || 21;
+  const atCap = state.columns.length >= cap;
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "uwb-nav-add";
+  btn.disabled = atCap;
+  btn.textContent = type === "ai" ? "+ 新增 AI 列" : "+ 新增 CLI 列";
+  if (atCap) btn.title = "已达列数上限";
+  btn.addEventListener("click", function () {
+    if (atCap) {
+      toast("最多同时管理 " + cap + " 列，请先关闭一列。");
+      return;
+    }
+    state.sidebarPicker[type] = !state.sidebarPicker[type];
+    renderSidebar();
+  });
+  container.appendChild(btn);
+  const picker = document.createElement("div");
+  picker.className = "uwb-nav-picker" + (state.sidebarPicker[type] ? "" : " hidden");
+  if (type === "ai") {
+    const rows = aiEnginePool().length ? aiEnginePool() : (state.aiEngines.length ? state.aiEngines : [firstAi()]);
+    rows.forEach(function (e) {
+      const sid = String(e.value || e.id || "").trim();
+      const used = state.columns.some(function (c) { return c.type === "ai" && c.siteId === sid; });
+      const opt = document.createElement("button");
+      opt.type = "button";
+      opt.className = "uwb-add";
+      opt.disabled = used;
+      opt.innerHTML = "<span class=\"uwb-add-main\">" + esc(e.name || e.label || sid) + "</span><span class=\"uwb-add-sub\">" + (used ? "已在列中" : "添加此 AI") + "</span>";
+      if (!used) {
+        opt.addEventListener("click", function () {
+          state.sidebarPicker.ai = false;
+          addColumn("ai", { siteId: sid, title: e.name || e.label, url: e.homeUrl || e.url });
+        });
+      }
+      picker.appendChild(opt);
+    });
+  } else {
+    const rows = state.cliEngines.length ? state.cliEngines : [firstCli()];
+    rows.forEach(function (e) {
+      const opt = document.createElement("button");
+      opt.type = "button";
+      opt.className = "uwb-add";
+      opt.innerHTML = "<span class=\"uwb-add-main\">" + esc(e.name || e.value) + "</span><span class=\"uwb-add-sub\">" + esc(normalizeCliEngine(e.value)) + "</span>";
+      opt.addEventListener("click", function () {
+        state.sidebarPicker.cli = false;
+        addColumn("cli", { engine: e.value, title: e.name });
+      });
+      picker.appendChild(opt);
+    });
+  }
+  container.appendChild(picker);
+}
+function updateSidebarFocus() {
+  if (isColumnResizing()) return;
+  document.querySelectorAll(".uwb-nav-item").forEach(function (el) {
+    el.classList.toggle("is-active", el.dataset.columnId === state.focusedColumnId);
+  });
+}
+function renderSidebar() {
+  if (isColumnResizing()) return;
+  const aiCols = state.columns.filter(function (c) { return c.type === "ai"; });
+  const cliCols = state.columns.filter(function (c) { return c.type === "cli"; });
+  const aiList = document.getElementById("ai-nav-list");
+  const cliList = document.getElementById("cli-nav-list");
+  const aiCount = document.getElementById("ai-count");
+  const cliCount = document.getElementById("cli-count");
+  if (aiCount) aiCount.textContent = aiCols.length + " 列";
+  if (cliCount) cliCount.textContent = cliCols.length + " 列";
+  if (aiList) {
+    aiList.innerHTML = "";
+    if (!aiCols.length) {
+      const empty = document.createElement("div");
+      empty.className = "uwb-nav-empty";
+      empty.textContent = "暂无 AI 列，点击下方新增。";
+      aiList.appendChild(empty);
+    } else {
+      aiCols.forEach(function (col) { aiList.appendChild(createColumnNavItem(col)); });
+    }
+  }
+  if (cliList) {
+    cliList.innerHTML = "";
+    if (!cliCols.length) {
+      const empty = document.createElement("div");
+      empty.className = "uwb-nav-empty";
+      empty.textContent = "暂无 CLI 列，点击下方新增终端。";
+      cliList.appendChild(empty);
+    } else {
+      cliCols.forEach(function (col) { cliList.appendChild(createColumnNavItem(col)); });
+    }
+  }
+  renderNavAddFoot(document.getElementById("ai-nav-foot"), "ai");
+  renderNavAddFoot(document.getElementById("cli-nav-foot"), "cli");
+  document.getElementById("ai-nav-group")?.classList.toggle("is-collapsed", !state.sidebarExpanded.ai);
+  document.getElementById("cli-nav-group")?.classList.toggle("is-collapsed", !state.sidebarExpanded.cli);
+  updateSidebarFocus();
 }
 function renderColumns() {
   const wrap = document.getElementById("columns");
@@ -1482,8 +2109,11 @@ function appendColumnDom(col) {
     return;
   }
   const idx = state.columns.findIndex(function (c) { return c.id === col.id; });
-  const root = createColumnRoot(col, idx >= 0 ? idx : state.columns.length - 1, oldCliFrames);
-  wrap.appendChild(root);
+  if (idx > 0) {
+    const prevCol = state.columns[idx - 1];
+    wrap.appendChild(createColumnDivider(prevCol, col));
+  }
+  wrap.appendChild(createColumnRoot(col, idx >= 0 ? idx : state.columns.length - 1, oldCliFrames));
   updateFocusUi();
   updateAiPlaceholderHints();
   updateComposeTargetUi();
@@ -1499,19 +2129,21 @@ function scheduleAiEmbedSync(delayMs) {
   }, wait);
 }
 function render() {
+  normalizeColumnWidths();
   renderSidebar();
   renderColumns();
+  syncAllColumnWidthsToDom();
   preserveCliColumns();
 }
 function applyColumnWidth(col) {
   if (!col) return;
   invalidateColumnMetrics();
-  const root = document.querySelector("[data-column-id='" + col.id + "']");
-  if (root) {
-    root.style.setProperty("--col-w", String(col.width || 600) + "px");
-    root.style.setProperty("--col-min", String(effectiveColumnMinWidth()) + "px");
+  col.width = columnWidthPx(col);
+  applyColumnWidthToDom(col);
+  if (shouldVirtualizeColumns()) {
+    refreshVirtualColumnWindow();
+    syncVirtualDividers();
   }
-  if (shouldVirtualizeColumns()) refreshVirtualColumnWindow();
   scheduleAiEmbedSync(40);
 }
 function observeColumnStage() {
@@ -1566,6 +2198,7 @@ function syncLayoutOnce(includeCli) {
 }
 function scheduleLayoutSync(includeCli, delayMs) {
   if (isColumnResizing()) return;
+  syncAllAiEmbeds._lastSig = "";
   const wait = Number.isFinite(delayMs) ? delayMs : 150;
   clearTimeout(scheduleLayoutSync._t);
   scheduleLayoutSync._pendingCli = scheduleLayoutSync._pendingCli || !!includeCli;
@@ -1693,6 +2326,7 @@ function handleTtydReady(payload) {
   } else {
     scheduleCliBootstrapRetries();
   }
+  renderSidebar();
   const bootCmd = String(payload.autoBootCmd || "").trim();
   if (bootCmd) {
     setTimeout(function () {
@@ -1712,6 +2346,7 @@ function handleTtydError(payload) {
     }
   });
   toast("ttyd: " + msg);
+  renderSidebar();
 }
 function sendToCli(col, text) {
   ensureCli(col);
@@ -1944,10 +2579,36 @@ function handleUwbDebugActionResult(payload) {
   if (act === "copy_trace" && ok) toast("诊断已复制到剪贴板");
   if (act === "rebootstrap") setTimeout(requestUwbDebugSnapshot, 400);
 }
+function embedCoordScale() {
+  const dpr = typeof window.devicePixelRatio === "number" ? window.devicePixelRatio : 1;
+  return dpr > 0 ? dpr : 1;
+}
+function withEmbedCoordMeta(rect, coordSpace) {
+  if (!rect) return rect;
+  const out = Object.assign({}, rect);
+  if (coordSpace) out.coordSpace = coordSpace;
+  return out;
+}
 function measureEmbedViewport() {
-  const stage = document.querySelector(".uwb-stage");
+  const stage = document.querySelector(".uwb-stage") || document.getElementById("columns");
   if (!stage) return null;
   const r = stage.getBoundingClientRect();
+  if (r.width < 80 || r.height < 80) return null;
+  return withEmbedCoordMeta({
+    left: Math.round(r.left),
+    top: Math.round(r.top),
+    width: Math.round(r.width),
+    height: Math.round(r.height)
+  });
+}
+function measureAiColumnBodyRect(col) {
+  const colEl = document.querySelector("[data-column-id='" + col.id + "']");
+  if (!colEl) return null;
+  const body = colEl.querySelector(".uwb-col-body");
+  if (!body) return null;
+  void colEl.offsetWidth;
+  void body.offsetWidth;
+  const r = body.getBoundingClientRect();
   if (r.width < 80 || r.height < 80) return null;
   return {
     left: Math.round(r.left),
@@ -1956,34 +2617,67 @@ function measureEmbedViewport() {
     height: Math.round(r.height)
   };
 }
-function measureAiColumnRect(col) {
+function measureAiColumnEmbedRect(col) {
   const root = document.querySelector("[data-column-id='" + col.id + "'] .uwb-ai-embed-slot")
     || document.querySelector("[data-column-id='" + col.id + "'] .uwb-col-body");
   if (root) {
+    void root.offsetWidth;
     const r = root.getBoundingClientRect();
-    if (r.width >= 80 && r.height >= 80) {
-      return {
+    if (r.width >= 80 && r.height >= 60) {
+      return withEmbedCoordMeta({
         left: Math.round(r.left),
         top: Math.round(r.top),
         width: Math.round(r.width),
         height: Math.round(r.height)
-      };
+      });
     }
   }
+  return measureAiColumnRectLayout(col);
+}
+function measureAiColumnRectLayout(col) {
   const stage = document.getElementById("columns");
+  if (!stage || !col) return null;
   const { items } = columnMetrics();
   const m = items.find(function (x) { return x.col.id === col.id; });
-  if (!stage || !m) return null;
+  if (!m) return null;
+  const colEl = document.querySelector("[data-column-id='" + col.id + "']");
   const stageR = stage.getBoundingClientRect();
-  const head = document.querySelector("[data-column-id='" + col.id + "'] .uwb-col-head");
-  const headH = head ? head.getBoundingClientRect().height : 38;
-  const pad = 10;
-  const left = Math.round(stageR.left + m.left - stage.scrollLeft + pad);
-  const top = Math.round(stageR.top + headH + pad);
-  const width = Math.max(160, Math.round(m.width - pad * 2));
-  const height = Math.max(120, Math.round(stageR.height - headH - pad * 2));
+  const head = colEl ? colEl.querySelector(".uwb-col-head") : null;
+  const foot = colEl ? colEl.querySelector(".uwb-col-foot") : null;
+  const headH = head ? Math.round(head.getBoundingClientRect().height) : 38;
+  const footH = foot ? Math.round(foot.getBoundingClientRect().height) : 24;
+  const pad = 0;
+  let left = Math.round(stageR.left + m.left - stage.scrollLeft + pad);
+  let top = Math.round(stageR.top + headH + pad);
+  let width = Math.max(160, Math.round(columnWidthPx(col)));
+  let height = Math.max(120, Math.round(stageR.height - headH - footH));
+  if (colEl) {
+    const body = colEl.querySelector(".uwb-col-body");
+    if (body) {
+      const bodyR = body.getBoundingClientRect();
+      left = Math.round(bodyR.left);
+      top = Math.round(bodyR.top);
+      width = Math.max(80, Math.round(bodyR.width));
+      height = Math.max(60, Math.round(bodyR.height));
+    } else {
+      const colR = colEl.getBoundingClientRect();
+      left = Math.round(colR.left);
+      top = Math.round(colR.top + headH);
+    }
+  }
   if (width < 80 || height < 80) return null;
-  return { left: left, top: top, width: width, height: height };
+  return withEmbedCoordMeta({
+    left: left,
+    top: top,
+    width: width,
+    height: height
+  });
+}
+function measureAiColumnRectFast(col) {
+  return measureAiColumnEmbedRect(col);
+}
+function measureAiColumnRect(col) {
+  return measureAiColumnEmbedRect(col) || measureAiColumnRectLayout(col);
 }
 function syncAllAiEmbeds(force) {
   if (isColumnResizing()) return;
@@ -2049,6 +2743,7 @@ function syncAllAiEmbeds(force) {
         selectedEngines: aiColumns.map((c) => c.siteId),
         focusSiteId: focusSiteId
       });
+      if (!isColumnResizing()) renderSidebar();
       if (focusSiteId && force) {
         postToAhk({ type: "webLlmFocusSite", siteId: focusSiteId, preserveLayout: true });
       }
@@ -2220,6 +2915,16 @@ document.querySelectorAll("#web-embed-debug-log-tabs .web-embed-debug-log-tab").
 });
 document.getElementById("add-ai").addEventListener("click", () => addColumn("ai"));
 document.getElementById("add-cli").addEventListener("click", () => addColumn("cli"));
+document.getElementById("ai-nav-toggle")?.addEventListener("click", function () {
+  state.sidebarExpanded.ai = !state.sidebarExpanded.ai;
+  document.getElementById("ai-nav-group")?.classList.toggle("is-collapsed", !state.sidebarExpanded.ai);
+  this.setAttribute("aria-expanded", state.sidebarExpanded.ai ? "true" : "false");
+});
+document.getElementById("cli-nav-toggle")?.addEventListener("click", function () {
+  state.sidebarExpanded.cli = !state.sidebarExpanded.cli;
+  document.getElementById("cli-nav-group")?.classList.toggle("is-collapsed", !state.sidebarExpanded.cli);
+  this.setAttribute("aria-expanded", state.sidebarExpanded.cli ? "true" : "false");
+});
 document.getElementById("compose-form").addEventListener("submit", (e) => { e.preventDefault(); submitCompose(); });
 document.getElementById("compose").addEventListener("input", autoSizeCompose);
 document.getElementById("compose").addEventListener("keydown", (e) => {

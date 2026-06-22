@@ -1,0 +1,46 @@
+# Rust / Tauri build outputs
+src-tauri/target/
+target/
+dist/
+build/
+src-tauri/gen/
+
+# Runtime files and local state
+*.log
+voice_input_manager.log
+voice_input_settings.json
+
+# Local backups and snapshots
+.backup_mapping_split_20260622-155626/
+backup/
+backups/
+snapshot/
+
+# Local helper scripts
+run_voice_pilot.ps1
+
+# AHK runtime / helper assets
+lib/runtime/
+lib/ahk/WebView2.ahk
+lib/ahk/ComVar.ahk
+lib/ahk/Jxon.ahk
+lib/ahk/Promise.ahk
+
+# Generated / cache / temp files
+*.tmp
+*.temp
+*.bak
+*.old
+*.swp
+*.swo
+
+# OS junk
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Optional local media / screenshots
+*.png
+*.jpg
+*.jpeg
+*.webp

@@ -9,6 +9,8 @@ A_MaxHotkeysPerInterval := 400
 #Include modules\SecretVault.ahk
 #Include modules\Nmer_SecretStore.ahk
 
+global g_NMER_Log_InProgress := false
+
 NMER_StartupOnError(err, mode) {
     if (mode = "Return")
         return false
@@ -23,10 +25,15 @@ NMER_StartupOnError(err, mode) {
     try errFile := err.File
     try errWhat := err.What
     try errStack := err.Stack
-    try NMER_Log("startup", "unhandled_error",
-        err.Message . " file=" . errFile . " line=" . line . " what=" . errWhat . " stack=" . errStack)
-    catch {
-        try FileAppend(Format("{} {}\n", A_Now, msg), Nmer_DebugPath("startup_error.log"))
+    global g_NMER_Log_InProgress
+    if !g_NMER_Log_InProgress {
+        try NMER_Log("startup", "unhandled_error",
+            err.Message . " file=" . errFile . " line=" . line . " what=" . errWhat . " stack=" . errStack)
+        catch {
+            try FileAppend(Format("{} {}\n", A_Now, msg), A_Temp . "\nmer_startup_error.log", "UTF-8")
+        }
+    } else {
+        try FileAppend(Format("{} {}\n", A_Now, msg), A_Temp . "\nmer_startup_error.log", "UTF-8")
     }
     try {
         if FuncExists("Nmer_ShowUserErrorDialog")
@@ -40,7 +47,10 @@ NMER_StartupOnError(err, mode) {
 }
 
 NMER_Log(scope, event, detail := "") {
-    global NMER_TraceSession
+    global NMER_TraceSession, g_NMER_Log_InProgress
+    if g_NMER_Log_InProgress
+        return
+    g_NMER_Log_InProgress := true
     try {
         logPath := Nmer_DebugPath("nmer_trace.log")
         dir := ""
@@ -50,7 +60,9 @@ NMER_Log(scope, event, detail := "") {
         ts := FormatTime(A_Now, "yyyy-MM-dd HH:mm:ss")
         FileAppend("[" . ts . "][" . NMER_TraceSession . "][" . scope . "][" . event . "] " . String(detail) . "`r`n", logPath, "UTF-8")
     } catch as _e {
-        try NMER_Log(A_ThisFunc, "catch", _e.Message)
+        try FileAppend(Format("{} [{}][{}][{}] log_fail: {}\n", A_Now, scope, event, A_ThisFunc, _e.Message), A_Temp . "\nmer_log_fallback.txt", "UTF-8")
+    } finally {
+        g_NMER_Log_InProgress := false
     }
 }
 

@@ -55,7 +55,9 @@ global g_SCWebLlm_UnifiedHostActive := false
 global g_SCWebLlm_UnifiedMultiRectActive := false
 global g_SCWebLlm_UnifiedColumnRects := Map()
 global g_SCWebLlm_UnifiedEmbedViewport := Map()
+global g_SCWebLlm_UnifiedColumnsStageClient := Map()
 global g_SCWebLlm_UnifiedLayoutPaused := false
+global g_SCWebLlm_EmbedWinOpsSuspended := false
 global g_SCWebLlm_UnifiedLayoutLiveDrag := false
 global g_SCWebLlm_UnifiedSuspendGen := 0
 global g_SCWebLlm_UnifiedLayoutBootstrapScheduled := false
@@ -71,21 +73,72 @@ ScWebLlm_IsUnifiedLayoutPaused() {
 }
 
 ScWebLlm_ShouldSkipEmbedWinOps() {
-    if FuncExists("Nmer_IsAppShuttingDown") && Nmer_IsAppShuttingDown()
+    global g_Nmer_AppShuttingDown, g_Nmer_WailsBridgeShuttingDown, g_SCWebLlm_EmbedWinOpsSuspended
+    if g_SCWebLlm_EmbedWinOpsSuspended
+        return true
+    if IsSet(g_Nmer_AppShuttingDown) && (g_Nmer_AppShuttingDown || g_Nmer_WailsBridgeShuttingDown)
         return true
     return false
 }
 
+SearchCenterWebLlm_SuspendEmbedWinOps() {
+    global g_SCWebLlm_EmbedWinOpsSuspended
+    g_SCWebLlm_EmbedWinOpsSuspended := true
+}
+
+ScWebLlm_UnifiedEnsureHostBinding() {
+    if !ScWebLlm_IsUnifiedWorkbenchHost()
+        return
+    global g_UnifiedWb_Ctrl, g_UnifiedWb_Gui, g_SCWV_Ctrl, g_SCWV_Gui
+    if IsObject(g_UnifiedWb_Ctrl)
+        g_SCWV_Ctrl := g_UnifiedWb_Ctrl
+    if IsObject(g_UnifiedWb_Gui)
+        g_SCWV_Gui := g_UnifiedWb_Gui
+    if FuncExists("UnifiedWb_BindScWebLlmHost") {
+        try UnifiedWb_BindScWebLlmHost()
+        catch {
+        }
+    }
+}
+
+ScWebLlm_IsUsableEmbedParent(parentHwnd := 0) {
+    ph := Integer(parentHwnd)
+    if (ph <= 0) {
+        global g_SCWebLlm_ParentHwnd
+        ph := Integer(g_SCWebLlm_ParentHwnd)
+    }
+    return ScWebLlm_IsUsableChildHwnd(ph)
+}
+
 ScWebLlm_IsUsableChildHwnd(hwnd) {
+    if ScWebLlm_ShouldSkipEmbedWinOps()
+        return false
     h := Integer(hwnd)
     if (h <= 0)
         return false
-    if FuncExists("WebView2_IsUsableHwnd")
-        return WebView2_IsUsableHwnd(h)
     try return !!DllCall("IsWindow", "Ptr", h, "Int")
     catch {
         return false
     }
+}
+
+ScWebLlm_IsUsableEmbedHostHwnd(hostHwnd, parentHwnd := 0) {
+    if !ScWebLlm_IsUsableChildHwnd(hostHwnd)
+        return false
+    ph := Integer(parentHwnd)
+    if !ph {
+        global g_SCWebLlm_ParentHwnd
+        ph := Integer(g_SCWebLlm_ParentHwnd)
+    }
+    if !ph || !ScWebLlm_IsUsableChildHwnd(ph)
+        return false
+    try {
+        if (DllCall("GetParent", "Ptr", hostHwnd, "Ptr") != ph)
+            return false
+    } catch {
+        return false
+    }
+    return true
 }
 
 ScWebLlm_EnsureEmbedBackdrop(parentHwnd, embedLeft, embedTop, embedW, embedH) {
@@ -139,7 +192,9 @@ ScWebLlm_ApplyActiveSiteChrome(activeSiteId := "", parentHwnd := 0) {
     if ScWebLlm_ResolveClientRect(hwnd, &embedLeft, &embedTop, &embedW, &embedH) {
         embedW := ScWebLlm_ExpandEmbedWidthToParent(hwnd, embedLeft, embedW)
         embedH := ScWebLlm_FullEmbedColumnHeight(hwnd, embedTop, Max(140, Integer(embedH)))
-        ScWebLlm_EnsureEmbedBackdrop(hwnd, embedLeft, embedTop, embedW, embedH)
+        global g_SCWebLlm_UnifiedMultiRectActive
+        if !(ScWebLlm_IsUnifiedWorkbenchHost() && g_SCWebLlm_UnifiedMultiRectActive)
+            ScWebLlm_EnsureEmbedBackdrop(hwnd, embedLeft, embedTop, embedW, embedH)
         fillCss := Integer(g_SCWebLlm_LastColFillCss)
         SearchCenterWebLlm_ApplyFocusGlow(siteIds, activeNorm, embedLeft, embedTop, embedW, embedH, hwnd, fillCss)
     }
@@ -216,7 +271,11 @@ ScWebLlm_ClearHostViewportClip(hostHwnd) {
 
 ; 卷帘：HWND 保持全列宽，超出 embed 左右边界的部分用 SetWindowRgn 裁掉
 ScWebLlm_ApplyHostViewportClip(hostHwnd, colL, colW, colH, embedLeft, embedW) {
-    global g_SCWebLlm_HostClipCache
+    global g_SCWebLlm_HostClipCache, g_SCWebLlm_UnifiedLayoutLiveDrag, g_SCWebLlm_UnifiedMultiRectActive
+    if ScWebLlm_IsUnifiedWorkbenchHost() && g_SCWebLlm_UnifiedMultiRectActive {
+        ScWebLlm_ClearHostViewportClip(hostHwnd)
+        return true
+    }
     if !hostHwnd || colW <= 0 || colH <= 0 || ScWebLlm_ShouldSkipEmbedWinOps() || !ScWebLlm_IsUsableChildHwnd(hostHwnd)
         return false
     embedRight := embedLeft + embedW
@@ -233,9 +292,11 @@ ScWebLlm_ApplyHostViewportClip(hostHwnd, colL, colW, colH, embedLeft, embedW) {
         return false
     }
     if (colL >= embedLeft && colRight <= embedRight) {
-        clipKey := "in"
-        if g_SCWebLlm_HostClipCache.Has(hostHwnd) && (g_SCWebLlm_HostClipCache[hostHwnd] = clipKey)
-            return true
+        clipKey := "in" . "x" . colW
+        if !g_SCWebLlm_UnifiedLayoutLiveDrag {
+            if g_SCWebLlm_HostClipCache.Has(hostHwnd) && (g_SCWebLlm_HostClipCache[hostHwnd] = clipKey)
+                return true
+        }
         prevClip := g_SCWebLlm_HostClipCache.Has(hostHwnd) ? g_SCWebLlm_HostClipCache[hostHwnd] : ""
         g_SCWebLlm_HostClipCache[hostHwnd] := clipKey
         if (prevClip != "" && prevClip != "in") {
@@ -250,9 +311,11 @@ ScWebLlm_ApplyHostViewportClip(hostHwnd, colL, colW, colH, embedLeft, embedW) {
     visR := Min(colRight, embedRight)
     rgnL := visL - colL
     rgnR := visR - colL
-    clipKey := "c" . rgnL . "x" . rgnR . "x" . embedW
-    if g_SCWebLlm_HostClipCache.Has(hostHwnd) && (g_SCWebLlm_HostClipCache[hostHwnd] = clipKey)
-        return true
+    clipKey := "c" . rgnL . "x" . rgnR . "x" . embedW . "x" . colW
+    if !g_SCWebLlm_UnifiedLayoutLiveDrag {
+        if g_SCWebLlm_HostClipCache.Has(hostHwnd) && (g_SCWebLlm_HostClipCache[hostHwnd] = clipKey)
+            return true
+    }
     g_SCWebLlm_HostClipCache[hostHwnd] := clipKey
     try {
         rgn := DllCall("gdi32\CreateRectRgn", "Int", rgnL, "Int", 0, "Int", rgnR, "Int", colH, "Ptr")
@@ -267,8 +330,11 @@ ScWebLlm_ApplyHostViewportClip(hostHwnd, colL, colW, colH, embedLeft, embedW) {
 }
 
 ScWebLlm_ExpandEmbedWidthToParent(hwnd, embedLeft, embedW) {
-    global g_SCWebLlm_ContentRect
+    global g_SCWebLlm_UnifiedMultiRectActive
     w := Max(200, Integer(embedW))
+    if ScWebLlm_IsUnifiedWorkbenchHost() && g_SCWebLlm_UnifiedMultiRectActive
+        return w
+    global g_SCWebLlm_ContentRect
     ; 仅信任 HTML 上报的 contentRect，勿撑满父窗（侧栏布局下会列错位/天窗）
     if (g_SCWebLlm_ContentRect is Map) {
         cssW := Integer(g_SCWebLlm_ContentRect.Get("width", 0))
@@ -1894,7 +1960,13 @@ ScWebLlm_MobileUserAgent() {
     return "Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1"
 }
 
+ScWebLlm_DesktopUserAgent() {
+    return "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 Edg/131.0.0.0"
+}
+
 ScWebLlm_ShouldUseMobileEmulation(siteId := "") {
+    if ScWebLlm_IsUnifiedWorkbenchHost()
+        return false
     ua := ScWebLlm_SiteUaMode(siteId)
     if (ua = "mobile")
         return true
@@ -2335,7 +2407,9 @@ SearchCenterWebLlm_ApplyMobileSettings(wv2, siteId := "") {
     try {
         s := wv2.Settings
         if IsObject(s) {
-            if ScWebLlm_ShouldUseMobileEmulation(siteId)
+            if ScWebLlm_IsUnifiedWorkbenchHost()
+                s.UserAgent := ScWebLlm_DesktopUserAgent()
+            else if ScWebLlm_ShouldUseMobileEmulation(siteId)
                 s.UserAgent := ScWebLlm_MobileUserAgent()
             s.AreDefaultContextMenusEnabled := true
             s.AreDevToolsEnabled := false
@@ -2750,6 +2824,151 @@ SearchCenterWebLlm_SetUnifiedEmbedLayoutPaused(paused := true) {
     return true
 }
 
+ScWebLlm_CopyEmbedRectMap(rectRaw) {
+    if !(rectRaw is Map)
+        return 0
+    rw := Max(0, Integer(rectRaw.Get("width", 0)))
+    rh := Max(0, Integer(rectRaw.Get("height", 0)))
+    if (rw < 80 || rh < 80)
+        return 0
+    m := Map(
+        "left", Integer(rectRaw.Get("left", 0)),
+        "top", Integer(rectRaw.Get("top", 0)),
+        "width", rw,
+        "height", rh
+    )
+    if rectRaw.Has("dpr") {
+        dpr := Float(rectRaw["dpr"])
+        if (dpr > 0.1 && dpr < 10)
+            m["dpr"] := dpr
+    }
+    cs := Trim(String(rectRaw.Get("coordSpace", "")))
+    if (cs != "")
+        m["coordSpace"] := cs
+    if rectRaw.Has("viewportLeft")
+        m["viewportLeft"] := Integer(rectRaw["viewportLeft"])
+    if rectRaw.Has("viewportTop")
+        m["viewportTop"] := Integer(rectRaw["viewportTop"])
+    return m
+}
+
+ScWebLlm_UnifiedRectScale(rect := 0) {
+    global g_UnifiedWb_Ctrl, g_SCWV_Ctrl
+    ctrl := 0
+    if ScWebLlm_IsUnifiedWorkbenchHost() && IsObject(g_UnifiedWb_Ctrl)
+        ctrl := g_UnifiedWb_Ctrl
+    else if IsObject(g_SCWV_Ctrl)
+        ctrl := g_SCWV_Ctrl
+    if IsObject(ctrl) {
+        try {
+            rs := ctrl.RasterizationScale
+            if (rs > 0.1 && rs < 10)
+                return rs
+        } catch {
+        }
+    }
+    if (rect is Map) && rect.Has("dpr") {
+        dpr := Float(rect["dpr"])
+        if (dpr > 0.1 && dpr < 10)
+            return dpr
+    }
+    return ScWebLlm_GetRasterScale()
+}
+
+ScWebLlm_UnifiedRefreshColumnsStageClient(hwnd := 0) {
+    global g_SCWebLlm_UnifiedColumnsStageClient
+    g_SCWebLlm_UnifiedColumnsStageClient := Map()
+    h := Integer(hwnd) ? Integer(hwnd) : ScWebLlm_GetEmbedParentHwnd()
+    if !h
+        return false
+    sl := 0
+    st := 0
+    sw := 0
+    sh := 0
+    if !ScWebLlm_UnifiedResolveEmbedViewport(h, &sl, &st, &sw, &sh)
+        return false
+    g_SCWebLlm_UnifiedColumnsStageClient := Map("left", sl, "top", st, "width", sw, "height", sh)
+    return true
+}
+
+ScWebLlm_UnifiedRectToParentClient(rect, &left, &top, &w, &h) {
+    left := 0
+    top := 0
+    w := 0
+    h := 0
+    if !(rect is Map)
+        return false
+    if !FuncExists("_SCWV_ViewportRectToParentClient")
+        return false
+    ph := 0
+    if ScWebLlm_IsUnifiedWorkbenchHost() {
+        global g_UnifiedWb_Gui
+        if IsObject(g_UnifiedWb_Gui) {
+            try ph := g_UnifiedWb_Gui.Hwnd
+            catch {
+            }
+        }
+    }
+    if !ph
+        ph := ScWebLlm_GetEmbedParentHwnd()
+    if !ph
+        return false
+    global g_SCWV_Ctrl, g_SCWV_Gui, g_UnifiedWb_Ctrl, g_UnifiedWb_Gui
+    savedCtrl := g_SCWV_Ctrl
+    savedGui := g_SCWV_Gui
+    if ScWebLlm_IsUnifiedWorkbenchHost() {
+        if IsObject(g_UnifiedWb_Ctrl)
+            g_SCWV_Ctrl := g_UnifiedWb_Ctrl
+        if IsObject(g_UnifiedWb_Gui)
+            g_SCWV_Gui := g_UnifiedWb_Gui
+    }
+    ok := false
+    try ok := _SCWV_ViewportRectToParentClient(rect, ph, &left, &top, &w, &h)
+    finally {
+        g_SCWV_Ctrl := savedCtrl
+        g_SCWV_Gui := savedGui
+    }
+    return ok
+}
+
+ScWebLlm_UnifiedColumnRectToParentClient(rect, parentHwnd, &colL, &colT, &colW, &colH) {
+    colL := 0
+    colT := 0
+    colW := 0
+    colH := 0
+    ph := Integer(parentHwnd)
+    if !ph
+        ph := ScWebLlm_GetEmbedParentHwnd()
+    if !(rect is Map) || !ph
+        return false
+    if ScWebLlm_UnifiedRectToParentClient(rect, &colL, &colT, &colW, &colH)
+        return (colW >= 80 && colH >= 60)
+    if FuncExists("_SCWV_ViewportRectToParentClient") {
+        global g_SCWV_Ctrl, g_SCWV_Gui, g_UnifiedWb_Ctrl, g_UnifiedWb_Gui
+        savedCtrl := g_SCWV_Ctrl
+        savedGui := g_SCWV_Gui
+        if ScWebLlm_IsUnifiedWorkbenchHost() {
+            if IsObject(g_UnifiedWb_Ctrl)
+                g_SCWV_Ctrl := g_UnifiedWb_Ctrl
+            if IsObject(g_UnifiedWb_Gui)
+                g_SCWV_Gui := g_UnifiedWb_Gui
+        }
+        ok := false
+        try ok := _SCWV_ViewportRectToParentClient(rect, ph, &colL, &colT, &colW, &colH)
+        finally {
+            g_SCWV_Ctrl := savedCtrl
+            g_SCWV_Gui := savedGui
+        }
+        if ok
+            return true
+    }
+    colL := Integer(rect.Get("left", 0))
+    colT := Integer(rect.Get("top", 0))
+    colW := Integer(rect.Get("width", 0))
+    colH := Integer(rect.Get("height", 0))
+    return (colW >= 80 && colH >= 60)
+}
+
 ScWebLlm_UnifiedResolveEmbedViewport(hwnd, &embedLeft, &embedTop, &embedW, &embedH) {
     global g_SCWebLlm_UnifiedEmbedViewport
     embedLeft := 0
@@ -2764,7 +2983,7 @@ ScWebLlm_UnifiedResolveEmbedViewport(hwnd, &embedLeft, &embedTop, &embedW, &embe
         return false
     if FuncExists("_SCWV_ViewportRectToParentClient") {
         try {
-            if _SCWV_ViewportRectToParentClient(g_SCWebLlm_UnifiedEmbedViewport, hwnd, &embedLeft, &embedTop, &embedW, &embedH)
+            if ScWebLlm_UnifiedColumnRectToParentClient(g_SCWebLlm_UnifiedEmbedViewport, hwnd, &embedLeft, &embedTop, &embedW, &embedH)
                 return true
         } catch {
         }
@@ -2777,7 +2996,7 @@ ScWebLlm_UnifiedResolveEmbedViewport(hwnd, &embedLeft, &embedTop, &embedW, &embe
 }
 
 ScWebLlm_UnifiedSetEmbedViewport(rawViewport) {
-    global g_SCWebLlm_UnifiedEmbedViewport, g_SCWebLlm_LastBoundsKey
+    global g_SCWebLlm_UnifiedEmbedViewport, g_SCWebLlm_LastBoundsKey, g_SCWebLlm_UnifiedColumnsStageClient
     if !(rawViewport is Map)
         return false
     rl := Integer(rawViewport.Get("left", 0))
@@ -2787,11 +3006,112 @@ ScWebLlm_UnifiedSetEmbedViewport(rawViewport) {
     if (rw < 80 || rh < 80)
         return false
     prev := (g_SCWebLlm_UnifiedEmbedViewport is Map) ? g_SCWebLlm_UnifiedEmbedViewport : Map()
+    prevDpr := prev.Has("dpr") ? Float(prev["dpr"]) : 0.0
+    newDpr := rawViewport.Has("dpr") ? Float(rawViewport["dpr"]) : 0.0
     if (Integer(prev.Get("left", -1)) = rl && Integer(prev.Get("top", -1)) = rt
-        && Integer(prev.Get("width", -1)) = rw && Integer(prev.Get("height", -1)) = rh)
+        && Integer(prev.Get("width", -1)) = rw && Integer(prev.Get("height", -1)) = rh
+        && (!newDpr || !prevDpr || Abs(newDpr - prevDpr) < 0.02))
         return true
     g_SCWebLlm_UnifiedEmbedViewport := Map("left", rl, "top", rt, "width", rw, "height", rh)
+    if (newDpr > 0.1 && newDpr < 10)
+        g_SCWebLlm_UnifiedEmbedViewport["dpr"] := newDpr
+    g_SCWebLlm_UnifiedColumnsStageClient := Map()
     g_SCWebLlm_LastBoundsKey := ""
+    return true
+}
+
+ScWebLlm_UnifiedMultiRectApplyBoundsLive(parentHwnd := 0) {
+    global g_SCWebLlm_UnifiedColumnRects, g_SCWebLlm_Visible, g_SCWebLlm_ParentHwnd
+    global g_SCWebLlm_SiteBoundsSig, g_SCWebLlm_SiteHosts, g_SCWebLlm_LayoutSiteIds
+    global g_SCWebLlm_UnifiedLayoutPaused, g_SCWebLlm_UnifiedLayoutLiveDrag
+    if g_SCWebLlm_UnifiedLayoutPaused || ScWebLlm_ShouldSkipEmbedWinOps()
+        return false
+    ScWebLlm_UnifiedEnsureHostBinding()
+    hwnd := Integer(parentHwnd) ? Integer(parentHwnd) : g_SCWebLlm_ParentHwnd
+    if !hwnd || !g_SCWebLlm_Visible || !g_SCWebLlm_UnifiedColumnRects.Count
+        return false
+    g_SCWebLlm_ParentHwnd := hwnd
+    g_SCWebLlm_UnifiedLayoutLiveDrag := true
+    ScWebLlm_UnifiedRefreshColumnsStageClient(hwnd)
+    embedLeft := 0
+    embedTop := 0
+    embedW := 0
+    embedH := 0
+    hasEmbedVp := ScWebLlm_UnifiedResolveEmbedViewport(hwnd, &embedLeft, &embedTop, &embedW, &embedH)
+    liveFlags := 0
+    for sid in g_SCWebLlm_LayoutSiteIds {
+        sidNorm := ScWebLlm_NormalizeSiteId(sid)
+        if (sidNorm = "" || !g_SCWebLlm_UnifiedColumnRects.Has(sidNorm))
+            continue
+        rect := g_SCWebLlm_UnifiedColumnRects[sidNorm]
+        if !(rect is Map)
+            continue
+        colL := 0
+        colT := 0
+        colW := 0
+        colH := 0
+        if !ScWebLlm_UnifiedColumnRectToParentClient(rect, hwnd, &colL, &colT, &colW, &colH) {
+            colL := Integer(rect.Get("left", 0))
+            colT := Integer(rect.Get("top", 0))
+            colW := Integer(rect.Get("width", 0))
+            colH := Integer(rect.Get("height", 0))
+        }
+        rec := SearchCenterWebLlm_SiteRecord(sidNorm)
+        if !(rec is Map)
+            continue
+        hostHwnd := rec.Has("hostHwnd") ? rec["hostHwnd"] : 0
+        if !hostHwnd
+            continue
+        showCol := (colW >= 80 && colH >= 80)
+        inView := showCol
+        if inView {
+            SearchCenterWebLlm_PositionChildHost(hostHwnd, colL, colT, colW, colH, true, hwnd, liveFlags)
+            ScWebLlm_ClearHostViewportClip(hostHwnd)
+            boundsSig := colL . "x" . colT . "x" . colW . "x" . colH
+            g_SCWebLlm_SiteBoundsSig[sidNorm] := boundsSig
+            if IsObject(rec["ctrl"]) {
+                try {
+                    WinGetClientPos(, , &hw, &hh, hostHwnd)
+                    if (hw > 0 && hh > 0) {
+                        rc := WebView2.RECT()
+                        rc.left := 0
+                        rc.top := 0
+                        rc.right := hw
+                        rc.bottom := hh
+                        rec["ctrl"].Bounds := rc
+                    } else if (colW > 0 && colH > 0) {
+                        rc := WebView2.RECT()
+                        rc.left := 0
+                        rc.top := 0
+                        rc.right := colW
+                        rc.bottom := colH
+                        rec["ctrl"].Bounds := rc
+                    }
+                    rec["ctrl"].NotifyParentWindowPositionChanged()
+                } catch as e {
+                    ScWebLlm_Catch(e)
+                }
+            }
+            if IsObject(rec["ctrl"]) {
+                try rec["ctrl"].IsVisible := true
+                catch {
+                }
+            }
+        } else {
+            ScWebLlm_ClearHostViewportClip(hostHwnd)
+            SearchCenterWebLlm_PositionChildHost(hostHwnd, 0, 0, 0, 0, false, hwnd)
+            if IsObject(rec["ctrl"]) {
+                try rec["ctrl"].IsVisible := false
+                catch {
+                }
+            }
+        }
+    }
+    g_SCWebLlm_UnifiedLayoutLiveDrag := false
+    try ScWebLlm_EnsureUnifiedMultiHostStack(g_SCWebLlm_ActiveSiteId)
+    catch as e {
+        ScWebLlm_Catch(e)
+    }
     return true
 }
 
@@ -2804,12 +3124,14 @@ ScWebLlm_UnifiedMultiRectApplyBounds(parentHwnd := 0) {
         return false
     if ScWebLlm_ShouldSkipEmbedWinOps()
         return false
+    ScWebLlm_UnifiedEnsureHostBinding()
     hwnd := Integer(parentHwnd) ? Integer(parentHwnd) : g_SCWebLlm_ParentHwnd
     if !hwnd || !g_SCWebLlm_Visible || !g_SCWebLlm_UnifiedColumnRects.Count
         return false
     g_SCWebLlm_ParentHwnd := hwnd
     SearchCenterWebLlm_LowerMainWebView()
     ScWebLlm_HideEmbedBackdrop()
+    ScWebLlm_UnifiedRefreshColumnsStageClient(hwnd)
     embedLeft := 0
     embedTop := 0
     embedW := 0
@@ -2829,14 +3151,7 @@ ScWebLlm_UnifiedMultiRectApplyBounds(parentHwnd := 0) {
         colT := 0
         colW := 0
         colH := 0
-        converted := false
-        if FuncExists("_SCWV_ViewportRectToParentClient") {
-            try converted := _SCWV_ViewportRectToParentClient(rect, hwnd, &colL, &colT, &colW, &colH)
-            catch {
-                converted := false
-            }
-        }
-        if !converted {
+        if !ScWebLlm_UnifiedColumnRectToParentClient(rect, hwnd, &colL, &colT, &colW, &colH) {
             colL := Integer(rect.Get("left", 0))
             colT := Integer(rect.Get("top", 0))
             colW := Integer(rect.Get("width", 0))
@@ -2853,19 +3168,15 @@ ScWebLlm_UnifiedMultiRectApplyBounds(parentHwnd := 0) {
         if !hostHwnd
             continue
         showCol := (colW >= 80 && colH >= 80)
-        inView := showCol && (!hasEmbedVp || ScWebLlm_ColumnIntersectsViewport(colL, colW, embedLeft, embedW))
+        inView := showCol
         if inView {
-            liveFlags := g_SCWebLlm_UnifiedLayoutLiveDrag ? 0x0400 : 0
-            SearchCenterWebLlm_PositionChildHost(hostHwnd, colL, colT, colW, colH, true, hwnd, liveFlags)
-            if hasEmbedVp
-                ScWebLlm_ApplyHostViewportClip(hostHwnd, colL, colW, colH, embedLeft, embedW)
-            else
-                ScWebLlm_ClearHostViewportClip(hostHwnd)
+            SearchCenterWebLlm_PositionChildHost(hostHwnd, colL, colT, colW, colH, true, hwnd, 0)
+            ScWebLlm_ClearHostViewportClip(hostHwnd)
         } else {
             ScWebLlm_ClearHostViewportClip(hostHwnd)
             SearchCenterWebLlm_PositionChildHost(hostHwnd, 0, 0, 0, 0, false, hwnd)
         }
-        boundsSig := colW . "x" . colH
+        boundsSig := colL . "x" . colT . "x" . colW . "x" . colH
         g_SCWebLlm_SiteBoundsSig[sidNorm] := boundsSig
         if IsObject(rec["ctrl"]) && hostHwnd && inView {
             try {
@@ -2877,8 +3188,15 @@ ScWebLlm_UnifiedMultiRectApplyBounds(parentHwnd := 0) {
                     rc.right := hw
                     rc.bottom := hh
                     rec["ctrl"].Bounds := rc
-                    rec["ctrl"].NotifyParentWindowPositionChanged()
+                } else if (colW > 0 && colH > 0) {
+                    rc := WebView2.RECT()
+                    rc.left := 0
+                    rc.top := 0
+                    rc.right := colW
+                    rc.bottom := colH
+                    rec["ctrl"].Bounds := rc
                 }
+                rec["ctrl"].NotifyParentWindowPositionChanged()
             } catch as e {
                 ScWebLlm_Catch(e)
             }
@@ -2939,6 +3257,13 @@ ScWebLlm_EnsureUnifiedMultiHostStack(activeSiteId := "") {
         return
     if !ScWebLlm_ShouldShowWebEmbed() || !g_SCWebLlm_Visible || ScWebLlm_IsRailDragging()
         return
+    if FuncExists("UnifiedWb_IsVisible") {
+        try {
+            if ScWebLlm_IsUnifiedWorkbenchHost() && !UnifiedWb_IsVisible()
+                return
+        } catch {
+        }
+    }
     if !g_SCWebLlm_OwnerOverlay && !g_SCWebLlm_MainWebViewLowered
         SearchCenterWebLlm_LowerMainWebView()
     g_SCWebLlm_LastRaisedHostHwnd := 0
@@ -2963,7 +3288,7 @@ ScWebLlm_EnsureUnifiedMultiHostStack(activeSiteId := "") {
         for item in ordered {
             sidNorm := String(item["sid"])
             rec := SearchCenterWebLlm_SiteRecord(sidNorm)
-            if (rec is Map) && rec.Has("hostHwnd") && rec["hostHwnd"]
+            if (rec is Map) && rec.Has("hostHwnd") && rec["hostHwnd"] && ScWebLlm_IsUsableEmbedHostHwnd(rec["hostHwnd"])
                 SearchCenterWebLlm_RaiseChildHost(rec["hostHwnd"])
         }
         return
@@ -2988,6 +3313,90 @@ SearchCenterWebLlm_ApplyUnifiedMultiColumnFromWeb(rawColumns, maxActive := 0, fo
     global g_SCWebLlm_UnifiedLayoutBootstrapScheduled, g_SCWebLlm_UnifiedLayoutNudgeCount, g_SCWebLlm_UnifiedEmbedViewport
     if !(rawColumns is Array) || !rawColumns.Length
         return false
+    if liveOnly {
+        global g_SCWebLlm_ChildHostBoundsCache, g_SCWebLlm_HostClipCache, g_SCWebLlm_SiteBoundsSig
+        if ScWebLlm_IsUnifiedLayoutPaused()
+            return true
+        g_SCWebLlm_ChildHostBoundsCache := Map()
+        g_SCWebLlm_HostClipCache := Map()
+        g_SCWebLlm_SiteBoundsSig := Map()
+        if (embedViewport is Map)
+            ScWebLlm_UnifiedSetEmbedViewport(embedViewport)
+        liveSiteIds := []
+        for item in rawColumns {
+            if !(item is Map)
+                continue
+            sidRaw := item.Has("siteId") ? String(item["siteId"]) : (item.Has("id") ? String(item["id"]) : "")
+            sidNorm := ScWebLlm_NormalizeSiteId(sidRaw)
+            if (sidNorm = "")
+                continue
+            dup := false
+            for existing in liveSiteIds {
+                if (existing = sidNorm) {
+                    dup := true
+                    break
+                }
+            }
+            if dup
+                continue
+            rectRaw := item.Has("rect") ? item["rect"] : item
+            if !(rectRaw is Map)
+                continue
+            rectCopy := ScWebLlm_CopyEmbedRectMap(rectRaw)
+            if !(rectCopy is Map)
+                continue
+            g_SCWebLlm_UnifiedColumnRects[sidNorm] := rectCopy
+            liveSiteIds.Push(sidNorm)
+        }
+        if liveSiteIds.Length {
+            g_SCWebLlm_LayoutSiteIds := liveSiteIds.Clone()
+            g_SCWebLlm_UnifiedMultiRectActive := true
+        }
+        unionL := 999999
+        unionT := 999999
+        unionR := 0
+        unionB := 0
+        h := ScWebLlm_GetEmbedParentHwnd()
+        ScWebLlm_UnifiedRefreshColumnsStageClient(h)
+        for sid, rect in g_SCWebLlm_UnifiedColumnRects {
+            if !(rect is Map)
+                continue
+            rl := Integer(rect.Get("left", 0))
+            rt := Integer(rect.Get("top", 0))
+            rr := rl + Integer(rect.Get("width", 0))
+            rb := rt + Integer(rect.Get("height", 0))
+            if (rl < unionL)
+                unionL := rl
+            if (rt < unionT)
+                unionT := rt
+            if (rr > unionR)
+                unionR := rr
+            if (rb > unionB)
+                unionB := rb
+        }
+        if (unionL != 999999) {
+            cr := Map(
+                "left", unionL,
+                "top", unionT,
+                "width", Max(200, unionR - unionL),
+                "height", Max(140, unionB - unionT)
+            )
+            global g_SCWebLlm_UnifiedEmbedViewport
+            if (g_SCWebLlm_UnifiedEmbedViewport is Map) && g_SCWebLlm_UnifiedEmbedViewport.Has("dpr")
+                cr["dpr"] := g_SCWebLlm_UnifiedEmbedViewport["dpr"]
+            g_SCWebLlm_ContentRect := cr
+            g_SCWebLlm_ContentRectReady := true
+        }
+        h := ScWebLlm_GetEmbedParentHwnd()
+        if h {
+            g_SCWebLlm_LastBoundsKey := ""
+            try ScWebLlm_UnifiedMultiRectApplyBoundsLive(h)
+            catch as e {
+                ScWebLlm_Catch(e)
+            }
+        }
+        return true
+    }
     if (embedViewport is Map)
         ScWebLlm_UnifiedSetEmbedViewport(embedViewport)
     limit := Integer(maxActive)
@@ -3020,18 +3429,14 @@ SearchCenterWebLlm_ApplyUnifiedMultiColumnFromWeb(rawColumns, maxActive := 0, fo
         rectRaw := item.Has("rect") ? item["rect"] : item
         if !(rectRaw is Map)
             continue
-        rw := Max(0, Integer(rectRaw.Get("width", 0)))
-        rh := Max(0, Integer(rectRaw.Get("height", 0)))
-        if (rw < 80 || rh < 80)
+        rectCopy := ScWebLlm_CopyEmbedRectMap(rectRaw)
+        if !(rectCopy is Map)
             continue
-        rl := Integer(rectRaw.Get("left", 0))
-        rt := Integer(rectRaw.Get("top", 0))
-        rects[sidNorm] := Map(
-            "left", rl,
-            "top", rt,
-            "width", rw,
-            "height", rh
-        )
+        rl := Integer(rectCopy.Get("left", 0))
+        rt := Integer(rectCopy.Get("top", 0))
+        rw := Integer(rectCopy.Get("width", 0))
+        rh := Integer(rectCopy.Get("height", 0))
+        rects[sidNorm] := rectCopy
         siteIds.Push(sidNorm)
         if (rl < unionL)
             unionL := rl
@@ -3051,51 +3456,44 @@ SearchCenterWebLlm_ApplyUnifiedMultiColumnFromWeb(rawColumns, maxActive := 0, fo
     g_SCWebLlm_LayoutSiteIds := siteIds.Clone()
     g_SCWebLlm_UnifiedLayoutBootstrapScheduled := false
     g_SCWebLlm_UnifiedLayoutNudgeCount := 0
+    global g_SCWebLlm_ChildHostBoundsCache, g_SCWebLlm_HostClipCache, g_SCWebLlm_SiteBoundsSig
+    g_SCWebLlm_ChildHostBoundsCache := Map()
+    g_SCWebLlm_HostClipCache := Map()
+    g_SCWebLlm_SiteBoundsSig := Map()
     SearchCenterSelectedEngines := siteIds.Clone()
     g_SCWebLlm_BroadcastSynced := true
     if (unionL = 999999)
         unionL := 0
     if (unionT = 999999)
         unionT := 0
-    g_SCWebLlm_ContentRect := Map(
+    cr := Map(
         "left", unionL,
         "top", unionT,
         "width", Max(200, unionR - unionL),
         "height", Max(140, unionB - unionT)
     )
+    if (g_SCWebLlm_UnifiedEmbedViewport is Map) && g_SCWebLlm_UnifiedEmbedViewport.Has("dpr")
+        cr["dpr"] := g_SCWebLlm_UnifiedEmbedViewport["dpr"]
+    g_SCWebLlm_ContentRect := cr
     g_SCWebLlm_ContentRectReady := true
     g_SCWebLlm_BootstrapWaitCount := 0
     g_SCWebLlm_LastBoundsKey := ""
     g_SCWebLlm_Visible := true
-    if !liveOnly {
-        focusNorm := ScWebLlm_NormalizeSiteId(focusSiteId)
-        focusFound := false
-        if (focusNorm != "") {
-            for sid in siteIds {
-                if (sid = focusNorm) {
-                    focusFound := true
-                    break
-                }
+    focusNorm := ScWebLlm_NormalizeSiteId(focusSiteId)
+    focusFound := false
+    if (focusNorm != "") {
+        for sid in siteIds {
+            if (sid = focusNorm) {
+                focusFound := true
+                break
             }
         }
-        if focusFound
-            g_SCWebLlm_ActiveSiteId := focusNorm
-        else
-            g_SCWebLlm_ActiveSiteId := siteIds[1]
     }
+    if focusFound
+        g_SCWebLlm_ActiveSiteId := focusNorm
+    else
+        g_SCWebLlm_ActiveSiteId := siteIds[1]
     h := ScWebLlm_GetEmbedParentHwnd()
-    if liveOnly {
-        if h {
-            global g_SCWebLlm_UnifiedLayoutLiveDrag
-            g_SCWebLlm_UnifiedLayoutLiveDrag := true
-            try ScWebLlm_UnifiedMultiRectApplyBounds(h)
-            catch as e {
-                ScWebLlm_Catch(e)
-            }
-            g_SCWebLlm_UnifiedLayoutLiveDrag := false
-        }
-        return true
-    }
     if h && !ScWebLlm_IsUnifiedLayoutPaused() {
         SearchCenterWebLlm_LowerMainWebView()
         try SearchCenterWebLlm_ApplyBounds(h)
@@ -3506,6 +3904,10 @@ SearchCenterWebLlm_SiteLastUrl(siteId) {
     return ""
 }
 
+ScWebLlm_UnifiedHostBackColor() {
+    return "F8FAFC"
+}
+
 SearchCenterWebLlm_CreateChildHostGui(ownerHwnd, bgColor := "F8FAFC") {
     owner := Integer(ownerHwnd)
     if !owner
@@ -3520,7 +3922,9 @@ SearchCenterWebLlm_CreateChildHostGui(ownerHwnd, bgColor := "F8FAFC") {
         }
         g := Gui("-Caption -SysMenu +E0x08000000 -DPIScale", "SCWebLlmEmbed")
         g.BackColor := bgColor
-        g.Show("Hide w400 h400")
+        initW := ScWebLlm_IsUnifiedWorkbenchHost() ? 1200 : 400
+        initH := ScWebLlm_IsUnifiedWorkbenchHost() ? 900 : 400
+        g.Show("Hide w" . initW . " h" . initH)
         hwnd := g.Hwnd
         style := DllCall("GetWindowLongPtr", "Ptr", hwnd, "Int", -16, "Ptr")
         style := (style | 0x40000000 | 0x10000000) & ~0x80000000
@@ -3537,7 +3941,9 @@ SearchCenterWebLlm_CreateChildHostGui(ownerHwnd, bgColor := "F8FAFC") {
 }
 
 SearchCenterWebLlm_PositionChildHost(hostHwnd, x, y, w, h, show := true, parentHwnd := 0, extraFlags := 0) {
-    if !hostHwnd || ScWebLlm_ShouldSkipEmbedWinOps() || !ScWebLlm_IsUsableChildHwnd(hostHwnd)
+    if ScWebLlm_ShouldSkipEmbedWinOps()
+        return
+    if !hostHwnd || !ScWebLlm_IsUsableChildHwnd(hostHwnd)
         return
     global g_SCWebLlm_OwnerOverlay, g_SCWebLlm_ParentHwnd, g_SCWebLlm_ChildHostBoundsCache
     sx := Integer(x)
@@ -3546,11 +3952,21 @@ SearchCenterWebLlm_PositionChildHost(hostHwnd, x, y, w, h, show := true, parentH
     sh := Integer(h)
     vis := (show && sw > 0 && sh > 0) ? 1 : 0
     unifiedHost := ScWebLlm_IsUnifiedWorkbenchHost()
+    ph := Integer(parentHwnd) ? Integer(parentHwnd) : Integer(g_SCWebLlm_ParentHwnd)
+    if unifiedHost && !ScWebLlm_IsUsableEmbedParent(ph)
+        return
+    if (vis && !ScWebLlm_IsUsableEmbedHostHwnd(hostHwnd, ph))
+        return
     if (vis && ScWebLlm_IsUnifiedLayoutPaused())
         return
     boundsKey := sx . "x" . sy . "x" . sw . "x" . sh . "x" . vis . "x" . (unifiedHost ? 1 : 0)
-    if g_SCWebLlm_ChildHostBoundsCache.Has(hostHwnd) && (g_SCWebLlm_ChildHostBoundsCache[hostHwnd] = boundsKey)
-        return
+    global g_SCWebLlm_UnifiedLayoutLiveDrag
+    if !unifiedHost {
+        if !(g_SCWebLlm_UnifiedLayoutLiveDrag && unifiedHost) {
+            if g_SCWebLlm_ChildHostBoundsCache.Has(hostHwnd) && (g_SCWebLlm_ChildHostBoundsCache[hostHwnd] = boundsKey)
+                return
+        }
+    }
     g_SCWebLlm_ChildHostBoundsCache[hostHwnd] := boundsKey
     id := "ahk_id " . hostHwnd
     if g_SCWebLlm_OwnerOverlay {
@@ -3593,20 +4009,15 @@ SearchCenterWebLlm_PositionChildHost(hostHwnd, x, y, w, h, show := true, parentH
         h := 0
     }
     if unifiedHost && !vis {
-        try WinHide(id)
+        try DllCall("SetWindowPos", "Ptr", hostHwnd, "Ptr", 0, "Int", 0, "Int", 0, "Int", 0, "Int", 0, "UInt", 0x0010 | 0x0080)
         catch as e {
             ScWebLlm_Catch(e)
         }
+        return
     }
     try DllCall("SetWindowPos", "Ptr", hostHwnd, "Ptr", 0, "Int", x, "Int", y, "Int", w, "Int", h, "UInt", flags)
     catch as e {
         ScWebLlm_Catch(e)
-    }
-    if unifiedHost && vis {
-        try WinShow(id)
-        catch as e {
-            ScWebLlm_Catch(e)
-        }
     }
 }
 
@@ -3617,7 +4028,30 @@ SearchCenterWebLlm_LowerMainWebView(retryPass := 0) {
     if g_SCWebLlm_MainWebViewLowered
         return
     if ScWebLlm_IsUnifiedWorkbenchHost() {
-        ; 统一工作台壳页 WebView 必须保持可见以渲染 CLI 列；AI 子窗叠在对应列区域即可。
+        ctrl := 0
+        global g_UnifiedWb_Ctrl
+        if IsObject(g_UnifiedWb_Ctrl)
+            ctrl := g_UnifiedWb_Ctrl
+        else if IsObject(g_SCWV_Ctrl)
+            ctrl := g_SCWV_Ctrl
+        if !IsObject(ctrl)
+            return
+        mainHwnd := 0
+        try mainHwnd := ctrl.ParentWindow
+        catch {
+        }
+        if !mainHwnd {
+            if (retryPass < 16)
+                SetTimer(SearchCenterWebLlm_LowerMainWebView.Bind(retryPass + 1), -Min(80 + retryPass * 60, 500))
+            return
+        }
+        if ScWebLlm_ShouldSkipEmbedWinOps() || !ScWebLlm_IsUsableChildHwnd(mainHwnd)
+            return
+        try DllCall("SetWindowPos", "Ptr", mainHwnd, "Ptr", 1, "Int", 0, "Int", 0, "Int", 0, "Int", 0, "UInt", 0x0010 | 0x0001 | 0x0002)
+        catch as e {
+            ScWebLlm_Catch(e)
+            return
+        }
         g_SCWebLlm_MainWebViewLowered := true
         return
     }
@@ -3669,7 +4103,9 @@ SearchCenterWebLlm_LowerChildHost(hostHwnd) {
 }
 
 SearchCenterWebLlm_RaiseChildHost(hostHwnd) {
-    if !hostHwnd || ScWebLlm_ShouldSkipEmbedWinOps() || !ScWebLlm_IsUsableChildHwnd(hostHwnd)
+    if !hostHwnd || ScWebLlm_ShouldSkipEmbedWinOps()
+        return
+    if !ScWebLlm_IsUsableEmbedHostHwnd(hostHwnd)
         return
     if ScWebLlm_IsUnifiedLayoutPaused()
         return
@@ -3692,6 +4128,8 @@ SearchCenterWebLlm_RaiseChildHost(hostHwnd) {
         }
         return
     }
+    if !ScWebLlm_IsUsableEmbedHostHwnd(hostHwnd)
+        return
     try DllCall("SetWindowPos", "Ptr", hostHwnd, "Ptr", 0, "Int", 0, "Int", 0, "Int", 0, "Int", 0, "UInt", 0x0010 | 0x0001 | 0x0002)
     catch as e {
         ScWebLlm_Catch(e)
@@ -3815,7 +4253,7 @@ SearchCenterWebLlm_EnsureSiteHost(parentHwnd, siteId) {
         if g_SCWebLlm_OwnerOverlay {
             if (rec.Has("ownerHwnd") && rec["ownerHwnd"] = ph) {
                 if IsObject(rec["hostGui"]) {
-                    try rec["hostGui"].BackColor := "0b1220"
+                    try rec["hostGui"].BackColor := ScWebLlm_IsUnifiedWorkbenchHost() ? ScWebLlm_UnifiedHostBackColor() : "0b1220"
                     catch {
                     }
                 }
@@ -3825,7 +4263,7 @@ SearchCenterWebLlm_EnsureSiteHost(parentHwnd, siteId) {
             try {
                 if (DllCall("GetParent", "Ptr", rec["hostHwnd"], "Ptr") = ph) {
                     if IsObject(rec["hostGui"]) {
-                        try rec["hostGui"].BackColor := "0b1220"
+                        try rec["hostGui"].BackColor := ScWebLlm_IsUnifiedWorkbenchHost() ? ScWebLlm_UnifiedHostBackColor() : "0b1220"
                         catch {
                         }
                     }
@@ -3842,7 +4280,7 @@ SearchCenterWebLlm_EnsureSiteHost(parentHwnd, siteId) {
             ScWebLlm_Catch(e)
         }
     }
-    created := SearchCenterWebLlm_CreateChildHostGui(ph, "0b1220")
+    created := SearchCenterWebLlm_CreateChildHostGui(ph, ScWebLlm_IsUnifiedWorkbenchHost() ? ScWebLlm_UnifiedHostBackColor() : "0b1220")
     if !(created is Map) || !created.Has("hwnd") || !created["hwnd"]
         return 0
     rec["hostGui"] := created["gui"]
@@ -4135,7 +4573,7 @@ SearchCenterWebLlm_OnControllerReady(ctrl, siteId, url, expectedHost := 0) {
     }
     rec["ready"] := true
     rec["lifecycleState"] := "ready"
-    try ctrl.DefaultBackgroundColor := 0xFF0B1220
+    try ctrl.DefaultBackgroundColor := ScWebLlm_IsUnifiedWorkbenchHost() ? 0xFFFFFFFF : 0xFF0B1220
     catch {
     }
     SearchCenterWebLlm_ApplyMobileSettings(rec["wv2"], sid)
@@ -4206,6 +4644,8 @@ SearchCenterWebLlm_OnControllerReady(ctrl, siteId, url, expectedHost := 0) {
 
 SearchCenterWebLlm_OnControllerReadyLayoutTick(siteId, *) {
     global g_SCWebLlm_UnifiedMultiRectActive
+    if ScWebLlm_ShouldSkipEmbedWinOps()
+        return
     sid := ScWebLlm_NormalizeSiteId(siteId)
     rec := SearchCenterWebLlm_SiteRecord(sid)
     if !(rec is Map) || !rec.Get("ready", false)
@@ -5295,6 +5735,7 @@ SearchCenterWebLlm_ReloadSites(engines := 0) {
     for sid in targets {
         rec := SearchCenterWebLlm_SiteRecord(sid)
         if (rec is Map) && IsObject(rec["wv2"]) {
+            try SearchCenterWebLlm_ApplyMobileSettings(rec["wv2"], sid)
             try {
                 rec["wv2"].Reload()
                 ok := true
@@ -5447,14 +5888,15 @@ SearchCenterWebLlm_TeardownEmbed(preservePrefs := true) {
         if !(rec is Map)
             continue
         SearchCenterWebLlm_DisposeSiteController(sid)
-        if IsObject(rec["hostGui"]) {
-            try rec["hostGui"].Destroy()
+        hostGui := rec.Has("hostGui") ? rec["hostGui"] : 0
+        rec["hostGui"] := 0
+        rec["hostHwnd"] := 0
+        if IsObject(hostGui) {
+            try hostGui.Destroy()
             catch as e {
                 ScWebLlm_Catch(e)
             }
         }
-        rec["hostGui"] := 0
-        rec["hostHwnd"] := 0
     }
     global g_SCWebLlm_Ctrl, g_SCWebLlm_WV2, g_SCWebLlm_Ready, g_SCWebLlm_TokenNavCompleted
     g_SCWebLlm_Ctrl := 0
@@ -5647,7 +6089,8 @@ SearchCenterWebLlm_PrepareForScriptReload() {
 
 SearchCenterWebLlm_CancelPendingTimers() {
     global g_SCWebLlm_UnifiedLayoutBootstrapScheduled, g_SCWebLlm_BoundsRetryScheduled, g_SCWebLlm_BootstrapScheduled
-    global g_SCWebLlm_BootstrapInFlight
+    global g_SCWebLlm_BootstrapInFlight, g_SCWebLlm_EmbedWinOpsSuspended
+    SearchCenterWebLlm_SuspendEmbedWinOps()
     g_SCWebLlm_UnifiedLayoutBootstrapScheduled := false
     g_SCWebLlm_BoundsRetryScheduled := false
     g_SCWebLlm_BootstrapScheduled := false

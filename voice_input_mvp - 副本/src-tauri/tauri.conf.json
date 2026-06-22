@@ -1,0 +1,31 @@
+{
+  "productName": "一键超人",
+  "version": "1.0.0",
+  "identifier": "com.voicepilot.app",
+  "build": {
+    "devUrl": "http://localhost:1420",
+    "frontendDist": "../src",
+    "beforeDevCommand": "",
+    "beforeBuildCommand": ""
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "一键超人 · Voice Pilot",
+        "width": 680,
+        "height": 780,
+        "resizable": true,
+        "minWidth": 520,
+        "minHeight": 600
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": []
+  }
+}

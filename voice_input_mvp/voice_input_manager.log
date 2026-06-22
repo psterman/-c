@@ -31,3 +31,12 @@
 [20260620175203][runtime][rebind] global|block|Volume_Down,Volume_Up,
 [20260620175255][runtime][rebind] global|block|Volume_Down,Volume_Up,
 [20260620175507][config][reloaded] source=音量混合单键 group=same_source_group scene=global bindings=Volume_Down,Volume_Up
+[20260622181108][runtime][rebind] global|block|Volume_Down,Volume_Up,
+[20260622181109][runtime][rebind] global|block|Volume_Down,Volume_Up,
+[20260622181109][config][reloaded] source=音量混合单键 group=same_source_group scene=global bindings=Volume_Down,Volume_Up
+[20260622181111][trigger][fire] hotkey=Volume_Down scene=global delta=0 count=0
+[20260622181111][action][voice_start] 
+[20260622181113][trigger][fire] hotkey=Volume_Up scene=global delta=2187 count=1
+[20260622181113][action][voice_start] 
+[20260622181113][timer][enter_scheduled] delay=5000
+[20260622181118][action][voice_send] 
