@@ -3525,6 +3525,7 @@ const SCENARIO_META = {
 const SCENARIO_TOOLBAR_CMD_MAP = {
   ai_workbench: 'ftb_ai_workbench',
   cli_workbench: 'ftb_cli_workbench',
+  unified_workbench: 'ftb_unified_workbench',
   ai: 'ftb_ai_workbench',
   cli: 'ftb_cli_workbench',
   search: 'sc_activate_search',
@@ -3547,6 +3548,7 @@ const TOOLBAR_CMD_TO_KEY = {
   hub_capsule: 'robot',
   ftb_ai_workbench: 'brain',
   ftb_cli_workbench: 'terminal',
+  ftb_unified_workbench: 'eye',
   ftb_scratchpad: 'notepad',
   ftb_screenshot: 'screenshot',
   qa_config: 'settings',
@@ -3805,6 +3807,7 @@ const SEARCH_COMMAND_OVERRIDES = {
   ftb_ai_workbench: { name: 'AI 工作台', desc: '悬浮条：打开 AI 工作台', iconClass: 'fa-brain' },
   sc_cat_cli: { name: 'CLI 工作台', desc: '打开 ttyd 多终端工作台', iconClass: 'fa-terminal' },
   ftb_cli_workbench: { name: 'CLI 工作台', desc: '悬浮条：打开 CLI 工作台', iconClass: 'fa-terminal' },
+  ftb_unified_workbench: { name: '混排工作台', desc: '悬浮条：打开 AI/CLI 混排工作台', iconClass: 'fa-eye' },
   sc_cat_academic: { name: '学术分类', desc: '切换到学术分类', iconClass: 'fa-graduation-cap' },
   sc_cat_baidu: { name: '百度分类', desc: '切换到百度分类', iconClass: 'fa-compass' },
   sc_cat_image: { name: '图片分类', desc: '切换到图片分类', iconClass: 'fa-image' },
@@ -8607,4 +8610,3 @@ function mkEl(tag, cls, text) {
 </script>
 </body>
 </html>
-

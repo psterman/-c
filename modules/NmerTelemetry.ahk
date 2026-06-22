@@ -63,6 +63,8 @@ Nmer_Telemetry_ScheduleWrite(snap := 0) {
 
 Nmer_Telemetry_FlushScheduledWrite(*) {
     global g_NmerTelemetry_WriteScheduled, g_NmerTelemetry_LastState
+    if FuncExists("Nmer_IsAppShuttingDown") && Nmer_IsAppShuttingDown()
+        return
     g_NmerTelemetry_WriteScheduled := false
     snap := (g_NmerTelemetry_LastState is Map) ? g_NmerTelemetry_LastState : Map()
     try Nmer_Telemetry_Write(snap)

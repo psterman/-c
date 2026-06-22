@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light" data-lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>一键超人 · Voice Pilot</title>
+  <style>
+    :root {
+      --bg0:#e8e8ed;--bg1:rgba(250,250,252,.68);--bg2:rgba(255,255,255,.82);
+      --border:rgba(60,60,67,.10);--borderStrong:rgba(60,60,67,.18);
+      --txt:#1d1d1f;--txt2:#6e6e73;--txt3:#aeaeb2;
+      --accent:#0071e3;--accentBg:rgba(0,113,227,.08);
+      --green:#34c759;--red:#ff3b30;
+      --shadow:0 4px 20px rgba(0,0,0,.05);
+      font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","PingFang SC","Microsoft YaHei",sans-serif;
+    }
+    [data-theme="dark"] {
+      --bg0:#1c1c1e;--bg1:rgba(30,30,32,.72);--bg2:rgba(44,44,46,.82);
+      --border:rgba(255,255,255,.08);--borderStrong:rgba(255,255,255,.14);
+      --txt:#f5f5f7;--txt2:#98989d;--txt3:#636366;
+      --accent:#4da6ff;--accentBg:rgba(77,166,255,.12);
+      --shadow:0 4px 20px rgba(0,0,0,.24);
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    html,body{height:100%;overflow:hidden}
+    body{
+      background:var(--bg0);color:var(--txt);
+      display:flex;flex-direction:column;
+      -webkit-font-smoothing:antialiased;
+    }
+    /* ── Header ── */
+    .header{
+      display:flex;align-items:center;justify-content:space-between;
+      padding:10px 16px;flex-shrink:0;
+      background:var(--bg1);
+      backdrop-filter:blur(40px) saturate(180%);
+      -webkit-backdrop-filter:blur(40px) saturate(180%);
+      border-bottom:1px solid var(--border);z-index:10;
+    }
+    .header-left{display:flex;align-items:center;gap:8px}
+    .logo-icon{
+      width:32px;height:32px;display:flex;align-items:center;justify-content:center;
+      border-radius:8px;background:var(--accentBg);color:var(--accent);
+    }
+    .title-icon{vertical-align:-3px;margin-right:2px}
+    .logo{font-size:16px;font-weight:800;letter-spacing:-.02em}
+    .logo-sub{font-size:11px;color:var(--txt2);font-weight:500}
+    .header-right{display:flex;align-items:center;gap:6px}
+    .pill{
+      display:flex;align-items:center;gap:5px;
+      padding:5px 10px;border-radius:999px;
+      background:var(--bg2);border:1px solid var(--border);
+      font-size:11px;font-weight:600;cursor:pointer;user-select:none;
+      color:var(--txt);transition:.15s;
+    }
+    .pill:hover{background:var(--accentBg)}
+    /* ── Main ── */
+    .main{
+      flex:1;overflow-y:auto;overflow-x:hidden;
+      padding:12px 16px 16px;
+      display:flex;flex-direction:column;gap:12px;
+    }
+    /* ── Cards ── */
+    .card{
+      background:var(--bg2);
+      backdrop-filter:blur(36px) saturate(180%);
+      -webkit-backdrop-filter:blur(36px) saturate(180%);
+      border:1px solid var(--border);border-radius:18px;
+      padding:14px 16px;box-shadow:var(--shadow);
+    }
+    .card-header{
+      display:flex;align-items:center;justify-content:space-between;
+      margin-bottom:10px;
+    }
+    .card-title{font-size:15px;font-weight:600;letter-spacing:-.01em}
+    label{display:block;font-size:11px;font-weight:700;margin:0 0 6px}
+    .btn{
+      height:36px;border:none;border-radius:12px;padding:0 20px;
+      font:inherit;font-size:14px;font-weight:600;cursor:pointer;
+      transition:.15s;white-space:nowrap;display:inline-flex;align-items:center;justify-content:center;
+    }
+    .btn.primary{
+      background:var(--accent);color:#fff;
+      box-shadow:0 2px 8px rgba(0,113,227,.25);
+    }
+    .btn.primary:hover{opacity:.9;box-shadow:0 4px 12px rgba(0,113,227,.35)}
+    .btn.primary:active{transform:scale(.97)}
+    .btn.ghost{background:transparent;color:var(--accent)}
+    .btn.destructive{background:transparent;color:var(--red)}
+    .btn.destructive:hover{background:rgba(255,59,48,.06)}
+    .btn.big{height:52px;font-size:17px;padding:0 40px;border-radius:16px;width:100%}
+    .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+    /* ── Recording ── */
+    .rec-section{text-align:center}
+    .rec-section .card-title{font-size:16px}
+    .rec-key-display{
+      display:inline-flex;align-items:center;justify-content:center;
+      min-width:140px;min-height:52px;padding:10px 24px;
+      border-radius:16px;margin:10px 0;font-weight:600;letter-spacing:-.02em;
+      background:var(--accentBg);border:1px dashed rgba(0,113,227,.25);
+      color:var(--accent);font-weight:800;font-size:20px;
+    }
+    @keyframes pulse-ring{0%{box-shadow:0 0 0 0px rgba(0,113,227,.24)}50%{box-shadow:0 0 0 10px rgba(0,113,227,.10)}100%{box-shadow:0 0 0 0px rgba(0,113,227,.24)}}
+    .recording-ring{animation:pulse-ring 1s ease-in-out infinite;border-color:var(--accent)!important}
+    .rec-hint{font-size:11px;color:var(--txt2);margin-top:6px;line-height:1.4}
+    .tip{display:none}
+    /* ── iOS Switch ── */
+    .ios-switch{
+      position:relative;width:44px;height:26px;border-radius:13px;
+      background:var(--borderStrong);cursor:pointer;transition:.2s;flex-shrink:0;
+    }
+    .ios-switch.on{background:var(--green)}
+    .ios-switch::after{
+      content:'';position:absolute;top:2px;left:2px;
+      width:22px;height:22px;border-radius:50%;background:#fff;
+      transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.15);
+    }
+    .ios-switch.on::after{left:20px}
+    /* ── Action blocks ── */
+    .action-block{display:flex;gap:14px;padding:16px 0}
+    .action-block+.action-block{border-top:1px solid var(--border)}
+    .action-icon{
+      width:38px;height:38px;display:flex;align-items:center;justify-content:center;
+      border-radius:11px;background:var(--bg1);flex-shrink:0;color:var(--txt);
+    }
+    .action-block:nth-child(2) .action-icon{color:var(--accent)}
+    .action-block:nth-child(3) .action-icon{color:var(--red)}
+    .action-block:nth-child(4) .action-icon{color:var(--accent)}
+    .action-info{flex:1;min-width:0}
+    .action-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:3px}
+    .action-title{font-size:15px;font-weight:600;letter-spacing:-.01em}
+    .action-desc{font-size:12px;color:var(--txt2);line-height:1.5}
+    .action-desc b{color:var(--accent);font-weight:600}
+    .action-param{
+      margin-top:10px;padding:10px 14px;
+      border-radius:10px;background:var(--bg1);
+      border:1px solid var(--border);
+    }
+    .action-param-label{
+      display:flex;align-items:center;gap:4px;
+      font-size:11px;font-weight:600;margin-bottom:6px;color:var(--txt2);
+    }
+    .action-param-ctrl{display:flex;align-items:center;gap:6px}
+    .action-param-ctrl .param-slider{flex:1}
+    input[type=range].param-slider{
+      -webkit-appearance:none;height:6px;
+      border-radius:3px;background:var(--borderStrong);outline:none;
+    }
+    input[type=range].param-slider::-webkit-slider-thumb{
+      -webkit-appearance:none;width:22px;height:22px;border-radius:50%;
+      background:#fff;cursor:pointer;
+      border:1px solid rgba(0,0,0,.08);
+      box-shadow:0 2px 8px rgba(0,0,0,.10);
+    }
+    .action-param-ctrl input[type=number]{
+      width:64px;text-align:center;
+      border:1px solid var(--borderStrong);border-radius:8px;
+      padding:5px 4px;background:var(--bg2);color:var(--txt);
+      font:inherit;font-size:13px;font-weight:600;
+    }
+    .unit{font-size:11px;color:var(--txt2);min-width:16px}
+    /* ── Status grid ── */
+    .status-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:6px;font-size:11px}
+    .status-item{
+      display:flex;align-items:center;gap:6px;
+      padding:7px 10px;border-radius:8px;background:rgba(128,128,128,.04);
+      font-size:12px;
+    }
+    .status-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+    .status-dot.on{background:var(--green)}.status-dot.off{background:var(--red)}
+    .count-badge{
+      display:inline-flex;align-items:center;justify-content:center;
+      min-width:20px;height:20px;padding:0 4px;border-radius:999px;
+      background:var(--accent);color:#fff;font-size:10px;font-weight:800;
+    }
+    .count-zero{background:var(--txt3)}
+    /* ── Collapsible ── */
+    .advanced-toggle{
+      display:flex;align-items:center;gap:8px;
+      padding:2px 0;cursor:pointer;user-select:none;
+      font-size:13px;font-weight:700;
+    }
+    .adv-arrow{font-size:9px;transition:.2s;display:inline-block}
+    .advanced-toggle.open .adv-arrow{transform:rotate(90deg)}
+    .advanced-body{display:none;padding-top:8px}
+    .advanced-body.show{display:block}
+    /* ── Event log ── */
+    .log-wrap{max-height:120px;overflow:auto;font:11px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace;color:var(--txt2);white-space:pre-wrap;word-break:break-word}
+    /* ── Toast / Tooltip ── */
+    .toast{
+      position:fixed;right:12px;bottom:12px;z-index:999;
+      padding:8px 14px;border-radius:10px;
+      background:rgba(30,30,32,.92);color:#fff;font-size:12px;
+      backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+      opacity:0;transform:translateY(6px);transition:.25s;pointer-events:none;
+    }
+    .toast.show{opacity:1;transform:translateY(0)}
+  </style>
+</head>
+<body>
+
+  <!-- ════ Header ════ -->
+  <div class="header">
+    <div class="header-left">
+      <div class="logo-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="3"/><circle cx="12" cy="12" r="2" fill="currentColor" stroke="none"/></svg></div>
+      <div>
+        <span class="logo" data-i18n="appName">一键超人</span>
+        <span class="logo-sub" data-i18n="tagline">Voice Pilot</span>
+      </div>
+    </div>
+    <div class="header-right">
+      <button class="pill" id="btnTheme">☀️</button>
+      <button class="pill" id="btnLang">中</button>
+    </div>
+  </div>
+
+  <!-- ════ Main ════ -->
+  <div class="main" id="mainScroll">
+
+    <!-- ══ Recording ══ -->
+    <div class="card rec-section">
+      <div class="card-title" data-i18n="recTitle"><svg class="title-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3" fill="currentColor" stroke="none"/></svg> 录制您的按键</div>
+      <div class="rec-key-display" id="recordKeyView">AutoTrigger</div>
+      <button class="btn primary big" id="btnRecord" data-i18n="btnRecord">一键录制</button>
+      <div style="text-align:center;margin-top:6px">
+        <button class="btn destructive" id="btnClear" data-i18n="btnClear">清除</button>
+      </div>
+      <div class="rec-hint" data-i18n="recHint">
+        按下蓝牙遥控器 / 戒指 / 键盘的目标按键即可自动识别并保存。录制时 AHK 同步监听，浏览器未捕获的媒体键也能识别。
+      </div>
+    </div>
+
+    <!-- ══ Settings ══ -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title" data-i18n="settingsTitle"><svg class="title-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> 动作设置</span>
+        <span style="font-size:10px;color:var(--txt2)" data-i18n="autoSave">自动保存</span>
+      </div>
+
+      <!-- Action 1: Start -->
+      <div class="action-block">
+        <div class="action-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="8" y="1" width="8" height="12" rx="4"/><path d="M4 11a8 8 0 0 0 16 0"/><path d="M12 18v4M8 22h8"/></svg></div>
+        <div class="action-info">
+          <div class="action-head">
+            <span class="action-title" data-i18n="actStartTitle">启动语音输入</span>
+          </div>
+          <div class="action-desc" data-i18n="actStartDesc">按下外设按键 → 发送右 Alt 唤醒语音输入</div>
+        </div>
+      </div>
+
+      <!-- Action 2: Cancel -->
+      <div class="action-block">
+        <div class="action-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M8 8l8 8M16 8l-8 8"/></svg></div>
+        <div class="action-info">
+          <div class="action-head">
+            <span class="action-title" data-i18n="actCancelTitle">撤销输入</span>
+            <div class="ios-switch on" id="switchCancel"></div>
+          </div>
+          <div class="action-desc">
+            <span data-i18n="actCancelPrefix">在</span> <b id="threshCancelVal">2.0</b> <span data-i18n="actCancelSuffix">秒内再次按下 → 发送 Esc 取消</span>
+          </div>
+          <div class="action-param">
+            <div class="action-param-label">
+              <span data-i18n="paramCancel">撤销输入等待时长</span>
+            </div>
+            <div class="action-param-ctrl">
+              <input type="range" class="param-slider" id="intervalSlider" min="200" max="5000" step="50" value="2000">
+              <input type="number" id="intervalMs" min="200" max="5000" step="50" value="2000">
+              <span class="unit" data-i18n="unitSec">秒</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Action 3: Auto Send -->
+      <div class="action-block">
+        <div class="action-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16V8M9 11l3-3 3 3"/></svg></div>
+        <div class="action-info">
+          <div class="action-head">
+            <span class="action-title" data-i18n="actSendTitle">自动发送</span>
+            <div class="ios-switch on" id="switchSend"></div>
+          </div>
+          <div class="action-desc">
+            <span data-i18n="actSendPrefix">撤销等待后再次按下 → 等待</span> <b id="threshSendVal">5.0</b> <span data-i18n="actSendSuffix">秒 → 自动发送 Enter</span>
+          </div>
+          <div class="action-param">
+            <div class="action-param-label">
+              <span data-i18n="paramSend">语音输入等待发送时长</span>
+            </div>
+            <div class="action-param-ctrl">
+              <input type="range" class="param-slider" id="enterDelaySlider" min="1000" max="15000" step="100" value="5000">
+              <input type="number" id="enterDelayMs" min="1000" max="15000" step="100" value="5000">
+              <span class="unit" data-i18n="unitSec">秒</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ Advanced (collapsible) ══ -->
+    <div class="card">
+      <div class="advanced-toggle" id="advToggle">
+        <span class="adv-arrow"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></span>
+        <span data-i18n="advTitle"><svg class="title-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg> 高级</span>
+        <span style="flex:1"></span>
+        <span id="advStatusDot" class="status-dot on" style="display:inline-block;margin-right:4px"></span>
+        <span id="advStatusLabel" style="font-size:11px;color:var(--txt2)" data-i18n="statusRunning">监听中</span>
+      </div>
+      <div class="advanced-body" id="advBody">
+        <!-- Debug info -->
+        <div style="font-size:11px;color:var(--txt2);margin-bottom:10px;display:flex;gap:12px;flex-wrap:wrap">
+          <span>key: <b id="dbKey" style="color:var(--txt)">-</b></span>
+          <span>code: <b id="dbCode" style="color:var(--txt)">-</b></span>
+          <span>→ <b id="dbNorm" style="color:var(--accent)">-</b></span>
+        </div>
+        <!-- Status -->
+        <div style="margin-bottom:10px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+            <span style="font-size:12px;font-weight:700;display:flex;align-items:center;gap:4px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg> <span data-i18n="statusTitle">实时状态</span></span>
+            <button class="btn ghost" id="btnPause" style="height:26px;font-size:11px;padding:0 12px" data-i18n="btnPause">暂停监听</button>
+          </div>
+          <div class="status-grid">
+            <div class="status-item"><span data-i18n="statusCount">点击</span><span class="count-badge count-zero" id="liveCount">0</span></div>
+            <div class="status-item"><span data-i18n="statusTimer">发送</span><span id="liveTimer" style="font-weight:700">-</span></div>
+            <div class="status-item"><span data-i18n="statusAction">动作</span><span id="liveAction" style="font-weight:700">-</span></div>
+            <div class="status-item"><span class="status-dot on" id="dotPaused"></span><span id="livePaused" style="font-weight:700;color:var(--green)" data-i18n="statusRunning">监听中</span></div>
+          </div>
+        </div>
+        <!-- Event Log -->
+        <div>
+          <div style="font-size:12px;font-weight:700;margin-bottom:4px;display:flex;align-items:center;gap:4px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg> <span data-i18n="logTitle">事件日志</span></div>
+          <div class="log-wrap" id="rawEventLog">等待按键…</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ══ Toast / Tooltip ══ -->
+  <div id="toast" class="toast"></div>
+
+  <script>
+  // ═══════════════════════════════════════
+  //  I18N
+  // ═══════════════════════════════════════
+  const I18N = {
+    zh: {
+      appName:"一键超人", tagline:"Voice Pilot",
+      recTitle:"🎯 录制您的按键", btnRecord:"一键录制", btnClear:"清除",
+      recHint:"点「一键录制」，按下蓝牙遥控器上的按钮，松手就自动保存，不用管其他设置。",
+      settingsTitle:"⚙ 动作设置", autoSave:"自动保存",
+      actStartTitle:"启动语音输入", actStartDesc:"按下外设按键 → 发送右 Alt 唤醒语音输入",
+      actCancelTitle:"撤销输入", actCancelPrefix:"在", actCancelSuffix:"秒内再次按下 → 发送 Esc 取消",
+      actSendTitle:"自动发送", actSendPrefix:"撤销等待后再次按下 → 等待", actSendSuffix:"秒 → 自动发送 Enter",
+      paramCancel:"撤销输入等待时长", paramSend:"语音输入等待发送时长", unitSec:"秒",
+      cancelTip:"在此时间内再次按下同一按键 → 视为「撤销输入」→ 发送 Esc 取消语音。设置太短容易把一次正常双击误判为撤销。",
+      sendTip:"第二次按下按键后，等待此时间 →「自动发送」Enter 键完成语音输入。根据你使用的语音识别服务速度调整。",
+      statusTitle:"实时状态", btnPause:"暂停监听",
+      statusCount:"点击", statusTimer:"发送", statusAction:"动作",
+      statusRunning:"监听中", statusPaused:"已暂停",
+      pauseHint:"「暂停监听」会暂时解除按键拦截，恢复音量键等原生功能。",
+      logTitle:"事件日志", advTitle:"🔧 高级",
+      toastRecorded:"已录制: ", toastCleared:"已清除", toastSaved:"已自动保存",
+      toastPaused:"已暂停监听", toastResumed:"已恢复监听",
+      toastRecording:"正在录制 — 按下蓝牙外设目标按键", toastTimeout:"录制超时，请重试",
+    },
+    en: {
+      appName:"One-Key Hero", tagline:"Voice Pilot",
+      recTitle:"🎯 Record Your Key", btnRecord:"Record", btnClear:"Clear",
+      recHint:"Tap Record, press the button on your remote, and let go. It saves automatically — no other steps needed.",
+      settingsTitle:"⚙ Actions", autoSave:"Auto-save",
+      actStartTitle:"Start Voice Input", actStartDesc:"Press device button → sends RAlt to wake voice input",
+      actCancelTitle:"Cancel Input", actCancelPrefix:"Within", actCancelSuffix:"s press again → sends Esc to cancel",
+      actSendTitle:"Auto Send", actSendPrefix:"After cancel window, press again → wait", actSendSuffix:"s → auto-send Enter",
+      paramCancel:"Cancel Wait Time", paramSend:"Auto-Send Delay", unitSec:"s",
+      cancelTip:"Press again within this window → «Cancel Input» → sends Esc. Too short may mistake a normal double-tap for cancel.",
+      sendTip:"After second press, waits this duration → «Auto Send» Enter. Adjust based on speech recognition speed.",
+      statusTitle:"Live Status", btnPause:"Pause Hook",
+      statusCount:"Tap", statusTimer:"Send", statusAction:"Action",
+      statusRunning:"Listening", statusPaused:"Paused",
+      pauseHint:"«Pause Hook» releases key interception, restoring native functions like volume.",
+      logTitle:"Event Log", advTitle:"🔧 Advanced",
+      toastRecorded:"Recorded: ", toastCleared:"Cleared", toastSaved:"Auto-saved",
+      toastPaused:"Hook paused", toastResumed:"Hook resumed",
+      toastRecording:"Recording — press Bluetooth button", toastTimeout:"Timeout, retry",
+    }
+  };
+  let lang = "zh";
+  const t = (k) => I18N[lang][k] || k;
+  const applyLang = () => {
+    document.documentElement.setAttribute("data-lang", lang);
+    document.querySelectorAll("[data-i18n]").forEach(el => {
+      const k = el.getAttribute("data-i18n");
+      if (I18N[lang][k]) el.textContent = I18N[lang][k];
+    });
+    document.querySelectorAll("[data-tip]").forEach(el => {
+      el.setAttribute("data-tip-text", I18N[lang][el.getAttribute("data-tip")] || "");
+    });
+    updateLiveStatus(); updateRuntime();
+  };
+
+  // ═══════════════════════════════════════
+  //  STATE
+  // ═══════════════════════════════════════
+  const state = {
+    recordKey:"AutoTrigger", intervalMs:2000, enterDelayMs:5000,
+    cancelEnabled:true, autoEnterEnabled:true,
+    debounceMs:80, keyPressDurationMs:50
+  };
+  const runtime = { bindings:"", lastAction:"-", count:0, timerActive:false, paused:false };
+  const rawEvents = [];
+  const $ = (id) => document.getElementById(id);
+  const toast = (msg) => {
+    const el = $("toast"); el.textContent = msg; el.classList.add("show");
+    setTimeout(() => el.classList.remove("show"), 2000);
+  };
+  const autoSave = () => {
+    const json = JSON.stringify(state, null, 2);
+    try { window.chrome?.webview?.postMessage({ type:"mvp_save", json }); } catch(_){}
+    localStorage.setItem("voice_input_mvp", json);
+  };
+
+  // ═══════════════════════════════════════
+  //  KEY NORMALIZATION
+  // ═══════════════════════════════════════
+  const MOD_KEYS = new Set(["Control","Shift","Alt","Meta"]);
+  const MEDIA_NORMALIZE = {
+    "AudioVolumeDown":"Volume_Down","AudioVolumeUp":"Volume_Up","AudioVolumeMute":"Volume_Mute",
+    "MediaTrackNext":"Media_Next","MediaTrackPrevious":"Media_Prev",
+    "MediaPlayPause":"Media_Play_Pause","MediaStop":"Media_Stop"
+  };
+  const normalizeSingleKey = (e) => {
+    if (MOD_KEYS.has(e.key)) return "";
+    if (e.key === " ") return "Space";
+    if (e.key === "Escape") return "Esc";
+    if (e.code === "AltRight" || e.key === "AltGraph" || e.location === 2 || e.getModifierState?.("AltGraph")) return "RAlt";
+    if (MEDIA_NORMALIZE[e.key]) return MEDIA_NORMALIZE[e.key];
+    return e.key.length === 1 ? e.key.toUpperCase() : e.key;
+  };
+
+  // ═══════════════════════════════════════
+  //  RECORDING
+  // ═══════════════════════════════════════
+  let recordingTimeout = 0, isRecording = false;
+  const startRecording = () => {
+    isRecording = true;
+    $("recordKeyView").classList.add("recording-ring");
+    toast(t("toastRecording"));
+    clearTimeout(recordingTimeout);
+    recordingTimeout = setTimeout(() => {
+      if (isRecording) {
+        isRecording = false;
+        $("recordKeyView").classList.remove("recording-ring");
+        toast(t("toastTimeout"));
+        try { window.chrome?.webview?.postMessage({ type:"mvp_stop_recording" }); } catch(_){}
+      }
+    }, 30000);
+    try { window.chrome?.webview?.postMessage({ type:"mvp_start_recording" }); } catch(_){}
+  };
+  const cancelRecording = () => {
+    if (!isRecording) return false;
+    isRecording = false; clearTimeout(recordingTimeout);
+    $("recordKeyView").classList.remove("recording-ring");
+    try { window.chrome?.webview?.postMessage({ type:"mvp_stop_recording" }); } catch(_){}
+    return true;
+  };
+  const onKeyCaptured = (keyName) => {
+    isRecording = false; clearTimeout(recordingTimeout);
+    state.recordKey = keyName;
+    $("recordKeyView").classList.remove("recording-ring");
+    render(); autoSave();
+    toast(t("toastRecorded") + keyName);
+  };
+
+  $("btnRecord").addEventListener("click", startRecording);
+  $("btnClear").addEventListener("click", () => {
+    cancelRecording(); state.recordKey = ""; render(); autoSave(); toast(t("toastCleared"));
+  });
+
+  document.addEventListener("keydown", (e) => {
+    $("dbKey").textContent = String(e.key);
+    $("dbCode").textContent = String(e.code);
+    if (isRecording && e.key === "Escape") { cancelRecording(); e.preventDefault(); e.stopPropagation(); return; }
+    const combo = normalizeSingleKey(e);
+    $("dbNorm").textContent = combo || "—";
+    const line = `${new Date().toLocaleTimeString()}  key=${String(e.key)}  code=${String(e.code)}  → ${combo||"—"}`;
+    rawEvents.unshift(line); rawEvents.splice(20);
+    $("rawEventLog").textContent = rawEvents.join("\n");
+    if (document.activeElement && ["INPUT","TEXTAREA","SELECT"].includes(document.activeElement.tagName)) return;
+    e.preventDefault(); e.stopPropagation();
+    if (!combo) return;
+    if (isRecording) { onKeyCaptured(combo); return; }
+  }, true);
+  document.addEventListener("keyup", (e) => {}, true);
+
+  // ═══════════════════════════════════════
+  //  UI UPDATES
+  // ═══════════════════════════════════════
+  const updateLiveStatus = () => {
+    const c = runtime.count || 0;
+    const badge = $("liveCount");
+    badge.textContent = c;
+    badge.className = c === 0 ? "count-badge count-zero" : "count-badge";
+    $("liveTimer").textContent = runtime.timerActive ? "⏳ …" : "-";
+    $("liveTimer").style.color = runtime.timerActive ? "var(--accent)" : "";
+    $("liveAction").textContent = runtime.lastAction || "-";
+    const p = runtime.paused;
+    $("livePaused").textContent = p ? t("statusPaused") : t("statusRunning");
+    $("livePaused").style.color = p ? "var(--red)" : "var(--green)";
+    $("dotPaused").className = p ? "status-dot off" : "status-dot on";
+    $("advStatusLabel").textContent = p ? t("statusPaused") : t("statusRunning");
+    $("advStatusDot").className = p ? "status-dot off" : "status-dot on";
+    $("btnPause").textContent = p ? "▶ " + (lang==="zh"?"恢复":"Resume") : (lang==="zh"?"暂停监听":"Pause");
+  };
+  const updateRuntime = () => { updateLiveStatus(); };
+  const render = () => {
+    $("recordKeyView").textContent = state.recordKey || "AutoTrigger";
+    $("intervalMs").value = state.intervalMs;
+    $("intervalSlider").value = state.intervalMs;
+    $("enterDelayMs").value = state.enterDelayMs;
+    $("enterDelaySlider").value = state.enterDelayMs;
+    $("threshCancelVal").textContent = (state.intervalMs / 1000).toFixed(1);
+    $("threshSendVal").textContent = (state.enterDelayMs / 1000).toFixed(1);
+    updateSwitch("switchCancel", state.cancelEnabled);
+    updateSwitch("switchSend", state.autoEnterEnabled);
+    updateRuntime();
+  };
+  const updateSwitch = (id, on) => {
+    const el = $(id);
+    if (on) el.classList.add("on"); else el.classList.remove("on");
+  };
+
+  // ═══════════════════════════════════════
+  //  PARAMS
+  // ═══════════════════════════════════════
+  const syncInterval = () => {
+    const v = Number($("intervalMs").value);
+    if (v >= 200 && v <= 5000) { state.intervalMs = v; $("intervalSlider").value = v; $("threshCancelVal").textContent = (v/1000).toFixed(1); autoSave(); }
+  };
+  const syncEnterDelay = () => {
+    const v = Number($("enterDelayMs").value);
+    if (v >= 1000 && v <= 15000) { state.enterDelayMs = v; $("enterDelaySlider").value = v; $("threshSendVal").textContent = (v/1000).toFixed(1); autoSave(); }
+  };
+  $("intervalSlider").addEventListener("input", () => { $("intervalMs").value = $("intervalSlider").value; syncInterval(); });
+  $("intervalMs").addEventListener("change", syncInterval);
+  $("enterDelaySlider").addEventListener("input", () => { $("enterDelayMs").value = $("enterDelaySlider").value; syncEnterDelay(); });
+  $("enterDelayMs").addEventListener("change", syncEnterDelay);
+
+  // ═══════════════════════════════════════
+  //  TOGGLES
+  // ═══════════════════════════════════════
+  $("switchCancel").addEventListener("click", () => {
+    state.cancelEnabled = !state.cancelEnabled;
+    updateSwitch("switchCancel", state.cancelEnabled);
+    autoSave();
+  });
+  $("switchSend").addEventListener("click", () => {
+    state.autoEnterEnabled = !state.autoEnterEnabled;
+    updateSwitch("switchSend", state.autoEnterEnabled);
+    autoSave();
+  });
+
+  // ═══════════════════════════════════════
+  //  PAUSE
+  // ═══════════════════════════════════════
+  $("btnPause").addEventListener("click", () => {
+    if (runtime.paused) {
+      try { window.chrome?.webview?.postMessage({ type:"mvp_resume" }); } catch(_){}
+      toast(t("toastResumed"));
+    } else {
+      try { window.chrome?.webview?.postMessage({ type:"mvp_pause" }); } catch(_){}
+      toast(t("toastPaused"));
+    }
+  });
+
+  // ═══════════════════════════════════════
+  //  THEME / LANG / ADVANCED TOGGLE
+  // ═══════════════════════════════════════
+  let theme = "light";
+  $("btnTheme").addEventListener("click", () => {
+    theme = theme === "light" ? "dark" : "light";
+    document.documentElement.setAttribute("data-theme", theme);
+    $("btnTheme").textContent = theme === "light" ? "☀️" : "🌙";
+  });
+  $("btnLang").addEventListener("click", () => {
+    lang = lang === "zh" ? "en" : "zh";
+    $("btnLang").textContent = lang === "zh" ? "中" : "EN";
+    applyLang();
+  });
+  $("advToggle").addEventListener("click", () => {
+    $("advToggle").classList.toggle("open");
+    $("advBody").classList.toggle("show");
+  });
+
+  // ═══════════════════════════════════════
+
+
+  // ═══════════════════════════════════════
+  //  MESSAGES FROM AHK
+  // ═══════════════════════════════════════
+  window.chrome?.webview?.addEventListener?.("message", (e) => {
+    const msg = e?.data;
+    if (!msg || typeof msg !== "object") return;
+    if (msg.type === "mvp_init") {
+      if (msg.config && typeof msg.config.recordKey === "string") state.recordKey = msg.config.recordKey;
+      if (Number.isFinite(Number(msg.config?.intervalMs))) state.intervalMs = Number(msg.config.intervalMs);
+      if (Number.isFinite(Number(msg.config?.enterDelayMs))) state.enterDelayMs = Number(msg.config.enterDelayMs);
+      if (typeof msg.config?.cancelEnabled === "boolean") state.cancelEnabled = msg.config.cancelEnabled;
+      if (typeof msg.config?.autoEnterEnabled === "boolean") state.autoEnterEnabled = msg.config.autoEnterEnabled;
+      render();
+    }
+    if (msg.type === "mvp_key_captured") { onKeyCaptured(msg.key || "RAlt"); }
+    if (msg.type === "mvp_paused" && msg.ok)  { runtime.paused = true;  updateLiveStatus(); }
+    if (msg.type === "mvp_resumed" && msg.ok) { runtime.paused = false; updateLiveStatus(); }
+    if (msg.type === "mvp_runtime") {
+      runtime.bindings = msg.bindings || "";
+      runtime.lastAction = msg.lastAction || "-";
+      runtime.count = typeof msg.count === "number" ? msg.count : 0;
+      runtime.timerActive = !!msg.timerActive;
+      runtime.paused = !!msg.paused;
+      updateRuntime();
+    }
+  });
+
+  // Init
+  try { window.chrome?.webview?.postMessage({ type:"mvp_ready" }); } catch(_){}
+  render(); applyLang();
+  </script>
+</body>
+</html>

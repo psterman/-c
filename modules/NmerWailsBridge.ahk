@@ -6,6 +6,7 @@ global g_Nmer_WailsBridgeHealthCacheOk := false
 global g_Nmer_WailsBridgeHealthCacheTick := 0
 global g_Nmer_WailsBridgeHealthBusy := false
 global g_Nmer_WailsBridgeShuttingDown := false
+global g_Nmer_AppShuttingDown := false
 global g_Nmer_WailsBridgeOpenClawEnvTick := 0
 global g_Nmer_WailsBridgePrevHealth := -1
 
@@ -50,7 +51,66 @@ Nmer_WailsBridgeNormalizeBool(value, default := false) {
     return !!(value = true || value = 1 || String(value) = "true" || String(value) = "1")
 }
 
+Nmer_IsAppShuttingDown(*) {
+    global g_Nmer_AppShuttingDown, g_Nmer_WailsBridgeShuttingDown
+    return g_Nmer_AppShuttingDown || g_Nmer_WailsBridgeShuttingDown
+}
+
+Nmer_BeginAppShutdown(*) {
+    global g_Nmer_AppShuttingDown
+    if g_Nmer_AppShuttingDown
+        return
+    g_Nmer_AppShuttingDown := true
+    if FuncExists("Nmer_WailsBridgePrepareForScriptReload") {
+        try Nmer_WailsBridgePrepareForScriptReload()
+        catch {
+        }
+    }
+    try SetTimer(SearchCenter_IMEStabilizeTick, 0)
+    catch {
+    }
+    try SetTimer(SearchCore_WatchdogTick, 0)
+    catch {
+    }
+    if FuncExists("SearchCore_StopWatchdog") {
+        try SearchCore_StopWatchdog()
+        catch {
+        }
+    }
+    try SetTimer(Nmer_Telemetry_FlushScheduledWrite, 0)
+    catch {
+    }
+    if FuncExists("UnifiedWb_MarkShutdown") {
+        try Func("UnifiedWb_MarkShutdown").Call()
+        catch {
+        }
+    } else if FuncExists("UnifiedWb_CancelBootstrapTimers") {
+        try Func("UnifiedWb_CancelBootstrapTimers").Call()
+        catch {
+        }
+    }
+    if FuncExists("FloatingToolbar_StopCompositionWatchdog") {
+        try FloatingToolbar_StopCompositionWatchdog()
+        catch {
+        }
+    }
+    if FuncExists("SearchCenterWebLlm_CancelPendingTimers") {
+        try SearchCenterWebLlm_CancelPendingTimers()
+        catch {
+        }
+    }
+    if FuncExists("WebView2_PrepareForCleanExit") {
+        try WebView2_PrepareForCleanExit()
+        catch {
+        }
+    }
+    try Nmer_WailsBridgeLog("app_shutdown_begin")
+    catch {
+    }
+}
+
 Nmer_WailsBridgeReadFlags(*) {
+    global g_Nmer_WailsBridgeShuttingDown, g_Nmer_AppShuttingDown
     defaults := Map(
         "wailsBridge", Map("enabled", true, "sidecarHost", "hub"),
         "officialA2ui", Map("enabled", false, "commandWhitelist", []),
@@ -78,6 +138,8 @@ Nmer_WailsBridgeReadFlags(*) {
             "openclawAnswerSync", true
         )
     )
+    if g_Nmer_WailsBridgeShuttingDown || g_Nmer_AppShuttingDown
+        return defaults
     path := Nmer_WailsBridgeFlagsPath()
     if !FileExist(path)
         return defaults

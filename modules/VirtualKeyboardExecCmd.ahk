@@ -534,6 +534,15 @@ VK_ExecCursorHelperCmd(cmdId) {
                     }
                 }
                 executed := true
+            case "ftb_unified_workbench":
+                try SurfaceIntent_Open("unified_workbench", Map("initialIntent", "ai", "source", "vk_exec"))
+                catch {
+                    try UnifiedWb_Show(Map("initialIntent", "ai", "source", "vk_exec"))
+                    catch as _e {
+                        NmerCatch(A_ThisFunc, _e)
+                    }
+                }
+                executed := true
             case "sc_cat_academic":
                 if (_VK_H("IsSearchCenterActive"))
                     VK_SearchCenterSetCategory("academic")

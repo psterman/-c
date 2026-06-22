@@ -224,6 +224,8 @@ SearchCore_StopWatchdog(*) {
 SearchCore_WatchdogTick(*) {
     global g_SearchCore_WatchdogEnabled, g_SearchCore_WatchdogLastPhase, g_SearchCore_WatchdogIntervalMs
     global g_SearchCore_WatchdogBadTicks, g_SearchCore_WatchdogBadThreshold
+    if FuncExists("Nmer_IsAppShuttingDown") && Nmer_IsAppShuttingDown()
+        return
     if !g_SearchCore_WatchdogEnabled
         return
     pid := ProcessExist("SearchCenterCore.exe")

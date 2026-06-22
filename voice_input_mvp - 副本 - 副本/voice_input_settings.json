@@ -1,0 +1,9 @@
+﻿{
+  "recordKey": "AutoTrigger",
+  "intervalMs": 950,
+  "enterDelayMs": 2600,
+  "cancelEnabled": true,
+  "autoEnterEnabled": true,
+  "debounceMs": 80,
+  "keyPressDurationMs": 50
+}

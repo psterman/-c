@@ -1026,6 +1026,26 @@ NiumaTtyd_StopEngine(engine) {
             }
         }
     }
+    NiumaTtyd_StopProcessesOnPort(port)
+}
+
+NiumaTtyd_StopProcessesOnPort(port) {
+    p := Integer(port)
+    if p <= 0
+        return
+    needle := " -p " . p . " "
+    try {
+        for proc in ComObjGet("winmgmts:").ExecQuery("Select ProcessId,CommandLine from Win32_Process where Name='ttyd.exe'") {
+            cmd := " " . String(proc.CommandLine) . " "
+            if (InStr(cmd, needle) || InStr(cmd, " -p " . p . "`"") || InStr(cmd, " -p " . p . "'")) {
+                pid := Integer(proc.ProcessId)
+                if (pid > 0)
+                    try ProcessClose(pid)
+            }
+        }
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e)
+    }
 }
 
 ; 微创：兼容旧同步 API，内部走 Async + 短 Sleep，绝无同步 WinHttp.Send
@@ -1113,14 +1133,6 @@ NiumaTtyd_EnsureEngineReadyStep(rid) {
     req := g_NiumaTtydReadyReqs[rid]
     eng := req.Has("engine") ? String(req["engine"]) : ""
     if (A_TickCount >= Integer(req["deadline"])) {
-        port := Integer(req["port"])
-        if (eng != "") && NiumaTtyd_EngineProcessAlive(eng) && !req.Has("extended") {
-            req["extended"] := true
-            req["deadline"] := A_TickCount + 45000
-            NiumaTtyd_MapRemoveKey(g_NiumaTtydHttpByPort, port)
-            SetTimer((*) => NiumaTtyd_EnsureEngineReadyStep(rid), -220)
-            return
-        }
         cb := req["cb"]
         if (eng != "") {
             if g_NiumaTtydEngineInflight.Has(eng)
@@ -1163,9 +1175,11 @@ NiumaTtyd_OpenExternal(url := "") {
 
 ; WebMessage 里同步长逻辑会卡 UI：延期到独立定时器
 NiumaTtyd_DeferredOpenJob(reqId := "", engine := "codex_cli", wv2 := 0) {
-    global g_FTB_WV2, g_SCWV_WV2, g_CliWb_WV2, ConfigWV2, g_NiumaTtydOpenRetryOnce
+    global g_FTB_WV2, g_SCWV_WV2, g_CliWb_WV2, g_UnifiedWb_WV2, ConfigWV2, g_NiumaTtydOpenRetryOnce
     if !wv2
         wv2 := ConfigWV2
+    if !wv2
+        wv2 := g_UnifiedWb_WV2
     if !wv2
         wv2 := g_CliWb_WV2
     if !wv2
@@ -1184,32 +1198,32 @@ NiumaTtyd_DeferredOpenJob(reqId := "", engine := "codex_cli", wv2 := 0) {
         return
     }
     port := NiumaTtyd_PortForEngine(eng)
-    if NiumaTtyd_IsHttpReadyOnPort(port, 800) {
+    if NiumaTtyd_IsHttpReadyOnPort(port, 1500) {
         NiumaTtyd_NotifyWeb(wv2, true, "", NiumaTtyd_BaseUrlForEngine(eng), rid, eng)
         return
     }
     NiumaTtyd_EmitStatus(wv2, "probing", rid, "probing ttyd " . eng)
     NiumaTtyd_EnsureReadyForEngineAsync(eng, (ok, reason) => (
-        (rid != "" && NiumaTtyd_ShouldDropReq("open", rid, eng))
+        (!ok && rid != "" && NiumaTtyd_ShouldDropReq("open", rid, eng))
             ? (NiumaTtyd_LogStaleDrop("open", rid), 0)
             : ((!ok && String(reason) = "inflight")
                 ? (SetTimer((*) => NiumaTtyd_DeferredOpenJob(rid, eng, wv2), -220), 0)
                 : (!ok && rid != "" && (String(reason) = "timeout" || String(reason) = "start_failed") && !g_NiumaTtydOpenRetryOnce.Has(rid)
                     ? (g_NiumaTtydOpenRetryOnce[rid] := true,
-                        NiumaTtyd_EngineProcessAlive(eng)
-                            ? NiumaTtyd_MapRemoveKey(g_NiumaTtydHttpByPort, NiumaTtyd_PortForEngine(eng))
-                            : NiumaTtyd_StopEngine(eng),
+                        NiumaTtyd_StopEngine(eng),
                         SetTimer((*) => NiumaTtyd_DeferredOpenJob(rid, eng, wv2), -260), 0)
                     : (ok
                         ? (NiumaTtyd_MapRemoveKey(g_NiumaTtydOpenRetryOnce, rid), NiumaTtyd_NotifyWeb(wv2, true, "", NiumaTtyd_BaseUrlForEngine(eng), rid, eng))
                         : (NiumaTtyd_MapRemoveKey(g_NiumaTtydOpenRetryOnce, rid), NiumaTtyd_NotifyWeb(wv2, false, "ttyd 就绪超时: " . reason, "", rid, eng)))))
-    ), 45000, rid)
+    ), 18000, rid)
 }
 
 NiumaTtyd_DeferredRestartJob(reqId := "", engine := "codex_cli", wv2 := 0) {
-    global g_FTB_WV2, g_SCWV_WV2, g_CliWb_WV2, ConfigWV2
+    global g_FTB_WV2, g_SCWV_WV2, g_CliWb_WV2, g_UnifiedWb_WV2, ConfigWV2
     if !wv2
         wv2 := ConfigWV2
+    if !wv2
+        wv2 := g_UnifiedWb_WV2
     if !wv2
         wv2 := g_CliWb_WV2
     if !wv2
@@ -1238,9 +1252,11 @@ NiumaTtyd_DeferredRestartJob(reqId := "", engine := "codex_cli", wv2 := 0) {
 }
 
 NiumaTtyd_DeferredExternalOpenJob(reqId := "", expectedBaseUrl := "", engine := "codex_cli", wv2 := 0) {
-    global g_FTB_WV2, g_SCWV_WV2, g_CliWb_WV2, ConfigWV2
+    global g_FTB_WV2, g_SCWV_WV2, g_CliWb_WV2, g_UnifiedWb_WV2, ConfigWV2
     if !wv2
         wv2 := ConfigWV2
+    if !wv2
+        wv2 := g_UnifiedWb_WV2
     if !wv2
         wv2 := g_CliWb_WV2
     if !wv2

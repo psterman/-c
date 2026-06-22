@@ -114,7 +114,10 @@ UserStudio_BuildNiumaRuntimeBlock(doc) {
         lines.Push("- 备注路径：" . note)
     lines.Push("")
     lines.Push("用户问「这个软件能干什么」时，指上述牛马 nmer 项目本身，不要回答泛化的 AHK 教程。")
-    return Trim(lines.Join("`n"), "`n")
+    out := ""
+    for i, line in lines
+        out .= (i > 1 ? "`n" : "") . String(line)
+    return Trim(out, "`n")
 }
 
 UserStudio_BuildDefaultNiumaSystemPrompt() {

@@ -127,6 +127,11 @@ SurfaceIntent_ExecuteOpen(surfaceId, meta := 0) {
                 CliWorkbenchRouter_Open(m)
             else
                 SurfaceManager_InvokeOptional("CliWb_Show", m)
+        case "unified_workbench":
+            if FuncExists("UnifiedWorkbenchRouter_Open")
+                UnifiedWorkbenchRouter_Open(m)
+            else
+                SurfaceManager_InvokeOptional("UnifiedWb_Show", m)
         case "virtual_keyboard":
             SurfaceManager_InvokeOptional("VK_Show")
         case "config_webview":
@@ -173,6 +178,11 @@ SurfaceIntent_ExecuteClose(surfaceId, meta := 0) {
                 CliWorkbenchRouter_Hide(m)
             else
                 SurfaceManager_InvokeOptional("CliWb_Hide")
+        case "unified_workbench":
+            if FuncExists("UnifiedWorkbenchRouter_Hide")
+                UnifiedWorkbenchRouter_Hide(m)
+            else
+                SurfaceManager_InvokeOptional("UnifiedWb_Hide")
         case "virtual_keyboard":
             SurfaceManager_InvokeOptional("VK_Hide")
         case "config_webview":

@@ -1,0 +1,917 @@
+﻿[20260620122426][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=500 enterDelayMs=5000
+[20260620122426][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=500 enterDelayMs=5000
+[20260620122426][config][reloaded] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=500 enterDelayMs=5000
+[20260620122429][trigger][fire] delta=0 count=0 runtime=recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=500 enterDelayMs=5000
+[20260620122429][action][ralt] count=1
+[20260620165058][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=500 enterDelayMs=5000
+[20260620165059][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=500 enterDelayMs=5000
+[20260620165059][config][reloaded] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=500 enterDelayMs=5000
+[20260620165102][trigger][fire] delta=0 count=0 runtime=recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=500 enterDelayMs=5000
+[20260620165102][action][ralt] count=1
+[20260620165303][trigger][fire] delta=120422 count=1 runtime=recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=500 enterDelayMs=5000
+[20260620165303][action][ralt] count=2
+[20260620165303][timer][enter_scheduled] enterDelayMs=5000
+[20260620165308][action][enter] 
+[20260620165337][trigger][fire] delta=34032 count=2 runtime=recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=500 enterDelayMs=5000
+[20260620165337][action][ralt] count=3
+[20260620165354][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=500 enterDelayMs=5000
+[20260620165355][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=500 enterDelayMs=5000
+[20260620165355][config][reloaded] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=500 enterDelayMs=5000
+[20260620165408][trigger][fire] delta=0 count=0 runtime=recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=500 enterDelayMs=5000
+[20260620165408][action][ralt] count=1
+[20260621132906][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=500 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621132906][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=500 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621132906][config][reloaded] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=500 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621132934][trigger][fire] delta=0 count=0 runtime=recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=500 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621132934][action][ralt] count=1
+[20260621132938][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=500 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621132938][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=500 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621132939][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=500 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621132939][config][reloaded] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=500 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621132946][trigger][fire] delta=0 count=0 runtime=recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=500 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621132946][action][ralt] count=1
+[20260621132947][trigger][fire] delta=1500 count=1 runtime=recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=500 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621132947][action][ralt] count=2
+[20260621132947][timer][enter_scheduled] enterDelayMs=5000
+[20260621132948][trigger][fire] delta=1141 count=2 runtime=recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=500 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621132949][action][ralt] count=3
+[20260621132950][trigger][fire] delta=1109 count=1 runtime=recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=500 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621132950][action][ralt] count=2
+[20260621132950][timer][enter_scheduled] enterDelayMs=5000
+[20260621132950][trigger][fire] delta=547 count=2 runtime=recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=500 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621132950][action][ralt] count=3
+[20260621132951][trigger][fire] delta=625 count=1 runtime=recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=500 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621132951][action][ralt] count=2
+[20260621132951][timer][enter_scheduled] enterDelayMs=5000
+[20260621132951][trigger][fire] delta=797 count=2 runtime=recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=500 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621132952][action][ralt] count=3
+[20260621132953][trigger][fire] delta=1281 count=1 runtime=recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=500 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621132953][action][ralt] count=2
+[20260621132953][timer][enter_scheduled] enterDelayMs=5000
+[20260621132958][action][enter] 
+[20260621133313][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=500 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621133313][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=500 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621133313][config][reloaded] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=500 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621133316][record][start] 
+[20260621133318][trigger][fire] delta=0 count=0 runtime=recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=500 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621133318][action][ralt] count=1
+[20260621133331][record][start] 
+[20260621133332][trigger][fire] delta=14062 count=1 runtime=recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=500 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621133332][action][ralt] count=2
+[20260621133332][timer][enter_scheduled] enterDelayMs=5000
+[20260621133337][action][enter] 
+[20260621133337][record][stop] 
+[20260621133343][record][start] 
+[20260621133344][trigger][fire] delta=0 count=0 runtime=recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=500 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621133344][action][ralt] count=1
+[20260621133345][trigger][fire] delta=1000 count=1 runtime=recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=500 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621133345][action][ralt] count=2
+[20260621133345][timer][enter_scheduled] enterDelayMs=5000
+[20260621133346][record][start] 
+[20260621133348][trigger][fire] delta=3204 count=2 runtime=recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=500 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621133348][action][ralt] count=3
+[20260621133350][record][start] 
+[20260621133351][record][stop] 
+[20260621133352][record][start] 
+[20260621133353][trigger][fire] delta=5468 count=1 runtime=recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=500 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621133353][action][ralt] count=2
+[20260621133353][timer][enter_scheduled] enterDelayMs=5000
+[20260621133354][trigger][fire] delta=891 count=2 runtime=recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=500 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621133354][action][ralt] count=3
+[20260621133355][trigger][fire] delta=578 count=1 runtime=recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=500 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621133355][action][ralt] count=2
+[20260621133355][timer][enter_scheduled] enterDelayMs=5000
+[20260621133355][trigger][fire] delta=469 count=2 runtime=recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=500 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621133355][action][esc] resetMs=500
+[20260621133355][record][stop] 
+[20260621133357][record][start] 
+[20260621133427][record][stop] 
+[20260621133831][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=500 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621133831][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=500 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621133831][config][reloaded] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=500 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621133900][trigger][fire] delta=0 count=0 runtime=recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=500 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621133900][action][ralt] count=1
+[20260621133904][record][session_start] hotkeys=Volume_Up,Volume_Down
+[20260621133906][record][captured] key=Volume_Down
+[20260621133906][record][session_stop] 
+[20260621133911][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=500 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621133911][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=500 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621133911][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=500 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621133911][config][reloaded] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=500 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621133947][trigger][fire] delta=0 count=0 runtime=recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=500 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621133947][action][ralt] count=1
+[20260621133948][trigger][fire] delta=1485 count=1 runtime=recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=500 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621133949][action][ralt] count=2
+[20260621133949][timer][enter_scheduled] enterDelayMs=5000
+[20260621133954][action][enter] 
+[20260621134013][trigger][fire] delta=0 count=0 runtime=recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=500 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621134013][action][ralt] count=1
+[20260621134014][trigger][fire] delta=563 count=1 runtime=recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=500 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621134014][action][ralt] count=2
+[20260621134014][timer][enter_scheduled] enterDelayMs=5000
+[20260621134016][trigger][fire] delta=1859 count=2 runtime=recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=500 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621134016][action][ralt] count=3
+[20260621134017][trigger][fire] delta=1000 count=1 runtime=recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=500 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621134017][action][ralt] count=2
+[20260621134017][timer][enter_scheduled] enterDelayMs=5000
+[20260621134022][action][enter] 
+[20260621134358][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2000 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621134358][config][reloaded] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2000 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621134556][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2000 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621134556][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2000 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621134556][config][reloaded] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2000 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621134602][record][session_start] bound 24 keys
+[20260621134609][record][session_stop] 
+[20260621134609][runtime][apply_config] recordKey=RAlt trigger=RAlt hotkeys=RAlt intervalMs=2000 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621134609][runtime][saved] recordKey=RAlt trigger=RAlt hotkeys=RAlt intervalMs=2000 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621134609][runtime][apply_config] recordKey=RAlt trigger=RAlt hotkeys=RAlt intervalMs=2000 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621134609][config][reloaded] recordKey=RAlt trigger=RAlt hotkeys=RAlt intervalMs=2000 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621134611][runtime][apply_config] recordKey=RAlt trigger=RAlt hotkeys=RAlt intervalMs=2000 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621134611][runtime][saved] recordKey=RAlt trigger=RAlt hotkeys=RAlt intervalMs=2000 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621134611][runtime][apply_config] recordKey=RAlt trigger=RAlt hotkeys=RAlt intervalMs=2000 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621134611][config][reloaded] recordKey=RAlt trigger=RAlt hotkeys=RAlt intervalMs=2000 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621134612][record][session_start] bound 24 keys
+[20260621134640][record][captured] key=Volume_Up
+[20260621134640][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2000 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621134640][config][reloaded] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2000 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621134640][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2000 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621134640][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2000 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621134640][record][session_stop] 
+[20260621134649][trigger][fire] delta=0 count=0 runtime=recordKey=AutoTrigger trigger=AutoTrigger hotkeys=RAlt intervalMs=2000 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621134649][action][ralt] count=1
+[20260621134651][trigger][fire] delta=1250 count=1 runtime=recordKey=AutoTrigger trigger=AutoTrigger hotkeys=RAlt intervalMs=2000 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621134651][action][esc] resetMs=2000
+[20260621135153][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2000 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621135153][config][reloaded] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2000 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621135253][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2000 autoEnterEnabled=1 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621135254][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2000 autoEnterEnabled=1 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621135254][config][reloaded] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2000 autoEnterEnabled=1 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621135825][runtime][paused] 
+[20260621135826][runtime][resumed] 
+[20260621140818][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2000 autoEnterEnabled=1 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621140818][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2000 autoEnterEnabled=1 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621140818][config][reloaded] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2000 autoEnterEnabled=1 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621140835][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2050 autoEnterEnabled=1 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621140835][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2050 autoEnterEnabled=1 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621140835][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=850 autoEnterEnabled=1 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621140835][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=850 autoEnterEnabled=1 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621140835][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=850 autoEnterEnabled=1 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621140835][config][reloaded] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=850 autoEnterEnabled=1 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621140835][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=200 autoEnterEnabled=1 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621140835][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=200 autoEnterEnabled=1 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621140836][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=350 autoEnterEnabled=1 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621140836][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=350 autoEnterEnabled=1 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621140836][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=600 autoEnterEnabled=1 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621140836][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=600 autoEnterEnabled=1 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621140836][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1000 autoEnterEnabled=1 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621140836][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1000 autoEnterEnabled=1 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621140836][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1400 autoEnterEnabled=1 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621140836][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1400 autoEnterEnabled=1 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621140836][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1550 autoEnterEnabled=1 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621140836][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1550 autoEnterEnabled=1 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621140836][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1650 autoEnterEnabled=1 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621140836][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1650 autoEnterEnabled=1 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621140836][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1800 autoEnterEnabled=1 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621140836][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1800 autoEnterEnabled=1 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621140836][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1950 autoEnterEnabled=1 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621140836][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1950 autoEnterEnabled=1 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621140836][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2050 autoEnterEnabled=1 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621140836][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2050 autoEnterEnabled=1 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621140836][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2200 autoEnterEnabled=1 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621140836][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2200 autoEnterEnabled=1 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621140836][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2450 autoEnterEnabled=1 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621140836][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2450 autoEnterEnabled=1 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621140836][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2600 autoEnterEnabled=1 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621140836][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2600 autoEnterEnabled=1 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621140836][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2850 autoEnterEnabled=1 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621140836][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2850 autoEnterEnabled=1 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621140837][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2850 autoEnterEnabled=1 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621140837][config][reloaded] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2850 autoEnterEnabled=1 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621140837][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2750 autoEnterEnabled=1 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621140837][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2750 autoEnterEnabled=1 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621140837][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2600 autoEnterEnabled=1 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621140837][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2600 autoEnterEnabled=1 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621140837][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2450 autoEnterEnabled=1 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621140837][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2450 autoEnterEnabled=1 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621140837][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2350 autoEnterEnabled=1 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621140837][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2350 autoEnterEnabled=1 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621140837][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2200 autoEnterEnabled=1 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621140837][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2200 autoEnterEnabled=1 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621140837][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2050 autoEnterEnabled=1 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621140837][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2050 autoEnterEnabled=1 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621140837][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2050 autoEnterEnabled=1 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621140837][config][reloaded] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2050 autoEnterEnabled=1 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621140837][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1950 autoEnterEnabled=1 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621140837][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1950 autoEnterEnabled=1 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621140837][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1800 autoEnterEnabled=1 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621140837][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1800 autoEnterEnabled=1 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621140837][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1650 autoEnterEnabled=1 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621140837][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1650 autoEnterEnabled=1 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621140838][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1800 autoEnterEnabled=1 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621140838][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1800 autoEnterEnabled=1 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621140838][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2200 autoEnterEnabled=1 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621140838][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2200 autoEnterEnabled=1 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621140838][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2450 autoEnterEnabled=1 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621140838][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2450 autoEnterEnabled=1 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621140838][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2600 autoEnterEnabled=1 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621140838][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2600 autoEnterEnabled=1 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621140839][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2600 autoEnterEnabled=1 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621140839][config][reloaded] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2600 autoEnterEnabled=1 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621140841][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2600 autoEnterEnabled=1 enterDelayMs=3300 debounceMs=80 keyPressDurationMs=50
+[20260621140841][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2600 autoEnterEnabled=1 enterDelayMs=3300 debounceMs=80 keyPressDurationMs=50
+[20260621140841][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2600 autoEnterEnabled=1 enterDelayMs=5300 debounceMs=80 keyPressDurationMs=50
+[20260621140841][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2600 autoEnterEnabled=1 enterDelayMs=5300 debounceMs=80 keyPressDurationMs=50
+[20260621140841][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2600 autoEnterEnabled=1 enterDelayMs=5700 debounceMs=80 keyPressDurationMs=50
+[20260621140841][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2600 autoEnterEnabled=1 enterDelayMs=5700 debounceMs=80 keyPressDurationMs=50
+[20260621140841][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2600 autoEnterEnabled=1 enterDelayMs=5700 debounceMs=80 keyPressDurationMs=50
+[20260621140841][config][reloaded] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2600 autoEnterEnabled=1 enterDelayMs=5700 debounceMs=80 keyPressDurationMs=50
+[20260621140841][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2600 autoEnterEnabled=1 enterDelayMs=4900 debounceMs=80 keyPressDurationMs=50
+[20260621140841][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2600 autoEnterEnabled=1 enterDelayMs=4900 debounceMs=80 keyPressDurationMs=50
+[20260621140841][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2600 autoEnterEnabled=1 enterDelayMs=4100 debounceMs=80 keyPressDurationMs=50
+[20260621140841][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2600 autoEnterEnabled=1 enterDelayMs=4100 debounceMs=80 keyPressDurationMs=50
+[20260621140841][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2600 autoEnterEnabled=1 enterDelayMs=2200 debounceMs=80 keyPressDurationMs=50
+[20260621140841][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2600 autoEnterEnabled=1 enterDelayMs=2200 debounceMs=80 keyPressDurationMs=50
+[20260621140841][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2600 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621140841][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2600 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621140843][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2600 autoEnterEnabled=1 enterDelayMs=2600 debounceMs=80 keyPressDurationMs=50
+[20260621140843][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2600 autoEnterEnabled=1 enterDelayMs=2600 debounceMs=80 keyPressDurationMs=50
+[20260621140843][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2600 autoEnterEnabled=1 enterDelayMs=4100 debounceMs=80 keyPressDurationMs=50
+[20260621140843][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2600 autoEnterEnabled=1 enterDelayMs=4100 debounceMs=80 keyPressDurationMs=50
+[20260621140843][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2600 autoEnterEnabled=1 enterDelayMs=4100 debounceMs=80 keyPressDurationMs=50
+[20260621140843][config][reloaded] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2600 autoEnterEnabled=1 enterDelayMs=4100 debounceMs=80 keyPressDurationMs=50
+[20260621140844][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2600 autoEnterEnabled=1 enterDelayMs=3700 debounceMs=80 keyPressDurationMs=50
+[20260621140844][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2600 autoEnterEnabled=1 enterDelayMs=3700 debounceMs=80 keyPressDurationMs=50
+[20260621140844][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2600 autoEnterEnabled=1 enterDelayMs=2600 debounceMs=80 keyPressDurationMs=50
+[20260621140844][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2600 autoEnterEnabled=1 enterDelayMs=2600 debounceMs=80 keyPressDurationMs=50
+[20260621140844][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2600 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621140844][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2600 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621140844][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2600 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621140844][config][reloaded] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2600 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141029][runtime][apply_config] recordKey=RAlt trigger=RAlt hotkeys=RAlt intervalMs=2600 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141029][runtime][saved] recordKey=RAlt trigger=RAlt hotkeys=RAlt intervalMs=2600 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141029][runtime][apply_config] recordKey=RAlt trigger=RAlt hotkeys=RAlt intervalMs=2600 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141029][config][reloaded] recordKey=RAlt trigger=RAlt hotkeys=RAlt intervalMs=2600 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141032][record][session_start] bound 24 keys
+[20260621141054][record][captured] key=Volume_Up
+[20260621141054][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2600 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141054][config][reloaded] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2600 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141100][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2600 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141100][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2600 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141100][config][reloaded] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2600 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141309][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2600 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141310][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2600 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141310][config][reloaded] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2600 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141329][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2850 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141329][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2850 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141329][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2600 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141329][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2600 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141329][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1950 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141329][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1950 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141329][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1800 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141329][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1800 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141329][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1550 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141329][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1550 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141329][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1550 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141329][config][reloaded] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1550 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141330][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1650 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141330][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1650 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141330][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1800 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141330][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1800 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141330][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1950 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141330][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1950 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141330][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2050 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141330][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2050 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141330][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2200 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141330][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2200 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141330][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2350 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141330][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2350 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141330][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2750 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141330][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2750 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141330][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2850 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141330][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2850 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141330][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2850 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141330][config][reloaded] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2850 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141634][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2850 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141635][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2850 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141635][config][reloaded] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2850 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141638][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2800 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141638][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2800 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141638][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2750 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141638][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2750 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141638][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2650 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141638][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2650 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141638][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2600 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141638][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2600 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141638][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2500 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141638][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2500 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141638][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2400 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141638][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2400 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141639][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2350 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141639][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2350 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141639][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2300 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141639][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2300 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141639][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2250 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141639][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2250 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141639][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2200 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141639][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2200 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141639][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2150 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141639][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2150 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141639][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2100 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141639][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2100 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141639][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2000 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141639][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2000 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141639][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1950 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141639][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1950 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141639][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1900 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141639][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1900 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141639][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1850 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141639][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1850 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141643][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1200 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141643][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1200 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141643][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1200 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141643][config][reloaded] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1200 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141643][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141643][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141643][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=900 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141643][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=900 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141643][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=800 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141643][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=800 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141643][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=750 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141643][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=750 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141645][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=800 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141645][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=800 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141645][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=800 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141645][config][reloaded] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=800 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141645][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=900 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141645][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=900 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141645][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1000 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141645][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1000 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141645][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141645][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141645][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1200 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141645][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1200 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141645][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1300 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141645][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1300 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141645][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1400 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141645][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1400 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141645][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1500 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141645][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1500 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141645][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1600 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141645][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1600 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141645][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1650 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141645][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1650 autoEnterEnabled=1 enterDelayMs=1000 debounceMs=80 keyPressDurationMs=50
+[20260621141647][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1650 autoEnterEnabled=1 enterDelayMs=1400 debounceMs=80 keyPressDurationMs=50
+[20260621141647][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1650 autoEnterEnabled=1 enterDelayMs=1400 debounceMs=80 keyPressDurationMs=50
+[20260621141648][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1650 autoEnterEnabled=1 enterDelayMs=1600 debounceMs=80 keyPressDurationMs=50
+[20260621141648][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1650 autoEnterEnabled=1 enterDelayMs=1600 debounceMs=80 keyPressDurationMs=50
+[20260621141648][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1650 autoEnterEnabled=1 enterDelayMs=1700 debounceMs=80 keyPressDurationMs=50
+[20260621141648][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1650 autoEnterEnabled=1 enterDelayMs=1700 debounceMs=80 keyPressDurationMs=50
+[20260621141648][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1650 autoEnterEnabled=1 enterDelayMs=2000 debounceMs=80 keyPressDurationMs=50
+[20260621141648][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1650 autoEnterEnabled=1 enterDelayMs=2000 debounceMs=80 keyPressDurationMs=50
+[20260621141648][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1650 autoEnterEnabled=1 enterDelayMs=2100 debounceMs=80 keyPressDurationMs=50
+[20260621141648][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1650 autoEnterEnabled=1 enterDelayMs=2100 debounceMs=80 keyPressDurationMs=50
+[20260621141648][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1650 autoEnterEnabled=1 enterDelayMs=2400 debounceMs=80 keyPressDurationMs=50
+[20260621141648][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1650 autoEnterEnabled=1 enterDelayMs=2400 debounceMs=80 keyPressDurationMs=50
+[20260621141648][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1650 autoEnterEnabled=1 enterDelayMs=2500 debounceMs=80 keyPressDurationMs=50
+[20260621141648][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1650 autoEnterEnabled=1 enterDelayMs=2500 debounceMs=80 keyPressDurationMs=50
+[20260621141648][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1650 autoEnterEnabled=1 enterDelayMs=2500 debounceMs=80 keyPressDurationMs=50
+[20260621141648][config][reloaded] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1650 autoEnterEnabled=1 enterDelayMs=2500 debounceMs=80 keyPressDurationMs=50
+[20260621141651][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1600 autoEnterEnabled=1 enterDelayMs=2500 debounceMs=80 keyPressDurationMs=50
+[20260621141651][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1600 autoEnterEnabled=1 enterDelayMs=2500 debounceMs=80 keyPressDurationMs=50
+[20260621141651][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1550 autoEnterEnabled=1 enterDelayMs=2500 debounceMs=80 keyPressDurationMs=50
+[20260621141651][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1550 autoEnterEnabled=1 enterDelayMs=2500 debounceMs=80 keyPressDurationMs=50
+[20260621141651][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1450 autoEnterEnabled=1 enterDelayMs=2500 debounceMs=80 keyPressDurationMs=50
+[20260621141651][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1450 autoEnterEnabled=1 enterDelayMs=2500 debounceMs=80 keyPressDurationMs=50
+[20260621141651][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1350 autoEnterEnabled=1 enterDelayMs=2500 debounceMs=80 keyPressDurationMs=50
+[20260621141651][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1350 autoEnterEnabled=1 enterDelayMs=2500 debounceMs=80 keyPressDurationMs=50
+[20260621141651][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1200 autoEnterEnabled=1 enterDelayMs=2500 debounceMs=80 keyPressDurationMs=50
+[20260621141651][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1200 autoEnterEnabled=1 enterDelayMs=2500 debounceMs=80 keyPressDurationMs=50
+[20260621141651][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1050 autoEnterEnabled=1 enterDelayMs=2500 debounceMs=80 keyPressDurationMs=50
+[20260621141651][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1050 autoEnterEnabled=1 enterDelayMs=2500 debounceMs=80 keyPressDurationMs=50
+[20260621141651][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=900 autoEnterEnabled=1 enterDelayMs=2500 debounceMs=80 keyPressDurationMs=50
+[20260621141651][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=900 autoEnterEnabled=1 enterDelayMs=2500 debounceMs=80 keyPressDurationMs=50
+[20260621141651][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=800 autoEnterEnabled=1 enterDelayMs=2500 debounceMs=80 keyPressDurationMs=50
+[20260621141651][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=800 autoEnterEnabled=1 enterDelayMs=2500 debounceMs=80 keyPressDurationMs=50
+[20260621141651][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=700 autoEnterEnabled=1 enterDelayMs=2500 debounceMs=80 keyPressDurationMs=50
+[20260621141651][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=700 autoEnterEnabled=1 enterDelayMs=2500 debounceMs=80 keyPressDurationMs=50
+[20260621141651][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=650 autoEnterEnabled=1 enterDelayMs=2500 debounceMs=80 keyPressDurationMs=50
+[20260621141651][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=650 autoEnterEnabled=1 enterDelayMs=2500 debounceMs=80 keyPressDurationMs=50
+[20260621141651][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=650 autoEnterEnabled=1 enterDelayMs=2500 debounceMs=80 keyPressDurationMs=50
+[20260621141651][config][reloaded] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=650 autoEnterEnabled=1 enterDelayMs=2500 debounceMs=80 keyPressDurationMs=50
+[20260621141652][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=700 autoEnterEnabled=1 enterDelayMs=2500 debounceMs=80 keyPressDurationMs=50
+[20260621141652][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=700 autoEnterEnabled=1 enterDelayMs=2500 debounceMs=80 keyPressDurationMs=50
+[20260621141652][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=800 autoEnterEnabled=1 enterDelayMs=2500 debounceMs=80 keyPressDurationMs=50
+[20260621141652][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=800 autoEnterEnabled=1 enterDelayMs=2500 debounceMs=80 keyPressDurationMs=50
+[20260621141652][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=850 autoEnterEnabled=1 enterDelayMs=2500 debounceMs=80 keyPressDurationMs=50
+[20260621141652][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=850 autoEnterEnabled=1 enterDelayMs=2500 debounceMs=80 keyPressDurationMs=50
+[20260621141652][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=900 autoEnterEnabled=1 enterDelayMs=2500 debounceMs=80 keyPressDurationMs=50
+[20260621141652][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=900 autoEnterEnabled=1 enterDelayMs=2500 debounceMs=80 keyPressDurationMs=50
+[20260621141652][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=950 autoEnterEnabled=1 enterDelayMs=2500 debounceMs=80 keyPressDurationMs=50
+[20260621141652][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=950 autoEnterEnabled=1 enterDelayMs=2500 debounceMs=80 keyPressDurationMs=50
+[20260621141652][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1000 autoEnterEnabled=1 enterDelayMs=2500 debounceMs=80 keyPressDurationMs=50
+[20260621141652][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1000 autoEnterEnabled=1 enterDelayMs=2500 debounceMs=80 keyPressDurationMs=50
+[20260621141652][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1000 autoEnterEnabled=1 enterDelayMs=2500 debounceMs=80 keyPressDurationMs=50
+[20260621141652][config][reloaded] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1000 autoEnterEnabled=1 enterDelayMs=2500 debounceMs=80 keyPressDurationMs=50
+[20260621141653][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1050 autoEnterEnabled=1 enterDelayMs=2500 debounceMs=80 keyPressDurationMs=50
+[20260621141653][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1050 autoEnterEnabled=1 enterDelayMs=2500 debounceMs=80 keyPressDurationMs=50
+[20260621141653][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 autoEnterEnabled=1 enterDelayMs=2500 debounceMs=80 keyPressDurationMs=50
+[20260621141653][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 autoEnterEnabled=1 enterDelayMs=2500 debounceMs=80 keyPressDurationMs=50
+[20260621141653][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1250 autoEnterEnabled=1 enterDelayMs=2500 debounceMs=80 keyPressDurationMs=50
+[20260621141653][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1250 autoEnterEnabled=1 enterDelayMs=2500 debounceMs=80 keyPressDurationMs=50
+[20260621141653][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1350 autoEnterEnabled=1 enterDelayMs=2500 debounceMs=80 keyPressDurationMs=50
+[20260621141653][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1350 autoEnterEnabled=1 enterDelayMs=2500 debounceMs=80 keyPressDurationMs=50
+[20260621141653][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1400 autoEnterEnabled=1 enterDelayMs=2500 debounceMs=80 keyPressDurationMs=50
+[20260621141653][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1400 autoEnterEnabled=1 enterDelayMs=2500 debounceMs=80 keyPressDurationMs=50
+[20260621141653][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1450 autoEnterEnabled=1 enterDelayMs=2500 debounceMs=80 keyPressDurationMs=50
+[20260621141653][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1450 autoEnterEnabled=1 enterDelayMs=2500 debounceMs=80 keyPressDurationMs=50
+[20260621141653][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1450 autoEnterEnabled=1 enterDelayMs=2500 debounceMs=80 keyPressDurationMs=50
+[20260621141653][config][reloaded] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1450 autoEnterEnabled=1 enterDelayMs=2500 debounceMs=80 keyPressDurationMs=50
+[20260621141654][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1400 autoEnterEnabled=1 enterDelayMs=2500 debounceMs=80 keyPressDurationMs=50
+[20260621141654][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1400 autoEnterEnabled=1 enterDelayMs=2500 debounceMs=80 keyPressDurationMs=50
+[20260621141654][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1350 autoEnterEnabled=1 enterDelayMs=2500 debounceMs=80 keyPressDurationMs=50
+[20260621141654][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1350 autoEnterEnabled=1 enterDelayMs=2500 debounceMs=80 keyPressDurationMs=50
+[20260621141654][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1300 autoEnterEnabled=1 enterDelayMs=2500 debounceMs=80 keyPressDurationMs=50
+[20260621141654][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1300 autoEnterEnabled=1 enterDelayMs=2500 debounceMs=80 keyPressDurationMs=50
+[20260621141654][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1150 autoEnterEnabled=1 enterDelayMs=2500 debounceMs=80 keyPressDurationMs=50
+[20260621141654][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1150 autoEnterEnabled=1 enterDelayMs=2500 debounceMs=80 keyPressDurationMs=50
+[20260621141654][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=950 autoEnterEnabled=1 enterDelayMs=2500 debounceMs=80 keyPressDurationMs=50
+[20260621141654][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=950 autoEnterEnabled=1 enterDelayMs=2500 debounceMs=80 keyPressDurationMs=50
+[20260621141654][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=900 autoEnterEnabled=1 enterDelayMs=2500 debounceMs=80 keyPressDurationMs=50
+[20260621141654][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=900 autoEnterEnabled=1 enterDelayMs=2500 debounceMs=80 keyPressDurationMs=50
+[20260621141654][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=900 autoEnterEnabled=1 enterDelayMs=2500 debounceMs=80 keyPressDurationMs=50
+[20260621141654][config][reloaded] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=900 autoEnterEnabled=1 enterDelayMs=2500 debounceMs=80 keyPressDurationMs=50
+[20260621141659][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=900 autoEnterEnabled=1 enterDelayMs=2700 debounceMs=80 keyPressDurationMs=50
+[20260621141659][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=900 autoEnterEnabled=1 enterDelayMs=2700 debounceMs=80 keyPressDurationMs=50
+[20260621141659][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=900 autoEnterEnabled=1 enterDelayMs=2700 debounceMs=80 keyPressDurationMs=50
+[20260621141659][config][reloaded] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=900 autoEnterEnabled=1 enterDelayMs=2700 debounceMs=80 keyPressDurationMs=50
+[20260621141659][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=900 autoEnterEnabled=1 enterDelayMs=2800 debounceMs=80 keyPressDurationMs=50
+[20260621141659][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=900 autoEnterEnabled=1 enterDelayMs=2800 debounceMs=80 keyPressDurationMs=50
+[20260621141659][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=900 autoEnterEnabled=1 enterDelayMs=3000 debounceMs=80 keyPressDurationMs=50
+[20260621141659][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=900 autoEnterEnabled=1 enterDelayMs=3000 debounceMs=80 keyPressDurationMs=50
+[20260621141659][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=900 autoEnterEnabled=1 enterDelayMs=3200 debounceMs=80 keyPressDurationMs=50
+[20260621141659][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=900 autoEnterEnabled=1 enterDelayMs=3200 debounceMs=80 keyPressDurationMs=50
+[20260621141659][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=900 autoEnterEnabled=1 enterDelayMs=3500 debounceMs=80 keyPressDurationMs=50
+[20260621141659][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=900 autoEnterEnabled=1 enterDelayMs=3500 debounceMs=80 keyPressDurationMs=50
+[20260621141659][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=900 autoEnterEnabled=1 enterDelayMs=3700 debounceMs=80 keyPressDurationMs=50
+[20260621141659][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=900 autoEnterEnabled=1 enterDelayMs=3700 debounceMs=80 keyPressDurationMs=50
+[20260621141659][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=900 autoEnterEnabled=1 enterDelayMs=3800 debounceMs=80 keyPressDurationMs=50
+[20260621141659][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=900 autoEnterEnabled=1 enterDelayMs=3800 debounceMs=80 keyPressDurationMs=50
+[20260621141659][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=900 autoEnterEnabled=1 enterDelayMs=3900 debounceMs=80 keyPressDurationMs=50
+[20260621141659][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=900 autoEnterEnabled=1 enterDelayMs=3900 debounceMs=80 keyPressDurationMs=50
+[20260621141659][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=900 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621141659][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=900 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621141715][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=850 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621141715][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=850 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621141715][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=800 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621141715][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=800 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621141715][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=700 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621141715][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=700 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621141715][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=650 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621141715][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=650 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621141715][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=650 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621141715][config][reloaded] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=650 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621141727][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=750 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621141727][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=750 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621141727][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1750 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621141727][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1750 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621141727][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2750 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621141727][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2750 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621141727][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2750 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621141727][config][reloaded] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2750 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621141727][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=4800 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621141727][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=4800 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621141727][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=5000 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621141727][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=5000 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621141729][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=750 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621141729][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=750 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621141729][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=750 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621141729][config][reloaded] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=750 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621141729][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1750 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621141729][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1750 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621141729][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2750 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621141729][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=2750 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621141729][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=3750 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621141729][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=3750 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621141729][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=4800 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621141729][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=4800 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621141729][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=5000 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621141729][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=5000 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621141731][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=550 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621141731][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=550 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621141731][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=550 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621141731][config][reloaded] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=550 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142041][trigger][fire] delta=0 count=0 runtime=recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=550 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142041][action][ralt] count=1
+[20260621142043][trigger][fire] delta=1360 count=1 runtime=recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=550 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142043][action][ralt] count=2
+[20260621142043][timer][enter_scheduled] enterDelayMs=4000
+[20260621142047][action][enter] 
+[20260621142241][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=550 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142241][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=550 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142241][config][reloaded] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=550 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142307][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=750 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142307][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=750 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142308][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=750 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142308][config][reloaded] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=750 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142308][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=900 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142308][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=900 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142308][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=900 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142308][config][reloaded] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=900 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142308][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=950 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142308][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=950 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142308][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142308][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142308][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1200 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142308][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1200 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142308][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1300 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142308][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1300 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142308][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1400 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142308][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1400 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142308][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1450 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142308][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1450 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142309][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1400 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142309][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1400 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142309][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1350 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142309][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1350 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142309][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1250 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142309][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1250 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142309][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1150 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142309][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1150 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142309][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1150 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142309][config][reloaded] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1150 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142309][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142309][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142309][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142309][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142310][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1050 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142310][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1050 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142310][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=950 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142310][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=950 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142310][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=850 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142310][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=850 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142310][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=750 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142310][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=750 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142310][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=700 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142310][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=700 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142310][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=700 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142310][config][reloaded] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=700 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142311][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=600 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142311][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=600 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142311][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=550 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142311][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=550 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142311][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=550 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142311][config][reloaded] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=550 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142311][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=500 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142311][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=500 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142311][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=450 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142311][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=450 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142312][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=500 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142312][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=500 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142312][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=550 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142312][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=550 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142312][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=650 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142312][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=650 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142312][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=700 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142312][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=700 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142312][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=750 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142312][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=750 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142312][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=750 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142312][config][reloaded] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=750 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142312][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=800 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142312][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=800 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142312][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=850 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142312][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=850 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142312][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=950 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142312][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=950 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142312][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1050 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142312][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1050 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142312][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1150 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142312][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1150 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142312][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1200 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142312][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1200 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142313][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1150 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142313][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1150 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142313][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1150 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142313][config][reloaded] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1150 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142313][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142313][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142313][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1050 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142313][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1050 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142313][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1000 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142313][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1000 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142313][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=950 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142313][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=950 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142313][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=900 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142313][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=900 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142313][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=800 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142313][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=800 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142313][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=750 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142313][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=750 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142313][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=700 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142313][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=700 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142316][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1250 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142316][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1250 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142316][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1250 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142316][config][reloaded] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1250 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142316][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1200 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142316][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1200 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142316][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1150 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142316][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1150 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142316][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142316][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142316][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1000 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142316][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1000 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142316][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=950 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142316][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=950 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142316][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=900 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142316][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=900 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142317][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=950 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142317][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=950 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142317][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1050 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142317][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1050 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142317][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1150 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142317][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1150 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142317][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1250 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142317][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1250 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142317][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1400 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142317][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1400 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142317][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1450 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142317][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1450 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142317][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1500 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142317][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1500 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142317][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1550 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142317][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1550 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142317][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1550 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142317][config][reloaded] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1550 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142326][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1400 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142326][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1400 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142326][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1400 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142326][config][reloaded] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1400 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142327][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1000 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142327][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1000 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142328][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1000 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142328][config][reloaded] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1000 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142328][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1650 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142328][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1650 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142328][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1650 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142328][config][reloaded] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1650 autoEnterEnabled=1 enterDelayMs=4000 debounceMs=80 keyPressDurationMs=50
+[20260621142330][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1650 autoEnterEnabled=1 enterDelayMs=3700 debounceMs=80 keyPressDurationMs=50
+[20260621142330][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1650 autoEnterEnabled=1 enterDelayMs=3700 debounceMs=80 keyPressDurationMs=50
+[20260621142330][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1650 autoEnterEnabled=1 enterDelayMs=3600 debounceMs=80 keyPressDurationMs=50
+[20260621142330][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1650 autoEnterEnabled=1 enterDelayMs=3600 debounceMs=80 keyPressDurationMs=50
+[20260621142330][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1650 autoEnterEnabled=1 enterDelayMs=3500 debounceMs=80 keyPressDurationMs=50
+[20260621142330][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1650 autoEnterEnabled=1 enterDelayMs=3500 debounceMs=80 keyPressDurationMs=50
+[20260621142330][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1650 autoEnterEnabled=1 enterDelayMs=3400 debounceMs=80 keyPressDurationMs=50
+[20260621142330][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1650 autoEnterEnabled=1 enterDelayMs=3400 debounceMs=80 keyPressDurationMs=50
+[20260621142330][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1650 autoEnterEnabled=1 enterDelayMs=3300 debounceMs=80 keyPressDurationMs=50
+[20260621142330][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1650 autoEnterEnabled=1 enterDelayMs=3300 debounceMs=80 keyPressDurationMs=50
+[20260621142330][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1650 autoEnterEnabled=1 enterDelayMs=3200 debounceMs=80 keyPressDurationMs=50
+[20260621142330][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1650 autoEnterEnabled=1 enterDelayMs=3200 debounceMs=80 keyPressDurationMs=50
+[20260621142331][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1650 autoEnterEnabled=1 enterDelayMs=3100 debounceMs=80 keyPressDurationMs=50
+[20260621142331][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1650 autoEnterEnabled=1 enterDelayMs=3100 debounceMs=80 keyPressDurationMs=50
+[20260621142331][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1650 autoEnterEnabled=1 enterDelayMs=3100 debounceMs=80 keyPressDurationMs=50
+[20260621142331][config][reloaded] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1650 autoEnterEnabled=1 enterDelayMs=3100 debounceMs=80 keyPressDurationMs=50
+[20260621142335][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=900 autoEnterEnabled=1 enterDelayMs=3100 debounceMs=80 keyPressDurationMs=50
+[20260621142335][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=900 autoEnterEnabled=1 enterDelayMs=3100 debounceMs=80 keyPressDurationMs=50
+[20260621142335][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=900 autoEnterEnabled=1 enterDelayMs=3100 debounceMs=80 keyPressDurationMs=50
+[20260621142335][config][reloaded] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=900 autoEnterEnabled=1 enterDelayMs=3100 debounceMs=80 keyPressDurationMs=50
+[20260621142523][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=900 autoEnterEnabled=1 enterDelayMs=3100 debounceMs=80 keyPressDurationMs=50
+[20260621142523][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=900 autoEnterEnabled=1 enterDelayMs=3100 debounceMs=80 keyPressDurationMs=50
+[20260621142523][config][reloaded] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=900 autoEnterEnabled=1 enterDelayMs=3100 debounceMs=80 keyPressDurationMs=50
+[20260621143433][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=900 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3100 debounceMs=80 keyPressDurationMs=50
+[20260621143434][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=900 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3100 debounceMs=80 keyPressDurationMs=50
+[20260621143434][config][reloaded] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=900 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3100 debounceMs=80 keyPressDurationMs=50
+[20260621143824][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=900 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3100 debounceMs=80 keyPressDurationMs=50
+[20260621143825][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=900 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3100 debounceMs=80 keyPressDurationMs=50
+[20260621143825][config][reloaded] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=900 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3100 debounceMs=80 keyPressDurationMs=50
+[20260621143830][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=900 cancelEnabled=0 autoEnterEnabled=1 enterDelayMs=3100 debounceMs=80 keyPressDurationMs=50
+[20260621143830][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=900 cancelEnabled=0 autoEnterEnabled=1 enterDelayMs=3100 debounceMs=80 keyPressDurationMs=50
+[20260621143830][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=900 cancelEnabled=0 autoEnterEnabled=1 enterDelayMs=3100 debounceMs=80 keyPressDurationMs=50
+[20260621143830][config][reloaded] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=900 cancelEnabled=0 autoEnterEnabled=1 enterDelayMs=3100 debounceMs=80 keyPressDurationMs=50
+[20260621143831][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=900 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3100 debounceMs=80 keyPressDurationMs=50
+[20260621143831][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=900 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3100 debounceMs=80 keyPressDurationMs=50
+[20260621143831][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=900 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3100 debounceMs=80 keyPressDurationMs=50
+[20260621143831][config][reloaded] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=900 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3100 debounceMs=80 keyPressDurationMs=50
+[20260621143832][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=900 cancelEnabled=1 autoEnterEnabled=0 enterDelayMs=3100 debounceMs=80 keyPressDurationMs=50
+[20260621143832][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=900 cancelEnabled=1 autoEnterEnabled=0 enterDelayMs=3100 debounceMs=80 keyPressDurationMs=50
+[20260621143832][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=900 cancelEnabled=1 autoEnterEnabled=0 enterDelayMs=3100 debounceMs=80 keyPressDurationMs=50
+[20260621143832][config][reloaded] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=900 cancelEnabled=1 autoEnterEnabled=0 enterDelayMs=3100 debounceMs=80 keyPressDurationMs=50
+[20260621143832][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=900 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3100 debounceMs=80 keyPressDurationMs=50
+[20260621143832][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=900 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3100 debounceMs=80 keyPressDurationMs=50
+[20260621143833][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=900 cancelEnabled=0 autoEnterEnabled=1 enterDelayMs=3100 debounceMs=80 keyPressDurationMs=50
+[20260621143833][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=900 cancelEnabled=0 autoEnterEnabled=1 enterDelayMs=3100 debounceMs=80 keyPressDurationMs=50
+[20260621143833][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=900 cancelEnabled=0 autoEnterEnabled=1 enterDelayMs=3100 debounceMs=80 keyPressDurationMs=50
+[20260621143833][config][reloaded] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=900 cancelEnabled=0 autoEnterEnabled=1 enterDelayMs=3100 debounceMs=80 keyPressDurationMs=50
+[20260621143834][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=900 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3100 debounceMs=80 keyPressDurationMs=50
+[20260621143834][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=900 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3100 debounceMs=80 keyPressDurationMs=50
+[20260621143834][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=900 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3100 debounceMs=80 keyPressDurationMs=50
+[20260621143834][config][reloaded] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=900 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3100 debounceMs=80 keyPressDurationMs=50
+[20260621144412][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=900 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3100 debounceMs=80 keyPressDurationMs=50
+[20260621144412][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=900 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3100 debounceMs=80 keyPressDurationMs=50
+[20260621144412][config][reloaded] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=900 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3100 debounceMs=80 keyPressDurationMs=50
+[20260621144415][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=850 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3100 debounceMs=80 keyPressDurationMs=50
+[20260621144415][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=850 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3100 debounceMs=80 keyPressDurationMs=50
+[20260621144415][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=750 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3100 debounceMs=80 keyPressDurationMs=50
+[20260621144415][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=750 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3100 debounceMs=80 keyPressDurationMs=50
+[20260621144416][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=650 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3100 debounceMs=80 keyPressDurationMs=50
+[20260621144416][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=650 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3100 debounceMs=80 keyPressDurationMs=50
+[20260621144416][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=500 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3100 debounceMs=80 keyPressDurationMs=50
+[20260621144416][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=500 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3100 debounceMs=80 keyPressDurationMs=50
+[20260621144416][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=400 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3100 debounceMs=80 keyPressDurationMs=50
+[20260621144416][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=400 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3100 debounceMs=80 keyPressDurationMs=50
+[20260621144416][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=350 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3100 debounceMs=80 keyPressDurationMs=50
+[20260621144416][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=350 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3100 debounceMs=80 keyPressDurationMs=50
+[20260621144416][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=350 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3100 debounceMs=80 keyPressDurationMs=50
+[20260621144416][config][reloaded] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=350 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3100 debounceMs=80 keyPressDurationMs=50
+[20260621144416][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=400 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3100 debounceMs=80 keyPressDurationMs=50
+[20260621144416][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=400 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3100 debounceMs=80 keyPressDurationMs=50
+[20260621144416][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=450 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3100 debounceMs=80 keyPressDurationMs=50
+[20260621144416][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=450 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3100 debounceMs=80 keyPressDurationMs=50
+[20260621144416][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=550 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3100 debounceMs=80 keyPressDurationMs=50
+[20260621144416][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=550 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3100 debounceMs=80 keyPressDurationMs=50
+[20260621144416][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=650 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3100 debounceMs=80 keyPressDurationMs=50
+[20260621144416][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=650 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3100 debounceMs=80 keyPressDurationMs=50
+[20260621144416][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=750 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3100 debounceMs=80 keyPressDurationMs=50
+[20260621144416][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=750 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3100 debounceMs=80 keyPressDurationMs=50
+[20260621144417][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=800 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3100 debounceMs=80 keyPressDurationMs=50
+[20260621144417][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=800 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3100 debounceMs=80 keyPressDurationMs=50
+[20260621144417][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=850 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3100 debounceMs=80 keyPressDurationMs=50
+[20260621144417][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=850 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3100 debounceMs=80 keyPressDurationMs=50
+[20260621144417][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=950 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3100 debounceMs=80 keyPressDurationMs=50
+[20260621144417][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=950 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3100 debounceMs=80 keyPressDurationMs=50
+[20260621144417][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1000 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3100 debounceMs=80 keyPressDurationMs=50
+[20260621144417][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1000 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3100 debounceMs=80 keyPressDurationMs=50
+[20260621144417][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1050 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3100 debounceMs=80 keyPressDurationMs=50
+[20260621144417][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1050 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3100 debounceMs=80 keyPressDurationMs=50
+[20260621144417][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3100 debounceMs=80 keyPressDurationMs=50
+[20260621144417][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3100 debounceMs=80 keyPressDurationMs=50
+[20260621144417][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3100 debounceMs=80 keyPressDurationMs=50
+[20260621144417][config][reloaded] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3100 debounceMs=80 keyPressDurationMs=50
+[20260621144418][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3400 debounceMs=80 keyPressDurationMs=50
+[20260621144418][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3400 debounceMs=80 keyPressDurationMs=50
+[20260621144418][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3600 debounceMs=80 keyPressDurationMs=50
+[20260621144418][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3600 debounceMs=80 keyPressDurationMs=50
+[20260621144418][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3800 debounceMs=80 keyPressDurationMs=50
+[20260621144418][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3800 debounceMs=80 keyPressDurationMs=50
+[20260621144418][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=4100 debounceMs=80 keyPressDurationMs=50
+[20260621144418][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=4100 debounceMs=80 keyPressDurationMs=50
+[20260621144418][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=4100 debounceMs=80 keyPressDurationMs=50
+[20260621144418][config][reloaded] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=4100 debounceMs=80 keyPressDurationMs=50
+[20260621144418][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=4300 debounceMs=80 keyPressDurationMs=50
+[20260621144418][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=4300 debounceMs=80 keyPressDurationMs=50
+[20260621144418][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=4400 debounceMs=80 keyPressDurationMs=50
+[20260621144418][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=4400 debounceMs=80 keyPressDurationMs=50
+[20260621144418][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=4500 debounceMs=80 keyPressDurationMs=50
+[20260621144418][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=4500 debounceMs=80 keyPressDurationMs=50
+[20260621144419][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=4600 debounceMs=80 keyPressDurationMs=50
+[20260621144419][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=4600 debounceMs=80 keyPressDurationMs=50
+[20260621144419][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=4800 debounceMs=80 keyPressDurationMs=50
+[20260621144419][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=4800 debounceMs=80 keyPressDurationMs=50
+[20260621144419][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621144419][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621144419][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=5100 debounceMs=80 keyPressDurationMs=50
+[20260621144419][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=5100 debounceMs=80 keyPressDurationMs=50
+[20260621144419][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=5200 debounceMs=80 keyPressDurationMs=50
+[20260621144419][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=5200 debounceMs=80 keyPressDurationMs=50
+[20260621144419][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=5200 debounceMs=80 keyPressDurationMs=50
+[20260621144419][config][reloaded] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=5200 debounceMs=80 keyPressDurationMs=50
+[20260621144736][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=5200 debounceMs=80 keyPressDurationMs=50
+[20260621144736][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=5200 debounceMs=80 keyPressDurationMs=50
+[20260621144736][config][reloaded] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=5200 debounceMs=80 keyPressDurationMs=50
+[20260621145004][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=5200 debounceMs=80 keyPressDurationMs=50
+[20260621145005][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=5200 debounceMs=80 keyPressDurationMs=50
+[20260621145005][config][reloaded] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=5200 debounceMs=80 keyPressDurationMs=50
+[20260621145025][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621145025][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=5000 debounceMs=80 keyPressDurationMs=50
+[20260621145025][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=4800 debounceMs=80 keyPressDurationMs=50
+[20260621145025][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=4800 debounceMs=80 keyPressDurationMs=50
+[20260621145025][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=4400 debounceMs=80 keyPressDurationMs=50
+[20260621145025][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=4400 debounceMs=80 keyPressDurationMs=50
+[20260621145025][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=4200 debounceMs=80 keyPressDurationMs=50
+[20260621145025][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=4200 debounceMs=80 keyPressDurationMs=50
+[20260621145025][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3900 debounceMs=80 keyPressDurationMs=50
+[20260621145025][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3900 debounceMs=80 keyPressDurationMs=50
+[20260621145025][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3800 debounceMs=80 keyPressDurationMs=50
+[20260621145025][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3800 debounceMs=80 keyPressDurationMs=50
+[20260621145025][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3700 debounceMs=80 keyPressDurationMs=50
+[20260621145025][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3700 debounceMs=80 keyPressDurationMs=50
+[20260621145025][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3600 debounceMs=80 keyPressDurationMs=50
+[20260621145025][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3600 debounceMs=80 keyPressDurationMs=50
+[20260621145025][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3500 debounceMs=80 keyPressDurationMs=50
+[20260621145025][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3500 debounceMs=80 keyPressDurationMs=50
+[20260621145025][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3500 debounceMs=80 keyPressDurationMs=50
+[20260621145025][config][reloaded] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3500 debounceMs=80 keyPressDurationMs=50
+[20260621145025][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3400 debounceMs=80 keyPressDurationMs=50
+[20260621145025][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3400 debounceMs=80 keyPressDurationMs=50
+[20260621145025][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3300 debounceMs=80 keyPressDurationMs=50
+[20260621145025][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3300 debounceMs=80 keyPressDurationMs=50
+[20260621145025][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3200 debounceMs=80 keyPressDurationMs=50
+[20260621145025][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3200 debounceMs=80 keyPressDurationMs=50
+[20260621145026][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3100 debounceMs=80 keyPressDurationMs=50
+[20260621145026][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3100 debounceMs=80 keyPressDurationMs=50
+[20260621145026][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=2900 debounceMs=80 keyPressDurationMs=50
+[20260621145026][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=2900 debounceMs=80 keyPressDurationMs=50
+[20260621145026][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=2700 debounceMs=80 keyPressDurationMs=50
+[20260621145026][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=2700 debounceMs=80 keyPressDurationMs=50
+[20260621145026][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=2500 debounceMs=80 keyPressDurationMs=50
+[20260621145026][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=2500 debounceMs=80 keyPressDurationMs=50
+[20260621145026][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=2300 debounceMs=80 keyPressDurationMs=50
+[20260621145026][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=2300 debounceMs=80 keyPressDurationMs=50
+[20260621145026][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=2200 debounceMs=80 keyPressDurationMs=50
+[20260621145026][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=2200 debounceMs=80 keyPressDurationMs=50
+[20260621145026][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=2100 debounceMs=80 keyPressDurationMs=50
+[20260621145026][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=2100 debounceMs=80 keyPressDurationMs=50
+[20260621145026][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=2000 debounceMs=80 keyPressDurationMs=50
+[20260621145026][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=2000 debounceMs=80 keyPressDurationMs=50
+[20260621145026][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=2000 debounceMs=80 keyPressDurationMs=50
+[20260621145026][config][reloaded] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=2000 debounceMs=80 keyPressDurationMs=50
+[20260621145332][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=2000 debounceMs=80 keyPressDurationMs=50
+[20260621145332][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=2000 debounceMs=80 keyPressDurationMs=50
+[20260621145332][config][reloaded] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=2000 debounceMs=80 keyPressDurationMs=50
+[20260621145342][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 cancelEnabled=0 autoEnterEnabled=1 enterDelayMs=2000 debounceMs=80 keyPressDurationMs=50
+[20260621145342][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 cancelEnabled=0 autoEnterEnabled=1 enterDelayMs=2000 debounceMs=80 keyPressDurationMs=50
+[20260621145343][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 cancelEnabled=0 autoEnterEnabled=1 enterDelayMs=2000 debounceMs=80 keyPressDurationMs=50
+[20260621145343][config][reloaded] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 cancelEnabled=0 autoEnterEnabled=1 enterDelayMs=2000 debounceMs=80 keyPressDurationMs=50
+[20260621145344][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=2000 debounceMs=80 keyPressDurationMs=50
+[20260621145344][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=2000 debounceMs=80 keyPressDurationMs=50
+[20260621145344][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=2000 debounceMs=80 keyPressDurationMs=50
+[20260621145344][config][reloaded] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=1100 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=2000 debounceMs=80 keyPressDurationMs=50
+[20260621145346][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=800 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=2000 debounceMs=80 keyPressDurationMs=50
+[20260621145346][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=800 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=2000 debounceMs=80 keyPressDurationMs=50
+[20260621145346][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=700 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=2000 debounceMs=80 keyPressDurationMs=50
+[20260621145346][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=700 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=2000 debounceMs=80 keyPressDurationMs=50
+[20260621145346][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=600 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=2000 debounceMs=80 keyPressDurationMs=50
+[20260621145346][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=600 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=2000 debounceMs=80 keyPressDurationMs=50
+[20260621145346][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=500 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=2000 debounceMs=80 keyPressDurationMs=50
+[20260621145346][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=500 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=2000 debounceMs=80 keyPressDurationMs=50
+[20260621145346][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=450 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=2000 debounceMs=80 keyPressDurationMs=50
+[20260621145346][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=450 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=2000 debounceMs=80 keyPressDurationMs=50
+[20260621145346][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=400 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=2000 debounceMs=80 keyPressDurationMs=50
+[20260621145346][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=400 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=2000 debounceMs=80 keyPressDurationMs=50
+[20260621145346][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=400 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=2000 debounceMs=80 keyPressDurationMs=50
+[20260621145346][config][reloaded] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=400 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=2000 debounceMs=80 keyPressDurationMs=50
+[20260621145346][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=450 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=2000 debounceMs=80 keyPressDurationMs=50
+[20260621145346][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=450 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=2000 debounceMs=80 keyPressDurationMs=50
+[20260621145346][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=500 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=2000 debounceMs=80 keyPressDurationMs=50
+[20260621145346][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=500 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=2000 debounceMs=80 keyPressDurationMs=50
+[20260621145346][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=650 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=2000 debounceMs=80 keyPressDurationMs=50
+[20260621145346][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=650 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=2000 debounceMs=80 keyPressDurationMs=50
+[20260621145346][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=850 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=2000 debounceMs=80 keyPressDurationMs=50
+[20260621145346][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=850 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=2000 debounceMs=80 keyPressDurationMs=50
+[20260621145346][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=950 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=2000 debounceMs=80 keyPressDurationMs=50
+[20260621145346][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=950 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=2000 debounceMs=80 keyPressDurationMs=50
+[20260621145348][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=950 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3000 debounceMs=80 keyPressDurationMs=50
+[20260621145348][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=950 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3000 debounceMs=80 keyPressDurationMs=50
+[20260621145348][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=950 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3000 debounceMs=80 keyPressDurationMs=50
+[20260621145348][config][reloaded] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=950 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3000 debounceMs=80 keyPressDurationMs=50
+[20260621145348][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=950 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=2800 debounceMs=80 keyPressDurationMs=50
+[20260621145348][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=950 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=2800 debounceMs=80 keyPressDurationMs=50
+[20260621145348][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=950 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=2500 debounceMs=80 keyPressDurationMs=50
+[20260621145348][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=950 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=2500 debounceMs=80 keyPressDurationMs=50
+[20260621145349][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=950 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=2300 debounceMs=80 keyPressDurationMs=50
+[20260621145349][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=950 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=2300 debounceMs=80 keyPressDurationMs=50
+[20260621145349][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=950 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=2100 debounceMs=80 keyPressDurationMs=50
+[20260621145349][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=950 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=2100 debounceMs=80 keyPressDurationMs=50
+[20260621145349][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=950 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=2000 debounceMs=80 keyPressDurationMs=50
+[20260621145349][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=950 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=2000 debounceMs=80 keyPressDurationMs=50
+[20260621145349][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=950 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=1900 debounceMs=80 keyPressDurationMs=50
+[20260621145349][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=950 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=1900 debounceMs=80 keyPressDurationMs=50
+[20260621145349][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=950 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=1900 debounceMs=80 keyPressDurationMs=50
+[20260621145349][config][reloaded] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=950 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=1900 debounceMs=80 keyPressDurationMs=50
+[20260621145351][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=950 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=2400 debounceMs=80 keyPressDurationMs=50
+[20260621145351][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=950 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=2400 debounceMs=80 keyPressDurationMs=50
+[20260621145351][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=950 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=2600 debounceMs=80 keyPressDurationMs=50
+[20260621145351][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=950 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=2600 debounceMs=80 keyPressDurationMs=50
+[20260621145351][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=950 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=2800 debounceMs=80 keyPressDurationMs=50
+[20260621145351][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=950 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=2800 debounceMs=80 keyPressDurationMs=50
+[20260621145351][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=950 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3000 debounceMs=80 keyPressDurationMs=50
+[20260621145351][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=950 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3000 debounceMs=80 keyPressDurationMs=50
+[20260621145351][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=950 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3200 debounceMs=80 keyPressDurationMs=50
+[20260621145351][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=950 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3200 debounceMs=80 keyPressDurationMs=50
+[20260621145351][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=950 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3400 debounceMs=80 keyPressDurationMs=50
+[20260621145351][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=950 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3400 debounceMs=80 keyPressDurationMs=50
+[20260621145352][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=950 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3400 debounceMs=80 keyPressDurationMs=50
+[20260621145352][config][reloaded] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=950 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3400 debounceMs=80 keyPressDurationMs=50
+[20260621145352][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=950 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3300 debounceMs=80 keyPressDurationMs=50
+[20260621145352][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=950 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3300 debounceMs=80 keyPressDurationMs=50
+[20260621145352][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=950 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3200 debounceMs=80 keyPressDurationMs=50
+[20260621145352][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=950 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3200 debounceMs=80 keyPressDurationMs=50
+[20260621145352][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=950 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3100 debounceMs=80 keyPressDurationMs=50
+[20260621145352][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=950 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3100 debounceMs=80 keyPressDurationMs=50
+[20260621145352][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=950 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3100 debounceMs=80 keyPressDurationMs=50
+[20260621145352][config][reloaded] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=950 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3100 debounceMs=80 keyPressDurationMs=50
+[20260621145352][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=950 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3000 debounceMs=80 keyPressDurationMs=50
+[20260621145352][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=950 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=3000 debounceMs=80 keyPressDurationMs=50
+[20260621145352][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=950 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=2900 debounceMs=80 keyPressDurationMs=50
+[20260621145352][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=950 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=2900 debounceMs=80 keyPressDurationMs=50
+[20260621145352][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=950 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=2800 debounceMs=80 keyPressDurationMs=50
+[20260621145352][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=950 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=2800 debounceMs=80 keyPressDurationMs=50
+[20260621145352][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=950 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=2700 debounceMs=80 keyPressDurationMs=50
+[20260621145352][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=950 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=2700 debounceMs=80 keyPressDurationMs=50
+[20260621145353][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=950 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=2600 debounceMs=80 keyPressDurationMs=50
+[20260621145353][runtime][saved] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=950 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=2600 debounceMs=80 keyPressDurationMs=50
+[20260621145353][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=950 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=2600 debounceMs=80 keyPressDurationMs=50
+[20260621145353][config][reloaded] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=950 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=2600 debounceMs=80 keyPressDurationMs=50
+[20260621154655][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=950 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=2600 debounceMs=80 keyPressDurationMs=50
+[20260621154656][runtime][apply_config] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=950 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=2600 debounceMs=80 keyPressDurationMs=50
+[20260621154656][config][reloaded] recordKey=AutoTrigger trigger=AutoTrigger hotkeys=Volume_Up,Volume_Down intervalMs=950 cancelEnabled=1 autoEnterEnabled=1 enterDelayMs=2600 debounceMs=80 keyPressDurationMs=50

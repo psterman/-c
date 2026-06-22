@@ -318,6 +318,7 @@ global g_CmdPal_AgentPullDebugDispatch := CommandPaletteSearchDebug_PullAgentDeb
 #Include modules\SearchCenterWebViewCore.ahk
 #Include modules\AiWorkbenchWebViewCore.ahk
 #Include modules\CliWorkbenchWebViewCore.ahk
+#Include modules\UnifiedWorkbenchWebViewCore.ahk
 #Include modules\DomainCSurfaceRouter.ahk
 #Include modules\DomainCWailsHost.ahk
 #Include modules\SelectionSenseCore.ahk
@@ -343,7 +344,7 @@ if (EnableHoleOverlayOnNativeDrop) {
     try GDHO_SetFallbackUrl(holeFallbackUrl)
 }
 
-OnExit((*) => (NativeDropBridge_Stop(), Nmer_StopWailsBridge()))
+OnExit((*) => (Nmer_BeginAppShutdown(), NativeDropBridge_Stop(), Nmer_StopWailsBridge()))
 NativeDropBridge_InitCopyDataReceiver()
 
 ; 已移除强制管理员自提权，避免与 Everything 产生权限不一致导致 IPC 失败。
@@ -639,13 +640,14 @@ global Language := "zh"  ; 语言设置：zh=中文, en=英文
 global DefaultStartTab := "general"  ; 默认启动页面：general=通用, appearance=外观, prompts=提示词, hotkeys=快捷键, advanced=高级
 ; 快捷操作按钮（历史产物，已移除 QuickActions 面板与槽位配置；保留空数组供旧版 GUI 残留引用）
 global QuickActionButtons := []
-global FloatingToolbarButtonItems := ["Search", "Record", "Prompt", "NewPrompt", "Screenshot", "Settings", "VirtualKeyboard"]
+global FloatingToolbarButtonItems := ["Search", "Record", "Prompt", "NewPrompt", "UnifiedWorkbench", "Screenshot", "Settings", "VirtualKeyboard"]
 global FloatingToolbarMenuItems := ["ToggleToolbar", "MinimizeToEdge", "ResetScale", "SearchCenter", "Clipboard", "OpenConfig", "HideToolbar", "ReloadScript", "ExitApp"]
 global FloatingToolbarButtonOptions := [
     Map("id", "Search", "name", "搜索"),
     Map("id", "Record", "name", "记录"),
     Map("id", "Prompt", "name", "提示词"),
     Map("id", "NewPrompt", "name", "草稿本"),
+    Map("id", "UnifiedWorkbench", "name", "混排工作台"),
     Map("id", "Screenshot", "name", "截图"),
     Map("id", "Settings", "name", "设置"),
     Map("id", "VirtualKeyboard", "name", "虚拟键盘")
@@ -7433,6 +7435,11 @@ SwitchToChineseIMEForSearchCenter(*) {
 ; 在脚本退出前关闭数据库连接，确保数据完全写入
 ExitFunc(ExitReason, ExitCode) {
     global ClipboardDB, g_Nmer_CleanRestartPending
+    if FuncExists("Nmer_BeginAppShutdown") {
+        try Nmer_BeginAppShutdown()
+        catch {
+        }
+    }
     if g_Nmer_CleanRestartPending {
         try NMER_Log("exit", "clean_restart_skip_heavy", ExitReason)
         if (ClipboardDB && ClipboardDB != 0) {

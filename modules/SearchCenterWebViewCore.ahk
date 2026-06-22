@@ -7408,6 +7408,8 @@ _SCWV_IsWebSearchCategoryKey(key) {
 }
 
 _SCWV_ShouldShowWebEmbed() {
+    if FuncExists("UnifiedWb_IsVisible") && UnifiedWb_IsVisible()
+        return true
     if FuncExists("AiWb_IsVisible") && AiWb_IsVisible()
         return true
     return false

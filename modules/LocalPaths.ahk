@@ -141,6 +141,13 @@ Nmer_SearchCenterSessionPath(*) {
     return dir . "\search_center_session.json"
 }
 
+Nmer_UnifiedWorkbenchSessionPath(*) {
+    dir := Nmer_DataRuntimeDir() . "\app"
+    if !DirExist(dir)
+        try DirCreate(dir)
+    return dir . "\unified_workbench_session.json"
+}
+
 Nmer_FullTextSettingsPath(*) {
     return Nmer_DataSearchDir() . "\fulltext_settings.json"
 }

@@ -744,6 +744,8 @@ CapsLock_NormalizeAfterUiClose() {
 
 ; 搜索中心 WebView 打开后：在 CapsLock 与焦点稳定后再多次尝试切换中文，减少「有时整句中文、有时英文小写」的竞态
 SearchCenter_IMEStabilizeTick(*) {
+    if FuncExists("Nmer_IsAppShuttingDown") && Nmer_IsAppShuttingDown()
+        return
     try SwitchToChineseIMEForSearchCenter()
 }
 

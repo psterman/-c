@@ -10,6 +10,15 @@ LlmApiPing_HasFunc(name) {
         return false
 }
 
+LlmApiPing_Join(arr, sep := "") {
+    out := ""
+    if !(arr is Array)
+        return String(arr)
+    for i, v in arr
+        out .= (i > 1 ? sep : "") . String(v)
+    return out
+}
+
 LlmApiPing_StripSurroundingQuotes(key) {
     key := Trim(String(key))
     dq := Chr(34)
@@ -270,7 +279,7 @@ LlmApiPing_ProxySummary(quick := false) {
         parts.Push("IE 代理: 无法读取")
     }
     if quick
-        return parts.Join(" · ")
+        return LlmApiPing_Join(parts, " · ")
     try {
         outFile := A_Temp . "\nmer_winhttp_proxy.txt"
         try FileDelete(outFile)
@@ -292,7 +301,7 @@ LlmApiPing_ProxySummary(quick := false) {
     } catch {
         parts.Push("WinHTTP: 无法读取")
     }
-    return parts.Join(" · ")
+    return LlmApiPing_Join(parts, " · ")
 }
 
 LlmApiPing_AttemptLabel(attempt) {
@@ -326,7 +335,7 @@ LlmApiPing_BuildNetworkDiagnostic(url, attempts, timeoutMs := 0) {
     lines.Push("目标: " . Trim(String(url)))
     dns := LlmApiPing_DnsLookupV4(host)
     if dns["ok"]
-        lines.Push("DNS: " . host . " → " . dns["addrs"].Join(", ") . " ✓")
+        lines.Push("DNS: " . host . " → " . LlmApiPing_Join(dns["addrs"], ", ") . " ✓")
     else
         lines.Push("DNS: " . host . " ✗ " . dns.Get("error", "解析失败"))
     if dns["ok"] {
@@ -373,7 +382,7 @@ LlmApiPing_BuildNetworkDiagnostic(url, attempts, timeoutMs := 0) {
         hint := "建议: 核对 API Key、Base URL 与模型名；若仅 WinHTTP 失败可尝试 netsh winhttp import proxy source=ie"
     lines.Push(hint)
     return Map(
-        "text", lines.Join("`n"),
+        "text", LlmApiPing_Join(lines, "`n"),
         "phase", phase,
         "dnsOk", !!dns["ok"],
         "host", host,
@@ -412,10 +421,10 @@ LlmApiPing_IsLoopbackUrl(url) {
 LlmApiPing_HttpSync(method, url, headers, body, timeoutMs := 18000) {
     attempts := []
     if LlmApiPing_IsLoopbackUrl(url) {
-        r0 := LlmApiPing_HttpSyncOnce(method, url, headers, body, timeoutMs, 1)
+        r0 := LlmApiPing_HttpSyncCurl(method, url, headers, body, Min(10000, Max(3000, Integer(timeoutMs))))
         attempts.Push(Map(
-            "via", "winhttp",
-            "proxyMode", 1,
+            "via", "curl",
+            "proxyMode", 0,
             "status", Integer(r0.Get("status", 0)),
             "error", String(r0.Get("error", "")),
             "hresult", String(r0.Get("hresult", "")),
@@ -511,18 +520,22 @@ LlmApiPing_HttpSync(method, url, headers, body, timeoutMs := 18000) {
 
 LlmApiPing_HttpSyncCurl(method, url, headers, body, timeoutMs := 12000) {
     start := A_TickCount
-    if (method != "POST")
-        return Map("ok", false, "status", 0, "text", "", "error", "curl: 不支持 " . method, "elapsedMs", 0)
+    method := StrUpper(String(method))
+    if (method != "POST" && method != "GET")
+        return Map("ok", false, "status", 0, "text", "", "error", "curl: 不支持 " . method, "elapsedMs", 0, "via", "curl")
     id := A_TickCount
     bodyPath := A_Temp . "\nmer_ping_" . id . ".json"
     outPath := A_Temp . "\nmer_ping_" . id . ".out"
-    for f in [bodyPath, outPath] {
+    codePath := A_Temp . "\nmer_ping_" . id . ".code"
+    for f in [bodyPath, outPath, codePath] {
         try if FileExist(f)
             FileDelete(f)
     }
-    try FileAppend(String(body), bodyPath, "UTF-8")
-    catch {
-        return Map("ok", false, "status", 0, "text", "", "error", "curl: 无法写入临时文件", "elapsedMs", A_TickCount - start)
+    if (method = "POST") {
+        try FileAppend(String(body), bodyPath, "UTF-8")
+        catch {
+            return Map("ok", false, "status", 0, "text", "", "error", "curl: 无法写入临时文件", "elapsedMs", A_TickCount - start, "via", "curl")
+        }
     }
     sec := Max(3, Min(10, Integer(timeoutMs // 1000)))
     cmd := "curl.exe -sS --connect-timeout " . sec . " -m " . (sec + 2)
@@ -533,11 +546,15 @@ LlmApiPing_HttpSyncCurl(method, url, headers, body, timeoutMs := 12000) {
             cmd .= ' -H "' . String(k) . ': ' . hv . '"'
         }
     }
-    cmd .= ' -X POST -d @"' . bodyPath . '" "' . String(url) . '"'
+    cmd .= ' -X ' . method
+    if (method = "POST")
+        cmd .= ' -d @"' . bodyPath . '"'
+    cmd .= ' "' . String(url) . '"'
+    shellCmd := A_ComSpec . ' /S /C "' . cmd . ' > "' . codePath . '" 2>&1"'
     codeOut := ""
-    try RunWait(cmd, , "Hide", &codeOut)
+    try RunWait(shellCmd, , "Hide")
     catch as eRun {
-        for f in [bodyPath, outPath] {
+        for f in [bodyPath, outPath, codePath] {
             try if FileExist(f)
                 FileDelete(f)
         }
@@ -545,6 +562,12 @@ LlmApiPing_HttpSyncCurl(method, url, headers, body, timeoutMs := 12000) {
     }
     status := 0
     text := ""
+    try {
+        if FileExist(codePath)
+            codeOut := String(FileRead(codePath, "UTF-8"))
+    } catch as _eCode {
+        NmerCatch(A_ThisFunc, _eCode)
+    }
     codeOut := Trim(String(codeOut))
     if RegExMatch(codeOut, "^\d{3}$")
         status := Integer(codeOut)
@@ -554,7 +577,7 @@ LlmApiPing_HttpSyncCurl(method, url, headers, body, timeoutMs := 12000) {
     } catch as _e2 {
         NmerCatch(A_ThisFunc, _e2)
     }
-    for f in [bodyPath, outPath] {
+    for f in [bodyPath, outPath, codePath] {
         try if FileExist(f)
             FileDelete(f)
     }

@@ -254,6 +254,16 @@ FloatingToolbar_ChatDrawerDefaultWidth() {
 ; ===================== 閸忋劌鐪崣姗€鍣?=====================
 global FloatingToolbarGUI := 0
 global FloatingToolbarIsVisible := false
+
+FloatingToolbar_ResolveHostHwnd() {
+    global FloatingToolbarGUI
+    try {
+        if IsObject(FloatingToolbarGUI)
+            return Integer(FloatingToolbarGUI.Hwnd)
+    } catch {
+    }
+    return 0
+}
 global FloatingToolbarWindowX := 0
 global FloatingToolbarWindowY := 0
 global FloatingToolbarScale := 1.0
@@ -283,6 +293,7 @@ global g_FTB_BlockedCmdIds := Map("ch_t", true, "pqp_capture", true, "ss_menu", 
 global g_FTB_AllowedCmdIds := Map(
     "ftb_ai_workbench", true,
     "ftb_cli_workbench", true,
+    "ftb_unified_workbench", true,
     "sc_activate_search", true,
     "qa_clipboard", true,
     "ch_b", true,
@@ -901,6 +912,7 @@ FloatingToolbar_GetFallbackCmdIds() {
     return [
         "ftb_ai_workbench",
         "ftb_cli_workbench",
+        "ftb_unified_workbench",
         "sc_activate_search",
         "qa_clipboard",
         "ch_b",
@@ -933,7 +945,7 @@ FloatingToolbar_CmdIdToSceneId(cmdId) {
     cid := Trim(String(cmdId))
     if (cid = "")
         return ""
-    static sceneIds := ["ai_workbench", "cli_workbench", "search", "clipboard", "prompts", "scratchpad", "screenshot", "settings", "hotkeys", "cursor", "cloudplayer"]
+    static sceneIds := ["ai_workbench", "cli_workbench", "unified_workbench", "search", "clipboard", "prompts", "scratchpad", "screenshot", "settings", "hotkeys", "cursor", "cloudplayer"]
     for sid in sceneIds {
         if (FloatingToolbar_ResolveSceneCmdId(sid) = cid)
             return sid
@@ -2047,9 +2059,12 @@ FloatingToolbar_CompositionWatchdogTick(*) {
         FloatingToolbar_StopCompositionWatchdog()
         return
     }
-    if (g_FTB_PaintReady && FloatingToolbarIsVisible && FloatingToolbarGUI) {
+    if (g_FTB_PaintReady && FloatingToolbarIsVisible) {
+        ftHwnd := FloatingToolbar_ResolveHostHwnd()
+        if !ftHwnd
+            return
         cw := 0, ch := 0
-        try WinGetClientPos(, , &cw, &ch, FloatingToolbarGUI.Hwnd)
+        try WinGetClientPos(, , &cw, &ch, ftHwnd)
         if (cw >= 48 && ch >= 32) {
             FloatingToolbar_StopCompositionWatchdog()
             return
@@ -2059,8 +2074,9 @@ FloatingToolbar_CompositionWatchdogTick(*) {
 }
 
 FloatingToolbar_WM_ACTIVATE(wParam, lParam, msg, hwnd) {
-    global FloatingToolbarGUI, FloatingToolbarIsVisible, g_FTB_WaitingUiFinishedReveal
-    if !(FloatingToolbarGUI && hwnd = FloatingToolbarGUI.Hwnd)
+    global FloatingToolbarIsVisible, g_FTB_WaitingUiFinishedReveal
+    ftHwnd := FloatingToolbar_ResolveHostHwnd()
+    if !ftHwnd || hwnd != ftHwnd
         return
     if !(FloatingToolbarIsVisible || g_FTB_WaitingUiFinishedReveal)
         return
@@ -4336,6 +4352,15 @@ FloatingToolbar_DeferredProbeOpenClawToken(force := false) {
 }
 
 FloatingToolbar_DeferredProbeHermesApiServer(force := false, ensureEnv := false) {
+    if FuncExists("UnifiedWb_IsVisible") {
+        try {
+            if UnifiedWb_IsVisible() {
+                SetTimer(FloatingToolbar_DeferredProbeHermesApiServer.Bind(force, ensureEnv), -6000)
+                return
+            }
+        } catch {
+        }
+    }
     try FloatingToolbar_ProbeHermesApiServerKey(!!force, !!ensureEnv)
 }
 
@@ -7692,18 +7717,27 @@ FloatingToolbar_DeferredToolbarCmd(cmdId) {
         return
     }
     if (c = "ftb_cli_workbench") {
-        try SurfaceIntent_Open("cli_workbench")
+        try SurfaceIntent_Open("unified_workbench", Map("initialIntent", "cli", "source", "ftb_cli_workbench"))
         catch as e {
-            try OutputDebug("[FloatingToolbar] cli workbench open failed: " . e.Message)
+            try OutputDebug("[FloatingToolbar] unified cli workbench open failed: " . e.Message)
+            catch {
+            }
+        }
+        return
+    }
+    if (c = "ftb_unified_workbench" || c = "UnifiedWorkbench") {
+        try SurfaceIntent_Open("unified_workbench", Map("initialIntent", "ai", "source", "ftb_unified_workbench"))
+        catch as e {
+            try OutputDebug("[FloatingToolbar] unified workbench open failed: " . e.Message)
             catch {
             }
         }
         return
     }
     if (c = "ftb_ai_workbench") {
-        try SurfaceIntent_Open("ai_workbench")
+        try SurfaceIntent_Open("unified_workbench", Map("initialIntent", "ai", "source", "ftb_ai_workbench"))
         catch as e {
-            try OutputDebug("[FloatingToolbar] ai workbench open failed: " . e.Message)
+            try OutputDebug("[FloatingToolbar] unified ai workbench open failed: " . e.Message)
             catch {
             }
         }

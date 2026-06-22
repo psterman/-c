@@ -1,0 +1,13 @@
+{
+  "version": 2,
+  "recordKey": "RAlt",
+  "intervalMs": 1200,
+  "enterDelayMs": 5000,
+  "cancelEnabled": true,
+  "autoEnterEnabled": true,
+  "debounceMs": 80,
+  "keyPressDurationMs": 50,
+  "triggerSource": null,
+  "actions": null,
+  "scenes": null
+}

@@ -2,10 +2,16 @@
 #Requires AutoHotkey v2.0
 
 SearchCenterCliBridge_IsCliContext(context) {
-    return (String(context) = "cli_workbench")
+    ctx := String(context)
+    return (ctx = "cli_workbench" || ctx = "unified_workbench")
 }
 
 ScCli_GetHostGui() {
+    if FuncExists("UnifiedWb_IsVisible") && UnifiedWb_IsVisible() && FuncExists("UnifiedWb_GetGui") {
+        try return UnifiedWb_GetGui()
+        catch {
+        }
+    }
     if FuncExists("CliWb_IsVisible") && CliWb_IsVisible() && FuncExists("CliWb_GetGui") {
         try return CliWb_GetGui()
         catch {
@@ -17,6 +23,11 @@ ScCli_GetHostGui() {
 
 ScCli_GetHostWv2(context := "") {
     ctx := Trim(String(context))
+    if (ctx = "unified_workbench") {
+        global g_UnifiedWb_WV2
+        if IsObject(g_UnifiedWb_WV2)
+            return g_UnifiedWb_WV2
+    }
     if (ctx = "cli_workbench" || SearchCenterCliBridge_IsCliContext(ctx)) {
         global g_CliWb_WV2
         if IsObject(g_CliWb_WV2)
@@ -31,6 +42,10 @@ ScCli_GetHostWv2(context := "") {
 }
 
 ScCli_PostJsonToHost(payload) {
+    if FuncExists("UnifiedWb_IsVisible") && UnifiedWb_IsVisible() && FuncExists("UnifiedWb_PostJson") {
+        try UnifiedWb_PostJson(payload, true)
+        return
+    }
     if FuncExists("CliWb_IsVisible") && CliWb_IsVisible() && FuncExists("CliWb_PostJson") {
         try CliWb_PostJson(payload)
         return
@@ -184,6 +199,16 @@ SearchCenterCliBridge_HandleMessage(msg, context := "cli_workbench", senderWv2 :
     wv2 := IsObject(senderWv2) ? senderWv2 : ScCli_GetHostWv2(context)
 
     switch typ {
+        case "ensure_cli":
+            reqId := msg.Has("reqId") ? String(msg["reqId"]) : ""
+            engine := msg.Has("engine") ? Trim(String(msg["engine"])) : "codex_cli"
+            SetTimer(NiumaTtyd_DeferredOpenJob.Bind(reqId, engine, wv2), -10)
+            return true
+        case "send_cli":
+            prompt := msg.Has("text") ? String(msg["text"]) : ""
+            eng := msg.Has("engine") ? Trim(String(msg["engine"])) : ""
+            ScCli_SendToCLI(prompt, eng)
+            return true
         case "cliSend":
             prompt := msg.Has("prompt") ? String(msg["prompt"]) : ""
             eng := msg.Has("engine") ? Trim(String(msg["engine"])) : ""

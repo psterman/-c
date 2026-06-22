@@ -1,0 +1,2297 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>统一工作台</title>
+<link rel="stylesheet" href="https://app.local/assets/css/sc-workbench-shell.css">
+<link rel="stylesheet" href="https://app.local/assets/css/sc-cli.css">
+<style>
+@font-face { font-family: "AppUi"; src: local("Segoe UI"); }
+@font-face { font-family: "AppUi"; src: local("DengXian"), local("Microsoft YaHei UI"), local("Microsoft YaHei"); }
+:root {
+  --bg: #0d1016;
+  --bg-surface: #121a26;
+  --border-subtle: rgba(255,255,255,.08);
+  --border: #2a3f5a;
+  --text: #e7ebef;
+  --muted: #93a0ad;
+  --accent: #ff8d2a;
+  --focus: #55b7ff;
+  --shadow: 0 18px 42px rgba(4, 10, 20, 0.4);
+  --font-ui: "AppUi", "Segoe UI", "DengXian", "Microsoft YaHei UI", system-ui, sans-serif;
+}
+html[data-theme="light"] {
+  --bg: #f4f6f8;
+  --bg-surface: #ffffff;
+  --border: #d7e0ea;
+  --text: #1f2a34;
+  --muted: #5f6d7c;
+  --border-subtle: rgba(20,32,48,.1);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  color: var(--text);
+  font-family: var(--font-ui);
+  background: linear-gradient(180deg, #0c1119 0%, #132238 100%);
+}
+html[data-theme="light"], html[data-theme="light"] body {
+  background: linear-gradient(180deg, #f4f6f8 0%, #eef2f7 100%);
+}
+.uwb-app {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  grid-template-columns: 276px minmax(0, 1fr);
+  gap: 12px;
+  padding: 12px 14px 14px 12px;
+}
+.uwb-sidebar {
+  position: relative;
+  z-index: 20;
+  min-height: 0;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 141, 42, 0.28);
+  background: rgba(8,12,22,.62);
+  overflow: hidden;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.1), 0 10px 28px rgba(0,0,0,.2);
+}
+.uwb-side-head {
+  padding: 12px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.uwb-side-title { font-size: 14px; font-weight: 800; }
+.uwb-side-sub { margin-top: 4px; color: var(--muted); font-size: 11px; line-height: 1.35; }
+.uwb-side-body {
+  height: calc(100% - 62px);
+  padding: 10px;
+  overflow: auto;
+}
+.uwb-group { margin-bottom: 14px; }
+.uwb-group-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 7px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+.uwb-list { display: flex; flex-direction: column; gap: 6px; }
+.uwb-add {
+  width: 100%;
+  border: 1px solid var(--border-subtle);
+  background: rgba(255,255,255,.04);
+  color: var(--text);
+  min-height: 38px;
+  border-radius: 10px;
+  padding: 7px 9px;
+  text-align: left;
+  cursor: pointer;
+}
+.uwb-add:hover { border-color: rgba(255,141,42,.45); background: rgba(255,141,42,.08); }
+.uwb-add:disabled { opacity: 0.42; cursor: not-allowed; }
+.uwb-add:disabled:hover { border-color: var(--border-subtle); background: rgba(255,255,255,.04); }
+.uwb-add-main { display: block; font-size: 12px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.uwb-add-sub { display: block; margin-top: 2px; font-size: 10px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.uwb-main {
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 10px;
+}
+.uwb-topbar {
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border: 1px solid var(--border-subtle);
+  border-radius: 14px;
+  background: rgba(8,12,22,.46);
+  padding: 8px 10px 8px 12px;
+}
+.uwb-title { font-size: 14px; font-weight: 800; }
+.uwb-status { color: var(--muted); font-size: 11px; margin-left: 10px; }
+.uwb-top-actions { display: flex; align-items: center; gap: 6px; }
+.uwb-btn {
+  min-height: 28px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 9px;
+  background: rgba(255,255,255,.04);
+  color: var(--text);
+  padding: 0 9px;
+  cursor: pointer;
+  font-size: 11px;
+}
+.uwb-btn:hover { border-color: rgba(255,141,42,.45); color: var(--accent); }
+.uwb-close { width: 30px; padding: 0; font-size: 18px; line-height: 1; }
+.uwb-stage {
+  position: relative;
+  isolation: isolate;
+  min-width: 0;
+  min-height: 0;
+  border: 1px solid rgba(255, 141, 42, 0.32);
+  border-radius: 16px;
+  background: rgba(5,9,17,.42);
+  overflow: hidden;
+  box-shadow: var(--shadow), inset 0 0 0 1px rgba(255,255,255,.04);
+}
+.uwb-stage::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 15px;
+  border: 2px solid rgba(255, 141, 42, 0.38);
+  box-shadow: inset 0 0 24px rgba(0,0,0,.18);
+  pointer-events: none;
+  z-index: 6;
+}
+.uwb-columns {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  gap: 10px;
+  padding: 10px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x proximity;
+}
+.uwb-columns.virtualized {
+  display: block;
+  scroll-snap-type: none;
+}
+.uwb-columns-track {
+  position: relative;
+  height: calc(100% - 0px);
+  min-height: 0;
+}
+.uwb-columns.virtualized .uwb-column {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  flex: none;
+  scroll-snap-align: none;
+}
+.uwb-column.virtual-offscreen {
+  pointer-events: none;
+  visibility: hidden;
+}
+.uwb-column {
+  position: relative;
+  flex: 0 0 var(--col-w, 600px);
+  width: var(--col-w, 600px);
+  min-width: var(--col-min, 480px);
+  max-width: 820px;
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border-subtle);
+  border-radius: 14px;
+  background: var(--bg-surface);
+  overflow: hidden;
+  scroll-snap-align: start;
+}
+.uwb-column.focused {
+  border-color: rgba(255, 141, 42, 0.55);
+  box-shadow: inset 0 0 0 1px rgba(255, 141, 42, 0.12);
+}
+.uwb-col-resize {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 10px;
+  z-index: 12;
+  cursor: ew-resize;
+  touch-action: none;
+}
+.uwb-col-resize-left { left: -5px; }
+.uwb-col-resize-right { right: -5px; }
+.uwb-col-resize:hover,
+.uwb-col-resize.dragging {
+  background: rgba(255, 141, 42, 0.28);
+}
+.uwb-col-resize::after {
+  content: "";
+  position: absolute;
+  top: 18%;
+  bottom: 18%;
+  left: 50%;
+  width: 2px;
+  transform: translateX(-50%);
+  border-radius: 2px;
+  background: rgba(255, 141, 42, 0.45);
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.uwb-col-resize:hover::after,
+.uwb-col-resize.dragging::after { opacity: 1; }
+.uwb-columns.uwb-resizing {
+  position: relative;
+  cursor: ew-resize;
+  user-select: none;
+}
+.uwb-col-head {
+  flex-shrink: 0;
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 9px;
+  border-bottom: 1px solid var(--border-subtle);
+  background: rgba(0,0,0,.14);
+}
+.uwb-col-title { font-size: 12px; font-weight: 800; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.uwb-col-meta { color: var(--muted); font-size: 10px; margin-left: 5px; }
+.uwb-col-actions { display: flex; gap: 5px; flex-shrink: 0; }
+.uwb-col-btn {
+  width: 28px;
+  height: 24px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 7px;
+  background: rgba(255,255,255,.035);
+  color: var(--text);
+  cursor: pointer;
+}
+.uwb-col-body {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  background: #101928;
+}
+.uwb-ai-column .uwb-col-body:has(.uwb-ai-embed-slot) {
+  background: transparent;
+}
+.uwb-ai-embed-slot {
+  position: absolute;
+  inset: 0;
+  min-height: 280px;
+}
+.uwb-ai-placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 24px;
+  color: var(--muted);
+  text-align: center;
+}
+.uwb-ai-placeholder strong { color: var(--text); font-size: 15px; }
+.uwb-ai-placeholder span { max-width: 340px; font-size: 12px; line-height: 1.5; }
+.uwb-ai-column.focused .uwb-ai-placeholder { opacity: .22; }
+.uwb-cli-stack {
+  position: absolute;
+  inset: 0;
+  background: #132033;
+}
+.uwb-cli-stack iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: #132033;
+}
+.uwb-loading {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  background: rgba(12,18,28,.84);
+  font-size: 12px;
+}
+.uwb-loading.hidden { display: none; }
+.uwb-compose {
+  min-height: 54px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: end;
+}
+.uwb-compose-inner {
+  min-height: 46px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid rgba(255,141,42,.24);
+  border-radius: 14px;
+  background: rgba(8,12,22,.62);
+  padding: 6px 9px;
+}
+.uwb-compose-target { flex-shrink: 0; color: var(--accent); font-size: 12px; font-weight: 800; min-width: 58px; }
+#compose {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-height: 96px;
+  border: 0;
+  outline: 0;
+  resize: none;
+  background: transparent;
+  color: var(--text);
+  font: 13px/1.35 var(--font-ui);
+}
+.uwb-send {
+  height: 46px;
+  min-width: 82px;
+  border: 1px solid rgba(255,141,42,.38);
+  border-radius: 14px;
+  background: rgba(255,141,42,.16);
+  color: #fff;
+  cursor: pointer;
+  font-weight: 800;
+}
+.uwb-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 72px;
+  transform: translateX(-50%);
+  max-width: 520px;
+  padding: 8px 12px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  background: rgba(8,12,22,.92);
+  color: var(--text);
+  font-size: 12px;
+  box-shadow: var(--shadow);
+}
+.uwb-toast.hidden { display: none; }
+.uwb-btn-debug.is-active {
+  border-color: rgba(255, 141, 42, 0.55);
+  color: #ffe6cc;
+  background: rgba(255, 141, 42, 0.12);
+}
+.uwb-main.uwb-debug-open { grid-template-rows: auto minmax(0, 1fr) auto auto; }
+.web-embed-debug-panel {
+  flex: 0 0 auto;
+  max-height: 38vh;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid rgba(255, 141, 42, 0.28);
+  border-radius: 12px;
+  background: rgba(8, 12, 20, 0.92);
+  font-size: 11px;
+  color: #c8d4e8;
+  overflow: hidden;
+}
+.web-embed-debug-panel.hidden { display: none !important; }
+.web-embed-debug-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+.web-embed-debug-head h4 { margin: 0; font-size: 11px; font-weight: 700; color: #ffe6cc; flex: 1 1 auto; }
+.web-embed-debug-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.web-embed-debug-btn {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  color: #dbe7ff;
+  border-radius: 6px;
+  padding: 2px 8px;
+  font-size: 10px;
+  cursor: pointer;
+}
+.web-embed-debug-btn:hover { border-color: rgba(255, 141, 42, 0.45); color: #fff; }
+.web-embed-debug-body {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(280px, 1.2fr);
+  gap: 8px;
+  padding: 8px 10px 10px;
+  min-height: 0;
+  overflow: hidden;
+}
+.web-embed-debug-col { min-height: 0; display: flex; flex-direction: column; gap: 6px; }
+.web-embed-debug-issues { display: flex; flex-direction: column; gap: 4px; max-height: 88px; overflow: auto; }
+.web-embed-debug-issue { padding: 4px 8px; border-radius: 6px; line-height: 1.35; }
+.web-embed-debug-issue.level-error { background: rgba(255, 72, 72, 0.14); border: 1px solid rgba(255, 96, 96, 0.35); color: #ffb4b4; }
+.web-embed-debug-issue.level-warn { background: rgba(255, 180, 64, 0.12); border: 1px solid rgba(255, 193, 100, 0.28); color: #ffd9a0; }
+.web-embed-debug-issue.level-ok { background: rgba(72, 200, 120, 0.1); border: 1px solid rgba(96, 220, 140, 0.25); color: #b8f0cc; }
+.web-embed-debug-kv {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px 8px;
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 10px;
+  line-height: 1.45;
+}
+.web-embed-debug-kv dt { opacity: 0.72; }
+.web-embed-debug-kv dd { margin: 0; word-break: break-all; }
+.web-embed-debug-sites { max-height: 72px; overflow: auto; font-family: ui-monospace, Consolas, monospace; font-size: 10px; line-height: 1.4; }
+.web-embed-debug-log-tabs { display: flex; gap: 4px; flex-wrap: wrap; }
+.web-embed-debug-log-tab {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: transparent;
+  color: #aab8d0;
+  border-radius: 999px;
+  padding: 1px 8px;
+  font-size: 10px;
+  cursor: pointer;
+}
+.web-embed-debug-log-tab.is-active { border-color: rgba(255, 141, 42, 0.55); color: #ffe6cc; background: rgba(255, 141, 42, 0.12); }
+.web-embed-debug-log {
+  flex: 1 1 auto;
+  min-height: 100px;
+  max-height: 160px;
+  overflow: auto;
+  margin: 0;
+  padding: 8px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 10px;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+</style>
+</head>
+<body>
+<div class="uwb-app">
+  <aside class="uwb-sidebar">
+    <div class="uwb-side-head">
+      <div class="uwb-side-title">Column Workbench</div>
+      <div class="uwb-side-sub">Phase4：最多 21 列虚拟滚动；AI 并行嵌入默认可至 8 路（低内存自动降档）。</div>
+    </div>
+    <div class="uwb-side-body">
+      <section class="uwb-group">
+        <div class="uwb-group-title"><span>AI</span><span id="ai-count">0</span></div>
+        <div class="uwb-list" id="ai-list"></div>
+      </section>
+      <section class="uwb-group">
+        <div class="uwb-group-title"><span>CLI</span><span id="cli-count">0</span></div>
+        <div class="uwb-list" id="cli-list"></div>
+      </section>
+    </div>
+  </aside>
+  <main class="uwb-main" id="uwb-main">
+    <header class="uwb-topbar">
+      <div>
+        <span class="uwb-title">统一工作台</span>
+        <span class="uwb-status" id="status">初始化中...</span>
+      </div>
+      <div class="uwb-top-actions">
+        <button type="button" class="uwb-btn uwb-btn-debug" id="btn-uwb-debug" title="诊断面板">诊断</button>
+        <button type="button" class="uwb-btn" id="add-ai">新增 AI 列</button>
+        <button type="button" class="uwb-btn" id="add-cli">新增 CLI 列</button>
+        <button type="button" class="uwb-btn uwb-close" id="close" title="关闭" aria-label="关闭">×</button>
+      </div>
+    </header>
+    <section class="uwb-stage">
+      <div class="uwb-columns" id="columns" aria-label="横向列式工作区"></div>
+    </section>
+    <div id="web-embed-debug-panel" class="web-embed-debug-panel hidden" aria-label="统一工作台诊断">
+      <div class="web-embed-debug-head">
+        <h4>统一工作台 · 诊断</h4>
+        <div class="web-embed-debug-actions">
+          <button type="button" class="web-embed-debug-btn" id="web-embed-debug-refresh">刷新</button>
+          <button type="button" class="web-embed-debug-btn" id="web-embed-debug-rebootstrap">重试 Bootstrap</button>
+          <button type="button" class="web-embed-debug-btn" id="web-embed-debug-copy">复制诊断</button>
+          <button type="button" class="web-embed-debug-btn" id="web-embed-debug-open-log">打开日志目录</button>
+          <button type="button" class="web-embed-debug-btn" id="web-embed-debug-close">关闭</button>
+        </div>
+      </div>
+      <div class="web-embed-debug-body">
+        <div class="web-embed-debug-col">
+          <div id="web-embed-debug-issues" class="web-embed-debug-issues"></div>
+          <dl id="web-embed-debug-kv" class="web-embed-debug-kv"></dl>
+          <div id="web-embed-debug-sites" class="web-embed-debug-sites"></div>
+        </div>
+        <div class="web-embed-debug-col">
+          <div class="web-embed-debug-log-tabs" id="web-embed-debug-log-tabs">
+            <button type="button" class="web-embed-debug-log-tab is-active" data-log-tab="js">页面事件</button>
+            <button type="button" class="web-embed-debug-log-tab" data-log-tab="uwb">uwb</button>
+            <button type="button" class="web-embed-debug-log-tab" data-log-tab="webLlm">webLlm</button>
+            <button type="button" class="web-embed-debug-log-tab" data-log-tab="wv2">wv2</button>
+          </div>
+          <pre id="web-embed-debug-log" class="web-embed-debug-log"></pre>
+        </div>
+      </div>
+    </div>
+    <form class="uwb-compose" id="compose-form">
+      <div class="uwb-compose-inner">
+        <span class="uwb-compose-target" id="compose-target">AI</span>
+        <textarea id="compose" rows="1" placeholder="Enter 发送到焦点列；Ctrl+Enter 或 /all 广播全部 AI；Shift+Enter 换行；$ 前缀发 CLI"></textarea>
+      </div>
+      <button type="submit" class="uwb-send">发送</button>
+    </form>
+  </main>
+</div>
+<div class="uwb-toast hidden" id="toast"></div>
+<script>
+window.BasePanel = {
+  postToAhk(obj) {
+    if (!window.chrome || !window.chrome.webview) return;
+    const src = (obj && typeof obj === "object" && !Array.isArray(obj)) ? obj : {};
+    window.chrome.webview.postMessage(Object.assign({ v: 1, timestamp: Date.now() }, src));
+  }
+};
+function postToAhk(obj) {
+  return window.BasePanel.postToAhk(obj);
+}
+const UWB_COL_GAP = 10;
+const UWB_COL_PAD = 10;
+const UWB_VIRTUAL_BUFFER = 1;
+const CLI_PORTS = {
+  codex_cli: 7681, gemini_cli: 7682, openclaw_cli: 7683, qwen_cli: 7684, ollama_cli: 7685,
+  claude_cli: 7686, deepseek_cli: 7687, kimi_cli: 7688, zhipu_cli: 7689, copilot_cli: 7690
+};
+const state = {
+  themeMode: "dark",
+  aiEngines: [],
+  cliEngines: [],
+  columns: [],
+  focusedColumnId: "",
+  lastAiColumnId: "",
+  lastCliColumnId: "",
+  initialIntent: "ai",
+  cliReady: {},
+  cliUrls: {},
+  defaultAiColumns: 2,
+  defaultCliColumns: 1,
+  maxColumns: 8,
+  maxVirtualColumns: 21,
+  virtualColumnThreshold: 9,
+  maxActiveAiEmbeds: 8,
+  columnResizeActive: false,
+  memoryTierCap: 4,
+  ignoreMemoryTierCap: false,
+  aiFocusLru: {},
+  hostLive: false,
+  hostArmed: false,
+  initGen: 0
+};
+let seq = 0;
+function armHostBootstrap() {
+  state.hostArmed = true;
+}
+function needsColumnRebuild() {
+  const aiN = state.columns.filter((c) => c.type === "ai").length;
+  const cliN = state.columns.filter((c) => c.type === "cli").length;
+  return aiN < state.defaultAiColumns || cliN < state.defaultCliColumns;
+}
+function canAutoBootstrap() {
+  return state.columns.length > 0 && (state.hostLive || state.hostArmed);
+}
+function defaultAiEngineRows() {
+  return [
+    { value: "deepseek", name: "DeepSeek", homeUrl: "https://chat.deepseek.com/" },
+    { value: "doubao", name: "豆包", homeUrl: "https://www.doubao.com/chat/" },
+    { value: "kimi", name: "Kimi", homeUrl: "https://kimi.moonshot.cn/" }
+  ];
+}
+function aiEnginePool() {
+  const seen = new Set();
+  const out = [];
+  const add = (e) => {
+    if (!e) return;
+    const sid = String(e.value || e.id || "").trim();
+    if (!sid || seen.has(sid)) return;
+    seen.add(sid);
+    out.push(e);
+  };
+  (state.aiEngines.length ? state.aiEngines : []).forEach(add);
+  defaultAiEngineRows().forEach(add);
+  if (!out.length) add(firstAi());
+  return out;
+}
+function esc(s) {
+  return String(s || "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" }[c]));
+}
+function normalizeCliEngine(v) {
+  const s = String(v || "").trim().toLowerCase();
+  return CLI_PORTS[s] ? s : "codex_cli";
+}
+function cliBaseUrl(engine) {
+  return "http://127.0.0.1:" + (CLI_PORTS[normalizeCliEngine(engine)] || 7681) + "/";
+}
+function cliThemePayload() {
+  const light = state.themeMode === "light";
+  return light
+    ? { scrollbarSliderBackground: "rgba(214,111,26,0.36)", scrollbarSliderHoverBackground: "rgba(211,84,0,0.56)" }
+    : { scrollbarSliderBackground: "rgba(255,120,48,0.4)", scrollbarSliderHoverBackground: "rgba(255,132,64,0.6)" };
+}
+function cliUrlWithTheme(rawUrl) {
+  try {
+    const u = new URL(String(rawUrl || ""), window.location.href);
+    u.searchParams.set("theme", JSON.stringify(cliThemePayload()));
+    return u.toString();
+  } catch (_) {
+    return String(rawUrl || "");
+  }
+}
+function firstAi() {
+  return state.aiEngines[0] || { value: "deepseek", name: "DeepSeek", homeUrl: "https://chat.deepseek.com/" };
+}
+function firstCli() {
+  return state.cliEngines[0] || { value: "codex_cli", name: "Codex" };
+}
+function clampLayoutInt(v, min, max, fallback) {
+  const n = parseInt(v, 10);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.max(min, Math.min(max, n));
+}
+function applyLayoutPrefs(payload) {
+  state.maxVirtualColumns = clampLayoutInt(payload.maxVirtualColumns || payload.maxColumns, 3, 21, 21);
+  state.maxColumns = clampLayoutInt(payload.maxColumns, 3, state.maxVirtualColumns, 8);
+  state.virtualColumnThreshold = clampLayoutInt(payload.virtualColumnThreshold, 9, 21, 9);
+  state.defaultAiColumns = clampLayoutInt(payload.defaultAiColumns, 1, 8, 2);
+  state.defaultCliColumns = clampLayoutInt(payload.defaultCliColumns, 0, 3, 1);
+  state.memoryTierCap = clampLayoutInt(payload.memoryTierCap, 2, 8, 4);
+  state.ignoreMemoryTierCap = !!payload.ignoreMemoryTierCap;
+  let maxActive = clampLayoutInt(payload.maxActiveAiEmbeds, 1, 8, 8);
+  if (payload.effectiveMaxActiveAiEmbeds != null) {
+    maxActive = clampLayoutInt(payload.effectiveMaxActiveAiEmbeds, 1, 8, maxActive);
+  } else if (!state.ignoreMemoryTierCap) {
+    maxActive = Math.min(maxActive, state.memoryTierCap);
+  }
+  state.maxActiveAiEmbeds = maxActive;
+  invalidateColumnMetrics();
+}
+function touchAiFocusLru(columnId) {
+  if (!columnId) return;
+  state.aiFocusLru = state.aiFocusLru || {};
+  state.aiFocusLru[columnId] = Date.now();
+}
+function aiFocusRank(columnId) {
+  return state.aiFocusLru && state.aiFocusLru[columnId] ? state.aiFocusLru[columnId] : 0;
+}
+function shouldVirtualizeColumns() {
+  return state.columns.length >= (state.virtualColumnThreshold || 9);
+}
+function invalidateColumnMetrics() {
+  columnMetrics._cache = null;
+  columnMetrics._sig = "";
+}
+function columnStateSig() {
+  return state.columns.map(function (c) { return c.id + ":" + (c.width || 0); }).join("|");
+}
+function columnMetrics() {
+  const sig = columnStateSig();
+  if (columnMetrics._cache && columnMetrics._sig === sig) return columnMetrics._cache;
+  const items = [];
+  let left = UWB_COL_PAD;
+  state.columns.forEach(function (col) {
+    const w = col.width || defaultColumnWidth();
+    items.push({ col: col, left: left, width: w, right: left + w });
+    left += w + UWB_COL_GAP;
+  });
+  const totalWidth = items.length ? left - UWB_COL_GAP + UWB_COL_PAD : UWB_COL_PAD * 2;
+  columnMetrics._cache = { items: items, totalWidth: totalWidth };
+  columnMetrics._sig = sig;
+  return columnMetrics._cache;
+}
+function listVisibleAiColumns(aiCols) {
+  const stage = document.getElementById("columns");
+  if (!stage) return [];
+  const scrollLeft = stage.scrollLeft;
+  const viewW = stage.clientWidth;
+  const margin = 8;
+  const { items } = columnMetrics();
+  const byId = new Map(items.map(function (m) { return [m.col.id, m]; }));
+  return aiCols.filter(function (c) {
+    const m = byId.get(c.id);
+    if (!m) return false;
+    return m.right > scrollLeft + margin && m.left < scrollLeft + viewW - margin;
+  });
+}
+function listAiEmbedColumns() {
+  const maxN = Math.max(1, state.maxActiveAiEmbeds || 8);
+  const aiCols = state.columns.filter(function (c) { return c.type === "ai"; });
+  if (aiCols.length <= maxN) return aiCols.slice();
+  const picked = [];
+  const seen = new Set();
+  const focusCol = getActiveAiColumn();
+  if (focusCol && !seen.has(focusCol.id)) {
+    picked.push(focusCol);
+    seen.add(focusCol.id);
+  }
+  const visible = listVisibleAiColumns(aiCols.filter(function (c) { return !seen.has(c.id); }));
+  visible.sort(function (a, b) { return aiFocusRank(b.id) - aiFocusRank(a.id); });
+  for (let i = 0; i < visible.length && picked.length < maxN; i++) {
+    picked.push(visible[i]);
+    seen.add(visible[i].id);
+  }
+  const rest = aiCols.filter(function (c) { return !seen.has(c.id); });
+  rest.sort(function (a, b) { return aiFocusRank(b.id) - aiFocusRank(a.id); });
+  for (let j = 0; j < rest.length && picked.length < maxN; j++) {
+    picked.push(rest[j]);
+    seen.add(rest[j].id);
+  }
+  return picked;
+}
+function layoutStatusText() {
+  const tier = state.memoryTierCap || 4;
+  const tierNote = state.ignoreMemoryTierCap ? "（忽略内存档）" : " · 内存档≤" + tier;
+  const virtNote = shouldVirtualizeColumns() ? " · 虚拟滚动" : "";
+  const cap = state.maxVirtualColumns || state.maxColumns || 21;
+  return "默认 " + state.defaultAiColumns + " AI + " + state.defaultCliColumns + " CLI（" + state.columns.length + "/" + cap + " 列 · 并行 " + state.maxActiveAiEmbeds + " AI" + tierNote + virtNote + "）";
+}
+function computeMountedColumnIndices() {
+  const { items } = columnMetrics();
+  if (!items.length) return [];
+  const stage = document.getElementById("columns");
+  const scrollLeft = stage ? stage.scrollLeft : 0;
+  const viewW = stage ? stage.clientWidth : 1920;
+  let avgW = items[0].width || 480;
+  const pad = avgW * Math.max(1, UWB_VIRTUAL_BUFFER);
+  const indices = [];
+  items.forEach(function (m, i) {
+    if (m.right >= scrollLeft - pad && m.left <= scrollLeft + viewW + pad) indices.push(i);
+  });
+  const focusIdx = state.columns.findIndex(function (c) { return c.id === state.focusedColumnId; });
+  if (focusIdx >= 0 && indices.indexOf(focusIdx) < 0) indices.push(focusIdx);
+  listAiEmbedColumns().forEach(function (col) {
+    const i = state.columns.findIndex(function (c) { return c.id === col.id; });
+    if (i >= 0 && indices.indexOf(i) < 0) indices.push(i);
+  });
+  indices.sort(function (a, b) { return a - b; });
+  return indices;
+}
+function scrollColumnIntoView(colId) {
+  const stage = document.getElementById("columns");
+  const { items } = columnMetrics();
+  const m = items.find(function (x) { return x.col.id === colId; });
+  if (!stage || !m) return;
+  stage.scrollTo({ left: Math.max(0, m.left - UWB_COL_PAD), behavior: "smooth" });
+}
+function harvestCliFrames(container) {
+  const oldCliFrames = new Map();
+  if (!container) return oldCliFrames;
+  container.querySelectorAll("iframe[data-cli-engine]").forEach(function (fr) {
+    oldCliFrames.set(fr.dataset.columnId, fr);
+  });
+  return oldCliFrames;
+}
+function mountColumnBody(root, col, oldCliFrames) {
+  const body = root.querySelector(".uwb-col-body");
+  if (!body) return;
+  if (col.type === "cli") {
+    body.innerHTML = "";
+    const stack = document.createElement("div");
+    stack.className = "uwb-cli-stack";
+    const loading = document.createElement("div");
+    loading.className = "uwb-loading";
+    loading.id = "loading-" + col.id;
+    loading.textContent = "正在连接 ttyd...";
+    let fr = oldCliFrames.get(col.id);
+    if (!fr) {
+      fr = document.createElement("iframe");
+      fr.src = "about:blank";
+      fr.dataset.cliEngine = col.engine;
+      fr.dataset.columnId = col.id;
+      fr.title = col.title;
+    }
+    stack.appendChild(fr);
+    stack.appendChild(loading);
+    body.appendChild(stack);
+    return;
+  }
+  const inSlot = isAiEmbedSlot(col);
+  const maxN = state.maxActiveAiEmbeds || 2;
+  if (inSlot) {
+    body.innerHTML = "<div class=\"uwb-ai-embed-slot\" aria-hidden=\"true\"></div>";
+  } else {
+    const hint = shouldVirtualizeColumns()
+      ? "虚拟列（点击换入 LRU 嵌入槽）"
+      : "超出并行上限（最多 " + maxN + " 个），点击本列可 LRU 换入。";
+    body.innerHTML = "<div class=\"uwb-ai-placeholder\"><strong>" + esc(col.title) + "</strong><span>" + hint + "</span></div>";
+  }
+}
+function getPreviousColumn(id) {
+  const idx = state.columns.findIndex(function (c) { return c.id === id; });
+  return idx > 0 ? state.columns[idx - 1] : null;
+}
+function clampColumnWidth(w) {
+  return Math.max(effectiveColumnMinWidth(), Math.min(effectiveColumnMaxWidth(), Math.round(w)));
+}
+function applyColumnWidthLive(col, partner) {
+  if (!col) return;
+  invalidateColumnMetrics();
+  [col, partner].filter(Boolean).forEach(function (c) {
+    const root = document.querySelector("[data-column-id='" + c.id + "']");
+    if (root) {
+      root.style.setProperty("--col-w", String(c.width || defaultColumnWidth()) + "px");
+      root.style.setProperty("--col-min", String(effectiveColumnMinWidth()) + "px");
+    }
+  });
+  if (shouldVirtualizeColumns()) refreshVirtualColumnWindow();
+}
+function buildSessionSnapshot() {
+  const stage = document.getElementById("columns");
+  return {
+    columns: state.columns.map(function (c) {
+      return {
+        id: c.id,
+        type: c.type,
+        title: c.title || "",
+        siteId: c.siteId || "",
+        engine: c.engine || "",
+        url: c.url || "",
+        width: c.width || defaultColumnWidth()
+      };
+    }),
+    focusedColumnId: state.focusedColumnId || "",
+    lastAiColumnId: state.lastAiColumnId || "",
+    lastCliColumnId: state.lastCliColumnId || "",
+    columnsScrollLeft: stage ? Math.round(stage.scrollLeft || 0) : 0,
+    seq: seq
+  };
+}
+function persistSessionNow() {
+  if (!state.columns.length) return;
+  postToAhk({ type: "layoutSnapshot", session: buildSessionSnapshot() });
+}
+function schedulePersistSession(delayMs) {
+  clearTimeout(schedulePersistSession._t);
+  schedulePersistSession._t = setTimeout(function () {
+    persistSessionNow();
+  }, Number.isFinite(delayMs) ? delayMs : 400);
+}
+function restoreColumnsFromSession(saved) {
+  if (!saved || !Array.isArray(saved.columns) || !saved.columns.length) return false;
+  const cols = [];
+  let maxSeq = 0;
+  saved.columns.forEach(function (raw) {
+    if (!raw || !raw.type) return;
+    const m = String(raw.id || "").match(/(\d+)$/);
+    if (m) maxSeq = Math.max(maxSeq, parseInt(m[1], 10));
+    const w = clampColumnWidth(raw.width || defaultColumnWidth());
+    if (raw.type === "cli") {
+      cols.push({
+        id: String(raw.id || ("cli-" + (++seq))),
+        type: "cli",
+        title: raw.title || columnTitle(raw.engine || "codex_cli", "cli"),
+        engine: normalizeCliEngine(raw.engine || "codex_cli"),
+        width: w
+      });
+      return;
+    }
+    if (raw.type === "ai") {
+      const sid = String(raw.siteId || "deepseek");
+      if (cols.some(function (c) { return c.type === "ai" && c.siteId === sid; })) return;
+      cols.push({
+        id: String(raw.id || ("ai-" + (++seq))),
+        type: "ai",
+        title: raw.title || sid,
+        siteId: sid,
+        url: String(raw.url || ""),
+        width: w
+      });
+    }
+  });
+  if (!cols.length) return false;
+  seq = Math.max(maxSeq, seq, ...cols.map(function (c) {
+    const m = String(c.id || "").match(/(\d+)$/);
+    return m ? parseInt(m[1], 10) : 0;
+  }));
+  state.columns = cols;
+  state.focusedColumnId = saved.focusedColumnId && cols.some(function (c) { return c.id === saved.focusedColumnId; })
+    ? saved.focusedColumnId
+    : cols[0].id;
+  state.lastAiColumnId = saved.lastAiColumnId && cols.some(function (c) { return c.id === saved.lastAiColumnId; })
+    ? saved.lastAiColumnId
+    : (cols.find(function (c) { return c.type === "ai"; }) || {}).id || "";
+  state.lastCliColumnId = saved.lastCliColumnId && cols.some(function (c) { return c.id === saved.lastCliColumnId; })
+    ? saved.lastCliColumnId
+    : (cols.find(function (c) { return c.type === "cli"; }) || {}).id || "";
+  state.aiFocusLru = {};
+  cols.filter(function (c) { return c.type === "ai"; }).forEach(function (c, idx) {
+    touchAiFocusLru(c.id);
+    state.aiFocusLru[c.id] = Date.now() - (cols.length - idx) * 1000;
+  });
+  if (state.focusedColumnId) touchAiFocusLru(state.focusedColumnId);
+  restoreColumnsFromSession._scrollLeft = Number(saved.columnsScrollLeft) || 0;
+  return true;
+}
+function applySavedScrollLeft() {
+  const left = restoreColumnsFromSession._scrollLeft;
+  if (!Number.isFinite(left)) return;
+  const stage = document.getElementById("columns");
+  if (!stage) return;
+  stage.scrollLeft = left;
+  delete restoreColumnsFromSession._scrollLeft;
+}
+function collectAiEmbedPayload() {
+  if (!state.columns.length || !canAutoBootstrap()) return null;
+  const targets = listAiEmbedColumns();
+  if (!targets.length) return null;
+  const aiColumns = [];
+  const seenSites = new Set();
+  for (let i = 0; i < targets.length; i++) {
+    const col = targets[i];
+    const rect = measureAiColumnRect(col);
+    if (!rect) return null;
+    const siteId = String(col.siteId || "deepseek");
+    if (seenSites.has(siteId)) continue;
+    seenSites.add(siteId);
+    aiColumns.push({
+      siteId: siteId,
+      columnId: col.id,
+      width: rect.width,
+      rect: rect
+    });
+  }
+  if (!aiColumns.length) return null;
+  const focusCol = getActiveAiColumn();
+  const focusSiteId = focusCol && focusCol.siteId ? String(focusCol.siteId) : (aiColumns[0] ? aiColumns[0].siteId : "");
+  return {
+    aiColumns: aiColumns,
+    embedViewport: measureEmbedViewport(),
+    maxActiveAiEmbeds: state.maxActiveAiEmbeds,
+    focusSiteId: focusSiteId
+  };
+}
+function syncAiEmbedsLive(force) {
+  if (!isColumnResizing()) return;
+  const payload = collectAiEmbedPayload();
+  if (!payload) return;
+  const vp = payload.embedViewport;
+  const vpSig = vp ? vp.left + "," + vp.top + "," + vp.width + "," + vp.height : "";
+  const sig = vpSig + "|" + payload.aiColumns.map(function (c) {
+    return c.siteId + "@" + c.rect.left + "," + c.rect.top + "," + c.rect.width + "," + c.rect.height;
+  }).join("|");
+  if (!force && syncAiEmbedsLive._lastSig === sig) return;
+  syncAiEmbedsLive._lastSig = sig;
+  postToAhk(Object.assign({ type: "webLlmLayoutLive" }, payload));
+}
+function scheduleAiEmbedsLiveSync() {
+  if (!isColumnResizing()) return;
+  if (scheduleAiEmbedsLiveSync._raf) return;
+  scheduleAiEmbedsLiveSync._raf = requestAnimationFrame(function () {
+    scheduleAiEmbedsLiveSync._raf = 0;
+    syncAiEmbedsLive(false);
+  });
+}
+function isColumnResizing() {
+  return !!state.columnResizeActive || !!document.getElementById("columns")?.classList.contains("uwb-resizing");
+}
+function cancelPendingLayoutSync() {
+  clearTimeout(scheduleLayoutSync._t);
+  clearTimeout(scheduleAiEmbedSync._t);
+  scheduleLayoutSync._pendingCli = false;
+}
+function setAiEmbedLayoutPaused(paused) {
+  postToAhk({ type: "webLlmLayoutPause", paused: !!paused });
+}
+function attachColumnResizeHandles(root, col) {
+  if (!root || root.querySelector(".uwb-col-resize-right")) return;
+  const left = document.createElement("div");
+  left.className = "uwb-col-resize uwb-col-resize-left";
+  left.title = "拖动调整列宽";
+  const right = document.createElement("div");
+  right.className = "uwb-col-resize uwb-col-resize-right";
+  right.title = "拖动调整列宽";
+  root.appendChild(left);
+  root.appendChild(right);
+  left.addEventListener("pointerdown", function (e) { startColumnResize(e, col, "left", left); });
+  right.addEventListener("pointerdown", function (e) { startColumnResize(e, col, "right", right); });
+}
+function startColumnResize(e, col, side, handleEl) {
+  e.preventDefault();
+  e.stopPropagation();
+  cancelPendingLayoutSync();
+  state.columnResizeActive = true;
+  syncAiEmbedsLive._lastSig = "";
+  const stage = document.getElementById("columns");
+  const startX = e.clientX;
+  const startW = col.width || defaultColumnWidth();
+  const prevCol = side === "left" ? getPreviousColumn(col.id) : null;
+  const startPrevW = prevCol ? (prevCol.width || defaultColumnWidth()) : 0;
+  handleEl.classList.add("dragging");
+  if (stage) stage.classList.add("uwb-resizing");
+  try { handleEl.setPointerCapture(e.pointerId); } catch (_) {}
+  function onMove(ev) {
+    const dx = ev.clientX - startX;
+    if (side === "right") {
+      col.width = clampColumnWidth(startW + dx);
+      applyColumnWidthLive(col);
+      scheduleAiEmbedsLiveSync();
+      return;
+    }
+    if (prevCol) {
+      let nextPrev = clampColumnWidth(startPrevW + dx);
+      let nextCur = clampColumnWidth(startW - (nextPrev - startPrevW));
+      if (nextCur !== clampColumnWidth(startW - (nextPrev - startPrevW))) {
+        nextPrev = clampColumnWidth(startPrevW + (startW - nextCur));
+      }
+      prevCol.width = nextPrev;
+      col.width = nextCur;
+      applyColumnWidthLive(col, prevCol);
+    } else {
+      col.width = clampColumnWidth(startW + dx);
+      applyColumnWidthLive(col);
+    }
+    scheduleAiEmbedsLiveSync();
+  }
+  function onUp(ev) {
+    handleEl.classList.remove("dragging");
+    if (stage) stage.classList.remove("uwb-resizing");
+    state.columnResizeActive = false;
+    try { handleEl.releasePointerCapture(ev.pointerId); } catch (_) {}
+    handleEl.removeEventListener("pointermove", onMove);
+    handleEl.removeEventListener("pointerup", onUp);
+    handleEl.removeEventListener("pointercancel", onUp);
+    syncAllAiEmbeds._lastSig = "";
+    syncAiEmbedsLive._lastSig = "";
+    syncAllAiEmbeds(true);
+    schedulePersistSession(80);
+  }
+  handleEl.addEventListener("pointermove", onMove);
+  handleEl.addEventListener("pointerup", onUp);
+  handleEl.addEventListener("pointercancel", onUp);
+}
+function createColumnRoot(col, idx, oldCliFrames) {
+  const root = document.createElement("article");
+  root.className = "uwb-column " + (col.type === "ai" ? "uwb-ai-column" : "uwb-cli-column") + (col.id === state.focusedColumnId ? " focused" : "");
+  root.dataset.columnId = col.id;
+  root.dataset.index = String(idx);
+  root.style.setProperty("--col-w", String(col.width || 600) + "px");
+  root.style.setProperty("--col-min", String(effectiveColumnMinWidth()) + "px");
+  root.innerHTML =
+    "<header class=\"uwb-col-head\">" +
+      "<div class=\"uwb-col-title\">" + esc(col.title) + "<span class=\"uwb-col-meta\">" + esc(col.type === "cli" ? col.engine : col.siteId) + "</span></div>" +
+      "<div class=\"uwb-col-actions\">" +
+        "<button type=\"button\" class=\"uwb-col-btn\" data-act=\"close\" title=\"关闭\">×</button>" +
+      "</div>" +
+    "</header><div class=\"uwb-col-body\"></div>";
+  root.addEventListener("pointerdown", function () { setFocus(col.id); });
+  root.querySelector("[data-act='close']").addEventListener("click", function (e) { e.stopPropagation(); removeColumn(col.id); });
+  mountColumnBody(root, col, oldCliFrames);
+  attachColumnResizeHandles(root, col);
+  root.dataset.slotSig = col.id + ":" + (col.type === "ai" ? (isAiEmbedSlot(col) ? "slot" : "ph") : "cli");
+  return root;
+}
+function updateColumnRoot(root, col) {
+  root.classList.toggle("focused", col.id === state.focusedColumnId);
+  root.style.setProperty("--col-w", String(col.width || 600) + "px");
+  root.style.setProperty("--col-min", String(effectiveColumnMinWidth()) + "px");
+  attachColumnResizeHandles(root, col);
+  const title = root.querySelector(".uwb-col-title");
+  if (title) {
+    title.innerHTML = esc(col.title) + "<span class=\"uwb-col-meta\">" + esc(col.type === "cli" ? col.engine : col.siteId) + "</span>";
+  }
+}
+function renderColumnsFlex(oldCliFrames) {
+  const wrap = document.getElementById("columns");
+  wrap.classList.remove("virtualized");
+  wrap.innerHTML = "";
+  state.columns.forEach(function (col, idx) {
+    const root = createColumnRoot(col, idx, oldCliFrames);
+    wrap.appendChild(root);
+  });
+}
+function renderColumnsVirtual(oldCliFrames) {
+  const wrap = document.getElementById("columns");
+  const scrollLeft = wrap.scrollLeft;
+  wrap.classList.add("virtualized");
+  const { items, totalWidth } = columnMetrics();
+  const mountIdx = computeMountedColumnIndices();
+  const mountSet = new Set(mountIdx);
+  let track = wrap.querySelector(".uwb-columns-track");
+  if (!track) {
+    wrap.innerHTML = "";
+    track = document.createElement("div");
+    track.className = "uwb-columns-track";
+    wrap.appendChild(track);
+  }
+  track.style.width = totalWidth + "px";
+  track.querySelectorAll(".uwb-column").forEach(function (el) {
+    const idx = parseInt(el.dataset.index, 10);
+    if (!mountSet.has(idx)) el.remove();
+  });
+  mountIdx.forEach(function (idx) {
+    const col = state.columns[idx];
+    const m = items[idx];
+    if (!col || !m) return;
+    let root = track.querySelector("[data-column-id='" + col.id + "']");
+    if (!root) {
+      root = createColumnRoot(col, idx, oldCliFrames);
+      track.appendChild(root);
+    } else {
+      updateColumnRoot(root, col);
+      root.dataset.index = String(idx);
+      const slotSig = col.id + ":" + (col.type === "ai" ? (isAiEmbedSlot(col) ? "slot" : "ph") : "cli");
+      if (root.dataset.slotSig !== slotSig) {
+        mountColumnBody(root, col, oldCliFrames);
+        root.dataset.slotSig = slotSig;
+      }
+    }
+    root.style.left = m.left + "px";
+    root.style.width = m.width + "px";
+  });
+  wrap.scrollLeft = scrollLeft;
+}
+function refreshVirtualColumnWindow() {
+  if (!shouldVirtualizeColumns()) return;
+  const wrap = document.getElementById("columns");
+  const oldCliFrames = harvestCliFrames(wrap);
+  renderColumnsVirtual(oldCliFrames);
+  updateFocusUi();
+  updateAiPlaceholderHints();
+  updateComposeTargetUi();
+}
+function aiEmbedSlotSig() {
+  return listAiEmbedColumns().map(function (c) { return c.id; }).join(",");
+}
+function isAiEmbedSlot(col) {
+  if (!col || col.type !== "ai") return false;
+  return listAiEmbedColumns().some(function (c) { return c.id === col.id; });
+}
+function ensureAiSlotDom() {
+  const sig = aiEmbedSlotSig();
+  if (ensureAiSlotDom._sig === sig) return;
+  ensureAiSlotDom._sig = sig;
+  const oldCliFrames = harvestCliFrames(document.getElementById("columns"));
+  state.columns.forEach(function (col) {
+    if (col.type !== "ai") return;
+    const root = document.querySelector("[data-column-id='" + col.id + "']");
+    if (!root) return;
+    const slotSig = col.id + ":" + (isAiEmbedSlot(col) ? "slot" : "ph");
+    if (root.dataset.slotSig === slotSig) return;
+    mountColumnBody(root, col, oldCliFrames);
+    root.dataset.slotSig = slotSig;
+  });
+  updateAiPlaceholderHints();
+  preserveCliColumns();
+}
+function pickAiEngines(count) {
+  const rows = state.aiEngines.length ? state.aiEngines : [firstAi()];
+  const out = [];
+  const seen = new Set();
+  for (let i = 0; i < rows.length && out.length < count; i++) {
+    const e = rows[i];
+    const sid = String(e.value || e.id || "").trim();
+    if (!sid || seen.has(sid)) continue;
+    seen.add(sid);
+    out.push(e);
+  }
+  return out;
+}
+function pickUniqueAiEngine(used) {
+  const pool = aiEnginePool();
+  for (let i = 0; i < pool.length; i++) {
+    const e = pool[i];
+    const sid = String(e.value || e.id || "").trim();
+    if (sid && !used.has(sid)) return e;
+  }
+  return null;
+}
+function nextAvailableAiEngine() {
+  const used = new Set(state.columns.filter((c) => c.type === "ai").map((c) => c.siteId));
+  const rows = state.aiEngines.length ? state.aiEngines : [firstAi()];
+  for (let i = 0; i < rows.length; i++) {
+    const e = rows[i];
+    const sid = String(e.value || e.id || "").trim();
+    if (sid && !used.has(sid)) return e;
+  }
+  return firstAi();
+}
+function effectiveColumnMinWidth() {
+  const aiN = state.columns.filter(function (c) { return c.type === "ai"; }).length;
+  if (aiN >= 9) return 320;
+  if (aiN >= 7) return 360;
+  if (aiN >= 5) return 400;
+  if (aiN >= 4) return 420;
+  return 480;
+}
+function effectiveColumnMaxWidth() {
+  const aiN = state.columns.filter(function (c) { return c.type === "ai"; }).length;
+  if (aiN >= 6) return 720;
+  return 820;
+}
+function defaultColumnWidth() {
+  const n = Math.max(1, state.defaultAiColumns + state.defaultCliColumns);
+  if (n <= 3) return 520;
+  if (n <= 4) return 480;
+  if (n <= 6) return 440;
+  if (n <= 10) return 400;
+  return 360;
+}
+function columnTitle(base, type) {
+  const prefix = type === "cli" ? "CLI" : "AI";
+  return prefix + " · " + String(base || (type === "cli" ? "Codex" : "DeepSeek"));
+}
+function makeAiColumn(engine, width) {
+  const e = engine || firstAi();
+  return {
+    id: "ai-" + (++seq),
+    type: "ai",
+    title: columnTitle(e.name || e.label || e.value, "ai"),
+    siteId: String(e.value || e.id || "deepseek"),
+    url: String(e.homeUrl || e.url || ""),
+    width: width || defaultColumnWidth()
+  };
+}
+function makeCliColumn(engine, width) {
+  const e = engine || firstCli();
+  return {
+    id: "cli-" + (++seq),
+    type: "cli",
+    title: columnTitle(e.name || e.value, "cli"),
+    engine: normalizeCliEngine(e.value),
+    width: width || defaultColumnWidth()
+  };
+}
+function buildDefaultColumns() {
+  const w = defaultColumnWidth();
+  const cols = [];
+  const used = new Set();
+  const targetAi = Math.max(1, state.defaultAiColumns || 2);
+  for (let i = 0; i < targetAi; i++) {
+    const e = pickUniqueAiEngine(used);
+    if (!e) break;
+    used.add(String(e.value || e.id || "deepseek"));
+    cols.push(makeAiColumn(e, w));
+  }
+  const cliRows = state.cliEngines.length ? state.cliEngines : [firstCli()];
+  for (let i = 0; i < state.defaultCliColumns; i++)
+    cols.push(makeCliColumn(cliRows[i] || cliRows[0], w));
+  return cols;
+}
+function getColumn(id) {
+  return state.columns.find((c) => c.id === id) || null;
+}
+function focusedColumn() {
+  return getColumn(state.focusedColumnId) || state.columns[0] || null;
+}
+function toast(text) {
+  const el = document.getElementById("toast");
+  el.textContent = String(text || "");
+  el.classList.remove("hidden");
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => el.classList.add("hidden"), 2200);
+}
+function buildUnifiedColumnLayout(col, rect) {
+  const sid = String(col.siteId || "deepseek");
+  const w = Math.max(160, Math.round(rect.width || col.width || defaultColumnWidth()));
+  return {
+    scrollX: 0,
+    viewportWidth: w,
+    stripWidth: w,
+    columns: [{ id: sid, width: w }],
+    fillExtra: 0
+  };
+}
+function listAiBroadcastSiteIds() {
+  const seen = new Set();
+  const out = [];
+  listAiEmbedColumns().forEach(function (col) {
+    const sid = String(col.siteId || "").trim();
+    if (!sid || seen.has(sid)) return;
+    seen.add(sid);
+    out.push(sid);
+  });
+  return out;
+}
+function updateComposeTargetUi() {
+  const col = focusedColumn();
+  const target = document.getElementById("compose-target");
+  if (!target) return;
+  if (!col) {
+    target.textContent = "-";
+    return;
+  }
+  if (col.type === "cli") {
+    target.textContent = "CLI";
+    return;
+  }
+  const n = listAiBroadcastSiteIds().length;
+  target.textContent = n > 1 ? ("AI×" + n) : "AI";
+}
+function getActiveAiColumn() {
+  const fc = focusedColumn();
+  if (fc && fc.type === "ai") return fc;
+  return getColumn(state.lastAiColumnId) || state.columns.find(function (c) { return c.type === "ai"; }) || null;
+}
+function updateAiPlaceholderHints() {
+  const slots = new Set(listAiEmbedColumns().map((c) => c.id));
+  const maxN = state.maxActiveAiEmbeds || 2;
+  state.columns.filter((c) => c.type === "ai").forEach((col) => {
+    const root = document.querySelector("[data-column-id='" + col.id + "'] .uwb-ai-placeholder span");
+    if (!root) return;
+    if (slots.has(col.id)) {
+      root.textContent = "正在加载 AI 浏览器…若长时间空白，请点击本列或稍候重试。";
+    } else {
+      root.textContent = shouldVirtualizeColumns()
+        ? "虚拟列，点击换入 LRU 嵌入槽（并行 " + maxN + "）。"
+        : "超出并行上限（最多 " + maxN + " 个），点击本列可 LRU 换入嵌入。";
+    }
+  });
+}
+function addColumn(type, opts) {
+  const cap = state.maxVirtualColumns || state.maxColumns || 21;
+  if (state.columns.length >= cap) {
+    toast("最多同时管理 " + cap + " 列（Phase4 虚拟滚动），请先关闭一列。");
+    return null;
+  }
+  const o = opts || {};
+  let col;
+  if (type === "cli") {
+    const e = o.engine ? { value: o.engine, name: o.title || o.engine } : firstCli();
+    col = makeCliColumn(e, defaultColumnWidth());
+  } else {
+    const sid = o.siteId ? String(o.siteId).trim() : "";
+    if (sid && state.columns.some(function (c) { return c.type === "ai" && c.siteId === sid; })) {
+      toast("「" + (o.title || sid) + "」已有列，每个 AI 站点同时只能占一列。");
+      return null;
+    }
+    const e = o.siteId
+      ? { value: o.siteId, name: o.title || o.siteId, homeUrl: o.url || "" }
+      : nextAvailableAiEngine();
+    if (!e) {
+      toast("没有可新增的 AI 站点，请先关闭一列或换其他引擎。");
+      return null;
+    }
+    col = makeAiColumn(e, defaultColumnWidth());
+  }
+  invalidateColumnMetrics();
+  state.columns.push(col);
+  appendColumnDom(col);
+  renderSidebar();
+  setFocus(col.id);
+  preserveCliColumns();
+  if (col.type === "cli") ensureCli(col);
+  scheduleAiEmbedSync(col.type === "ai" ? 100 : 0);
+  requestAnimationFrame(function () {
+    if (shouldVirtualizeColumns()) scrollColumnIntoView(col.id);
+    else document.querySelector("[data-column-id='" + col.id + "']")?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  });
+  schedulePersistSession();
+  return col;
+}
+function removeColumn(id) {
+  const idx = state.columns.findIndex((c) => c.id === id);
+  if (idx < 0) return;
+  const wasFocused = state.focusedColumnId === id;
+  invalidateColumnMetrics();
+  state.columns.splice(idx, 1);
+  if (!state.columns.length) addColumn("ai");
+  else if (wasFocused) setFocus(state.columns[Math.max(0, idx - 1)].id);
+  render();
+  preserveCliColumns();
+  scheduleAiEmbedSync(100);
+  schedulePersistSession();
+}
+function setFocus(id) {
+  const col = getColumn(id);
+  if (!col) return;
+  const slotBefore = aiEmbedSlotSig();
+  state.focusedColumnId = id;
+  if (col.type === "ai") {
+    state.lastAiColumnId = id;
+    touchAiFocusLru(id);
+  }
+  if (col.type === "cli") state.lastCliColumnId = id;
+  if (aiEmbedSlotSig() !== slotBefore) ensureAiSlotDom();
+  postToAhk({ type: "column_focus", columnId: id, columnType: col.type, engine: col.engine || "", siteId: col.siteId || "" });
+  updateFocusUi();
+  if (col.type === "ai") {
+    postToAhk({ type: "webLlmFocusSite", siteId: col.siteId || "", preserveLayout: true });
+    if (shouldVirtualizeColumns()) scrollColumnIntoView(col.id);
+    scheduleAiEmbedSync(80);
+  } else if (col.type === "cli") ensureCli(col);
+  schedulePersistSession(600);
+}
+function updateFocusUi() {
+  const col = focusedColumn();
+  document.querySelectorAll(".uwb-column").forEach((el) => el.classList.toggle("focused", el.dataset.columnId === state.focusedColumnId));
+  updateComposeTargetUi();
+  const status = document.getElementById("status");
+  status.textContent = col ? ("焦点：" + col.title) : "无焦点列";
+}
+function renderSidebar() {
+  const aiWrap = document.getElementById("ai-list");
+  const cliWrap = document.getElementById("cli-list");
+  aiWrap.innerHTML = "";
+  cliWrap.innerHTML = "";
+  document.getElementById("ai-count").textContent = String(state.columns.filter((c) => c.type === "ai").length) + " 列";
+  document.getElementById("cli-count").textContent = String(state.columns.filter((c) => c.type === "cli").length) + " 列";
+  const cap = state.maxVirtualColumns || state.maxColumns || 21;
+  const aiRows = aiEnginePool().length ? aiEnginePool() : (state.aiEngines.length ? state.aiEngines : [firstAi()]);
+  aiRows.slice(0, cap).forEach((e) => {
+    const sid = String(e.value || e.id || "").trim();
+    const used = state.columns.some(function (c) { return c.type === "ai" && c.siteId === sid; });
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "uwb-add";
+    b.disabled = used;
+    b.innerHTML = "<span class=\"uwb-add-main\">" + esc(e.name || e.label || e.value || e.id) + "</span><span class=\"uwb-add-sub\">" + (used ? "已在列中" : "新增 AI 列") + "</span>";
+    if (!used) {
+      b.addEventListener("click", () => addColumn("ai", { siteId: sid, title: e.name || e.label, url: e.homeUrl || e.url }));
+    }
+    aiWrap.appendChild(b);
+  });
+  const cliRows = state.cliEngines.length ? state.cliEngines : [firstCli()];
+  cliRows.forEach((e) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "uwb-add";
+    b.innerHTML = "<span class=\"uwb-add-main\">" + esc(e.name || e.value) + "</span><span class=\"uwb-add-sub\">" + esc(normalizeCliEngine(e.value)) + "</span>";
+    b.addEventListener("click", () => addColumn("cli", { engine: e.value, title: e.name }));
+    cliWrap.appendChild(b);
+  });
+}
+function renderColumns() {
+  const wrap = document.getElementById("columns");
+  const oldCliFrames = harvestCliFrames(wrap);
+  if (shouldVirtualizeColumns()) renderColumnsVirtual(oldCliFrames);
+  else renderColumnsFlex(oldCliFrames);
+  updateFocusUi();
+  updateAiPlaceholderHints();
+  updateComposeTargetUi();
+}
+function cliUrlsEquivalent(a, b) {
+  try {
+    const ua = new URL(String(a || ""), window.location.href);
+    const ub = new URL(String(b || ""), window.location.href);
+    ua.searchParams.delete("theme");
+    ub.searchParams.delete("theme");
+    return ua.origin + ua.pathname + ua.search === ub.origin + ub.pathname + ub.search;
+  } catch (_) {
+    return String(a || "") === String(b || "");
+  }
+}
+function preserveCliColumns() {
+  state.columns.filter(function (c) { return c.type === "cli"; }).forEach(function (col) {
+    const eng = normalizeCliEngine(col.engine);
+    if (!state.cliReady[eng]) return;
+    mountCliUrl(col.id, eng, state.cliUrls[eng] || cliUrlWithTheme(cliBaseUrl(eng)), false);
+  });
+}
+function appendColumnDom(col) {
+  const wrap = document.getElementById("columns");
+  if (!wrap || !col) return;
+  const oldCliFrames = harvestCliFrames(wrap);
+  if (shouldVirtualizeColumns()) {
+    renderColumnsVirtual(oldCliFrames);
+    return;
+  }
+  const idx = state.columns.findIndex(function (c) { return c.id === col.id; });
+  const root = createColumnRoot(col, idx >= 0 ? idx : state.columns.length - 1, oldCliFrames);
+  wrap.appendChild(root);
+  updateFocusUi();
+  updateAiPlaceholderHints();
+  updateComposeTargetUi();
+}
+function scheduleAiEmbedSync(delayMs) {
+  if (isColumnResizing()) return;
+  const wait = Number.isFinite(delayMs) ? delayMs : 24;
+  clearTimeout(scheduleAiEmbedSync._t);
+  scheduleAiEmbedSync._t = setTimeout(function () {
+    if (!canAutoBootstrap() || isColumnResizing()) return;
+    ensureAiSlotDom();
+    syncAllAiEmbeds(false);
+  }, wait);
+}
+function render() {
+  renderSidebar();
+  renderColumns();
+  preserveCliColumns();
+}
+function applyColumnWidth(col) {
+  if (!col) return;
+  invalidateColumnMetrics();
+  const root = document.querySelector("[data-column-id='" + col.id + "']");
+  if (root) {
+    root.style.setProperty("--col-w", String(col.width || 600) + "px");
+    root.style.setProperty("--col-min", String(effectiveColumnMinWidth()) + "px");
+  }
+  if (shouldVirtualizeColumns()) refreshVirtualColumnWindow();
+  scheduleAiEmbedSync(40);
+}
+function observeColumnStage() {
+  if (observeColumnStage._ro) return;
+  const stage = document.getElementById("columns");
+  if (!stage || !window.ResizeObserver) return;
+  observeColumnStage._ro = new ResizeObserver(function () {
+    if (isColumnResizing()) return;
+    scheduleLayoutSync(false, 80);
+  });
+  observeColumnStage._ro.observe(stage);
+}
+function postInitialFocusOnce() {
+  if (postInitialFocusOnce._done || !canAutoBootstrap()) return;
+  postInitialFocusOnce._done = true;
+  const fc = getColumn(state.focusedColumnId) || state.columns[0];
+  if (!fc) return;
+  postToAhk({
+    type: "column_focus",
+    columnId: fc.id,
+    columnType: fc.type,
+    engine: fc.engine || "",
+    siteId: fc.siteId || ""
+  });
+  pulseAiActivation("initial-focus");
+  const cliCol = getColumn(state.lastCliColumnId) || state.columns.find((c) => c.type === "cli");
+  if (cliCol) ensureCli(cliCol);
+}
+function pulseAiActivation(reason) {
+  if (!canAutoBootstrap()) return;
+  const aiCols = listAiEmbedColumns();
+  aiCols.forEach((col, idx) => {
+    if (!col.siteId) return;
+    setTimeout(function () {
+      postToAhk({
+        type: "webLlmFocusSite",
+        siteId: col.siteId,
+        preserveLayout: true,
+        reason: reason || "auto"
+      });
+    }, idx * 90);
+  });
+}
+function syncLayoutOnce(includeCli) {
+  if (isColumnResizing()) return;
+  if (!canAutoBootstrap()) return;
+  ensureAiSlotDom();
+  syncAllAiEmbeds(false);
+  updateComposeTargetUi();
+  if (includeCli) bootstrapAllCliColumns();
+  postInitialFocusOnce();
+}
+function scheduleLayoutSync(includeCli, delayMs) {
+  if (isColumnResizing()) return;
+  const wait = Number.isFinite(delayMs) ? delayMs : 150;
+  clearTimeout(scheduleLayoutSync._t);
+  scheduleLayoutSync._pendingCli = scheduleLayoutSync._pendingCli || !!includeCli;
+  scheduleLayoutSync._t = setTimeout(function () {
+    if (isColumnResizing()) return;
+    const withCli = scheduleLayoutSync._pendingCli;
+    scheduleLayoutSync._pendingCli = false;
+    syncLayoutOnce(withCli);
+  }, wait);
+}
+function runAutoBootstrap() {
+  if (!state.columns.length) return;
+  postInitialFocusOnce._done = false;
+  syncAllAiEmbeds._lastSig = "";
+  scheduleLayoutSync(true, 20);
+  if (runAutoBootstrap._armed) return;
+  runAutoBootstrap._armed = true;
+  setTimeout(function () { scheduleLayoutSync(true, 0); }, 180);
+  setTimeout(function () { scheduleLayoutSync(true, 0); }, 450);
+  setTimeout(function () { scheduleLayoutSync(true, 0); }, 1200);
+  setTimeout(function () { scheduleLayoutSync(true, 0); }, 2800);
+  setTimeout(function () { pulseAiActivation("bootstrap-900"); }, 900);
+  setTimeout(function () { pulseAiActivation("bootstrap-1800"); }, 1800);
+}
+function resetBootstrapState() {
+  runAutoBootstrap._armed = false;
+  postInitialFocusOnce._done = false;
+  syncAllAiEmbeds._lastSig = "";
+  ensureAiSlotDom._sig = "";
+  clearTimeout(scheduleLayoutSync._t);
+  scheduleLayoutSync._pendingCli = false;
+}
+function cliReqId(engine) {
+  return "uwb_" + normalizeCliEngine(engine || "codex_cli");
+}
+function ensureCli(col) {
+  if (!col || col.type !== "cli") return;
+  const eng = normalizeCliEngine(col.engine);
+  const reqId = cliReqId(eng);
+  const now = Date.now();
+  ensureCli._sent = ensureCli._sent || {};
+  ensureCli._optimistic = ensureCli._optimistic || {};
+  const lastSent = ensureCli._sent[eng] || 0;
+  if (!state.cliReady[eng] && (lastSent === 0 || now - lastSent > 20000)) {
+    ensureCli._sent[eng] = now;
+    postToAhk({ type: "ensure_cli", columnId: col.id, engine: eng, reqId: reqId });
+  }
+  const ready = !!state.cliReady[eng];
+  const fr = document.querySelector("iframe[data-column-id='" + col.id + "']");
+  const ld = document.getElementById("loading-" + col.id);
+  if (ready && fr) {
+    mountCliUrl(col.id, eng, state.cliUrls[eng] || cliUrlWithTheme(cliBaseUrl(eng)), false);
+    return;
+  }
+  if (fr) {
+    const cur = String(fr.src || "");
+    if (cur && cur.indexOf("about:blank") !== 0) {
+      if (ld) {
+        ld.textContent = "正在连接 ttyd…";
+        ld.classList.toggle("hidden", !!ready);
+      }
+      return;
+    }
+    if (!cur || cur.indexOf("about:blank") === 0) {
+      try { fr.src = "about:blank"; } catch (_) {}
+    }
+  }
+  if (ld) {
+    ld.textContent = "正在连接 ttyd…";
+    ld.classList.remove("hidden");
+  }
+  clearTimeout(ensureCli._optimistic[col.id]);
+}
+function bootstrapAllCliColumns() {
+  if (!state.columns.length || !canAutoBootstrap()) return;
+  const cliCols = state.columns.filter((c) => c.type === "cli");
+  if (!cliCols.length) return;
+  cliCols.forEach(ensureCli);
+  scheduleCliBootstrapRetries();
+  cliCols.forEach((c) => {
+    const eng = normalizeCliEngine(c.engine);
+    if (state.cliReady[eng] && state.cliUrls[eng]) {
+      mountCliUrl(c.id, eng, state.cliUrls[eng], false);
+    }
+  });
+}
+function mountCliUrl(columnId, engine, url, loading) {
+  const fr = document.querySelector("iframe[data-column-id='" + columnId + "']");
+  if (!fr) return;
+  const u = cliUrlWithTheme(url || cliBaseUrl(engine));
+  fr.onload = function () {
+    const el = document.getElementById("loading-" + columnId);
+    if (el) el.classList.add("hidden");
+  };
+  if (String(fr.src || "") !== u && !cliUrlsEquivalent(fr.src, u)) fr.src = u;
+  const ld = document.getElementById("loading-" + columnId);
+  if (ld) {
+    if (!loading) {
+      ld.classList.add("hidden");
+    } else {
+      ld.classList.remove("hidden");
+    }
+  }
+}
+function focusCliFrame(engine) {
+  const eng = normalizeCliEngine(engine || "");
+  const col = state.columns.find((c) => c.type === "cli" && normalizeCliEngine(c.engine) === eng)
+    || state.columns.find((c) => c.type === "cli");
+  if (!col) return false;
+  setFocus(col.id);
+  const fr = document.querySelector("iframe[data-column-id='" + col.id + "']");
+  if (!fr) return false;
+  try { fr.focus(); } catch (_) {}
+  return true;
+}
+function handleTtydReady(payload) {
+  const eng = normalizeCliEngine(payload.engine || "codex_cli");
+  state.cliReady[eng] = Date.now();
+  state.cliUrls[eng] = payload.baseUrl || cliBaseUrl(eng);
+  scheduleCliBootstrapRetries._n = 0;
+  if (ensureCli._sent) ensureCli._sent[eng] = 0;
+  const cols = state.columns.filter((c) => c.type === "cli" && normalizeCliEngine(c.engine) === eng);
+  if (cols.length) {
+    cols.forEach((c) => mountCliUrl(c.id, eng, state.cliUrls[eng], false));
+  } else {
+    scheduleCliBootstrapRetries();
+  }
+  const bootCmd = String(payload.autoBootCmd || "").trim();
+  if (bootCmd) {
+    setTimeout(function () {
+      postToAhk({ type: "send_cli", engine: eng, text: bootCmd });
+    }, 900);
+  }
+}
+function handleTtydError(payload) {
+  const eng = normalizeCliEngine(payload.engine || "codex_cli");
+  const msg = String(payload.message || "启动失败");
+  if (ensureCli._sent) ensureCli._sent[eng] = 0;
+  state.columns.filter((c) => c.type === "cli" && normalizeCliEngine(c.engine) === eng).forEach((c) => {
+    const ld = document.getElementById("loading-" + c.id);
+    if (ld) {
+      ld.textContent = "ttyd 失败：" + msg;
+      ld.classList.remove("hidden");
+    }
+  });
+  toast("ttyd: " + msg);
+}
+function sendToCli(col, text) {
+  ensureCli(col);
+  focusCliFrame(col.engine);
+  postToAhk({ type: "send_cli", columnId: col.id, engine: normalizeCliEngine(col.engine), text });
+}
+function sendToAllAi(text) {
+  const siteIds = listAiBroadcastSiteIds();
+  if (!siteIds.length) {
+    toast("没有可广播的 AI 列");
+    return;
+  }
+  postToAhk({ type: "broadcast_ai", siteIds: siteIds, text: text });
+  toast("已广播到 " + siteIds.length + " 个 AI 列");
+}
+function sendToAi(col, text) {
+  setFocus(col.id);
+  scheduleLayoutSync(false, 80);
+  postToAhk({ type: "send_ai", columnId: col.id, siteId: col.siteId || "", text });
+}
+function submitCompose(opts) {
+  const o = opts || {};
+  const input = document.getElementById("compose");
+  let text = String(input.value || "");
+  if (!text.trim()) return;
+  let forced = "";
+  if (/^\$\s*/.test(text)) {
+    forced = "cli";
+    text = text.replace(/^\$\s*/, "");
+  } else if (/^\/ask\s+/i.test(text)) {
+    forced = "ai";
+    text = text.replace(/^\/ask\s+/i, "");
+  }
+  const broadcast = !!o.broadcast || /^\s*\/all\s+/i.test(text);
+  if (/^\s*\/all\s+/i.test(text)) text = text.replace(/^\s*\/all\s+/i, "");
+  if (!text.trim()) return;
+  if (broadcast && forced !== "cli") {
+    sendToAllAi(text);
+    input.value = "";
+    autoSizeCompose();
+    return;
+  }
+  let col = focusedColumn();
+  if (forced === "cli") col = getColumn(state.lastCliColumnId) || state.columns.find((c) => c.type === "cli");
+  if (forced === "ai") col = getColumn(state.lastAiColumnId) || state.columns.find((c) => c.type === "ai");
+  if (!col) return toast("没有可发送的目标列");
+  if (col.type === "cli") sendToCli(col, text);
+  else sendToAi(col, text);
+  input.value = "";
+  autoSizeCompose();
+}
+function autoSizeCompose() {
+  const el = document.getElementById("compose");
+  el.style.height = "0px";
+  el.style.height = Math.min(96, Math.max(22, el.scrollHeight)) + "px";
+}
+const _uwbDebugState = { logTab: "js", hostSnap: null, events: [] };
+function uwbDebugLog(level, msg) {
+  const line = new Date().toISOString().slice(11, 23) + " [" + String(level || "info") + "] " + String(msg || "");
+  _uwbDebugState.events.push(line);
+  if (_uwbDebugState.events.length > 120) _uwbDebugState.events.shift();
+  if (_uwbDebugState.logTab === "js") renderUwbDebugLogPane();
+}
+function buildUwbClientDebugSnapshot() {
+  const targets = listAiEmbedColumns();
+  let measureFailed = false;
+  for (let i = 0; i < targets.length; i++) {
+    if (!measureAiColumnRect(targets[i])) measureFailed = true;
+  }
+  return {
+    mode: "unified",
+    embedActive: true,
+    canAutoBootstrap: canAutoBootstrap(),
+    hostLive: !!state.hostLive,
+    hostArmed: !!state.hostArmed,
+    aiColumnCount: targets.length,
+    broadcastSites: targets.map(function (c) { return String(c.siteId || ""); }),
+    measureFailed: measureFailed,
+    syncRetries: syncAllAiEmbeds._n || 0,
+    lastSyncSig: String(syncAllAiEmbeds._lastSig || ""),
+    columnCount: state.columns.length,
+    hostBootstrapGen: state.hostBootstrapGen || 0
+  };
+}
+function renderUwbDebugIssues(issues) {
+  const host = document.getElementById("web-embed-debug-issues");
+  if (!host) return;
+  const list = Array.isArray(issues) ? issues : [];
+  if (!list.length) {
+    host.innerHTML = '<div class="web-embed-debug-issue level-ok">未发现明显异常 · 若 AI 仍空白，查看 uwb / webLlm 日志</div>';
+    return;
+  }
+  host.innerHTML = list.map(function (it) {
+    const lv = esc(String(it && it.level || "warn"));
+    const msg = esc(String(it && it.msg || it && it.code || "?"));
+    return '<div class="web-embed-debug-issue level-' + lv + '">' + msg + "</div>";
+  }).join("");
+}
+function renderUwbDebugKv(client, snap) {
+  const host = document.getElementById("web-embed-debug-kv");
+  if (!host) return;
+  const flags = snap && snap.flags ? snap.flags : {};
+  const unified = snap && snap.unified ? snap.unified : {};
+  const uRects = unified.columnRects || [];
+  const rows = [
+    ["hostLive", client.hostLive ? "是" : "否"],
+    ["hostArmed", client.hostArmed ? "是" : "否"],
+    ["canAutoBootstrap", client.canAutoBootstrap ? "是" : "否"],
+    ["页面 AI 列", (client.broadcastSites || []).join(", ") || "(空)"],
+    ["layoutIds", (snap && snap.layoutSiteIds || []).join(", ") || "(空)"],
+    ["multiRect", unified.multiRectActive ? "是" : "否"],
+    ["layoutReady", unified.layoutReady ? "是" : "否"],
+    ["宿主列矩形", uRects.length ? uRects.map(function (r) { return r.siteId + ":" + r.width + "×" + r.height; }).join(" · ") : "(空)"],
+    ["measureFailed", client.measureFailed ? "是" : "否"],
+    ["syncRetries", String(client.syncRetries || 0)],
+    ["mainWvLowered", flags.mainWebViewLowered ? "是" : "否"],
+    ["embedBootstrapped", flags.embedBootstrapped ? "是" : "否"]
+  ];
+  host.innerHTML = rows.map(function (row) {
+    return "<dt>" + esc(row[0]) + "</dt><dd>" + esc(String(row[1])) + "</dd>";
+  }).join("");
+}
+function renderUwbDebugSites(snap) {
+  const host = document.getElementById("web-embed-debug-sites");
+  if (!host) return;
+  const sites = snap && Array.isArray(snap.sites) ? snap.sites : [];
+  if (!sites.length) {
+    host.textContent = "无 layout 站点记录";
+    return;
+  }
+  host.textContent = sites.map(function (s) {
+    const st = [String(s.id || "?")];
+    st.push(s.ready ? "ready" : (s.createInFlight ? "creating" : "missing"));
+    if (s.createAgeMs) st.push(String(s.createAgeMs) + "ms");
+    if (s.lastNavError) st.push("err:" + s.lastNavError);
+    return st.join(" · ");
+  }).join("\n");
+}
+function renderUwbDebugLogPane() {
+  const pre = document.getElementById("web-embed-debug-log");
+  if (!pre) return;
+  const tab = _uwbDebugState.logTab || "js";
+  if (tab === "js") {
+    pre.textContent = _uwbDebugState.events.length
+      ? _uwbDebugState.events.join("\n")
+      : "(暂无页面事件 — 打开工作台或点「重试 Bootstrap」后刷新)";
+    pre.scrollTop = pre.scrollHeight;
+    return;
+  }
+  const snap = _uwbDebugState.hostSnap;
+  const logs = snap && snap.logs ? snap.logs : {};
+  pre.textContent = String(logs[tab] || "(无日志)") || "(无日志)";
+  pre.scrollTop = pre.scrollHeight;
+}
+function renderUwbDebugPanel(client, snap) {
+  _uwbDebugState.hostSnap = snap || null;
+  renderUwbDebugIssues(snap && snap.issues);
+  renderUwbDebugKv(client, snap);
+  renderUwbDebugSites(snap);
+  renderUwbDebugLogPane();
+}
+function requestUwbDebugSnapshot() {
+  const client = buildUwbClientDebugSnapshot();
+  uwbDebugLog("info", "请求宿主诊断快照…");
+  try {
+    window.BasePanel.postToAhk({ type: "webEmbedDebugRequest", client: client });
+  } catch (e) {
+    uwbDebugLog("error", "postToAhk 失败: " + (e && e.message ? e.message : e));
+    renderUwbDebugPanel(client, null);
+  }
+}
+function buildUwbDebugRebootstrapPayload() {
+  const targets = listAiEmbedColumns();
+  const aiColumns = [];
+  const seen = new Set();
+  for (let i = 0; i < targets.length; i++) {
+    const col = targets[i];
+    const rect = measureAiColumnRect(col);
+    if (!rect) continue;
+    const siteId = String(col.siteId || "deepseek");
+    if (seen.has(siteId)) continue;
+    seen.add(siteId);
+    aiColumns.push({ siteId: siteId, columnId: col.id, width: rect.width, rect: rect });
+  }
+  const focusCol = getActiveAiColumn();
+  return {
+    type: "webEmbedDebugAction",
+    action: "rebootstrap",
+    aiColumns: aiColumns,
+    maxActiveAiEmbeds: state.maxActiveAiEmbeds,
+    focusSiteId: focusCol && focusCol.siteId ? String(focusCol.siteId) : (aiColumns[0] ? aiColumns[0].siteId : ""),
+    client: buildUwbClientDebugSnapshot()
+  };
+}
+function toggleUwbDebugPanel(forceOpen) {
+  const panel = document.getElementById("web-embed-debug-panel");
+  const main = document.getElementById("uwb-main");
+  const btn = document.getElementById("btn-uwb-debug");
+  if (!panel) return;
+  const next = typeof forceOpen === "boolean" ? forceOpen : panel.classList.contains("hidden");
+  panel.classList.toggle("hidden", !next);
+  if (main) main.classList.toggle("uwb-debug-open", next);
+  if (btn) btn.classList.toggle("is-active", next);
+  syncAllAiEmbeds._lastSig = "";
+  scheduleLayoutSync(false, 40);
+  setTimeout(function () {
+    syncAllAiEmbeds._lastSig = "";
+    scheduleLayoutSync(false, 0);
+  }, 180);
+  setTimeout(function () {
+    syncAllAiEmbeds._lastSig = "";
+    scheduleLayoutSync(false, 0);
+  }, 520);
+  if (next) requestUwbDebugSnapshot();
+}
+function handleUwbDebugResult(payload) {
+  const client = buildUwbClientDebugSnapshot();
+  if (!payload || !payload.ok) {
+    uwbDebugLog("error", "宿主快照失败: " + String(payload && payload.error ? payload.error : "?"));
+    renderUwbDebugPanel(client, null);
+    return;
+  }
+  uwbDebugLog("info", "宿主快照 OK issues=" + ((payload.snapshot && payload.snapshot.issues) ? payload.snapshot.issues.length : 0));
+  renderUwbDebugPanel(client, payload.snapshot || null);
+}
+function handleUwbDebugActionResult(payload) {
+  const act = payload && payload.action ? String(payload.action) : "";
+  const ok = !!(payload && payload.ok);
+  uwbDebugLog(ok ? "info" : "error", "action " + act + (ok ? " OK" : " FAIL") + (payload && payload.error ? ": " + payload.error : ""));
+  if (act === "copy_trace" && ok) toast("诊断已复制到剪贴板");
+  if (act === "rebootstrap") setTimeout(requestUwbDebugSnapshot, 400);
+}
+function measureEmbedViewport() {
+  const stage = document.querySelector(".uwb-stage");
+  if (!stage) return null;
+  const r = stage.getBoundingClientRect();
+  if (r.width < 80 || r.height < 80) return null;
+  return {
+    left: Math.round(r.left),
+    top: Math.round(r.top),
+    width: Math.round(r.width),
+    height: Math.round(r.height)
+  };
+}
+function measureAiColumnRect(col) {
+  const root = document.querySelector("[data-column-id='" + col.id + "'] .uwb-ai-embed-slot")
+    || document.querySelector("[data-column-id='" + col.id + "'] .uwb-col-body");
+  if (root) {
+    const r = root.getBoundingClientRect();
+    if (r.width >= 80 && r.height >= 80) {
+      return {
+        left: Math.round(r.left),
+        top: Math.round(r.top),
+        width: Math.round(r.width),
+        height: Math.round(r.height)
+      };
+    }
+  }
+  const stage = document.getElementById("columns");
+  const { items } = columnMetrics();
+  const m = items.find(function (x) { return x.col.id === col.id; });
+  if (!stage || !m) return null;
+  const stageR = stage.getBoundingClientRect();
+  const head = document.querySelector("[data-column-id='" + col.id + "'] .uwb-col-head");
+  const headH = head ? head.getBoundingClientRect().height : 38;
+  const pad = 10;
+  const left = Math.round(stageR.left + m.left - stage.scrollLeft + pad);
+  const top = Math.round(stageR.top + headH + pad);
+  const width = Math.max(160, Math.round(m.width - pad * 2));
+  const height = Math.max(120, Math.round(stageR.height - headH - pad * 2));
+  if (width < 80 || height < 80) return null;
+  return { left: left, top: top, width: width, height: height };
+}
+function syncAllAiEmbeds(force) {
+  if (isColumnResizing()) return;
+  if (!state.columns.length) return;
+  if (!canAutoBootstrap()) {
+    uwbDebugLog("warn", "sync skip: canAutoBootstrap=false hostLive=" + !!state.hostLive + " armed=" + !!state.hostArmed);
+    return;
+  }
+  const targets = listAiEmbedColumns();
+  if (!targets.length) {
+    uwbDebugLog("warn", "sync skip: no ai embed columns");
+    return;
+  }
+  updateAiPlaceholderHints();
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      const aiColumns = [];
+      const seenSites = new Set();
+      for (let i = 0; i < targets.length; i++) {
+        const col = targets[i];
+        const rect = measureAiColumnRect(col);
+        if (!rect) {
+          uwbDebugLog("warn", "measure fail col=" + col.id + " site=" + (col.siteId || "?"));
+          scheduleSyncAllAiRetry();
+          return;
+        }
+        const siteId = String(col.siteId || "deepseek");
+        if (seenSites.has(siteId)) {
+          uwbDebugLog("warn", "sync skip duplicate site=" + siteId + " col=" + col.id);
+          continue;
+        }
+        seenSites.add(siteId);
+        aiColumns.push({
+          siteId: siteId,
+          columnId: col.id,
+          width: rect.width,
+          rect: rect
+        });
+      }
+      if (!aiColumns.length) {
+        uwbDebugLog("warn", "sync skip: aiColumns empty after measure");
+        scheduleSyncAllAiRetry();
+        return;
+      }
+      const embedViewport = measureEmbedViewport();
+      const vpSig = embedViewport
+        ? embedViewport.left + "," + embedViewport.top + "," + embedViewport.width + "," + embedViewport.height
+        : "";
+      const sig = vpSig + "|" + aiColumns.map(function (c) {
+        return c.siteId + "@" + c.rect.left + "," + c.rect.top + "," + c.rect.width + "," + c.rect.height;
+      }).join("|");
+      if (!force && syncAllAiEmbeds._lastSig === sig) return;
+      syncAllAiEmbeds._lastSig = sig;
+      syncAllAiEmbeds._n = 0;
+      const focusCol = getActiveAiColumn();
+      const focusSiteId = focusCol && focusCol.siteId ? String(focusCol.siteId) : (aiColumns[0] ? aiColumns[0].siteId : "");
+      uwbDebugLog("info", "webLlmBootstrap sites=" + aiColumns.map(function (c) { return c.siteId; }).join(",") + " sig=" + sig.slice(0, 80));
+      postToAhk({
+        type: "webLlmBootstrap",
+        aiColumns: aiColumns,
+        embedViewport: embedViewport,
+        maxActiveAiEmbeds: state.maxActiveAiEmbeds,
+        selectedEngines: aiColumns.map((c) => c.siteId),
+        focusSiteId: focusSiteId
+      });
+      if (focusSiteId && force) {
+        postToAhk({ type: "webLlmFocusSite", siteId: focusSiteId, preserveLayout: true });
+      }
+    });
+  });
+}
+function scheduleSyncAllAiRetry() {
+  clearTimeout(syncAllAiEmbeds._retry);
+  syncAllAiEmbeds._n = (syncAllAiEmbeds._n || 0) + 1;
+  if (syncAllAiEmbeds._n > 20) {
+    uwbDebugLog("error", "sync retry exhausted (>20)");
+    return;
+  }
+  uwbDebugLog("warn", "schedule retry #" + syncAllAiEmbeds._n);
+  syncAllAiEmbeds._retry = setTimeout(function () { syncAllAiEmbeds(true); }, syncAllAiEmbeds._n < 8 ? 120 : 280);
+}
+function syncAiEmbed() {
+  scheduleLayoutSync(false);
+}
+function scheduleCliBootstrapRetries() {
+  const cliCols = state.columns.filter((c) => c.type === "cli");
+  if (!cliCols.length) return;
+  const pending = cliCols.some((c) => !state.cliReady[normalizeCliEngine(c.engine)]);
+  if (!pending) return;
+  cliCols.forEach((c) => {
+    const eng = normalizeCliEngine(c.engine);
+    if (state.cliReady[eng] && state.cliUrls[eng]) {
+      mountCliUrl(c.id, eng, state.cliUrls[eng], false);
+      return;
+    }
+    const lastSent = ensureCli._sent && ensureCli._sent[eng] ? ensureCli._sent[eng] : 0;
+    if (!lastSent || Date.now() - lastSent > 20000) ensureCli(c);
+  });
+  clearTimeout(scheduleCliBootstrapRetries._t);
+  scheduleCliBootstrapRetries._n = (scheduleCliBootstrapRetries._n || 0) + 1;
+  if (scheduleCliBootstrapRetries._n < 16)
+    scheduleCliBootstrapRetries._t = setTimeout(scheduleCliBootstrapRetries, 600);
+}
+function nudgeUnifiedBootstrap() {
+  clearTimeout(nudgeUnifiedBootstrap._t);
+  nudgeUnifiedBootstrap._t = setTimeout(function () {
+    scheduleLayoutSync(false, 80);
+  }, 80);
+}
+function applyInit(payload, opts) {
+  try {
+    payload = payload || {};
+    opts = opts || {};
+    const fromHost = opts.fromHost !== false;
+    const forceReset = !!payload.forceReset;
+    const savedSession = (!forceReset && payload.savedSession && Array.isArray(payload.savedSession.columns) && payload.savedSession.columns.length)
+      ? payload.savedSession
+      : null;
+    const softOnly = fromHost && state.hostLive && !forceReset && !needsColumnRebuild();
+    state.themeMode = String(payload.themeMode || "dark").toLowerCase() === "light" ? "light" : "dark";
+    document.documentElement.setAttribute("data-theme", state.themeMode);
+    state.aiEngines = Array.isArray(payload.aiEngines) ? payload.aiEngines.slice() : state.aiEngines;
+    state.cliEngines = Array.isArray(payload.cliEngines) ? payload.cliEngines.slice() : state.cliEngines;
+    if (payload.initialIntent)
+      state.initialIntent = String(payload.initialIntent) === "cli" ? "cli" : "ai";
+    applyLayoutPrefs(payload);
+    if (softOnly) {
+      state.initGen = (state.initGen || 0) + 1;
+      renderSidebar();
+      if (payload.keyword) {
+        document.getElementById("compose").value = String(payload.keyword);
+        autoSizeCompose();
+      }
+      document.getElementById("status").textContent = layoutStatusText();
+      runAutoBootstrap();
+      return;
+    }
+    if (fromHost) {
+      state.hostLive = true;
+      armHostBootstrap();
+    }
+    else if (state.columns.length) state.hostArmed = true;
+    state.initGen = (state.initGen || 0) + 1;
+    resetBootstrapState();
+    state.cliReady = {};
+    state.cliUrls = {};
+    seq = 0;
+    const restored = savedSession ? restoreColumnsFromSession(savedSession) : false;
+    if (!restored) {
+      state.columns = buildDefaultColumns();
+      const firstAiCol = state.columns.find((c) => c.type === "ai");
+      const firstCliCol = state.columns.find((c) => c.type === "cli");
+      state.lastAiColumnId = firstAiCol ? firstAiCol.id : "";
+      state.lastCliColumnId = firstCliCol ? firstCliCol.id : "";
+      state.focusedColumnId = state.initialIntent === "cli" && firstCliCol
+        ? firstCliCol.id
+        : (firstAiCol ? firstAiCol.id : (state.columns[0] ? state.columns[0].id : ""));
+      state.aiFocusLru = {};
+      state.columns.filter(function (c) { return c.type === "ai"; }).forEach(function (c, idx) {
+        touchAiFocusLru(c.id);
+        state.aiFocusLru[c.id] = Date.now() - (state.columns.length - idx) * 1000;
+      });
+      if (state.focusedColumnId) touchAiFocusLru(state.focusedColumnId);
+    }
+    render();
+    applySavedScrollLeft();
+    observeColumnStage();
+    document.getElementById("status").textContent = layoutStatusText();
+    if (payload.keyword) {
+      document.getElementById("compose").value = String(payload.keyword);
+      autoSizeCompose();
+    }
+    runAutoBootstrap();
+    schedulePersistSession(1200);
+  } catch (err) {
+    document.getElementById("status").textContent = "初始化失败：" + String(err && err.message ? err.message : err);
+    console.error("[UnifiedWorkbench] applyInit failed", err);
+  }
+}
+function bootLocalDefaultLayout(reason) {
+  if (state.columns.length && !needsColumnRebuild()) return true;
+  applyInit({
+    themeMode: state.themeMode,
+    aiEngines: defaultAiEngineRows(),
+    cliEngines: state.cliEngines.length ? state.cliEngines.slice() : [firstCli()],
+    initialIntent: state.initialIntent || "ai",
+    defaultAiColumns: state.defaultAiColumns,
+    defaultCliColumns: state.defaultCliColumns,
+    maxColumns: state.maxColumns,
+    maxVirtualColumns: state.maxVirtualColumns,
+    virtualColumnThreshold: state.virtualColumnThreshold,
+    maxActiveAiEmbeds: state.maxActiveAiEmbeds,
+    forceReset: true
+  }, { fromHost: false });
+  if (state.columns.length) {
+    const note = reason ? "（" + reason + "）" : "";
+    document.getElementById("status").textContent = "默认 " + state.defaultAiColumns + " AI + " + state.defaultCliColumns + " CLI" + note;
+    return true;
+  }
+  return false;
+}
+function signalReadyToHost() {
+  postToAhk({ type: "ready" });
+}
+document.getElementById("close").addEventListener("click", () => {
+  persistSessionNow();
+  postToAhk({ type: "close" });
+});
+document.getElementById("btn-uwb-debug").addEventListener("click", () => toggleUwbDebugPanel());
+document.getElementById("web-embed-debug-close").addEventListener("click", () => toggleUwbDebugPanel(false));
+document.getElementById("web-embed-debug-refresh").addEventListener("click", () => requestUwbDebugSnapshot());
+document.getElementById("web-embed-debug-rebootstrap").addEventListener("click", () => {
+  uwbDebugLog("info", "手动 rebootstrap…");
+  try { window.BasePanel.postToAhk(buildUwbDebugRebootstrapPayload()); } catch (e) {
+    uwbDebugLog("error", "rebootstrap post failed: " + (e && e.message ? e.message : e));
+  }
+});
+document.getElementById("web-embed-debug-copy").addEventListener("click", () => {
+  try {
+    window.BasePanel.postToAhk({ type: "webEmbedDebugAction", action: "copy_trace", client: buildUwbClientDebugSnapshot() });
+  } catch (_) {}
+});
+document.getElementById("web-embed-debug-open-log").addEventListener("click", () => {
+  try { window.BasePanel.postToAhk({ type: "webEmbedDebugAction", action: "open_log_dir" }); } catch (_) {}
+});
+document.querySelectorAll("#web-embed-debug-log-tabs .web-embed-debug-log-tab").forEach(function (btn) {
+  btn.addEventListener("click", function () {
+    document.querySelectorAll("#web-embed-debug-log-tabs .web-embed-debug-log-tab").forEach(function (b) {
+      b.classList.toggle("is-active", b === btn);
+    });
+    _uwbDebugState.logTab = btn.getAttribute("data-log-tab") || "js";
+    renderUwbDebugLogPane();
+  });
+});
+document.getElementById("add-ai").addEventListener("click", () => addColumn("ai"));
+document.getElementById("add-cli").addEventListener("click", () => addColumn("cli"));
+document.getElementById("compose-form").addEventListener("submit", (e) => { e.preventDefault(); submitCompose(); });
+document.getElementById("compose").addEventListener("input", autoSizeCompose);
+document.getElementById("compose").addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && e.ctrlKey) {
+    e.preventDefault();
+    submitCompose({ broadcast: true });
+    return;
+  }
+  if (e.key === "Enter" && !e.shiftKey) {
+    e.preventDefault();
+    submitCompose();
+  }
+});
+window.addEventListener("resize", () => scheduleLayoutSync(false, 120));
+document.getElementById("columns").addEventListener("scroll", () => {
+  if (isColumnResizing()) return;
+  clearTimeout(syncAllAiEmbeds._scrollT);
+  syncAllAiEmbeds._scrollT = setTimeout(function () {
+    if (shouldVirtualizeColumns()) refreshVirtualColumnWindow();
+    scheduleAiEmbedSync(20);
+    schedulePersistSession(800);
+  }, 20);
+});
+observeColumnStage();
+function handleHostPayload(payload) {
+  if (typeof payload === "string") {
+    try { payload = JSON.parse(payload); } catch (_) { return; }
+  }
+  if (!payload || typeof payload !== "object") return;
+  if (payload.hostMsgId) {
+    handleHostPayload._seen = handleHostPayload._seen || new Set();
+    const key = String(payload.hostMsgId);
+    if (handleHostPayload._seen.has(key)) return;
+    handleHostPayload._seen.add(key);
+  }
+  if (payload.type === "init") applyInit(payload, { fromHost: true });
+  else if (payload.type === "requestReady") signalReadyToHost();
+  else if (payload.type === "hostOpenBootstrap") {
+    const gen = Number(payload.gen);
+    if (Number.isFinite(gen)) {
+      if (gen < (state.hostBootstrapGen || 0)) return;
+      state.hostBootstrapGen = gen;
+    }
+    armHostBootstrap();
+    nudgeUnifiedBootstrap();
+  }
+  else if (payload.type === "hostAiBootstrap") scheduleLayoutSync(false, 120);
+  else if (payload.type === "hostCliBootstrap") scheduleLayoutSync(true, 120);
+  else if (payload.type === "ttyd_ready") handleTtydReady(payload);
+  else if (payload.type === "ttyd_error") handleTtydError(payload);
+  else if (payload.type === "focusCliFrame") focusCliFrame(payload.engine || "");
+  else if (payload.type === "hostLayout" || payload.type === "hostPaintNudge") scheduleLayoutSync(!!payload.includeCli, 160);
+  else if (payload.type === "requestLayoutSnapshot") persistSessionNow();
+  else if (payload.type === "webEmbedDebugResult") handleUwbDebugResult(payload);
+  else if (payload.type === "webEmbedDebugActionResult") handleUwbDebugActionResult(payload);
+}
+window.__UnifiedWorkbenchHostMessage = handleHostPayload;
+if (window.chrome && window.chrome.webview) {
+  window.chrome.webview.addEventListener("message", (ev) => handleHostPayload(ev.data));
+}
+signalReadyToHost();
+setTimeout(function () {
+  if (!state.columns.length) bootLocalDefaultLayout("本地兜底");
+}, 700);
+setTimeout(function () {
+  if (!state.columns.length) {
+    signalReadyToHost();
+    setTimeout(function () {
+      if (!state.columns.length) bootLocalDefaultLayout("等待宿主 init 超时");
+    }, 500);
+  }
+}, 1200);
+</script>
+</body>
+</html>

@@ -274,6 +274,7 @@ _VK_BuiltinCommandCatalog() {
             Map("id", "sc_activate_search", "name", "搜索", "desc", "打开并激活搜索中心", "fn", "CH_RUN"),
             Map("id", "ftb_ai_workbench", "name", "AI 工作台", "desc", "悬浮条按钮：打开 AI 工作台", "fn", "CH_RUN", "iconClass", "fa-brain", "iconPath", Nmer_AssetsIconPath("app", "brain.svg")),
             Map("id", "ftb_cli_workbench", "name", "CLI 工作台", "desc", "悬浮条按钮：打开 CLI 终端工作台", "fn", "CH_RUN", "iconClass", "fa-terminal"),
+            Map("id", "ftb_unified_workbench", "name", "混排工作台", "desc", "悬浮条按钮：打开 AI/CLI 混排工作台", "fn", "CH_RUN", "iconClass", "fa-eye"),
             Map("id", "sc_cat_ai", "name", "AI 工作台", "desc", "打开独立 AI 工作台", "fn", "CH_RUN", "suggested", "q"),
             Map("id", "sc_cat_cli", "name", "CLI 工作台", "desc", "打开 ttyd 多终端工作台", "fn", "CH_RUN", "suggested", "w"),
             Map("id", "sc_cat_academic", "name", "分类 / 学术", "desc", "切换到学术分类", "fn", "CH_RUN", "suggested", "e"),
@@ -1220,6 +1221,7 @@ _VK_DefaultToolbarLayoutCmdIds() {
     return [
         "ftb_ai_workbench",
         "ftb_cli_workbench",
+        "ftb_unified_workbench",
         "sc_activate_search",
         "qa_clipboard",
         "ch_b",
@@ -1241,6 +1243,7 @@ _VK_SceneIdToToolbarCmdId(sceneId) {
             "search", "sc_activate_search",
             "ai_workbench", "ftb_ai_workbench",
             "cli_workbench", "ftb_cli_workbench",
+            "unified_workbench", "ftb_unified_workbench",
             "clipboard", "qa_clipboard",
             "prompts", "ch_b",
             "scratchpad", "ftb_scratchpad",
@@ -1373,15 +1376,16 @@ _VK_DefaultSceneToolbarLayoutRows() {
     return [
         Map("sceneId", "ai_workbench", "visible_in_bar", true, "order_bar", 0),
         Map("sceneId", "cli_workbench", "visible_in_bar", true, "order_bar", 1),
-        Map("sceneId", "search", "visible_in_bar", true, "order_bar", 2),
-        Map("sceneId", "clipboard", "visible_in_bar", true, "order_bar", 3),
-        Map("sceneId", "prompts", "visible_in_bar", true, "order_bar", 4),
-        Map("sceneId", "scratchpad", "visible_in_bar", true, "order_bar", 5),
-        Map("sceneId", "screenshot", "visible_in_bar", true, "order_bar", 6),
-        Map("sceneId", "settings", "visible_in_bar", true, "order_bar", 7),
-        Map("sceneId", "hotkeys", "visible_in_bar", true, "order_bar", 8),
-        Map("sceneId", "cursor", "visible_in_bar", true, "order_bar", 9),
-        Map("sceneId", "cloudplayer", "visible_in_bar", true, "order_bar", 10)
+        Map("sceneId", "unified_workbench", "visible_in_bar", true, "order_bar", 2),
+        Map("sceneId", "search", "visible_in_bar", true, "order_bar", 3),
+        Map("sceneId", "clipboard", "visible_in_bar", true, "order_bar", 4),
+        Map("sceneId", "prompts", "visible_in_bar", true, "order_bar", 5),
+        Map("sceneId", "scratchpad", "visible_in_bar", true, "order_bar", 6),
+        Map("sceneId", "screenshot", "visible_in_bar", true, "order_bar", 7),
+        Map("sceneId", "settings", "visible_in_bar", true, "order_bar", 8),
+        Map("sceneId", "hotkeys", "visible_in_bar", true, "order_bar", 9),
+        Map("sceneId", "cursor", "visible_in_bar", true, "order_bar", 10),
+        Map("sceneId", "cloudplayer", "visible_in_bar", true, "order_bar", 11)
     ]
 }
 
@@ -1982,7 +1986,7 @@ _VK_SceneCtxActMap(sceneKey) {
     }
     if (sk = "floating_bar") {
         m := Map()
-        for c in ["ftm_reset_scale", "ftm_search_center", "ftm_switch_hole", "ftm_clipboard", "ftm_minimize_to_edge", "ftm_exit_app", "ftm_hide_toolbar", "ftm_open_config", "ftm_toggle_toolbar", "ftm_reload_script", "ftb_ai_workbench", "ftb_cli_workbench", "ftb_scratchpad", "ftb_screenshot", "ftb_cursor_menu", "ftb_cloud_player", "hub_capsule", "pqp_capture", "qa_clipboard", "sc_activate_search", "sys_show_vk"]
+        for c in ["ftm_reset_scale", "ftm_search_center", "ftm_switch_hole", "ftm_clipboard", "ftm_minimize_to_edge", "ftm_exit_app", "ftm_hide_toolbar", "ftm_open_config", "ftm_toggle_toolbar", "ftm_reload_script", "ftb_ai_workbench", "ftb_cli_workbench", "ftb_unified_workbench", "ftb_scratchpad", "ftb_screenshot", "ftb_cursor_menu", "ftb_cloud_player", "hub_capsule", "pqp_capture", "qa_clipboard", "sc_activate_search", "sys_show_vk"]
             m[c] := c
         return m
     }
