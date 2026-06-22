@@ -6,8 +6,8 @@
   "cancelEnabled": true,
   "autoEnterEnabled": true,
   "debounceMs": 80,
-  "keyPressDurationMs": 50,
-  "targetKey": "Ctrl+4",
+  "keyPressDurationMs": 250,
+  "targetKey": "RAlt",
   "triggerSource": null,
   "actions": null,
   "scenes": null

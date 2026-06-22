@@ -109,7 +109,7 @@ fn default_interval_ms() -> u32 { 1200 }
 fn default_enter_delay_ms() -> u32 { 5000 }
 fn default_true() -> bool { true }
 fn default_debounce_ms() -> u32 { 80 }
-fn default_key_press_duration_ms() -> u32 { 50 }
+fn default_key_press_duration_ms() -> u32 { 250 }
 fn default_target_key() -> String { "RAlt".into() }
 
 impl Default for VoiceConfig {
@@ -241,6 +241,7 @@ pub fn start_watcher(state: Arc<AppState>, window: tauri::WebviewWindow) {
         }
     });
 }
+
 
 
 

@@ -43,7 +43,7 @@ fn send_scancode(scan: u16, extended: bool, keyup: bool) {
 
 /// Match AHK's `{vkA5sc138}` as closely as possible.
 pub fn send_right_alt(duration_ms: u32) {
-    let hold_ms = duration_ms.max(120) as u64;
+    let hold_ms = duration_ms.max(250) as u64;
 
     // First use the virtual key path Windows expects for right Alt.
     send_vk(VK_RMENU as u16, true, false);
@@ -65,3 +65,7 @@ pub fn send_enter() {
     send_vk(VK_RETURN as u16, false, false);
     send_vk(VK_RETURN as u16, false, true);
 }
+
+
+
+

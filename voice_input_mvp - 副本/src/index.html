@@ -173,9 +173,10 @@ events:
   const logLines=[];
   let recordingMode='none';
   let recordTimer=0;
+  const targetCapture={pendingModifier:'',mods:{ctrl:false,shift:false,alt:false,meta:false}};
 
   function save(){
-    try{ window.chrome?.webview?.postMessage({type:'mvp_save',json:JSON.stringify({recordKey:state.triggerKey, targetKey:state.targetKey})}); }catch(_){ }
+    try{ window.chrome?.webview?.postMessage({type:'mvp_save',json:JSON.stringify({recordKey:state.triggerKey,targetKey:state.targetKey})}); }catch(_){ }
     localStorage.setItem('voice_input_mvp',JSON.stringify(state));
     $('saveState').textContent='已自动保存';
   }
@@ -189,22 +190,64 @@ events:
     return v;
   }
 
-  function normalizeTargetKey(key, code, mods){
-    const v=String(key||'');
+  function normalizeKeyFromCode(code, key){
     const c=String(code||'');
+    const k=String(key||'');
+    const map={
+      Backspace:'Backspace',Tab:'Tab',Enter:'Enter',NumpadEnter:'NumpadEnter',Escape:'Esc',Space:'Space',
+      Minus:'-',Equal:'=',BracketLeft:'[',BracketRight:']',Backslash:'\\',Semicolon:';',Quote:"'",Comma:',',Period:'.',Slash:'/',
+      Insert:'Insert',Delete:'Delete',Home:'Home',End:'End',PageUp:'PageUp',PageDown:'PageDown',
+      ArrowUp:'Up',ArrowDown:'Down',ArrowLeft:'Left',ArrowRight:'Right',
+      PrintScreen:'PrintScreen',ScrollLock:'ScrollLock',Pause:'Pause',CapsLock:'CapsLock',ContextMenu:'AppsKey'
+    };
+    if(Object.prototype.hasOwnProperty.call(map, c)) return map[c];
+    if(/^Digit\d$/.test(c)) return c.slice(5);
+    if(/^Numpad\d$/.test(c)) return c;
+    if(/^Key[A-Z]$/.test(c)) return c.slice(3);
+    if(/^F\d{1,2}$/.test(c)) return c;
+    if(c==='AltLeft') return 'LAlt';
+    if(c==='AltRight') return 'RAlt';
+    if(c==='ControlLeft') return 'LCtrl';
+    if(c==='ControlRight') return 'RCtrl';
+    if(c==='ShiftLeft') return 'LShift';
+    if(c==='ShiftRight') return 'RShift';
+    if(c==='MetaLeft') return 'LWin';
+    if(c==='MetaRight') return 'RWin';
+    if(k && !['Control','Shift','Alt','Meta','OS'].includes(k)) return k;
+    return c || k;
+  }
+
+  function normalizeStandaloneModifier(code){
+    switch(String(code||'')){
+      case 'ControlLeft': return 'LCtrl';
+      case 'ControlRight': return 'RCtrl';
+      case 'ShiftLeft': return 'LShift';
+      case 'ShiftRight': return 'RShift';
+      case 'AltLeft': return 'LAlt';
+      case 'AltRight': return 'RAlt';
+      case 'MetaLeft': return 'LWin';
+      case 'MetaRight': return 'RWin';
+      default: return '';
+    }
+  }
+
+  function normalizeTargetCombination(mods, mainKey){
     const parts=[];
-    if(mods&&mods.ctrl) parts.push('Ctrl');
-    if(mods&&mods.shift) parts.push('Shift');
-    if(mods&&mods.alt) parts.push('Alt');
-    if(mods&&mods.meta) parts.push('Win');
-    const hasAlt = c==='AltRight' || v==='RAlt';
-    const hasLAlt = c==='AltLeft' || v==='LAlt';
-    if(hasAlt && parts.includes('Alt')) return parts.map(x=>x==='Alt'?'RAlt':x).join('+');
-    if(hasLAlt && parts.includes('Alt')) return parts.map(x=>x==='Alt'?'LAlt':x).join('+');
-    if(hasAlt) return parts.length ? parts.join('+') + '+RAlt' : 'RAlt';
-    if(hasLAlt) return parts.length ? parts.join('+') + '+LAlt' : 'LAlt';
-    const main = (v && !['Control','Shift','Alt','Meta'].includes(v)) ? v : (c || v || 'RAlt');
-    return parts.length ? parts.concat([main]).join('+') : main;
+    if(mods.ctrl) parts.push('Ctrl');
+    if(mods.shift) parts.push('Shift');
+    if(mods.alt) parts.push('Alt');
+    if(mods.meta) parts.push('Win');
+    if(mainKey) parts.push(mainKey);
+    return parts.join('+');
+  }
+
+  function isModifierCode(code){
+    return ['ControlLeft','ControlRight','ShiftLeft','ShiftRight','AltLeft','AltRight','MetaLeft','MetaRight'].includes(String(code||''));
+  }
+
+  function resetTargetCapture(){
+    targetCapture.pendingModifier='';
+    targetCapture.mods={ctrl:false,shift:false,alt:false,meta:false};
   }
 
   function pushLog(line){ logLines.unshift(line); logLines.length=Math.min(logLines.length,20); $('rawEventLog').textContent=logLines.join('\n'); }
@@ -268,27 +311,34 @@ events:
     recordingMode='target';
     $('saveState').textContent='正在录制…';
     setRecording('target');
+    resetTargetCapture();
     pushLog('开始录制目标键...');
-    recordTimer=setTimeout(function(){ if(recordingMode==='target'){ recordingMode='none'; setRecording('none'); pushLog('录制超时'); } },30000);
+    recordTimer=setTimeout(function(){ if(recordingMode==='target'){ recordingMode='none'; setRecording('none'); resetTargetCapture(); pushLog('录制超时'); } },30000);
   }
 
-  function finishCapture(key, code, mods){
-    const k = recordingMode === 'trigger' ? normalizeTriggerKey(key) : normalizeTargetKey(key, code, mods);
-    if(recordingMode==='trigger'){
-      state.triggerKey=k;
-      pushLog('已录制触发键: '+k);
-      try{window.chrome?.webview?.postMessage({type:'mvp_stop_recording'});}catch(_){ }
-    }else if(recordingMode==='target'){
-      state.targetKey=k;
-      pushLog('已录制目标键: '+k);
-      try{window.chrome?.webview?.postMessage({type:'mvp_frontend_keydown',key:k});}catch(_){ }
-    }
+  function finishTriggerCapture(key){
+    const k=normalizeTriggerKey(key);
+    state.triggerKey=k;
+    pushLog('已录制触发键: '+k);
     recordingMode='none';
     clearTimeout(recordTimer);
     setRecording('none');
     save();
     render();
+    try{window.chrome?.webview?.postMessage({type:'mvp_stop_recording'});}catch(_){ }
   }
+
+  function finishTargetCapture(combo){
+    state.targetKey=combo;
+    pushLog('已录制目标键: '+combo);
+    recordingMode='none';
+    clearTimeout(recordTimer);
+    setRecording('none');
+    resetTargetCapture();
+    save();
+    render();
+  }
+
   $('btnRecordTrigger').onclick=startTriggerRecord;
   $('btnRecordTarget').onclick=startTargetRecord;
   $('btnClear').onclick=function(){
@@ -296,6 +346,7 @@ events:
     state.targetKey='';
     recordingMode='none';
     clearTimeout(recordTimer);
+    resetTargetCapture();
     setRecording('none');
     save();
     render();
@@ -306,22 +357,47 @@ events:
     $('dbKey').textContent=e.key;
     $('dbCode').textContent=e.code;
     pushLog(new Date().toLocaleTimeString()+' key='+e.key+' code='+e.code);
-    if(recordingMode==='trigger' || recordingMode==='target'){
+    if(recordingMode==='trigger'){
       e.preventDefault();
       e.stopPropagation();
+      const captured = normalizeTriggerKey(e.key || e.code || '');
+      if(captured){
+        finishTriggerCapture(captured);
+        try{window.chrome?.webview?.postMessage({type:'mvp_frontend_keydown', key:captured});}catch(_){ }
+      }
+      return;
+    }
+    if(recordingMode==='target'){
+      e.preventDefault();
+      e.stopPropagation();
+      const code=String(e.code||'');
+      const key=String(e.key||'');
       const mods={ctrl:e.ctrlKey,shift:e.shiftKey,alt:e.altKey,meta:e.metaKey};
-      if(recordingMode==='trigger'){
-        finishCapture(e.key, e.code, mods);
-      } else {
-        const key = String(e.key);
-        const code = String(e.code);
-        const isAltOnly = code === 'AltLeft' || code === 'AltRight';
-        const modifierOnly = ['Control','Shift','Alt','Meta','OS'].includes(key) || ['ControlLeft','ControlRight','ShiftLeft','ShiftRight','MetaLeft','MetaRight'].includes(code);
-        if (isAltOnly) {
-          finishCapture(key, code, mods);
-        } else if (!modifierOnly) {
-          finishCapture(key, code, mods);
-        }
+      if(isModifierCode(code)){
+        targetCapture.pendingModifier=code;
+        targetCapture.mods=mods;
+        const standalone=normalizeStandaloneModifier(code);
+        $('targetState').textContent='等待组合键…';
+        pushLog('等待按下主键...');
+        if(standalone==='') return;
+        return;
+      }
+      const main=normalizeKeyFromCode(code, key);
+      const combo=normalizeTargetCombination(mods, main);
+      if(combo){
+        finishTargetCapture(combo);
+      }
+    }
+  },true);
+
+  document.addEventListener('keyup',function(e){
+    if(recordingMode!=='target') return;
+    const code=String(e.code||'');
+    if(!isModifierCode(code)) return;
+    if(targetCapture.pendingModifier===code){
+      const modifierName=normalizeStandaloneModifier(code);
+      if(modifierName){
+        finishTargetCapture(modifierName);
       }
     }
   },true);
@@ -330,14 +406,14 @@ events:
     const msg=e&&e.data;
     if(!msg||typeof msg!=='object') return;
     if(msg.type==='mvp_init'&&msg.config){
-      if(typeof msg.config.recordKey==='string') state.triggerKey=msg.config.recordKey;
+      if(typeof msg.config.recordKey==='string') state.triggerKey=normalizeTriggerKey(msg.config.recordKey);
       if(typeof msg.config.targetKey==='string') state.targetKey=msg.config.targetKey;
       render();
     }
     if(msg.type==='mvp_key_captured'){
       const key = msg.key || 'AutoTrigger';
       if(recordingMode==='trigger'){
-        finishCapture(key, '', {ctrl:false,shift:false,alt:false,meta:false});
+        finishTriggerCapture(key);
       }
     }
     if(msg.type==='mvp_paused'&&msg.ok){ runtime.paused=true; render(); }
@@ -346,18 +422,27 @@ events:
       runtime.lastAction=msg.lastAction||'-';
       runtime.timerActive=!!msg.timerActive;
       runtime.paused=!!msg.paused;
-      render();
+      if(recordingMode==='trigger' && runtime.lastAction==='recorded'){
+        finishTriggerCapture(state.triggerKey || 'AutoTrigger');
+      } else {
+        render();
+      }
     }
   });
 
-  try{ const saved=JSON.parse(localStorage.getItem('voice_input_mvp')||'{}'); if(saved&&typeof saved==='object'){ if(typeof saved.triggerKey==='string') state.triggerKey=saved.triggerKey; if(typeof saved.targetKey==='string') state.targetKey=saved.targetKey; } }catch(_){ }
+  try{ const saved=JSON.parse(localStorage.getItem('voice_input_mvp')||'{}'); if(saved&&typeof saved==='object'){ if(typeof saved.triggerKey==='string') state.triggerKey=normalizeTriggerKey(saved.triggerKey); if(typeof saved.targetKey==='string') state.targetKey=saved.targetKey; } }catch(_){ }
   setRecording('none');
   render();
   pushLog('等待录制…');
   try{window.chrome?.webview?.postMessage({type:'mvp_ready'});}catch(_){ }
-  </script>
+</script>
 </body>
 </html>
+
+
+
+
+
 
 
 

@@ -20,6 +20,14 @@ pub struct AppState {
     pub paused: Mutex<bool>,
 }
 
+fn normalize_trigger_key_name(key: &str) -> String {
+    match key {
+        "AudioVolumeUp" | "VolumeUp" | "Volume_Up" => "AutoTrigger".to_string(),
+        "AudioVolumeDown" | "VolumeDown" | "Volume_Down" => "AutoTrigger".to_string(),
+        "AudioVolumeMute" | "VolumeMute" | "Volume_Mute" => "AutoTrigger".to_string(),
+        other => other.to_string(),
+    }
+}
 pub fn run() {
     let app_state = Arc::new(AppState {
         cfg: Mutex::new(config::load_config()),
@@ -73,9 +81,10 @@ pub fn run() {
                         continue;
                     }
                     if is_recording {
+                        let normalized_key = normalize_trigger_key_name(&key_name);
                         {
                             let mut cfg = state2.cfg.lock();
-                            cfg.record_key = key_name.clone();
+                            cfg.record_key = normalized_key.clone();
                             cfg.normalize();
                             config::save_config(&cfg);
                             if let Some(ref mgr) = *state2.hotkey_mgr.lock() {
@@ -86,8 +95,10 @@ pub fn run() {
                         *state2.recording.lock() = false;
                         let json = serde_json::json!({
                             "type": "mvp_key_captured",
-                            "key": key_name
+                            "key": normalized_key
                         });
+                        let key_js = serde_json::to_string(&normalized_key).unwrap_or_else(|_| "AutoTrigger".into());
+                        win2.eval(&format!("window.__vp_bridge__('mvp_key_captured', {{key:{}}})", key_js)).ok();
                         win2.emit("to_js", &json).ok();
                         ipc::push_runtime(&state2, &win2, "recorded");
                         continue;
@@ -147,4 +158,7 @@ pub fn run() {
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
+
+
+
 

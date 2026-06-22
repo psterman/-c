@@ -175,7 +175,6 @@ fn hotkey_thread(cmd_rx: mpsc::Receiver<Cmd>, event_tx: mpsc::Sender<String>) {
     *active_sender().lock().unwrap() = Some(event_tx.clone());
 
     let mut recording_mode = false;
-    let mut saved_bindings: Vec<String> = vec![];
 
     unsafe fn register(ctx: *mut WndCtx, hwnd: HWND, name: &str) -> Option<u32> {
         let vk = key_to_vk(name)?;
@@ -213,7 +212,6 @@ fn hotkey_thread(cmd_rx: mpsc::Receiver<Cmd>, event_tx: mpsc::Sender<String>) {
         while let Ok(cmd) = cmd_rx.try_recv() {
             match cmd {
                 Cmd::BindAll(bindings) => {
-                    saved_bindings = bindings.clone();
                     *active_bindings().lock().unwrap() = bindings.clone();
                     unsafe { install_keyboard_hook(); }
                     if !recording_mode {
@@ -222,14 +220,12 @@ fn hotkey_thread(cmd_rx: mpsc::Receiver<Cmd>, event_tx: mpsc::Sender<String>) {
                 }
                 Cmd::StartRecording => {
                     recording_mode = true;
-                    unsafe { register_list(ctx_ptr, hwnd, &[]); }
                     *recording_sender().lock().unwrap() = Some(event_tx.clone());
                     unsafe { install_raw_input(hwnd); }
                     unsafe { install_keyboard_hook(); }
                 }
                 Cmd::StopRecording => {
                     recording_mode = false;
-                    unsafe { register_list(ctx_ptr, hwnd, &saved_bindings); }
                     *recording_sender().lock().unwrap() = None;
                     unsafe { remove_raw_input(); }
                     unsafe { remove_keyboard_hook(); }
@@ -444,3 +440,5 @@ fn appcommand_to_name(cmd: i32) -> Option<String> {
         _ => None,
     }
 }
+
+
