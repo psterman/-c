@@ -1,5 +1,6 @@
 mod config;
 mod state;
+mod key_chord;
 mod keyboard;
 mod ipc;
 
@@ -110,10 +111,13 @@ pub fn run() {
 
                     match action {
                                                 state::Action::SendKey { key } => {
-                            if key == "RAlt" {
-                                keyboard::send_right_alt(cfg.key_press_duration_ms);
-                            }
-                            ipc::push_runtime(&state2, &win2, &key);
+                            let sent = keyboard::send_chord(&key, cfg.key_press_duration_ms);
+                            let action_label = if sent {
+                                key.as_str()
+                            } else {
+                                "send_failed"
+                            };
+                            ipc::push_runtime(&state2, &win2, action_label);
                         }
                         state::Action::SendEsc => {
                             keyboard::send_escape();

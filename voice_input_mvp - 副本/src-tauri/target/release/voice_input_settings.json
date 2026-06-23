@@ -7,7 +7,7 @@
   "autoEnterEnabled": true,
   "debounceMs": 80,
   "keyPressDurationMs": 250,
-  "targetKey": "RAlt",
+  "targetKey": "F2",
   "triggerSource": null,
   "actions": null,
   "scenes": null
