@@ -1,4 +1,5 @@
 use crate::key_chord::{is_right_alt_only, parse_chord, MouseButton, SendToken, VkKey};
+use crate::send_guard;
 use winapi::um::winuser::{
     SendInput, INPUT, INPUT_KEYBOARD, INPUT_MOUSE, KEYBDINPUT, KEYEVENTF_EXTENDEDKEY,
     KEYEVENTF_KEYUP, KEYEVENTF_SCANCODE, MOUSEEVENTF_LEFTDOWN, MOUSEEVENTF_LEFTUP,
@@ -150,14 +151,15 @@ fn send_token_sequence(tokens: &[SendToken], hold_ms: u32) -> bool {
 /// Match AHK's `{vkA5sc138}` as closely as possible.
 pub fn send_right_alt(duration_ms: u32) {
     let hold_ms = duration_ms.max(250) as u64;
+    send_guard::run_guarded(hold_ms + 80, || {
+        send_vk(VK_RMENU as u16, true, false);
+        std::thread::sleep(std::time::Duration::from_millis(hold_ms));
+        send_vk(VK_RMENU as u16, true, true);
 
-    send_vk(VK_RMENU as u16, true, false);
-    std::thread::sleep(std::time::Duration::from_millis(hold_ms));
-    send_vk(VK_RMENU as u16, true, true);
-
-    send_scancode(0x38, true, false);
-    std::thread::sleep(std::time::Duration::from_millis(30));
-    send_scancode(0x38, true, true);
+        send_scancode(0x38, true, false);
+        std::thread::sleep(std::time::Duration::from_millis(30));
+        send_scancode(0x38, true, true);
+    });
 }
 
 /// 发送目标键/组合键：键盘、媒体键、鼠标键、扫描码与别名。
@@ -173,19 +175,29 @@ pub fn send_chord(combo: &str, duration_ms: u32) -> bool {
     }
 
     match parse_chord(trimmed) {
-        Ok(tokens) => send_token_sequence(&tokens, duration_ms),
+        Ok(tokens) => {
+            let hold = duration_ms.max(35) as u64;
+            send_guard::run_guarded(hold + 100, || {
+                send_token_sequence(&tokens, duration_ms);
+            });
+            true
+        }
         Err(_) => false,
     }
 }
 
 pub fn send_escape() {
-    send_vk(VK_ESCAPE as u16, false, false);
-    send_vk(VK_ESCAPE as u16, false, true);
+    send_guard::run_guarded(100, || {
+        send_vk(VK_ESCAPE as u16, false, false);
+        send_vk(VK_ESCAPE as u16, false, true);
+    });
 }
 
 pub fn send_enter() {
-    send_vk(VK_RETURN as u16, false, false);
-    send_vk(VK_RETURN as u16, false, true);
+    send_guard::run_guarded(100, || {
+        send_vk(VK_RETURN as u16, false, false);
+        send_vk(VK_RETURN as u16, false, true);
+    });
 }
 
 #[cfg(test)]

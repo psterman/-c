@@ -1,14 +1,69 @@
 {
-  "version": 2,
-  "recordKey": "AutoTrigger",
+  "version": 3,
+  "mappings": [
+    {
+      "id": "m-1782175248814",
+      "label": "AutoTrigger → F2",
+      "group": "默认",
+      "triggerKey": "AutoTrigger",
+      "targetKey": "F2",
+      "enabled": true,
+      "order": 0,
+      "triggerMode": "tap",
+      "triggerSource": null
+    },
+    {
+      "id": "m-1782177424048-6etm7",
+      "label": "? → ?",
+      "group": "默认",
+      "triggerKey": "AutoTrigger",
+      "targetKey": "RAlt",
+      "enabled": false,
+      "order": 1,
+      "triggerMode": "tap",
+      "triggerSource": null
+    }
+  ],
+  "trash": [
+    {
+      "id": "m-1782176592996",
+      "label": "AutoTrigger → F2（副本）",
+      "group": "默认",
+      "triggerKey": "AutoTrigger",
+      "targetKey": "F2",
+      "enabled": false,
+      "order": 1,
+      "triggerMode": "tap",
+      "triggerSource": null
+    },
+    {
+      "id": "m-1782177049683-ipu6q",
+      "label": "z → RAlt",
+      "group": "默认",
+      "triggerKey": "z",
+      "targetKey": "RAlt",
+      "enabled": false,
+      "order": 2,
+      "triggerMode": "tap",
+      "triggerSource": null
+    },
+    {
+      "id": "m-1782176275671",
+      "label": "AutoTrigger → RAlt",
+      "group": "默认",
+      "triggerKey": "AutoTrigger",
+      "targetKey": "RAlt",
+      "enabled": false,
+      "order": 1,
+      "triggerMode": "tap",
+      "triggerSource": null
+    }
+  ],
   "intervalMs": 1200,
   "enterDelayMs": 5000,
   "cancelEnabled": true,
   "autoEnterEnabled": true,
   "debounceMs": 80,
   "keyPressDurationMs": 250,
-  "targetKey": "F2",
-  "triggerSource": null,
-  "actions": null,
   "scenes": null
 }

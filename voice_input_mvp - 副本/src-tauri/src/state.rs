@@ -1,6 +1,8 @@
+use std::collections::{HashMap, HashSet};
 use std::time::{Duration, Instant};
 
-/// State machine result: what action to perform after a trigger.
+use crate::config::{canonical_trigger, MappingEntry, VoiceConfig};
+
 #[derive(Debug, Clone)]
 pub enum Action {
     SendKey { key: String },
@@ -39,24 +41,22 @@ impl StateMachine {
 
     pub fn trigger(
         &mut self,
-        cfg: &super::config::VoiceConfig,
+        cfg: &VoiceConfig,
+        mapping: &MappingEntry,
         trigger_key: &str,
         now: Instant,
     ) -> Action {
         let debounce_ms = cfg.debounce_ms as u64;
         let reset_ms = cfg.interval_ms as u64;
-        let normalized_trigger = match trigger_key {
-            "Volume_Up" | "Volume_Down" | "Volume_Mute" |
-            "AudioVolumeUp" | "AudioVolumeDown" | "AudioVolumeMute" => "AutoTrigger",
-            other => other,
-        };
+        let normalized = canonical_trigger(trigger_key);
+        let target = mapping.target_key.clone();
 
-        if normalized_trigger == "AutoTrigger" {
+        if normalized == "AutoTrigger" {
             self.last_trigger = Some(now);
             self.last_tick = Some(now);
             self.count = 0;
             self.enter_timer_active = false;
-            return Action::SendKey { key: cfg.output_for_trigger(normalized_trigger) };
+            return Action::SendKey { key: target };
         }
 
         if let Some(last) = self.last_trigger {
@@ -66,7 +66,8 @@ impl StateMachine {
         }
         self.last_trigger = Some(now);
 
-        let delta_ms = self.last_tick
+        let delta_ms = self
+            .last_tick
             .map(|t| now.duration_since(t).as_millis() as u64)
             .unwrap_or(0);
 
@@ -83,14 +84,16 @@ impl StateMachine {
 
         if cfg.auto_enter_enabled && self.count == 2 {
             self.enter_timer_active = true;
-            return Action::ScheduleEnter { delay_ms: cfg.enter_delay_ms };
+            return Action::ScheduleEnter {
+                delay_ms: cfg.enter_delay_ms,
+            };
         }
 
         if self.count >= 3 {
             self.count = 1;
         }
 
-        Action::SendKey { key: cfg.output_for_trigger(normalized_trigger) }
+        Action::SendKey { key: target }
     }
 
     pub fn on_enter_timer(&mut self) -> Action {
@@ -115,4 +118,34 @@ impl StateMachine {
     }
 }
 
+pub struct StateMachinePool {
+    machines: HashMap<String, StateMachine>,
+}
 
+impl StateMachinePool {
+    pub fn new() -> Self {
+        Self {
+            machines: HashMap::new(),
+        }
+    }
+
+    pub fn get_or_create(&mut self, mapping_id: &str) -> &mut StateMachine {
+        self.machines
+            .entry(mapping_id.to_string())
+            .or_insert_with(StateMachine::new)
+    }
+
+    pub fn prune(&mut self, valid_ids: &HashSet<String>) {
+        self.machines.retain(|id, _| valid_ids.contains(id));
+    }
+
+    pub fn reset_all(&mut self) {
+        for sm in self.machines.values_mut() {
+            sm.reset();
+        }
+    }
+
+    pub fn any_timer_active(&self) -> bool {
+        self.machines.values().any(|m| m.enter_timer_active)
+    }
+}

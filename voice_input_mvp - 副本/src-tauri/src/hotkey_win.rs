@@ -10,6 +10,7 @@ macro_rules! w {
     }};
 }
 
+use crate::send_guard;
 use winapi::shared::minwindef::{UINT, WPARAM, LPARAM, LRESULT};
 use winapi::shared::windef::HWND;
 use winapi::um::winuser::{
@@ -84,6 +85,10 @@ fn key_to_vk(name: &str) -> Option<UINT> {
         "F15" => Some(0x7E), "F16" => Some(0x7F),
         "F17" => Some(0x80), "F18" => Some(0x81),
         "F19" => Some(0x82), "F20" => Some(0x83),
+        "CapsLock" => Some(0x14),
+        "F1" => Some(0x70), "F2" => Some(0x71), "F3" => Some(0x72), "F4" => Some(0x73),
+        "F5" => Some(0x74), "F6" => Some(0x75), "F7" => Some(0x76), "F8" => Some(0x77),
+        "F9" => Some(0x78), "F10" => Some(0x79), "F11" => Some(0x7A), "F12" => Some(0x7B),
         _ => None,
     }
 }
@@ -294,9 +299,17 @@ unsafe fn remove_keyboard_hook() {
     }
 }
 
+const LLKHF_INJECTED: u32 = 0x10;
+
 unsafe extern "system" fn keyboard_proc(code: i32, wparam: WPARAM, lparam: LPARAM) -> LRESULT {
+    if send_guard::is_active() {
+        return CallNextHookEx(std::ptr::null_mut(), code, wparam, lparam);
+    }
     if code >= 0 && (wparam == WM_KEYDOWN as usize || wparam == WM_SYSKEYDOWN as usize) {
         let kb = *(lparam as *const KBDLLHOOKSTRUCT);
+        if kb.flags & LLKHF_INJECTED != 0 {
+            return CallNextHookEx(std::ptr::null_mut(), code, wparam, lparam);
+        }
         if let Some(name) = vk_to_name(kb.vkCode as u32) {
             let should_swallow = active_bindings().lock().unwrap().iter().any(|v| v == &name);
             if let Some(sender) = recording_sender().lock().unwrap().as_ref() {
@@ -333,6 +346,8 @@ fn vk_to_name(vk: u32) -> Option<String> {
         0xB6 => Some("Launch_App1".into()),
         0xB7 => Some("Launch_App2".into()),
         0x7C..=0x83 => Some(format!("F{}", vk - 0x7C + 13)),
+        0x14 => Some("CapsLock".into()),
+        0x70..=0x7B => Some(format!("F{}", vk - 0x70 + 1)),
         _ => None,
     }
 }
@@ -391,6 +406,9 @@ unsafe extern "system" fn wnd_proc(
     }
 
     if msg == WM_HOTKEY {
+        if send_guard::is_active() {
+            return 1;
+        }
         let id = wparam as u32;
         let ctx_ptr = winuser::GetWindowLongPtrW(hwnd, winuser::GWLP_USERDATA) as *mut WndCtx;
         if !ctx_ptr.is_null() {

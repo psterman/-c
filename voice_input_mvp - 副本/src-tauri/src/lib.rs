@@ -2,6 +2,7 @@ mod config;
 mod state;
 mod key_chord;
 mod keyboard;
+mod send_guard;
 mod ipc;
 
 #[cfg(target_os = "windows")]
@@ -10,31 +11,32 @@ mod hotkey_win;
 use parking_lot::Mutex;
 use std::sync::Arc;
 use std::time::Instant;
-use tauri::{Manager, Emitter};
+use tauri::Manager;
 use tokio::time::{sleep, Duration};
 
+use crate::config::{load_config, VoiceConfig};
+use crate::ipc::RecordingTarget;
+use crate::state::StateMachinePool;
+
 pub struct AppState {
-    pub cfg: Mutex<config::VoiceConfig>,
-    pub machine: Mutex<state::StateMachine>,
+    pub cfg: Mutex<VoiceConfig>,
+    pub machine_pool: Mutex<StateMachinePool>,
     pub hotkey_mgr: Mutex<Option<hotkey_win::HotkeyManager>>,
     pub recording: Mutex<bool>,
+    pub recording_target: Mutex<Option<RecordingTarget>>,
     pub paused: Mutex<bool>,
 }
 
-fn normalize_trigger_key_name(key: &str) -> String {
-    match key {
-        "AudioVolumeUp" | "VolumeUp" | "Volume_Up" => "AutoTrigger".to_string(),
-        "AudioVolumeDown" | "VolumeDown" | "Volume_Down" => "AutoTrigger".to_string(),
-        "AudioVolumeMute" | "VolumeMute" | "Volume_Mute" => "AutoTrigger".to_string(),
-        other => other.to_string(),
-    }
-}
 pub fn run() {
+    let mut initial = load_config();
+    initial.migrate();
+
     let app_state = Arc::new(AppState {
-        cfg: Mutex::new(config::load_config()),
-        machine: Mutex::new(state::StateMachine::new()),
+        cfg: Mutex::new(initial),
+        machine_pool: Mutex::new(StateMachinePool::new()),
         hotkey_mgr: Mutex::new(None),
         recording: Mutex::new(false),
+        recording_target: Mutex::new(None),
         paused: Mutex::new(false),
     });
 
@@ -44,29 +46,32 @@ pub fn run() {
         .setup(move |app| {
             let window = app.get_webview_window("main").unwrap();
 
-            // Init hotkey manager
             let mgr = hotkey_win::HotkeyManager::new();
             let bindings = app_state.cfg.lock().bindings();
             mgr.bind_all(&bindings);
             *app_state.hotkey_mgr.lock() = Some(mgr);
 
-            // Push initial config to JS after a short delay
             let cfg = app_state.cfg.lock().clone();
             let json = serde_json::to_string(&cfg).unwrap();
-            window.eval(&format!(
-                "setTimeout(function(){{ window.__vp_bridge__('mvp_init', {{config:{}}}) }}, 300)",
-                json
-            )).ok();
+            window
+                .eval(&format!(
+                    "setTimeout(function(){{ window.__vp_bridge__('mvp_init', {{config:{}}}) }}, 300)",
+                    json
+                ))
+                .ok();
 
-            // Start file watcher for config hot-reload
             config::start_watcher(app_state.clone(), window.clone());
 
-            // Background task: poll hotkey events → state machine → actions
             let state2 = app_state.clone();
             let win2 = window.clone();
             tauri::async_runtime::spawn(async move {
                 loop {
                     sleep(Duration::from_millis(20)).await;
+
+                    if crate::send_guard::is_active() {
+                        continue;
+                    }
+
                     let key_name = {
                         let mgr_opt = state2.hotkey_mgr.lock();
                         mgr_opt.as_ref().and_then(|mgr| mgr.try_recv())
@@ -76,70 +81,59 @@ pub fn run() {
                         continue;
                     };
 
-                    let is_recording = *state2.recording.lock();
-                    let is_paused = *state2.paused.lock();
-                    if is_paused {
+                    if *state2.paused.lock() {
                         continue;
                     }
-                    if is_recording {
-                        let normalized_key = normalize_trigger_key_name(&key_name);
-                        {
-                            let mut cfg = state2.cfg.lock();
-                            cfg.record_key = normalized_key.clone();
-                            cfg.normalize();
-                            config::save_config(&cfg);
-                            if let Some(ref mgr) = *state2.hotkey_mgr.lock() {
-                                mgr.stop_recording();
-                                mgr.bind_all(&cfg.bindings());
-                            }
-                        }
-                        *state2.recording.lock() = false;
-                        let json = serde_json::json!({
-                            "type": "mvp_key_captured",
-                            "key": normalized_key
-                        });
-                        let key_js = serde_json::to_string(&normalized_key).unwrap_or_else(|_| "AutoTrigger".into());
-                        win2.eval(&format!("window.__vp_bridge__('mvp_key_captured', {{key:{}}})", key_js)).ok();
-                        win2.emit("to_js", &json).ok();
-                        ipc::push_runtime(&state2, &win2, "recorded");
+
+                    if *state2.recording.lock() {
+                        ipc::finish_hardware_capture(&state2, &win2, &key_name);
                         continue;
                     }
 
                     let now = Instant::now();
-                    let cfg = state2.cfg.lock().clone();
-                    let action = state2.machine.lock().trigger(&cfg, &key_name, now);
+                    let (mapping_id, duration_ms, action) = {
+                        let cfg = state2.cfg.lock();
+                        let Some(mapping) = cfg.find_mapping_by_physical(&key_name) else {
+                            continue;
+                        };
+                        let mapping_id = mapping.id.clone();
+                        let duration_ms = cfg.key_press_duration_ms;
+                        let action = state2
+                            .machine_pool
+                            .lock()
+                            .get_or_create(&mapping_id)
+                            .trigger(&cfg, mapping, &key_name, now);
+                        (mapping_id, duration_ms, action)
+                    };
 
                     match action {
-                                                state::Action::SendKey { key } => {
-                            let sent = keyboard::send_chord(&key, cfg.key_press_duration_ms);
-                            let action_label = if sent {
-                                key.as_str()
-                            } else {
-                                "send_failed"
-                            };
-                            ipc::push_runtime(&state2, &win2, action_label);
+                        state::Action::SendKey { key } => {
+                            let sent = keyboard::send_chord(&key, duration_ms);
+                            let label = if sent { key.as_str() } else { "send_failed" };
+                            ipc::push_runtime(&state2, &win2, label, &mapping_id);
                         }
                         state::Action::SendEsc => {
                             keyboard::send_escape();
-                            ipc::push_runtime(&state2, &win2, "esc");
+                            ipc::push_runtime(&state2, &win2, "esc", &mapping_id);
                         }
                         state::Action::ScheduleEnter { delay_ms } => {
                             let s3 = state2.clone();
                             let w3 = win2.clone();
+                            let mid = mapping_id.clone();
                             let d = delay_ms;
                             tauri::async_runtime::spawn(async move {
                                 sleep(Duration::from_millis(d as u64)).await;
-                                let action = s3.machine.lock().on_enter_timer();
+                                let action = s3.machine_pool.lock().get_or_create(&mid).on_enter_timer();
                                 if matches!(action, state::Action::SendEnter) {
                                     keyboard::send_enter();
-                                    ipc::push_runtime(&s3, &w3, "enter");
+                                    ipc::push_runtime(&s3, &w3, "enter", &mid);
                                 }
                             });
-                            ipc::push_runtime(&state2, &win2, "enter_scheduled");
+                            ipc::push_runtime(&state2, &win2, "enter_scheduled", &mapping_id);
                         }
                         state::Action::SendEnter => {
                             keyboard::send_enter();
-                            ipc::push_runtime(&state2, &win2, "enter");
+                            ipc::push_runtime(&state2, &win2, "enter", &mapping_id);
                         }
                         state::Action::None => {}
                     }
@@ -155,14 +149,14 @@ pub fn run() {
             ipc::cmd_stop_recording,
             ipc::cmd_pause,
             ipc::cmd_resume,
-            ipc::cmd_capture_source,
             ipc::cmd_request_runtime,
             ipc::cmd_frontend_keydown,
+            ipc::cmd_mapping_toggle,
+            ipc::cmd_mapping_delete,
+            ipc::cmd_mapping_duplicate,
+            ipc::cmd_mapping_reorder,
+            ipc::cmd_mapping_set_group,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
-
-
-
-

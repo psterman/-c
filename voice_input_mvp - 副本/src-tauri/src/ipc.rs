@@ -1,90 +1,134 @@
 use std::sync::Arc;
+
 use tauri::Emitter;
 
+use crate::config::{
+    self, canonical_trigger, is_allowed_trigger, new_mapping_id, MappingEntry, VoiceConfig,
+};
 use crate::AppState;
-use crate::config;
+
+#[derive(Debug, Clone)]
+pub enum RecordMode {
+    Trigger,
+    Target,
+}
+
+#[derive(Debug, Clone)]
+pub struct RecordingTarget {
+    pub mapping_id: String,
+    pub mode: RecordMode,
+}
+
 fn normalize_record_key(key: &str) -> String {
-    match key.trim() {
-        "AudioVolumeUp" | "VolumeUp" | "Volume_Up" => "AutoTrigger".into(),
-        "AudioVolumeDown" | "VolumeDown" | "Volume_Down" => "AutoTrigger".into(),
-        "AudioVolumeMute" | "VolumeMute" | "Volume_Mute" => "AutoTrigger".into(),
-        "MediaTrackNext" | "Media_Next" => "Media_Next".into(),
-        "MediaTrackPrevious" | "Media_Prev" => "Media_Prev".into(),
-        "MediaPlayPause" | "Media_Play_Pause" => "Media_Play_Pause".into(),
-        "MediaStop" | "Media_Stop" => "Media_Stop".into(),
-        other if other.is_empty() => "RAlt".into(),
-        other => other.into(),
-    }
+    canonical_trigger(key)
 }
 
 #[derive(Clone, serde::Serialize)]
 struct RuntimePayload {
     #[serde(rename = "type")]
     msg_type: String,
-    #[serde(rename = "activeSceneId")]
-    active_scene_id: String,
-    #[serde(rename = "activeSceneLabel")]
-    active_scene_label: String,
     bindings: String,
     #[serde(rename = "lastAction")]
     last_action: String,
-    #[serde(rename = "sourceLabel")]
-    source_label: String,
-    #[serde(rename = "sourceGrouping")]
-    source_grouping: String,
+    #[serde(rename = "lastMappingId")]
+    last_mapping_id: String,
+    #[serde(rename = "mappingCount")]
+    mapping_count: u32,
+    #[serde(rename = "enabledCount")]
+    enabled_count: u32,
     #[serde(rename = "timerActive")]
     timer_active: bool,
     paused: bool,
 }
 
-pub fn push_runtime(state: &AppState, window: &tauri::WebviewWindow, last_action: &str) {
+pub fn push_runtime(
+    state: &AppState,
+    window: &tauri::WebviewWindow,
+    last_action: &str,
+    last_mapping_id: &str,
+) {
     let cfg = state.cfg.lock();
-    let machine = state.machine.lock();
-    let info = machine.runtime_info();
+    let pool = state.machine_pool.lock();
     let paused = *state.paused.lock();
-    let scene = cfg.scenes.as_ref().and_then(|scenes| scenes.iter().find(|s| s.enabled)).cloned();
-    let source = cfg.trigger_source.clone();
+    let enabled_count = cfg.mappings.iter().filter(|m| m.enabled).count() as u32;
     let payload = RuntimePayload {
         msg_type: "mvp_runtime".into(),
-        active_scene_id: scene.as_ref().map(|s| s.id.clone()).unwrap_or_else(|| "global".into()),
-        active_scene_label: scene.as_ref().map(|s| s.label.clone()).unwrap_or_else(|| "全局".into()),
         bindings: cfg.bindings().join(", "),
         last_action: last_action.into(),
-        source_label: source.as_ref().map(|s| s.label.clone()).unwrap_or_else(|| cfg.record_key.clone()),
-        source_grouping: source.as_ref().map(|s| s.grouping.clone()).unwrap_or_else(|| "exact".into()),
-        timer_active: info.timer_active,
+        last_mapping_id: last_mapping_id.into(),
+        mapping_count: cfg.mappings.len() as u32,
+        enabled_count,
+        timer_active: pool.any_timer_active(),
         paused,
     };
     window.emit("to_js", &payload).ok();
+}
+
+fn sync_config_ui(state: &AppState, window: &tauri::WebviewWindow) {
+    let cfg = state.cfg.lock().clone();
+    if let Ok(json) = serde_json::to_string(&cfg) {
+        window
+            .eval(&format!(
+                "window.__vp_bridge__('mvp_init', {{config:{}}})",
+                json
+            ))
+            .ok();
+    }
+}
+
+fn persist_and_rebind(state: &AppState, window: &tauri::WebviewWindow, last_action: &str) {
+    let cfg = state.cfg.lock().clone();
+    config::save_config(&cfg);
+    config::apply_config(state, &cfg);
+    sync_config_ui(state, window);
+    push_runtime(state, window, last_action, "");
 }
 
 #[tauri::command]
 pub fn cmd_ready(state: tauri::State<Arc<AppState>>, window: tauri::WebviewWindow) {
     let cfg = state.cfg.lock().clone();
     let json = serde_json::to_string(&cfg).unwrap();
-    window.eval(&format!("window.__vp_bridge__('mvp_init', {{config:{}}})", json)).ok();
-    push_runtime(&state, &window, "config_push");
+    window
+        .eval(&format!(
+            "window.__vp_bridge__('mvp_init', {{config:{}}})",
+            json
+        ))
+        .ok();
+    push_runtime(&state, &window, "config_push", "");
 }
 
 #[tauri::command]
 pub fn cmd_save(state: tauri::State<Arc<AppState>>, window: tauri::WebviewWindow, json: String) {
-    if let Ok(mut cfg) = serde_json::from_str::<config::VoiceConfig>(&json) {
+    if let Ok(mut cfg) = serde_json::from_str::<VoiceConfig>(&json) {
+        cfg.migrate();
         cfg.normalize();
         config::save_config(&cfg);
-        if let Some(ref mgr) = *state.hotkey_mgr.lock() {
-            mgr.bind_all(&cfg.bindings());
-        }
-        *state.cfg.lock() = cfg;
-        state.machine.lock().reset();
-        push_runtime(&state, &window, "saved");
+        config::apply_config(&state, &cfg);
+        *state.cfg.lock() = cfg.clone();
+        sync_config_ui(&state, &window);
+        state.machine_pool.lock().reset_all();
+        push_runtime(&state, &window, "saved", "");
         let ack = serde_json::json!({"type":"mvp_saved","ok":true});
         window.emit("to_js", &ack).ok();
     }
 }
 
 #[tauri::command]
-pub fn cmd_start_recording(state: tauri::State<Arc<AppState>>) {
-    state.machine.lock().reset();
+pub fn cmd_start_recording(
+    state: tauri::State<Arc<AppState>>,
+    mapping_id: String,
+    mode: String,
+) {
+    state.machine_pool.lock().reset_all();
+    let record_mode = if mode == "target" {
+        RecordMode::Target
+    } else {
+        RecordMode::Trigger
+    };
+    *state.recording_target.lock() = Some(RecordingTarget {
+        mapping_id,
+        mode: record_mode,
+    });
     *state.recording.lock() = true;
     if let Some(ref mgr) = *state.hotkey_mgr.lock() {
         mgr.start_recording();
@@ -94,19 +138,23 @@ pub fn cmd_start_recording(state: tauri::State<Arc<AppState>>) {
 #[tauri::command]
 pub fn cmd_stop_recording(state: tauri::State<Arc<AppState>>) {
     *state.recording.lock() = false;
+    *state.recording_target.lock() = None;
     if let Some(ref mgr) = *state.hotkey_mgr.lock() {
         mgr.stop_recording();
+        let bindings = state.cfg.lock().bindings();
+        mgr.bind_all(&bindings);
     }
 }
 
 #[tauri::command]
 pub fn cmd_pause(state: tauri::State<Arc<AppState>>, window: tauri::WebviewWindow) {
-    state.machine.lock().reset();
+    state.machine_pool.lock().reset_all();
     *state.recording.lock() = false;
+    *state.recording_target.lock() = None;
     *state.paused.lock() = true;
     let ack = serde_json::json!({"type":"mvp_paused","ok":true});
     window.emit("to_js", &ack).ok();
-    push_runtime(&state, &window, "paused");
+    push_runtime(&state, &window, "paused", "");
 }
 
 #[tauri::command]
@@ -114,38 +162,129 @@ pub fn cmd_resume(state: tauri::State<Arc<AppState>>, window: tauri::WebviewWind
     *state.paused.lock() = false;
     let ack = serde_json::json!({"type":"mvp_resumed","ok":true});
     window.emit("to_js", &ack).ok();
-    push_runtime(&state, &window, "resumed");
+    push_runtime(&state, &window, "resumed", "");
 }
 
 #[tauri::command]
-pub fn cmd_capture_source(
+pub fn cmd_mapping_toggle(
     state: tauri::State<Arc<AppState>>,
     window: tauri::WebviewWindow,
-    raw_events: Vec<config::RawEvent>,
+    id: String,
+    enabled: bool,
 ) {
-    let source = config::TriggerSource {
-        id: "source_captured".into(),
-        label: raw_events.first().map(|r| r.label.clone()).filter(|s| !s.is_empty()).unwrap_or_else(|| "已录制触发源".into()),
-        mode: "single_press".into(),
-        grouping: "exact".into(),
-        raw_events,
-    };
-    let mut cfg = state.cfg.lock();
-    cfg.trigger_source = Some(source.clone());
-    cfg.record_key = source.label.clone();
-    cfg.normalize();
-    config::save_config(&cfg);
-    if let Some(ref mgr) = *state.hotkey_mgr.lock() {
-        mgr.bind_all(&cfg.bindings());
+    let mut disabled_ids = Vec::new();
+    {
+        let mut cfg = state.cfg.lock();
+        if enabled {
+            disabled_ids = cfg.enable_mapping(&id);
+        } else {
+            cfg.disable_mapping(&id);
+        }
+        cfg.normalize();
     }
-    let payload = serde_json::json!({"type":"mvp_source_captured","source":source});
-    window.emit("to_js", &payload).ok();
-    push_runtime(&state, &window, "runtime_refresh");
+    persist_and_rebind(&state, &window, "mapping_toggled");
+    let ack = serde_json::json!({
+        "type": "mvp_mapping_toggled",
+        "ok": true,
+        "id": id,
+        "enabled": enabled,
+        "autoDisabled": disabled_ids,
+    });
+    window.emit("to_js", &ack).ok();
+}
+
+#[tauri::command]
+pub fn cmd_mapping_delete(
+    state: tauri::State<Arc<AppState>>,
+    window: tauri::WebviewWindow,
+    id: String,
+) {
+    let mut cfg = state.cfg.lock();
+    if cfg.mappings.len() <= 1 {
+        let ack = serde_json::json!({"type":"mvp_mapping_delete","ok":false,"reason":"last_mapping"});
+        window.emit("to_js", &ack).ok();
+        return;
+    }
+    cfg.mappings.retain(|m| m.id != id);
+    cfg.normalize();
+    drop(cfg);
+    persist_and_rebind(&state, &window, "mapping_deleted");
+    let ack = serde_json::json!({"type":"mvp_mapping_delete","ok":true,"id":id});
+    window.emit("to_js", &ack).ok();
+}
+
+#[tauri::command]
+pub fn cmd_mapping_duplicate(
+    state: tauri::State<Arc<AppState>>,
+    window: tauri::WebviewWindow,
+    id: String,
+) {
+    let mut new_id = String::new();
+    {
+        let mut cfg = state.cfg.lock();
+        if let Some(src) = cfg.mappings.iter().find(|m| m.id == id).cloned() {
+            new_id = new_mapping_id();
+            let order = cfg.mappings.len() as u32;
+            cfg.mappings.push(MappingEntry {
+                id: new_id.clone(),
+                label: format!("{}（副本）", src.display_label()),
+                group: src.group,
+                trigger_key: src.trigger_key,
+                target_key: src.target_key,
+                enabled: false,
+                order,
+                trigger_mode: src.trigger_mode,
+                trigger_source: src.trigger_source,
+            });
+            cfg.normalize();
+        }
+    }
+    persist_and_rebind(&state, &window, "mapping_duplicated");
+    let ack = serde_json::json!({"type":"mvp_mapping_duplicated","ok":true,"id":new_id});
+    window.emit("to_js", &ack).ok();
+}
+
+#[tauri::command]
+pub fn cmd_mapping_reorder(
+    state: tauri::State<Arc<AppState>>,
+    window: tauri::WebviewWindow,
+    ordered_ids: Vec<String>,
+) {
+    {
+        let mut cfg = state.cfg.lock();
+        for (i, oid) in ordered_ids.iter().enumerate() {
+            if let Some(m) = cfg.mappings.iter_mut().find(|m| &m.id == oid) {
+                m.order = i as u32;
+            }
+        }
+        cfg.mappings.sort_by_key(|m| m.order);
+    }
+    persist_and_rebind(&state, &window, "mapping_reordered");
+}
+
+#[tauri::command]
+pub fn cmd_mapping_set_group(
+    state: tauri::State<Arc<AppState>>,
+    window: tauri::WebviewWindow,
+    id: String,
+    group: String,
+) {
+    {
+        let mut cfg = state.cfg.lock();
+        if let Some(m) = cfg.mappings.iter_mut().find(|m| m.id == id) {
+            m.group = if group.trim().is_empty() {
+                "默认".into()
+            } else {
+                group
+            };
+        }
+    }
+    persist_and_rebind(&state, &window, "mapping_group_set");
 }
 
 #[tauri::command]
 pub fn cmd_request_runtime(state: tauri::State<Arc<AppState>>, window: tauri::WebviewWindow) {
-    push_runtime(&state, &window, "runtime_refresh");
+    push_runtime(&state, &window, "runtime_refresh", "");
 }
 
 #[tauri::command]
@@ -153,6 +292,8 @@ pub fn cmd_frontend_keydown(
     state: tauri::State<Arc<AppState>>,
     window: tauri::WebviewWindow,
     key: String,
+    mapping_id: String,
+    mode: String,
 ) {
     if !*state.recording.lock() {
         return;
@@ -161,20 +302,95 @@ pub fn cmd_frontend_keydown(
         return;
     }
 
-    let captured = normalize_record_key(&key);
-    {
-        let mut cfg = state.cfg.lock();
-        cfg.record_key = if captured == "AutoTrigger" { "AutoTrigger".into() } else { captured.clone() };
-        cfg.normalize();
-        config::save_config(&cfg);
-        if let Some(ref mgr) = *state.hotkey_mgr.lock() {
-            mgr.stop_recording();
-            mgr.bind_all(&cfg.bindings());
+    let is_target = mode == "target";
+    if !is_target {
+        let captured = normalize_record_key(&key);
+        if !is_allowed_trigger(&captured) {
+            let ack = serde_json::json!({
+                "type": "mvp_record_rejected",
+                "reason": "trigger_not_allowed",
+                "key": captured,
+            });
+            window.emit("to_js", &ack).ok();
+            return;
         }
+        {
+            let mut cfg = state.cfg.lock();
+            if let Some(m) = cfg.mappings.iter_mut().find(|m| m.id == mapping_id) {
+                m.trigger_key = captured.clone();
+                m.label = format!("{} → {}", captured, m.target_key);
+            }
+            cfg.normalize();
+        }
+    } else {
+        let mut cfg = state.cfg.lock();
+        if let Some(m) = cfg.mappings.iter_mut().find(|m| m.id == mapping_id) {
+            m.target_key = key.clone();
+            m.label = format!("{} → {}", m.trigger_key, key);
+        }
+        cfg.normalize();
     }
+
     *state.recording.lock() = false;
-    let ack = serde_json::json!({"type":"mvp_key_captured","key":captured});
+    *state.recording_target.lock() = None;
+    if let Some(ref mgr) = *state.hotkey_mgr.lock() {
+        mgr.stop_recording();
+    }
+    persist_and_rebind(&state, &window, "recorded");
+
+    let captured_key = if is_target {
+        key
+    } else {
+        normalize_record_key(&key)
+    };
+    let ack = serde_json::json!({
+        "type": "mvp_key_captured",
+        "key": captured_key,
+        "mappingId": mapping_id,
+        "mode": mode,
+    });
     window.emit("to_js", &ack).ok();
-    push_runtime(&state, &window, "recorded");
 }
 
+pub fn finish_hardware_capture(state: &AppState, window: &tauri::WebviewWindow, key: &str) {
+    let target = state.recording_target.lock().clone();
+    let Some(target) = target else {
+        return;
+    };
+
+    if matches!(target.mode, RecordMode::Trigger) {
+        let captured = normalize_record_key(key);
+        if !is_allowed_trigger(&captured) {
+            let ack = serde_json::json!({
+                "type": "mvp_record_rejected",
+                "reason": "trigger_not_allowed",
+                "key": captured,
+            });
+            window.emit("to_js", &ack).ok();
+            return;
+        }
+        {
+            let mut cfg = state.cfg.lock();
+            if let Some(m) = cfg.mappings.iter_mut().find(|m| m.id == target.mapping_id) {
+                m.trigger_key = captured.clone();
+                m.label = format!("{} → {}", captured, m.target_key);
+            }
+            cfg.normalize();
+        }
+    }
+
+    *state.recording.lock() = false;
+    *state.recording_target.lock() = None;
+    if let Some(ref mgr) = *state.hotkey_mgr.lock() {
+        mgr.stop_recording();
+    }
+    persist_and_rebind(state, window, "recorded");
+
+    let ack = serde_json::json!({
+        "type": "mvp_key_captured",
+        "key": normalize_record_key(key),
+        "mappingId": target.mapping_id,
+        "mode": "trigger",
+    });
+    window.emit("to_js", &ack).ok();
+}

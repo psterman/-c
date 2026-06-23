@@ -7,39 +7,62 @@
   <style>
     :root{
       --bg:#f4f6fb;
+      --bg2:#eef3fb;
       --card:#ffffff;
       --line:#dce4f2;
       --text:#0f172a;
       --muted:#667085;
       --accent:#1677ff;
       --accent-soft:#eaf2ff;
+      --display-bg:linear-gradient(180deg,#eef5ff,#e5f0ff);
+      --display-border:#cfe0ff;
+      --display-empty:#8aa4d8;
+      --green:#17a34a;
+      --red:#cf3f3f;
       --shadow:0 18px 40px rgba(22,36,72,.08);
       font-family:"SF Pro Text","PingFang SC","Microsoft YaHei UI",system-ui,sans-serif;
     }
+    html[data-theme="dark"]{
+      --bg:#1c1c1e;
+      --bg2:#111315;
+      --card:#2c2c2e;
+      --line:#3a3a3c;
+      --text:#f5f5f7;
+      --muted:#a1a1a6;
+      --accent:#4da6ff;
+      --accent-soft:rgba(77,166,255,.14);
+      --display-bg:linear-gradient(180deg,rgba(77,166,255,.12),rgba(77,166,255,.06));
+      --display-border:rgba(77,166,255,.28);
+      --display-empty:#7a8fb8;
+      --shadow:0 10px 28px rgba(0,0,0,.25);
+    }
     *{box-sizing:border-box}
-    html,body{margin:0;height:100%;background:linear-gradient(180deg,#f8fbff,#eef3fb);color:var(--text)}
+    html,body{margin:0;height:100%;background:linear-gradient(180deg,var(--bg),var(--bg2));color:var(--text)}
     body{overflow:auto}
     .app{min-height:100%;padding:20px}
     .shell{max-width:1120px;margin:0 auto}
-    .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+    .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;gap:12px}
     .brand{font-size:18px;font-weight:800;letter-spacing:-.02em}
-    .save{font-size:12px;color:var(--muted)}
+    .topbar-right{display:flex;align-items:center;gap:10px}
+    .chips{display:flex;gap:6px}
+    .chip-btn{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:4px 10px;font-size:12px;color:var(--text);cursor:pointer;font:inherit}
+    .save{font-size:12px;color:var(--muted);white-space:nowrap}
     .grid{display:grid;grid-template-columns:1fr 72px 1fr;gap:16px;align-items:center}
-    .arrow{font-size:34px;color:#7f8aa3;text-align:center;user-select:none}
+    .arrow{font-size:34px;color:var(--muted);text-align:center;user-select:none}
     .card{background:var(--card);border:1px solid var(--line);border-radius:26px;box-shadow:var(--shadow);padding:16px 16px 14px;min-height:290px}
     .card-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
     .title{font-size:16px;font-weight:800}
     .badge{font-size:12px;font-weight:700;color:var(--accent);background:var(--accent-soft);padding:4px 10px;border-radius:999px}
-    .display{border:1px solid #cfe0ff;background:linear-gradient(180deg,#eef5ff,#e5f0ff);border-radius:18px;min-height:74px;display:flex;align-items:center;justify-content:center;text-align:center;font-size:32px;font-weight:800;color:var(--accent);letter-spacing:-.03em;padding:12px}
-    .display.empty{color:#8aa4d8;font-size:18px;font-weight:700}
+    .display{border:1px solid var(--display-border);background:var(--display-bg);border-radius:18px;min-height:74px;display:flex;align-items:center;justify-content:center;text-align:center;font-size:32px;font-weight:800;color:var(--accent);letter-spacing:-.03em;padding:12px}
+    .display.empty{color:var(--display-empty);font-size:18px;font-weight:700}
     .actions{margin-top:12px;display:grid;gap:10px}
-    .btn{height:48px;border-radius:999px;border:1px solid var(--line);background:#fff;font:inherit;font-size:15px;cursor:pointer}
+    .btn{height:48px;border-radius:999px;border:1px solid var(--line);background:var(--card);color:var(--text);font:inherit;font-size:15px;cursor:pointer}
     .btn.primary{background:linear-gradient(180deg,#1e84ff,#0f6cf5);border-color:#0f6cf5;color:#fff;font-weight:800;box-shadow:0 10px 22px rgba(15,108,245,.20)}
-    .btn.secondary{background:#fff;color:var(--text)}
+    .btn.secondary{background:var(--card);color:var(--text)}
     .help{margin-top:10px;font-size:13px;line-height:1.6;color:var(--muted);text-align:center;min-height:42px}
     .help strong{color:var(--text)}
     .state{margin-top:6px;text-align:center;font-size:13px;color:var(--accent);font-weight:700;min-height:20px}
-    .mapping{margin:14px 0 0;padding:12px 14px;border:1px solid var(--line);border-radius:18px;background:#fff}
+    .mapping{margin:14px 0 0;padding:12px 14px;border:1px solid var(--line);border-radius:18px;background:var(--card)}
     .mapping .label{font-size:12px;color:var(--muted);margin-bottom:6px}
     .mapping .pair{font-size:22px;font-weight:800;color:var(--text);letter-spacing:-.02em}
     .mapping .pair span{color:var(--accent)}
@@ -49,12 +72,46 @@
     .adv-body{padding-top:12px;display:grid;gap:14px}
     .mini-title{margin:0 0 8px;font-size:14px;font-weight:800}
     .mini{margin:0;color:var(--muted);font-size:13px;line-height:1.65}
-    .log{margin:0;padding:10px 0 0;border-top:1px solid var(--line);white-space:pre-wrap;word-break:break-word;font:12px/1.55 Consolas,monospace;min-height:70px;color:#334155}
+    .log{margin:0;padding:10px 0 0;border-top:1px solid var(--line);white-space:pre-wrap;word-break:break-word;font:12px/1.55 Consolas,monospace;min-height:70px;color:var(--muted)}
     .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
     .item{border-top:1px solid var(--line);padding-top:10px;display:flex;justify-content:space-between;gap:10px;font-size:13px}
     .chip{padding:2px 8px;border-radius:999px;background:var(--accent-soft);color:var(--accent);font-weight:700}
     .clear-panel{margin-top:10px;display:flex;justify-content:flex-end}
-    .clear-btn{border:none;background:transparent;color:#cf3f3f;font-weight:800;cursor:pointer;padding:0}
+    .clear-btn{border:none;background:transparent;color:var(--red);font-weight:800;cursor:pointer;padding:0}
+    .list-card{margin:16px 0;padding:14px 16px;border:1px solid var(--line);border-radius:22px;background:var(--card);box-shadow:var(--shadow);overflow:visible}
+    #mappingList{overflow:visible}
+    .list-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+    .list-head h2{margin:0;font-size:16px;font-weight:800}
+    .list-add{height:36px;padding:0 14px;border-radius:999px;border:1px solid var(--line);background:var(--card);color:var(--text);font:inherit;font-size:13px;font-weight:700;cursor:pointer}
+    .map-row{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:14px;margin-bottom:8px;cursor:pointer;background:var(--card);position:relative;z-index:1}
+    .map-row.menu-open{z-index:40}
+    .map-row.selected{border-color:var(--accent);background:var(--accent-soft)}
+    .map-row.disabled{opacity:.72}
+    .map-main{flex:1;min-width:0}
+    .map-pair{font-size:15px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .map-meta{font-size:12px;color:var(--muted);margin-top:2px}
+    .toggle{width:44px;height:26px;border-radius:999px;background:#cfd5dd;position:relative;flex-shrink:0;box-shadow:inset 0 1px 2px rgba(0,0,0,.08);cursor:pointer}
+    .toggle.on{background:var(--green)}
+    .toggle::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:.18s;box-shadow:0 1px 2px rgba(0,0,0,.22)}
+    .toggle.on::after{left:20px}
+    .map-del{flex-shrink:0;width:32px;height:32px;border-radius:8px;border:1px solid var(--line);background:var(--card);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--red);padding:0;font-size:18px;font-weight:800;line-height:1}
+    .map-del:hover{background:rgba(207,63,63,.08);border-color:rgba(207,63,63,.25)}
+    .map-menu{position:relative;flex-shrink:0}
+    .map-menu-btn{width:32px;height:32px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--text);cursor:pointer;font-size:16px;line-height:1}
+    .map-menu-float{position:fixed;min-width:148px;background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:0 12px 32px rgba(15,23,42,.18);padding:6px;z-index:200;display:none}
+    .map-menu-float.open{display:block}
+    .map-menu-float button{display:block;width:100%;text-align:left;border:none;background:transparent;color:var(--text);padding:8px 10px;font:inherit;font-size:13px;border-radius:8px;cursor:pointer}
+    .map-menu-float button:hover{background:var(--accent-soft)}
+    .map-menu-float button:disabled{opacity:.45;cursor:not-allowed}
+    .trash-box{border-top:1px solid var(--line);padding-top:12px}
+    .trash-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:13px}
+    .trash-row:last-child{border-bottom:none}
+    .trash-restore{height:30px;padding:0 12px;border-radius:999px;border:1px solid var(--line);background:var(--card);color:var(--text);font:inherit;font-size:12px;font-weight:700;cursor:pointer}
+    .trash-empty{color:var(--muted);font-size:13px;margin:0}
+    .editor-wrap{margin-bottom:16px}
+    .editor-wrap.hidden{display:none}
+    .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#0f172a;color:#fff;padding:10px 16px;border-radius:999px;font-size:13px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:99}
+    .toast.show{opacity:1}
     @media (max-width: 980px){
       .grid{grid-template-columns:1fr;gap:12px}
       .arrow{transform:rotate(90deg);font-size:28px}
@@ -67,14 +124,21 @@
   <div class="app">
     <div class="shell">
       <div class="topbar">
-        <div class="brand">语音启动设置</div>
-        <div class="save" id="saveState">已自动保存</div>
+        <div class="brand" id="appTitle">语音启动设置</div>
+        <div class="topbar-right">
+          <div class="chips">
+            <button class="chip-btn" id="btnTheme" type="button" title="主题">☀</button>
+            <button class="chip-btn" id="btnLang" type="button" title="语言">中</button>
+          </div>
+          <div class="save" id="saveState">已自动保存</div>
+        </div>
       </div>
 
+      <div class="editor-wrap" id="editorWrap">
       <div class="grid">
         <section class="card" id="leftCard">
           <div class="card-head">
-            <div class="title">录制触发键</div>
+            <div class="title" id="triggerTitle">录制触发键</div>
             <div class="badge" id="leftBadge">等待按键…</div>
           </div>
           <div class="display empty" id="triggerView">点击录制触发键</div>
@@ -89,7 +153,7 @@
 
         <section class="card" id="rightCard">
           <div class="card-head">
-            <div class="title">设置目标键</div>
+            <div class="title" id="targetTitle">设置目标键</div>
             <div class="badge" id="rightBadge">等待按键…</div>
           </div>
           <div class="display empty" id="targetView">点击录制目标键</div>
@@ -100,44 +164,59 @@
           <div class="state" id="targetState">等待按键…</div>
         </section>
       </div>
-
-      <div class="mapping">
-        <div class="label">映射关系</div>
-        <div class="pair" id="mappingView">AutoTrigger <span>→</span> RAlt</div>
       </div>
 
+      <section class="list-card">
+        <div class="list-head">
+          <h2 id="mappingListTitle">快捷键映射</h2>
+          <button class="list-add" id="btnAddMapping" type="button">+ 添加</button>
+        </div>
+        <div id="mappingList"></div>
+      </section>
+
       <details class="advanced">
-        <summary><span>高级</span><span class="chip" id="listenState">监听中</span></summary>
+        <summary><span id="advTitle">高级</span><span class="chip" id="listenState">监听中</span></summary>
         <div class="adv-body">
           <div>
-            <div class="mini-title">事件日志</div>
+            <div class="mini-title" id="logTitle">事件日志</div>
             <pre class="log" id="rawEventLog">等待录制…</pre>
           </div>
           <div>
-            <div class="mini-title">运行解释</div>
+            <div class="mini-title" id="runtimeTitle">运行解释</div>
             <div class="row2">
               <div class="item"><span>key</span><span id="dbKey">-</span></div>
               <div class="item"><span>code</span><span id="dbCode">-</span></div>
-              <div class="item"><span>动作</span><span id="liveAction">-</span></div>
-              <div class="item"><span>发送</span><span id="liveTimer">-</span></div>
+              <div class="item"><span id="actionLabel">动作</span><span id="liveAction">-</span></div>
+              <div class="item"><span id="sendLabel">发送</span><span id="liveTimer">-</span></div>
             </div>
           </div>
           <div>
-            <div class="mini-title">当前源组</div>
+            <div class="mini-title" id="sourceTitle">当前源组</div>
             <pre class="log" id="sourceExplain">source: 右 Alt
 grouping: exact
 events:
 - key=Alt code=AltRight hotkey=RAlt</pre>
           </div>
           <div>
-            <div class="mini-title">说明</div>
-            <p class="mini">录制真实按钮，状态机只接管动作，不接管用户的命名方式。清除当前设置放在这里，避免首页干扰。</p>
-            <div class="clear-panel"><button class="clear-btn" id="btnClear">清除当前设置</button></div>
+            <div class="mini-title" id="noteTitle">说明</div>
+            <p class="mini" id="noteText">录制真实按钮，状态机只接管动作，不接管用户的命名方式。清除当前设置放在这里，避免首页干扰。</p>
+            <div class="clear-panel"><button class="clear-btn" id="btnClearAll">清除全部映射</button></div>
+          </div>
+          <div class="trash-box">
+            <div class="mini-title" id="trashTitle">回收站</div>
+            <p class="trash-empty" id="trashEmpty">暂无已删除的映射</p>
+            <div id="trashList"></div>
           </div>
         </div>
       </details>
     </div>
   </div>
+  <div class="map-menu-float" id="mapMenuFloat">
+    <button type="button" data-act="dup" id="menuActDup"></button>
+    <button type="button" data-act="up" id="menuActUp"></button>
+    <button type="button" data-act="down" id="menuActDown"></button>
+  </div>
+  <div class="toast" id="toast"></div>
 
   <script>
   (function(){
@@ -148,12 +227,16 @@ events:
       const type=msg&&msg.type;
       if(type==='mvp_ready')invoke('cmd_ready',{});
       else if(type==='mvp_save')invoke('cmd_save',{json:msg.json||'{}'});
-      else if(type==='mvp_start_recording')invoke('cmd_start_recording',{});
+      else if(type==='mvp_start_recording')invoke('cmd_start_recording',{mapping_id:msg.mappingId||'',mode:msg.mode||'trigger'});
       else if(type==='mvp_stop_recording')invoke('cmd_stop_recording',{});
+      else if(type==='mvp_mapping_toggle')invoke('cmd_mapping_toggle',{id:msg.id,enabled:!!msg.enabled});
+      else if(type==='mvp_mapping_delete')invoke('cmd_mapping_delete',{id:msg.id});
+      else if(type==='mvp_mapping_duplicate')invoke('cmd_mapping_duplicate',{id:msg.id});
+      else if(type==='mvp_mapping_reorder')invoke('cmd_mapping_reorder',{ordered_ids:msg.orderedIds||[]});
+      else if(type==='mvp_mapping_set_group')invoke('cmd_mapping_set_group',{id:msg.id,group:msg.group||''});
       else if(type==='mvp_pause')invoke('cmd_pause',{});
       else if(type==='mvp_resume')invoke('cmd_resume',{});
-      else if(type==='mvp_capture_source')invoke('cmd_capture_source',{raw_events:msg.rawEvents||[]});
-      else if(type==='mvp_frontend_keydown')invoke('cmd_frontend_keydown',{key:msg.key||''});
+      else if(type==='mvp_frontend_keydown')invoke('cmd_frontend_keydown',{key:msg.key||'',mapping_id:msg.mappingId||'',mode:msg.mode||'trigger'});
     };
     window.chrome.webview.addEventListener=function(event,cb){ if(!listeners[event]) listeners[event]=[]; listeners[event].push(cb); };
     window.__vp_bridge__=function(type,data){ const event={data:Object.assign({type:type},data||{})}; (listeners.message||[]).forEach(function(cb){ try{cb(event);}catch(e){} }); };
@@ -168,17 +251,163 @@ events:
 
   <script>
   const $=id=>document.getElementById(id);
-  const state={triggerKey:'AutoTrigger',targetKey:'RAlt'};
+  const state={config:null,selectedMappingId:null};
   const runtime={lastAction:'-',timerActive:false,paused:false};
   const logLines=[];
   let recordingMode='none';
   let recordTimer=0;
+  let openMenuId=null;
+  let menuAnchorBtn=null;
+  let theme='light';
+  let lang='zh';
   const targetCapture={pendingModifier:'',mods:{ctrl:false,shift:false,alt:false,meta:false},modSide:{ctrl:'',shift:'',alt:'',meta:''}};
+  const I18N={
+    zh:{
+      appTitle:'语音启动设置',saved:'已自动保存',recordingSave:'正在录制…',
+      mappingListTitle:'快捷键映射',addMapping:'+ 添加',
+      triggerTitle:'录制触发键',targetTitle:'设置目标键',
+      btnRecordTrigger:'录制触发键',btnRecordTarget:'录制目标键',
+      triggerPlaceholder:'点击录制触发键',targetPlaceholder:'点击录制目标键',
+      triggerHelp:'点击后，请按下您的设备按键。<br>备注：这是蓝牙外设的真实按键，不改名字，只做记录。',
+      targetHelp:'点击后，请按下您的语音输入快捷键（支持键盘、媒体键、鼠标侧键）。<br>备注：请先退出/切换语音输入法，避免冲突或无法录制；也可在配置里手写如 Volume_Up、LButton、Ctrl+Shift。',
+      waitingKey:'等待按键…',recordingBadge:'正在录制…',recordedBadge:'已录制',setBadge:'已设置',
+      triggerRecordHint:'请按下设备/白名单触发键',targetRecordHint:'请按下语音输入快捷键',
+      comboHint:'等待组合键…',enabled:'启用',disabled:'停用',
+      duplicate:'复制',moveUp:'上移',moveDown:'下移',delete:'删除',
+      confirmDelete:'要删除这条快捷键吗？\n\n删除后会先放进下方「高级 → 回收站」，需要时还能恢复。',
+      confirmClear:'确定清除全部映射并恢复默认？',
+      movedToTrash:'已移入回收站，可在「高级」中恢复',
+      trashTitle:'回收站',trashEmpty:'暂无已删除的映射',trashRestore:'恢复',
+      advTitle:'高级',listenOn:'监听中',listenPaused:'已暂停监听',
+      logTitle:'事件日志',runtimeTitle:'运行解释',actionLabel:'动作',sendLabel:'发送',
+      sourceTitle:'当前源组',noteTitle:'说明',
+      noteText:'录制真实按钮，状态机只接管动作，不接管用户的命名方式。清除当前设置放在这里，避免首页干扰。',
+      clearAll:'清除全部映射',      waitLog:'等待录制…',
+      triggerRejected:'未能识别该按键，请再试一次',
+      whitelistRejected:'未能识别该按键，请再试一次',conflictDisabled:'已停用冲突映射',
+      restoredDefault:'已恢复默认映射',logStartTrigger:'开始录制触发键...',logStartTarget:'开始录制目标键...',
+      logTimeout:'录制超时',logTriggerDone:'已录制触发键: ',logTargetDone:'已录制目标键: ',logWaitMain:'等待按下主键...'
+    },
+    en:{
+      appTitle:'Voice Launch Settings',saved:'Auto-saved',recordingSave:'Recording…',
+      mappingListTitle:'Shortcut Mappings',addMapping:'+ Add',
+      triggerTitle:'Record Trigger Key',targetTitle:'Set Target Key',
+      btnRecordTrigger:'Record Trigger',btnRecordTarget:'Record Target',
+      triggerPlaceholder:'Tap to record trigger',targetPlaceholder:'Tap to record target',
+      triggerHelp:'After tapping, press your device button.<br>Note: we record the real Bluetooth key as-is.',
+      targetHelp:'After tapping, press your voice-input shortcut (keyboard, media, mouse side buttons).<br>Note: switch away from the IME first to avoid conflicts; you can also type values like Volume_Up, LButton, Ctrl+Shift.',
+      waitingKey:'Waiting for key…',recordingBadge:'Recording…',recordedBadge:'Recorded',setBadge:'Set',
+      triggerRecordHint:'Press device / whitelist trigger key',targetRecordHint:'Press voice-input shortcut',
+      comboHint:'Waiting for combo…',enabled:'On',disabled:'Off',
+      duplicate:'Duplicate',moveUp:'Move up',moveDown:'Move down',delete:'Delete',
+      confirmDelete:'Remove this shortcut?\n\nIt will go to Advanced → Recycle Bin and you can restore it later.',
+      confirmClear:'Clear all mappings and restore default?',
+      movedToTrash:'Moved to recycle bin (see Advanced)',
+      trashTitle:'Recycle Bin',trashEmpty:'No deleted mappings',trashRestore:'Restore',
+      advTitle:'Advanced',listenOn:'Listening',listenPaused:'Paused',
+      logTitle:'Event Log',runtimeTitle:'Live Status',actionLabel:'Action',sendLabel:'Send',
+      sourceTitle:'Source Group',noteTitle:'Note',
+      noteText:'Record the real button; the state machine handles actions, not naming. Clear-all stays here to keep the homepage clean.',
+      clearAll:'Clear all mappings',      waitLog:'Waiting to record…',
+      triggerRejected:'Could not recognize that key — please try again',
+      whitelistRejected:'Could not recognize that key — please try again',conflictDisabled:'Conflicting mappings disabled',
+      restoredDefault:'Default mapping restored',logStartTrigger:'Start recording trigger...',logStartTarget:'Start recording target...',
+      logTimeout:'Recording timed out',logTriggerDone:'Trigger recorded: ',logTargetDone:'Target recorded: ',logWaitMain:'Waiting for main key...'
+    }
+  };
+
+  function t(key){ return (I18N[lang]&&I18N[lang][key])||key; }
+
+  function applyTheme(){
+    document.documentElement.setAttribute('data-theme',theme);
+    $('btnTheme').textContent=theme==='light'?'☀':'☾';
+    try{ localStorage.setItem('vp_theme',theme); }catch(_){ }
+  }
+
+  function applyLang(){
+    const d=I18N[lang];
+    $('appTitle').textContent=d.appTitle;
+    $('mappingListTitle').textContent=d.mappingListTitle;
+    $('btnAddMapping').textContent=d.addMapping;
+    $('triggerTitle').textContent=d.triggerTitle;
+    $('targetTitle').textContent=d.targetTitle;
+    $('btnRecordTrigger').textContent=d.btnRecordTrigger;
+    $('btnRecordTarget').textContent=d.btnRecordTarget;
+    $('triggerHelp').innerHTML=d.triggerHelp;
+    $('targetHelp').innerHTML=d.targetHelp;
+    $('advTitle').textContent=d.advTitle;
+    $('logTitle').textContent=d.logTitle;
+    $('runtimeTitle').textContent=d.runtimeTitle;
+    $('actionLabel').textContent=d.actionLabel;
+    $('sendLabel').textContent=d.sendLabel;
+    $('sourceTitle').textContent=d.sourceTitle;
+    $('noteTitle').textContent=d.noteTitle;
+    $('noteText').textContent=d.noteText;
+    $('btnClearAll').textContent=d.clearAll;
+    $('trashTitle').textContent=d.trashTitle;
+    $('trashEmpty').textContent=d.trashEmpty;
+    $('menuActDup').textContent=d.duplicate;
+    $('menuActUp').textContent=d.moveUp;
+    $('menuActDown').textContent=d.moveDown;
+    $('btnLang').textContent=lang==='zh'?'中':'EN';
+    if(recordingMode==='none') setRecording('none');
+    render();
+    try{ localStorage.setItem('vp_lang',lang); }catch(_){ }
+  }
+
+  function toast(msg){
+    const el=$('toast');
+    el.textContent=msg;
+    el.classList.add('show');
+    clearTimeout(el._t);
+    el._t=setTimeout(function(){el.classList.remove('show');},2200);
+  }
+
+  function newMappingId(){ return 'm-'+Date.now()+'-'+Math.random().toString(36).slice(2,7); }
+
+  function defaultConfig(){
+    const id=newMappingId();
+    return {version:3,mappings:[{id:id,label:'AutoTrigger → RAlt',group:'默认',triggerKey:'AutoTrigger',targetKey:'RAlt',enabled:true,order:0,triggerMode:'tap'}],trash:[],intervalMs:1200,enterDelayMs:5000,cancelEnabled:true,autoEnterEnabled:true,debounceMs:80,keyPressDurationMs:250};
+  }
+
+  function ensureConfig(){
+    if(!state.config||!Array.isArray(state.config.mappings)) state.config=defaultConfig();
+    if(!Array.isArray(state.config.trash)) state.config.trash=[];
+    if(!state.config.mappings.length){
+      const id=newMappingId();
+      state.config.mappings.push({id:id,label:'',group:'默认',triggerKey:'',targetKey:'',enabled:false,order:0,triggerMode:'tap'});
+    }
+    if(!state.selectedMappingId) state.selectedMappingId=state.config.mappings[0].id;
+  }
+
+  function selectedMapping(){
+    ensureConfig();
+    return state.config.mappings.find(function(m){return m.id===state.selectedMappingId;})||state.config.mappings[0];
+  }
+
+  function buildSavePayload(){
+    ensureConfig();
+    return JSON.stringify({
+      version:3,
+      mappings:state.config.mappings.map(function(m,i){
+        return {id:m.id,label:m.label||((m.triggerKey||'?')+' → '+(m.targetKey||'?')),group:m.group||'默认',triggerKey:m.triggerKey||'AutoTrigger',targetKey:m.targetKey||'RAlt',enabled:!!m.enabled,order:i,triggerMode:m.triggerMode||'tap',triggerSource:m.triggerSource||null};
+      }),
+      trash:(state.config.trash||[]).map(function(m){
+        return {id:m.id,label:m.label||'',group:m.group||'默认',triggerKey:m.triggerKey||'',targetKey:m.targetKey||'',enabled:false,order:m.order||0,triggerMode:m.triggerMode||'tap',triggerSource:m.triggerSource||null};
+      }),
+      intervalMs:state.config.intervalMs||1200,
+      enterDelayMs:state.config.enterDelayMs||5000,
+      cancelEnabled:state.config.cancelEnabled!==false,
+      autoEnterEnabled:state.config.autoEnterEnabled!==false,
+      debounceMs:state.config.debounceMs||80,
+      keyPressDurationMs:state.config.keyPressDurationMs||250,
+      scenes:state.config.scenes||null
+    });
+  }
 
   function save(){
-    try{ window.chrome?.webview?.postMessage({type:'mvp_save',json:JSON.stringify({recordKey:state.triggerKey,targetKey:state.targetKey})}); }catch(_){ }
-    localStorage.setItem('voice_input_mvp',JSON.stringify(state));
-    $('saveState').textContent='已自动保存';
+    try{ window.chrome?.webview?.postMessage({type:'mvp_save',json:buildSavePayload()}); }catch(_){ }
+    $('saveState').textContent=t('saved');
   }
 
   function normalizeTriggerKey(key){
@@ -289,74 +518,202 @@ events:
 
   function pushLog(line){ logLines.unshift(line); logLines.length=Math.min(logLines.length,20); $('rawEventLog').textContent=logLines.join('\n'); }
 
-  function setRecording(mode){
-    recordingMode=mode;
-    clearTimeout(recordTimer);
-    if(mode==='trigger'){
-      $('leftBadge').textContent='正在录制…';
-      $('rightBadge').textContent=state.targetKey ? '已设置' : '等待按键…';
-      $('triggerState').textContent='请按下您的设备按键';
-      $('targetState').textContent=state.targetKey ? '已设置目标键' : '等待按键…';
-      $('triggerHelp').innerHTML='正在录制… 请按下您的设备按键。<br>备注：这是蓝牙外设的真实按键，不改名字，只做记录。';
-    }else if(mode==='target'){
-      $('rightBadge').textContent='正在录制…';
-      $('leftBadge').textContent=state.triggerKey ? '已录制' : '等待按键…';
-      $('targetState').textContent='请按下您的语音输入快捷键';
-      $('triggerState').textContent=state.triggerKey ? '已设置触发键' : '等待按键…';
-      $('targetHelp').innerHTML='正在录制… 请按下您的语音输入快捷键（键盘/媒体键/鼠标键）。<br>备注：请先退出/切换语音输入法，避免冲突或无法录制。';
-    }else{
-      $('leftBadge').textContent=state.triggerKey ? '已录制' : '等待按键…';
-      $('rightBadge').textContent=state.targetKey ? '已设置' : '等待按键…';
-      $('triggerState').textContent=state.triggerKey || '等待按键…';
-      $('targetState').textContent=state.targetKey || '等待按键…';
-      $('triggerHelp').innerHTML='点击后，请按下您的设备按键。<br>备注：这是蓝牙外设的真实按键，不改名字，只做记录。';
-      $('targetHelp').innerHTML='点击后，请按下您的语音输入快捷键（支持键盘、媒体键、鼠标侧键）。<br>备注：请先退出/切换语音输入法，避免冲突或无法录制；也可在配置里手写如 Volume_Up、LButton、Ctrl+Shift。';
+  function isAllowedTriggerKey(key){
+    return !!String(normalizeTriggerKey(key)||'').trim();
+  }
+
+  function sortedMappings(){
+    return state.config.mappings.slice().sort(function(a,b){return (a.order||0)-(b.order||0);});
+  }
+
+  function closeFloatMenu(){
+    openMenuId=null;
+    menuAnchorBtn=null;
+    const pop=$('mapMenuFloat');
+    pop.classList.remove('open');
+    pop.removeAttribute('data-id');
+    document.querySelectorAll('.map-row.menu-open').forEach(function(row){ row.classList.remove('menu-open'); });
+  }
+
+  function openFloatMenu(id, btn){
+    if(openMenuId===id){ closeFloatMenu(); return; }
+    openMenuId=id;
+    menuAnchorBtn=btn;
+    const pop=$('mapMenuFloat');
+    pop.dataset.id=id;
+    const rect=btn.getBoundingClientRect();
+    const width=148;
+    let left=rect.right-width;
+    if(left<8) left=8;
+    let top=rect.bottom+6;
+    if(top+120>window.innerHeight) top=Math.max(8, rect.top-120);
+    pop.style.left=left+'px';
+    pop.style.top=top+'px';
+    pop.classList.add('open');
+    document.querySelectorAll('.map-row.menu-open').forEach(function(row){ row.classList.remove('menu-open'); });
+    const row=btn.closest('.map-row');
+    if(row) row.classList.add('menu-open');
+    const list=sortedMappings();
+    const i=list.findIndex(function(m){return m.id===id;});
+    $('menuActUp').disabled=i<=0;
+    $('menuActDown').disabled=i<0||i>=list.length-1;
+  }
+
+  function reorderMapping(id, dir){
+    ensureConfig();
+    const list=sortedMappings();
+    const i=list.findIndex(function(m){return m.id===id;});
+    if(i<0) return;
+    if(dir==='up'&&i>0){
+      const tmp=list[i-1];
+      list[i-1]=list[i];
+      list[i]=tmp;
+    }else if(dir==='down'&&i<list.length-1){
+      const tmp=list[i+1];
+      list[i+1]=list[i];
+      list[i]=tmp;
+    }else return;
+    list.forEach(function(m,idx){ m.order=idx; });
+    state.config.mappings=list;
+    closeFloatMenu();
+    save();
+    render();
+  }
+
+  function softDeleteMapping(id){
+    ensureConfig();
+    if(!confirm(t('confirmDelete'))) return;
+    const idx=state.config.mappings.findIndex(function(m){return m.id===id;});
+    if(idx<0) return;
+    const removed=Object.assign({}, state.config.mappings.splice(idx,1)[0]);
+    removed.enabled=false;
+    state.config.trash.unshift(removed);
+    if(state.selectedMappingId===id){
+      state.selectedMappingId=state.config.mappings[0]&&state.config.mappings[0].id;
     }
+    if(!state.config.mappings.length){
+      const newId=newMappingId();
+      state.config.mappings.push({id:newId,label:'',group:'默认',triggerKey:'',targetKey:'',enabled:false,order:0,triggerMode:'tap'});
+      state.selectedMappingId=newId;
+    }
+    state.config.mappings.forEach(function(m,i){ m.order=i; });
+    closeFloatMenu();
+    save();
+    render();
+    toast(t('movedToTrash'));
+  }
+
+  function restoreFromTrash(id){
+    ensureConfig();
+    const idx=state.config.trash.findIndex(function(m){return m.id===id;});
+    if(idx<0) return;
+    const item=state.config.trash.splice(idx,1)[0];
+    item.enabled=false;
+    item.order=state.config.mappings.length;
+    state.config.mappings.push(item);
+    state.selectedMappingId=item.id;
+    save();
+    render();
+  }
+
+  function renderTrashList(){
+    ensureConfig();
+    const box=$('trashList');
+    const empty=$('trashEmpty');
+    const items=state.config.trash||[];
+    empty.hidden=items.length>0;
+    if(!items.length){ box.innerHTML=''; return; }
+    let html='';
+    items.forEach(function(m){
+      html+='<div class="trash-row"><span>'+(m.triggerKey||'?')+' → '+(m.targetKey||'?')+'</span>';
+      html+='<button type="button" class="trash-restore" data-restore="'+m.id+'">'+t('trashRestore')+'</button></div>';
+    });
+    box.innerHTML=html;
+  }
+
+  function renderMappingList(){
+    ensureConfig();
+    const list=$('mappingList');
+    const d=I18N[lang];
+    let html='';
+    sortedMappings().forEach(function(m){
+      const sel=m.id===state.selectedMappingId;
+      const on=!!m.enabled;
+      html+='<div class="map-row'+(sel?' selected':'')+(on?'':' disabled')+(openMenuId===m.id?' menu-open':'')+'" data-id="'+m.id+'">';
+      html+='<div class="map-main"><div class="map-pair">'+(m.triggerKey||'?')+' → '+(m.targetKey||'?')+'</div>';
+      html+='<div class="map-meta">'+(on?d.enabled:d.disabled)+'</div></div>';
+      html+='<div class="toggle'+(on?' on':'')+'" data-toggle="'+m.id+'" role="switch" aria-checked="'+(on?'true':'false')+'" title="'+(on?d.disabled:d.enabled)+'"></div>';
+      html+='<button type="button" class="map-del" data-del="'+m.id+'" title="'+d.delete+'" aria-label="'+d.delete+'">×</button>';
+      html+='<button type="button" class="map-menu-btn" data-menu="'+m.id+'">⋮</button>';
+      html+='</div>';
+    });
+    list.innerHTML=html;
+  }
+
+  function renderEditor(){
+    const m=selectedMapping();
+    const d=I18N[lang];
+    $('triggerView').textContent=m.triggerKey||d.triggerPlaceholder;
+    $('targetView').textContent=m.targetKey||d.targetPlaceholder;
+    $('triggerView').classList.toggle('empty',!m.triggerKey);
+    $('targetView').classList.toggle('empty',!m.targetKey);
   }
 
   function render(){
-    $('triggerView').textContent=state.triggerKey||'点击录制触发键';
-    $('targetView').textContent=state.targetKey||'点击录制目标键';
-    $('triggerView').classList.toggle('empty',!state.triggerKey);
-    $('targetView').classList.toggle('empty',!state.targetKey);
-    $('mappingView').innerHTML=(state.triggerKey||'AutoTrigger')+' <span>→</span> '+(state.targetKey||'RAlt');
-    $('listenState').textContent=runtime.paused?'已暂停监听':'监听中';
+    renderMappingList();
+    renderEditor();
+    renderTrashList();
+    $('listenState').textContent=runtime.paused?t('listenPaused'):t('listenOn');
     $('liveAction').textContent=runtime.lastAction||'-';
     $('liveTimer').textContent=runtime.timerActive?'⏳':'-';
-    if(recordingMode==='trigger'){
-      $('leftBadge').textContent='正在录制…';
-      $('rightBadge').textContent=state.targetKey ? '已设置' : '等待按键…';
-    }else if(recordingMode==='target'){
-      $('rightBadge').textContent='正在录制…';
-      $('leftBadge').textContent=state.triggerKey ? '已录制' : '等待按键…';
+  }
+
+  function setRecording(mode){
+    recordingMode=mode;
+    clearTimeout(recordTimer);
+    const m=selectedMapping();
+    const d=I18N[lang];
+    if(mode==='trigger'){
+      $('leftBadge').textContent=d.recordingBadge;
+      $('triggerState').textContent=d.triggerRecordHint;
+    }else if(mode==='target'){
+      $('rightBadge').textContent=d.recordingBadge;
+      $('targetState').textContent=d.targetRecordHint;
     }else{
-      $('leftBadge').textContent=state.triggerKey ? '已录制' : '等待按键…';
-      $('rightBadge').textContent=state.targetKey ? '已设置' : '等待按键…';
+      $('leftBadge').textContent=m.triggerKey?d.recordedBadge:d.waitingKey;
+      $('rightBadge').textContent=m.targetKey?d.setBadge:d.waitingKey;
+      $('triggerState').textContent=m.triggerKey||d.waitingKey;
+      $('targetState').textContent=m.targetKey||d.waitingKey;
     }
   }
 
   function startTriggerRecord(){
+    ensureConfig();
     recordingMode='trigger';
-    $('saveState').textContent='正在录制…';
+    $('saveState').textContent=t('recordingSave');
     setRecording('trigger');
-    try{window.chrome?.webview?.postMessage({type:'mvp_start_recording'});}catch(_){ }
-    pushLog('开始录制触发键...');
-    recordTimer=setTimeout(function(){ if(recordingMode==='trigger'){ recordingMode='none'; setRecording('none'); pushLog('录制超时'); try{window.chrome?.webview?.postMessage({type:'mvp_stop_recording'});}catch(_){} } },30000);
+    try{window.chrome?.webview?.postMessage({type:'mvp_start_recording',mappingId:state.selectedMappingId,mode:'trigger'});}catch(_){ }
+    pushLog(t('logStartTrigger'));
+    recordTimer=setTimeout(function(){ if(recordingMode==='trigger'){ recordingMode='none'; setRecording('none'); pushLog(t('logTimeout')); try{window.chrome?.webview?.postMessage({type:'mvp_stop_recording'});}catch(_){} } },30000);
   }
 
   function startTargetRecord(){
+    ensureConfig();
     recordingMode='target';
-    $('saveState').textContent='正在录制…';
+    $('saveState').textContent=t('recordingSave');
     setRecording('target');
     resetTargetCapture();
-    pushLog('开始录制目标键...');
-    recordTimer=setTimeout(function(){ if(recordingMode==='target'){ recordingMode='none'; setRecording('none'); resetTargetCapture(); pushLog('录制超时'); } },30000);
+    pushLog(t('logStartTarget'));
+    recordTimer=setTimeout(function(){ if(recordingMode==='target'){ recordingMode='none'; setRecording('none'); resetTargetCapture(); pushLog(t('logTimeout')); } },30000);
   }
 
   function finishTriggerCapture(key){
     const k=normalizeTriggerKey(key);
-    state.triggerKey=k;
-    pushLog('已录制触发键: '+k);
+    if(!isAllowedTriggerKey(k)){ toast(t('triggerRejected')); return; }
+    const m=selectedMapping();
+    m.triggerKey=k;
+    m.label=k+' → '+(m.targetKey||'?');
+    pushLog(t('logTriggerDone')+k);
     recordingMode='none';
     clearTimeout(recordTimer);
     setRecording('none');
@@ -366,8 +723,10 @@ events:
   }
 
   function finishTargetCapture(combo){
-    state.targetKey=combo;
-    pushLog('已录制目标键: '+combo);
+    const m=selectedMapping();
+    m.targetKey=combo;
+    m.label=(m.triggerKey||'?')+' → '+combo;
+    pushLog(t('logTargetDone')+combo);
     recordingMode='none';
     clearTimeout(recordTimer);
     setRecording('none');
@@ -376,19 +735,90 @@ events:
     render();
   }
 
+  $('btnTheme').onclick=function(){ theme=theme==='light'?'dark':'light'; applyTheme(); };
+  $('btnLang').onclick=function(){ lang=lang==='zh'?'en':'zh'; applyLang(); };
+
   $('btnRecordTrigger').onclick=startTriggerRecord;
   $('btnRecordTarget').onclick=startTargetRecord;
-  $('btnClear').onclick=function(){
-    state.triggerKey='';
-    state.targetKey='';
-    recordingMode='none';
-    clearTimeout(recordTimer);
-    resetTargetCapture();
-    setRecording('none');
+
+  $('btnAddMapping').onclick=function(){
+    ensureConfig();
+    const id=newMappingId();
+    state.config.mappings.push({id:id,label:'',group:'默认',triggerKey:'',targetKey:'',enabled:false,order:state.config.mappings.length,triggerMode:'tap'});
+    state.selectedMappingId=id;
     save();
     render();
-    pushLog('已清除当前设置');
+    startTriggerRecord();
   };
+
+  $('btnClearAll').onclick=function(){
+    if(!confirm(t('confirmClear'))) return;
+    state.config=defaultConfig();
+    state.selectedMappingId=state.config.mappings[0].id;
+    save();
+    render();
+    toast(t('restoredDefault'));
+  };
+
+  $('mappingList').addEventListener('click',function(e){
+    const el=e.target;
+    const toggleEl=el.closest&&el.closest('[data-toggle]');
+    if(toggleEl){
+      e.stopPropagation();
+      const id=toggleEl.dataset.toggle;
+      const m=state.config.mappings.find(function(x){return x.id===id;});
+      if(!m) return;
+      const next=!m.enabled;
+      try{window.chrome?.webview?.postMessage({type:'mvp_mapping_toggle',id:id,enabled:next});}catch(_){ }
+      return;
+    }
+    const delBtn=el.closest&&el.closest('[data-del]');
+    if(delBtn){
+      e.stopPropagation();
+      softDeleteMapping(delBtn.dataset.del);
+      return;
+    }
+    const menuBtn=el.closest&&el.closest('[data-menu]');
+    if(menuBtn){
+      e.stopPropagation();
+      openFloatMenu(menuBtn.dataset.menu, menuBtn);
+      return;
+    }
+    const row=el.closest&&el.closest('.map-row');
+    if(row&&row.dataset.id){
+      state.selectedMappingId=row.dataset.id;
+      closeFloatMenu();
+      render();
+    }
+  });
+
+  $('mapMenuFloat').addEventListener('click',function(e){
+    e.stopPropagation();
+    const actBtn=e.target.closest&&e.target.closest('[data-act]');
+    if(!actBtn||actBtn.disabled) return;
+    const id=$('mapMenuFloat').dataset.id;
+    const act=actBtn.dataset.act;
+    if(!id) return;
+    if(act==='dup'){ closeFloatMenu(); try{window.chrome?.webview?.postMessage({type:'mvp_mapping_duplicate',id:id});}catch(_){ } return; }
+    if(act==='up'||act==='down'){ reorderMapping(id, act); return; }
+  });
+
+  $('trashList').addEventListener('click',function(e){
+    const btn=e.target.closest&&e.target.closest('[data-restore]');
+    if(btn) restoreFromTrash(btn.dataset.restore);
+  });
+
+  document.addEventListener('click',function(e){
+    if(openMenuId){
+      const pop=$('mapMenuFloat');
+      if(!pop.contains(e.target) && !(menuAnchorBtn&&menuAnchorBtn.contains(e.target))){
+        closeFloatMenu();
+        renderMappingList();
+      }
+    }
+  });
+  window.addEventListener('resize',function(){ if(openMenuId&&menuAnchorBtn) openFloatMenu(openMenuId, menuAnchorBtn); });
+  window.addEventListener('scroll',function(){ if(openMenuId) closeFloatMenu(); }, true);
 
   document.addEventListener('keydown',function(e){
     $('dbKey').textContent=e.key;
@@ -400,7 +830,7 @@ events:
       const captured = normalizeTriggerKey(e.key || e.code || '');
       if(captured){
         finishTriggerCapture(captured);
-        try{window.chrome?.webview?.postMessage({type:'mvp_frontend_keydown', key:captured});}catch(_){ }
+        try{window.chrome?.webview?.postMessage({type:'mvp_frontend_keydown', key:captured, mappingId:state.selectedMappingId, mode:'trigger'});}catch(_){ }
       }
       return;
     }
@@ -420,8 +850,8 @@ events:
         targetCapture.mods=mods;
         noteModifierSide(code);
         const standalone=normalizeStandaloneModifier(code);
-        $('targetState').textContent='等待组合键…';
-        pushLog('等待按下主键...');
+        $('targetState').textContent=t('comboHint');
+        pushLog(t('logWaitMain'));
         if(standalone==='') return;
         return;
       }
@@ -429,6 +859,7 @@ events:
       const combo=normalizeTargetCombination(mods, main, targetCapture.modSide);
       if(combo){
         finishTargetCapture(combo);
+        try{window.chrome?.webview?.postMessage({type:'mvp_frontend_keydown', key:combo, mappingId:state.selectedMappingId, mode:'target'});}catch(_){ }
       }
     }
   },true);
@@ -468,14 +899,25 @@ events:
     const msg=e&&e.data;
     if(!msg||typeof msg!=='object') return;
     if(msg.type==='mvp_init'&&msg.config){
-      if(typeof msg.config.recordKey==='string') state.triggerKey=normalizeTriggerKey(msg.config.recordKey);
-      if(typeof msg.config.targetKey==='string') state.targetKey=msg.config.targetKey;
+      state.config=msg.config;
+      ensureConfig();
       render();
     }
+    if(msg.type==='mvp_saved'&&msg.ok){ $('saveState').textContent=t('saved'); }
+    if(msg.type==='mvp_mapping_toggled'&&msg.ok){
+      const m=state.config&&state.config.mappings.find(function(x){return x.id===msg.id;});
+      if(m) m.enabled=!!msg.enabled;
+      if(msg.autoDisabled&&msg.autoDisabled.length) toast(t('conflictDisabled'));
+      render();
+    }
+    if(msg.type==='mvp_mapping_duplicated'&&msg.ok){ /* backend persisted; wait mvp_init */ }
+    if(msg.type==='mvp_record_rejected'){ toast(t('whitelistRejected')); recordingMode='none'; setRecording('none'); }
     if(msg.type==='mvp_key_captured'){
       const key = msg.key || 'AutoTrigger';
       if(recordingMode==='trigger'){
         finishTriggerCapture(key);
+      }else if(recordingMode==='target'&&msg.mode==='target'){
+        finishTargetCapture(key);
       }
     }
     if(msg.type==='mvp_paused'&&msg.ok){ runtime.paused=true; render(); }
@@ -485,17 +927,25 @@ events:
       runtime.timerActive=!!msg.timerActive;
       runtime.paused=!!msg.paused;
       if(recordingMode==='trigger' && runtime.lastAction==='recorded'){
-        finishTriggerCapture(state.triggerKey || 'AutoTrigger');
+        /* handled by mvp_key_captured */
       } else {
         render();
       }
     }
   });
 
-  try{ const saved=JSON.parse(localStorage.getItem('voice_input_mvp')||'{}'); if(saved&&typeof saved==='object'){ if(typeof saved.triggerKey==='string') state.triggerKey=normalizeTriggerKey(saved.triggerKey); if(typeof saved.targetKey==='string') state.targetKey=saved.targetKey; } }catch(_){ }
+  try{
+    const savedTheme=localStorage.getItem('vp_theme');
+    const savedLang=localStorage.getItem('vp_lang');
+    if(savedTheme==='dark'||savedTheme==='light') theme=savedTheme;
+    if(savedLang==='zh'||savedLang==='en') lang=savedLang;
+  }catch(_){}
+  state.config=defaultConfig();
+  ensureConfig();
+  applyTheme();
+  applyLang();
   setRecording('none');
-  render();
-  pushLog('等待录制…');
+  pushLog(t('waitLog'));
   try{window.chrome?.webview?.postMessage({type:'mvp_ready'});}catch(_){ }
 </script>
 </body>
