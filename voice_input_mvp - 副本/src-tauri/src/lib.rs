@@ -4,6 +4,7 @@ mod key_chord;
 mod keyboard;
 mod send_guard;
 mod ipc;
+mod backdrop;
 
 #[cfg(target_os = "windows")]
 mod hotkey_win;
@@ -46,17 +47,17 @@ pub fn run() {
         .setup(move |app| {
             let window = app.get_webview_window("main").unwrap();
 
+            let backdrop_mode = backdrop::apply_native_backdrop(&window, None);
+
             let mgr = hotkey_win::HotkeyManager::new();
             let bindings = app_state.cfg.lock().bindings();
             mgr.bind_all(&bindings);
             *app_state.hotkey_mgr.lock() = Some(mgr);
 
-            let cfg = app_state.cfg.lock().clone();
-            let json = serde_json::to_string(&cfg).unwrap();
+            let json = ipc::mvp_init_json(&app_state, &backdrop_mode);
             window
                 .eval(&format!(
-                    "setTimeout(function(){{ window.__vp_bridge__('mvp_init', {{config:{}}}) }}, 300)",
-                    json
+                    "setTimeout(function(){{ window.__vp_bridge__('mvp_init', {json}) }}, 300)",
                 ))
                 .ok();
 
@@ -156,6 +157,10 @@ pub fn run() {
             ipc::cmd_mapping_duplicate,
             ipc::cmd_mapping_reorder,
             ipc::cmd_mapping_set_group,
+            ipc::cmd_mapping_conflicts,
+            ipc::cmd_window_minimize,
+            ipc::cmd_window_close,
+            ipc::cmd_sync_theme_backdrop,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

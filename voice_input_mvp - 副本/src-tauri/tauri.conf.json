@@ -11,12 +11,15 @@
   "app": {
     "windows": [
       {
+        "label": "main",
         "title": "一键超人 · Voice Pilot",
-        "width": 680,
-        "height": 780,
+        "width": 760,
+        "height": 820,
         "resizable": true,
-        "minWidth": 520,
-        "minHeight": 600
+        "minWidth": 640,
+        "minHeight": 680,
+        "decorations": true,
+        "transparent": false
       }
     ],
     "security": {

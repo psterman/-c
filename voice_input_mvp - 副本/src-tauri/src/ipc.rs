@@ -3,7 +3,8 @@ use std::sync::Arc;
 use tauri::Emitter;
 
 use crate::config::{
-    self, canonical_trigger, is_allowed_trigger, new_mapping_id, MappingEntry, VoiceConfig,
+    self, canonical_trigger, is_allowed_trigger, new_mapping_id, ConflictReport, MappingEntry,
+    VoiceConfig,
 };
 use crate::AppState;
 
@@ -64,34 +65,48 @@ pub fn push_runtime(
     window.emit("to_js", &payload).ok();
 }
 
-fn sync_config_ui(state: &AppState, window: &tauri::WebviewWindow) {
+pub fn mvp_init_json(state: &AppState, backdrop_mode: &str) -> String {
     let cfg = state.cfg.lock().clone();
-    if let Ok(json) = serde_json::to_string(&cfg) {
-        window
-            .eval(&format!(
-                "window.__vp_bridge__('mvp_init', {{config:{}}})",
-                json
-            ))
-            .ok();
-    }
+    let conflicts = cfg.conflict_report();
+    let payload = serde_json::json!({
+        "config": cfg,
+        "conflicts": conflicts,
+        "shell": {
+            "customTitlebar": crate::backdrop::CUSTOM_TITLEBAR,
+            "backdropMode": backdrop_mode,
+        }
+    });
+    serde_json::to_string(&payload).unwrap_or_else(|_| "{}".into())
+}
+
+fn sync_config_ui(state: &AppState, window: &tauri::WebviewWindow, backdrop_mode: &str) {
+    let json = mvp_init_json(state, backdrop_mode);
+    window
+        .eval(&format!(
+            "window.__vp_bridge__('mvp_init', {json})"
+        ))
+        .ok();
 }
 
 fn persist_and_rebind(state: &AppState, window: &tauri::WebviewWindow, last_action: &str) {
     let cfg = state.cfg.lock().clone();
     config::save_config(&cfg);
     config::apply_config(state, &cfg);
-    sync_config_ui(state, window);
+    sync_config_ui(state, window, "unchanged");
     push_runtime(state, window, last_action, "");
 }
 
 #[tauri::command]
-pub fn cmd_ready(state: tauri::State<Arc<AppState>>, window: tauri::WebviewWindow) {
-    let cfg = state.cfg.lock().clone();
-    let json = serde_json::to_string(&cfg).unwrap();
+pub fn cmd_ready(
+    state: tauri::State<Arc<AppState>>,
+    window: tauri::WebviewWindow,
+    backdrop_mode: Option<String>,
+) {
+    let mode = backdrop_mode.unwrap_or_else(|| "unchanged".into());
+    let json = mvp_init_json(&state, &mode);
     window
         .eval(&format!(
-            "window.__vp_bridge__('mvp_init', {{config:{}}})",
-            json
+            "window.__vp_bridge__('mvp_init', {json})"
         ))
         .ok();
     push_runtime(&state, &window, "config_push", "");
@@ -105,7 +120,7 @@ pub fn cmd_save(state: tauri::State<Arc<AppState>>, window: tauri::WebviewWindow
         config::save_config(&cfg);
         config::apply_config(&state, &cfg);
         *state.cfg.lock() = cfg.clone();
-        sync_config_ui(&state, &window);
+        sync_config_ui(&state, &window, "unchanged");
         state.machine_pool.lock().reset_all();
         push_runtime(&state, &window, "saved", "");
         let ack = serde_json::json!({"type":"mvp_saved","ok":true});
@@ -393,4 +408,81 @@ pub fn finish_hardware_capture(state: &AppState, window: &tauri::WebviewWindow, 
         "mode": "trigger",
     });
     window.emit("to_js", &ack).ok();
+}
+
+/// 测试发送目标键：只读发送，不修改配置、录制态、监听态、选中映射。
+#[tauri::command]
+pub fn cmd_test_send(
+    state: tauri::State<Arc<AppState>>,
+    window: tauri::WebviewWindow,
+    mapping_id: Option<String>,
+    target_key: Option<String>,
+) {
+    let (key, duration_ms) = {
+        let cfg = state.cfg.lock();
+        let duration_ms = cfg.key_press_duration_ms;
+        let mut key = String::new();
+        if let Some(ref id) = mapping_id {
+            if let Some(m) = cfg.find_mapping_by_id(id) {
+                if !m.target_key.trim().is_empty() {
+                    key = m.target_key.clone();
+                }
+            }
+        }
+        if key.is_empty() {
+            if let Some(k) = target_key {
+                let k = k.trim().to_string();
+                if !k.is_empty() {
+                    key = k;
+                }
+            }
+        }
+        (key, duration_ms)
+    };
+
+    if key.is_empty() {
+        let ack = serde_json::json!({
+            "type": "mvp_test_sent",
+            "ok": false,
+            "reason": "no_target",
+        });
+        window.emit("to_js", &ack).ok();
+        return;
+    }
+
+    let ok = crate::keyboard::send_chord(&key, duration_ms);
+    let ack = serde_json::json!({
+        "type": "mvp_test_sent",
+        "ok": ok,
+        "key": key,
+    });
+    window.emit("to_js", &ack).ok();
+}
+
+#[tauri::command]
+pub fn cmd_mapping_conflicts(
+    state: tauri::State<Arc<AppState>>,
+    mapping_id: Option<String>,
+) -> Vec<ConflictReport> {
+    let cfg = state.cfg.lock();
+    if let Some(id) = mapping_id {
+        cfg.conflicts_for_mapping(&id)
+    } else {
+        cfg.conflict_report()
+    }
+}
+
+#[tauri::command]
+pub fn cmd_window_minimize(window: tauri::WebviewWindow) {
+    let _ = window.minimize();
+}
+
+#[tauri::command]
+pub fn cmd_window_close(window: tauri::WebviewWindow) {
+    let _ = window.close();
+}
+
+#[tauri::command]
+pub fn cmd_sync_theme_backdrop(window: tauri::WebviewWindow, theme: String) {
+    crate::backdrop::sync_backdrop_theme(&window, &theme);
 }

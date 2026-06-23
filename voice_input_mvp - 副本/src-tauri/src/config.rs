@@ -246,6 +246,24 @@ pub struct Conflict {
     pub detail: String,
 }
 
+#[derive(Debug, Clone, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ConflictReport {
+    pub mapping_id: String,
+    pub other_id: String,
+    pub kind: String,
+    pub detail: String,
+}
+
+impl ConflictKind {
+    fn as_str(&self) -> &'static str {
+        match self {
+            ConflictKind::CanonicalTrigger => "canonical",
+            ConflictKind::PhysicalKey => "physical",
+        }
+    }
+}
+
 impl VoiceConfig {
     pub fn migrate(&mut self) {
         if self.version >= 3 && !self.mappings.is_empty() {
@@ -416,6 +434,43 @@ impl VoiceConfig {
             entry.enabled = false;
         }
     }
+
+    /// 汇总所有「若启用将冲突」的映射对（与 `conflicts_on_enable` 对齐，去重）。
+    pub fn conflict_report(&self) -> Vec<ConflictReport> {
+        let mut seen = HashSet::new();
+        let mut out = Vec::new();
+        for m in &self.mappings {
+            for c in self.conflicts_on_enable(&m.id) {
+                let (a, b) = if m.id < c.other_id {
+                    (m.id.as_str(), c.other_id.as_str())
+                } else {
+                    (c.other_id.as_str(), m.id.as_str())
+                };
+                let key = format!("{a}|{b}|{}", c.kind.as_str());
+                if seen.insert(key) {
+                    out.push(ConflictReport {
+                        mapping_id: m.id.clone(),
+                        other_id: c.other_id.clone(),
+                        kind: c.kind.as_str().into(),
+                        detail: c.detail.clone(),
+                    });
+                }
+            }
+        }
+        out
+    }
+
+    pub fn conflicts_for_mapping(&self, id: &str) -> Vec<ConflictReport> {
+        self.conflicts_on_enable(id)
+            .into_iter()
+            .map(|c| ConflictReport {
+                mapping_id: id.to_string(),
+                other_id: c.other_id,
+                kind: c.kind.as_str().into(),
+                detail: c.detail,
+            })
+            .collect()
+    }
 }
 
 pub fn config_path() -> PathBuf {
@@ -482,11 +537,15 @@ pub fn start_watcher(state: Arc<AppState>, window: tauri::WebviewWindow) {
                     new_cfg.migrate();
                     apply_config(&state, &new_cfg);
                     *state.cfg.lock() = new_cfg.clone();
-                    let json = serde_json::to_string(&new_cfg).unwrap();
+                    let conflicts = new_cfg.conflict_report();
+                    let payload = serde_json::json!({
+                        "config": new_cfg,
+                        "conflicts": conflicts,
+                    });
+                    let json = serde_json::to_string(&payload).unwrap();
                     window
                         .eval(&format!(
-                            "window.__vp_bridge__('mvp_init', {{config:{}}})",
-                            json
+                            "window.__vp_bridge__('mvp_init', {json})"
                         ))
                         .ok();
                 }

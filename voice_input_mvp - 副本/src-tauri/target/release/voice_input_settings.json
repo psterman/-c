@@ -2,12 +2,80 @@
   "version": 3,
   "mappings": [
     {
-      "id": "m-1782175248814",
+      "id": "m-1782182329928-mnpbn",
       "label": "AutoTrigger → F2",
       "group": "默认",
       "triggerKey": "AutoTrigger",
       "targetKey": "F2",
       "enabled": true,
+      "order": 0,
+      "triggerMode": "tap",
+      "triggerSource": null
+    },
+    {
+      "id": "m-1782183360375-5re54",
+      "label": "AutoTrigger → LCtrl+LButton",
+      "group": "默认",
+      "triggerKey": "AutoTrigger",
+      "targetKey": "LCtrl+LButton",
+      "enabled": false,
+      "order": 1,
+      "triggerMode": "tap",
+      "triggerSource": null
+    }
+  ],
+  "trash": [
+    {
+      "id": "m-1782186468068-a7o3b",
+      "label": "? → ?",
+      "group": "默认",
+      "triggerKey": "AutoTrigger",
+      "targetKey": "RAlt",
+      "enabled": false,
+      "order": 2,
+      "triggerMode": "tap",
+      "triggerSource": null
+    },
+    {
+      "id": "m-1782184494826-ativv",
+      "label": "? → ?",
+      "group": "默认",
+      "triggerKey": "AutoTrigger",
+      "targetKey": "RAlt",
+      "enabled": false,
+      "order": 2,
+      "triggerMode": "tap",
+      "triggerSource": null
+    },
+    {
+      "id": "m-1782184495954-td3dm",
+      "label": "? → ?",
+      "group": "默认",
+      "triggerKey": "AutoTrigger",
+      "targetKey": "RAlt",
+      "enabled": false,
+      "order": 3,
+      "triggerMode": "tap",
+      "triggerSource": null
+    },
+    {
+      "id": "m-1782184491455-qnzx1",
+      "label": "? → ?",
+      "group": "默认",
+      "triggerKey": "AutoTrigger",
+      "targetKey": "RAlt",
+      "enabled": false,
+      "order": 2,
+      "triggerMode": "tap",
+      "triggerSource": null
+    },
+    {
+      "id": "m-1782175248814",
+      "label": "AutoTrigger → LButton",
+      "group": "默认",
+      "triggerKey": "AutoTrigger",
+      "targetKey": "LButton",
+      "enabled": false,
       "order": 0,
       "triggerMode": "tap",
       "triggerSource": null
@@ -22,9 +90,7 @@
       "order": 1,
       "triggerMode": "tap",
       "triggerSource": null
-    }
-  ],
-  "trash": [
+    },
     {
       "id": "m-1782176592996",
       "label": "AutoTrigger → F2（副本）",

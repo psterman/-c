@@ -6,222 +6,443 @@
   <title>Voice Pilot</title>
   <style>
     :root{
-      --bg:#f4f6fb;
-      --bg2:#eef3fb;
-      --card:#ffffff;
-      --line:#dce4f2;
-      --text:#0f172a;
-      --muted:#667085;
-      --accent:#1677ff;
-      --accent-soft:#eaf2ff;
-      --display-bg:linear-gradient(180deg,#eef5ff,#e5f0ff);
-      --display-border:#cfe0ff;
-      --display-empty:#8aa4d8;
-      --green:#17a34a;
-      --red:#cf3f3f;
-      --shadow:0 18px 40px rgba(22,36,72,.08);
-      font-family:"SF Pro Text","PingFang SC","Microsoft YaHei UI",system-ui,sans-serif;
+      --primary:#2563eb;
+      --primary-muted:#3b6ea8;
+      --primary-soft:#eaf2ff;
+      --key-soft:#3b6ea8;
+      --on-primary:#ffffff;
+      --surface:rgba(255,255,255,.88);
+      --surface-high:rgba(255,255,255,.96);
+      --surface-soft:#eef5ff;
+      --on-surface:#111827;
+      --on-surface-muted:#64748b;
+      --btn-label:#1e3a5f;
+      --btn-label-muted:#6b7c93;
+      --outline:rgba(120,140,170,.24);
+      --outline-variant:rgba(120,140,170,.16);
+      --success:#16a34a;
+      --warning:#f97316;
+      --error:#dc2626;
+      --radius-card:28px;
+      --radius-inner:20px;
+      --radius-row:16px;
+      --radius-pill:999px;
+      --shadow-card:0 18px 48px rgba(30,41,59,.10);
+      --shadow-button:0 10px 22px rgba(26,115,232,.22);
+      --dur-fast:160ms;
+      --dur-med:260ms;
+      --ease-standard:cubic-bezier(.2,.8,.2,1);
+      font-family:"Segoe UI","PingFang SC","Microsoft YaHei UI",system-ui,sans-serif;
     }
     html[data-theme="dark"]{
-      --bg:#1c1c1e;
-      --bg2:#111315;
-      --card:#2c2c2e;
-      --line:#3a3a3c;
-      --text:#f5f5f7;
-      --muted:#a1a1a6;
-      --accent:#4da6ff;
-      --accent-soft:rgba(77,166,255,.14);
-      --display-bg:linear-gradient(180deg,rgba(77,166,255,.12),rgba(77,166,255,.06));
-      --display-border:rgba(77,166,255,.28);
-      --display-empty:#7a8fb8;
-      --shadow:0 10px 28px rgba(0,0,0,.25);
+      --primary:#8ab4f8;
+      --primary-muted:#7eb3ff;
+      --primary-soft:rgba(110,182,255,.12);
+      --key-soft:#7eb3ff;
+      --on-primary:#0b1220;
+      --surface:rgba(36,42,52,.92);
+      --surface-high:rgba(44,50,62,.96);
+      --surface-soft:rgba(80,140,255,.10);
+      --on-surface:#e8eaed;
+      --on-surface-muted:#9aa3b2;
+      --btn-label:#dce6f5;
+      --btn-label-muted:#8b97a8;
+      --outline:rgba(148,163,184,.22);
+      --outline-variant:rgba(148,163,184,.12);
+      --shadow-card:0 12px 36px rgba(0,0,0,.28);
+      --shadow-button:0 8px 18px rgba(26,115,232,.18);
     }
     *{box-sizing:border-box}
-    html,body{margin:0;height:100%;background:linear-gradient(180deg,var(--bg),var(--bg2));color:var(--text)}
-    body{overflow:auto}
-    .app{min-height:100%;padding:20px}
-    .shell{max-width:1120px;margin:0 auto}
-    .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;gap:12px}
-    .brand{font-size:18px;font-weight:800;letter-spacing:-.02em}
-    .topbar-right{display:flex;align-items:center;gap:10px}
-    .chips{display:flex;gap:6px}
-    .chip-btn{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:4px 10px;font-size:12px;color:var(--text);cursor:pointer;font:inherit}
-    .save{font-size:12px;color:var(--muted);white-space:nowrap}
-    .grid{display:grid;grid-template-columns:1fr 72px 1fr;gap:16px;align-items:center}
-    .arrow{font-size:34px;color:var(--muted);text-align:center;user-select:none}
-    .card{background:var(--card);border:1px solid var(--line);border-radius:26px;box-shadow:var(--shadow);padding:16px 16px 14px;min-height:290px}
-    .card-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
-    .title{font-size:16px;font-weight:800}
-    .badge{font-size:12px;font-weight:700;color:var(--accent);background:var(--accent-soft);padding:4px 10px;border-radius:999px}
-    .display{border:1px solid var(--display-border);background:var(--display-bg);border-radius:18px;min-height:74px;display:flex;align-items:center;justify-content:center;text-align:center;font-size:32px;font-weight:800;color:var(--accent);letter-spacing:-.03em;padding:12px}
-    .display.empty{color:var(--display-empty);font-size:18px;font-weight:700}
-    .actions{margin-top:12px;display:grid;gap:10px}
-    .btn{height:48px;border-radius:999px;border:1px solid var(--line);background:var(--card);color:var(--text);font:inherit;font-size:15px;cursor:pointer}
-    .btn.primary{background:linear-gradient(180deg,#1e84ff,#0f6cf5);border-color:#0f6cf5;color:#fff;font-weight:800;box-shadow:0 10px 22px rgba(15,108,245,.20)}
-    .btn.secondary{background:var(--card);color:var(--text)}
-    .help{margin-top:10px;font-size:13px;line-height:1.6;color:var(--muted);text-align:center;min-height:42px}
-    .help strong{color:var(--text)}
-    .state{margin-top:6px;text-align:center;font-size:13px;color:var(--accent);font-weight:700;min-height:20px}
-    .mapping{margin:14px 0 0;padding:12px 14px;border:1px solid var(--line);border-radius:18px;background:var(--card)}
-    .mapping .label{font-size:12px;color:var(--muted);margin-bottom:6px}
-    .mapping .pair{font-size:22px;font-weight:800;color:var(--text);letter-spacing:-.02em}
-    .mapping .pair span{color:var(--accent)}
-    .advanced{margin-top:14px;border-top:1px solid var(--line);padding-top:12px}
-    details summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;font-weight:800}
-    details summary::-webkit-details-marker{display:none}
-    .adv-body{padding-top:12px;display:grid;gap:14px}
-    .mini-title{margin:0 0 8px;font-size:14px;font-weight:800}
-    .mini{margin:0;color:var(--muted);font-size:13px;line-height:1.65}
-    .log{margin:0;padding:10px 0 0;border-top:1px solid var(--line);white-space:pre-wrap;word-break:break-word;font:12px/1.55 Consolas,monospace;min-height:70px;color:var(--muted)}
-    .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-    .item{border-top:1px solid var(--line);padding-top:10px;display:flex;justify-content:space-between;gap:10px;font-size:13px}
-    .chip{padding:2px 8px;border-radius:999px;background:var(--accent-soft);color:var(--accent);font-weight:700}
-    .clear-panel{margin-top:10px;display:flex;justify-content:flex-end}
-    .clear-btn{border:none;background:transparent;color:var(--red);font-weight:800;cursor:pointer;padding:0}
-    .list-card{margin:16px 0;padding:14px 16px;border:1px solid var(--line);border-radius:22px;background:var(--card);box-shadow:var(--shadow);overflow:visible}
+    html,body{margin:0;height:100%;overflow:hidden}
+    body{background:#eef3f8;color:var(--on-surface)}
+    .app{
+      height:100vh;display:flex;flex-direction:column;
+      background:
+        radial-gradient(circle at 20% 0%,rgba(80,140,255,.12),transparent 32%),
+        linear-gradient(180deg,#f4f7fb 0%,#edf2f7 100%);
+    }
+    html[data-theme="dark"] .app{
+      background:
+        radial-gradient(circle at 20% 0%,rgba(80,140,255,.16),transparent 32%),
+        linear-gradient(180deg,#121820 0%,#171d27 100%);
+    }
+    html[data-theme="dark"] body{background:#121820}
+    .app-header{
+      display:flex;align-items:center;justify-content:space-between;
+      padding:18px 22px 10px;flex-shrink:0;
+    }
+    .app-title{margin:0;font-size:22px;font-weight:800;letter-spacing:-.03em}
+    #btnSettings{
+      height:36px;padding:0 16px;border-radius:var(--radius-pill);
+      border:1px solid var(--outline-variant);background:var(--surface-high);
+      color:var(--btn-label);font:inherit;font-size:13px;font-weight:600;cursor:pointer;
+    }
+    #btnSettings:hover{background:var(--primary-soft);transform:translateY(-1px)}
+    #btnSettings:active{transform:scale(0.97)}
+    .main-scroll{
+      flex:1;overflow-y:auto;padding:12px 22px 28px;
+      scrollbar-width:thin;scrollbar-color:rgba(80,96,120,.32) transparent;
+    }
+    .main-scroll::-webkit-scrollbar{width:8px}
+    .main-scroll::-webkit-scrollbar-track{background:transparent}
+    .main-scroll::-webkit-scrollbar-thumb{background:rgba(80,96,120,.28);border-radius:999px}
+    .main-scroll::-webkit-scrollbar-thumb:hover{background:rgba(80,96,120,.42)}
+    .hero-grid{
+      display:grid;grid-template-columns:1fr auto 1fr;gap:12px 10px;margin-bottom:8px;align-items:stretch;
+    }
+    .hero-flow-arrow{
+      display:flex;align-items:center;justify-content:center;align-self:center;
+      color:var(--on-surface-muted);opacity:.22;font-size:20px;user-select:none;padding-top:28px;
+    }
+    .editor-zone{margin-bottom:20px}
+    .bubble-card{
+      background:var(--surface);border:1px solid var(--outline-variant);
+      border-radius:var(--radius-card);box-shadow:var(--shadow-card);padding:20px 18px 16px;
+    }
+    .bubble-card.is-recording{border-color:rgba(26,115,232,.35);animation:card-pulse 1.6s ease-in-out infinite}
+    @keyframes card-pulse{0%,100%{box-shadow:var(--shadow-card)}50%{box-shadow:0 0 0 3px rgba(26,115,232,.12),var(--shadow-card)}}
+    .card-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;gap:10px}
+    .title{font-size:17px;font-weight:700;letter-spacing:-.02em;margin:0;display:flex;align-items:center;gap:6px}
+    .title-icon{width:16px;height:16px;flex-shrink:0;color:var(--primary-muted)}
+    .step-mark{font-size:15px;font-weight:700;color:var(--primary-muted);line-height:1}
+    .badge{
+      font-size:12px;font-weight:600;color:var(--key-soft);background:var(--primary-soft);
+      padding:4px 10px;border-radius:var(--radius-pill);white-space:nowrap;
+    }
+    .display{
+      min-height:88px;border-radius:var(--radius-inner);background:var(--surface-soft);
+      border:1px solid var(--outline-variant);display:flex;align-items:center;justify-content:center;
+      text-align:center;padding:14px;
+    }
+    .display:not(.empty){border-color:rgba(37,99,184,.18)}
+    .display.empty .display-value{font-size:15px;font-weight:500;color:var(--on-surface-muted);opacity:.65}
+    .display:not(.empty) .display-value{font-size:34px;font-weight:800;color:var(--key-soft);letter-spacing:-.03em}
+    .actions{margin-top:14px}
+    .btn,.list-add,.map-test,.btn-test-send,.map-menu-btn,#btnSettings{
+      transition:transform var(--dur-fast) var(--ease-standard),background var(--dur-fast) var(--ease-standard),
+        border-color var(--dur-fast) var(--ease-standard),box-shadow var(--dur-fast) var(--ease-standard),color var(--dur-fast) var(--ease-standard);
+    }
+    .btn{
+      width:100%;height:52px;border-radius:var(--radius-pill);border:1px solid var(--outline);
+      background:var(--surface-high);color:var(--btn-label);font:inherit;font-size:15px;font-weight:600;cursor:pointer;
+    }
+    .btn:hover:not(:disabled){background:var(--primary-soft);border-color:rgba(26,115,232,.22)}
+    .btn:active:not(:disabled){transform:scale(0.98)}
+    .btn.primary{
+      border:none;background:linear-gradient(180deg,#3b82f6 0%,var(--primary) 100%);
+      color:var(--on-primary);font-weight:700;box-shadow:var(--shadow-button);
+    }
+    .btn.primary:hover:not(:disabled){filter:brightness(1.04);transform:translateY(-1px)}
+    .btn.primary:active:not(:disabled){transform:scale(0.98) translateY(0)}
+    .btn.primary.is-recording{animation:btn-recording-pulse 1.4s ease-in-out infinite}
+    .btn.primary.record-btn,
+    .btn.primary.record-btn:hover:not(:disabled),
+    .btn.primary.record-btn.is-recording{color:var(--on-primary)}
+    .btn.secondary{background:var(--surface-high);color:var(--btn-label);border-color:var(--outline)}
+    .btn.record-btn{color:var(--primary-muted)}
+    .btn.record-btn:hover:not(:disabled){color:var(--primary-muted);background:var(--primary-soft)}
+    .btn.secondary:hover:not(:disabled){background:var(--primary-soft);color:var(--btn-label)}
+    .btn.secondary.is-recording{animation:btn-recording-pulse 1.4s ease-in-out infinite;border-color:rgba(26,115,232,.3)}
+    @keyframes btn-recording-pulse{
+      0%,100%{box-shadow:0 0 0 0 rgba(26,115,232,.0)}
+      50%{box-shadow:0 0 0 4px rgba(26,115,232,.18)}
+    }
+    .btn:disabled{opacity:.5;cursor:not-allowed}
+    .help{margin-top:8px;font-size:11px;line-height:1.4;color:var(--on-surface-muted);opacity:.52;text-align:center}
+    .record-cancel-bar{
+      display:none;align-items:center;justify-content:center;gap:12px;margin-top:12px;padding-top:10px;
+      border-top:1px dashed var(--outline-variant);
+    }
+    .record-cancel-bar.show{display:flex}
+    .btn-cancel-record{
+      height:34px;padding:0 14px;border-radius:var(--radius-pill);border:1px solid var(--outline-variant);
+      background:var(--surface-high);color:var(--on-surface-muted);font:inherit;font-size:12px;font-weight:600;cursor:pointer;
+    }
+    .btn-cancel-record:hover{background:#fff7ed;border-color:#fed7aa;color:#9a3412}
+    .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+    .mapping-section{margin-top:4px;padding:20px 20px 18px}
+    .list-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:16px}
+    .list-head h2{margin:0;font-size:18px;font-weight:800;flex:1}
+    .list-add{
+      height:40px;padding:0 22px;border-radius:var(--radius-pill);border:1px solid var(--outline);
+      background:var(--surface-high);color:var(--btn-label);font:inherit;font-size:14px;font-weight:600;cursor:pointer;
+      flex-shrink:0;
+    }
+    .list-add:hover:not(:disabled){background:var(--primary-soft);border-color:rgba(26,115,232,.22);transform:translateY(-1px)}
+    .list-add:active:not(:disabled){transform:scale(0.97)}
+    .list-add:disabled{opacity:.55;cursor:not-allowed;color:var(--btn-label-muted);border-style:dashed}
+    .draft-hint{
+      display:none;margin-bottom:18px;padding:18px 20px;border-radius:var(--radius-inner);
+      background:var(--surface-soft);border:1px dashed var(--outline-variant);
+      color:var(--on-surface-muted);font-size:13px;line-height:1.55;text-align:center;
+    }
+    .draft-hint.show{display:block}
+    .mapping-empty{
+      text-align:center;padding:28px 16px 20px;color:var(--on-surface-muted);
+      border:1px dashed var(--outline-variant);border-radius:var(--radius-inner);margin-bottom:12px;
+    }
+    .mapping-empty strong{display:block;font-size:15px;color:var(--on-surface);margin-bottom:6px}
     #mappingList{overflow:visible}
-    .list-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
-    .list-head h2{margin:0;font-size:16px;font-weight:800}
-    .list-add{height:36px;padding:0 14px;border-radius:999px;border:1px solid var(--line);background:var(--card);color:var(--text);font:inherit;font-size:13px;font-weight:700;cursor:pointer}
-    .map-row{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:14px;margin-bottom:8px;cursor:pointer;background:var(--card);position:relative;z-index:1}
+    .map-row{
+      display:grid;grid-template-columns:auto 1fr auto auto;align-items:center;gap:10px;
+      padding:12px 14px 12px 12px;border:1px solid var(--outline-variant);border-radius:var(--radius-row);
+      margin-bottom:10px;cursor:pointer;background:var(--surface-high);position:relative;z-index:1;
+    }
     .map-row.menu-open{z-index:40}
-    .map-row.selected{border-color:var(--accent);background:var(--accent-soft)}
-    .map-row.disabled{opacity:.72}
-    .map-main{flex:1;min-width:0}
-    .map-pair{font-size:15px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .map-meta{font-size:12px;color:var(--muted);margin-top:2px}
-    .toggle{width:44px;height:26px;border-radius:999px;background:#cfd5dd;position:relative;flex-shrink:0;box-shadow:inset 0 1px 2px rgba(0,0,0,.08);cursor:pointer}
-    .toggle.on{background:var(--green)}
-    .toggle::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:.18s;box-shadow:0 1px 2px rgba(0,0,0,.22)}
+    .map-row.is-on{box-shadow:inset 3px 0 0 var(--success)}
+    .map-row.selected{background:var(--primary-soft);border-color:rgba(26,115,232,.14)}
+    .map-row:not(.is-on){opacity:.68}
+    .map-main{min-width:0}
+    .map-pair{font-size:16px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--on-surface)}
+    .map-row:not(.is-on) .map-pair{color:var(--on-surface-muted)}
+    .map-row-draft{border-style:dashed;opacity:.82}
+    .map-row-draft .toggle{opacity:.35;pointer-events:none}
+    .map-pair-draft{color:var(--on-surface-muted)}
+    .draft-ph{opacity:.72}
+    .map-conflict{
+      margin-top:5px;font-size:11px;line-height:1.35;color:#9a3412;font-weight:500;
+      padding:3px 8px;border-radius:var(--radius-pill);background:#fff7ed;border:1px solid #fed7aa;
+    }
+    .toggle{width:44px;height:26px;border-radius:var(--radius-pill);background:#cfd5dd;position:relative;flex-shrink:0;cursor:pointer}
+    .toggle.on{background:var(--success)}
+    .toggle::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:left var(--dur-fast) var(--ease-standard);box-shadow:0 1px 2px rgba(0,0,0,.15)}
     .toggle.on::after{left:20px}
-    .map-del{flex-shrink:0;width:32px;height:32px;border-radius:8px;border:1px solid var(--line);background:var(--card);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--red);padding:0;font-size:18px;font-weight:800;line-height:1}
-    .map-del:hover{background:rgba(207,63,63,.08);border-color:rgba(207,63,63,.25)}
-    .map-menu{position:relative;flex-shrink:0}
-    .map-menu-btn{width:32px;height:32px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--text);cursor:pointer;font-size:16px;line-height:1}
-    .map-menu-float{position:fixed;min-width:148px;background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:0 12px 32px rgba(15,23,42,.18);padding:6px;z-index:200;display:none}
-    .map-menu-float.open{display:block}
-    .map-menu-float button{display:block;width:100%;text-align:left;border:none;background:transparent;color:var(--text);padding:8px 10px;font:inherit;font-size:13px;border-radius:8px;cursor:pointer}
-    .map-menu-float button:hover{background:var(--accent-soft)}
-    .map-menu-float button:disabled{opacity:.45;cursor:not-allowed}
-    .trash-box{border-top:1px solid var(--line);padding-top:12px}
-    .trash-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:13px}
+    .map-test{
+      height:34px;padding:0 14px;border-radius:var(--radius-pill);border:1px solid var(--outline);
+      background:var(--surface);color:var(--btn-label);font:inherit;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;
+    }
+    .map-test:hover:not(:disabled){background:var(--primary-soft);border-color:rgba(26,115,232,.2);transform:translateY(-1px)}
+    .map-test:active:not(:disabled){transform:scale(0.96)}
+    .map-test:disabled{opacity:.5;cursor:not-allowed;color:var(--btn-label-muted)}
+    .map-test.sending{
+      pointer-events:none;border-color:rgba(26,115,232,.35);color:var(--key-soft);
+      animation:test-pulse .75s ease-in-out infinite;
+    }
+    @keyframes test-pulse{0%,100%{opacity:1}50%{opacity:.5}}
+    .map-menu-btn{
+      width:34px;height:34px;border-radius:10px;border:1px solid var(--outline-variant);
+      background:var(--surface);color:var(--btn-label);cursor:pointer;font-size:16px;line-height:1;
+    }
+    .map-menu-btn:hover{background:var(--primary-soft);transform:translateY(-1px)}
+    .map-menu-btn:active{transform:scale(0.94)}
+    .status-section{
+      display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
+      margin-top:16px;padding-top:14px;border-top:1px solid var(--outline-variant);
+    }
+    .status-left{display:flex;align-items:center;gap:10px;flex-wrap:wrap;min-width:0;flex:1}
+    .conflict-pill,.conflict-banner{
+      display:none;font-size:12px;line-height:1.35;color:#9a3412;font-weight:500;
+      padding:4px 10px;border-radius:var(--radius-pill);background:#fff7ed;border:1px solid #fed7aa;
+    }
+    .conflict-pill.show,.conflict-banner.show{display:inline-flex;align-items:center}
+    .btn-test-send{
+      height:40px;padding:0 20px;border-radius:var(--radius-pill);
+      border:1px solid var(--outline);background:var(--surface-high);color:var(--btn-label);
+      font:inherit;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;box-shadow:none;
+    }
+    .btn-test-send:hover:not(:disabled){background:var(--primary-soft);border-color:rgba(26,115,232,.22);transform:translateY(-1px)}
+    .btn-test-send:active:not(:disabled){transform:scale(0.97)}
+    .btn-test-send:disabled{opacity:.55;cursor:not-allowed;color:var(--btn-label-muted);border-style:dashed;box-shadow:none}
+    .btn-test-send.sending{
+      pointer-events:none;border-color:rgba(26,115,232,.35);color:var(--key-soft);
+      animation:test-pulse .75s ease-in-out infinite;
+    }
+    .settings-overlay{
+      position:fixed;inset:0;background:rgba(15,23,42,.28);z-index:400;
+      opacity:0;pointer-events:none;transition:opacity var(--dur-med) var(--ease-standard);
+    }
+    .settings-overlay.open{opacity:1;pointer-events:auto}
+    .settings-drawer{
+      position:fixed;top:0;right:0;width:min(400px,92vw);height:100%;z-index:401;
+      background:var(--surface-high);border-left:1px solid var(--outline-variant);
+      transform:translateX(100%);transition:transform var(--dur-med) var(--ease-standard);
+      display:flex;flex-direction:column;overflow:hidden;
+    }
+    .settings-drawer.open{transform:translateX(0)}
+    .drawer-head{display:flex;justify-content:space-between;align-items:center;padding:16px 18px;border-bottom:1px solid var(--outline-variant)}
+    .drawer-head h2{margin:0;font-size:16px;font-weight:800}
+    .drawer-close{width:32px;height:32px;border-radius:10px;border:1px solid var(--outline-variant);background:var(--surface-high);cursor:pointer;font-size:18px;line-height:1;color:var(--on-surface)}
+    .drawer-body{flex:1;overflow:auto;padding:16px 18px 24px;display:grid;gap:16px}
+    .appearance-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .appearance-pill{
+      height:48px;border-radius:var(--radius-pill);border:1px solid var(--outline-variant);
+      background:var(--surface-high);font:inherit;font-size:15px;font-weight:700;cursor:pointer;color:var(--on-surface);
+    }
+    .appearance-pill:hover{background:var(--primary-soft)}
+    .drawer-section{border-top:1px solid var(--outline-variant);padding-top:14px}
+    .mini-title{margin:0 0 8px;font-size:14px;font-weight:700}
+    .mini{margin:0;color:var(--on-surface-muted);font-size:13px;line-height:1.65}
+    .chip{display:inline-flex;padding:4px 10px;border-radius:var(--radius-pill);background:var(--primary-soft);color:var(--primary);font-size:12px;font-weight:600}
+    .log{margin:0;padding:10px 0 0;white-space:pre-wrap;word-break:break-word;font:12px/1.55 Consolas,monospace;min-height:60px;color:var(--on-surface-muted)}
+    .row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .item{display:flex;justify-content:space-between;gap:8px;font-size:13px;padding:8px 0;border-top:1px solid var(--outline-variant)}
+    .clear-panel{margin-top:10px;display:flex;justify-content:flex-end}
+    .clear-btn{border:none;background:transparent;color:var(--error);font-weight:700;cursor:pointer;padding:0;font:inherit;font-size:13px}
+    .trash-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--outline-variant);font-size:13px}
     .trash-row:last-child{border-bottom:none}
-    .trash-restore{height:30px;padding:0 12px;border-radius:999px;border:1px solid var(--line);background:var(--card);color:var(--text);font:inherit;font-size:12px;font-weight:700;cursor:pointer}
-    .trash-empty{color:var(--muted);font-size:13px;margin:0}
-    .editor-wrap{margin-bottom:16px}
-    .editor-wrap.hidden{display:none}
-    .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#0f172a;color:#fff;padding:10px 16px;border-radius:999px;font-size:13px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:99}
-    .toast.show{opacity:1}
-    @media (max-width: 980px){
-      .grid{grid-template-columns:1fr;gap:12px}
-      .arrow{transform:rotate(90deg);font-size:28px}
-      .card{min-height:auto}
-      .row2{grid-template-columns:1fr}
+    .trash-empty{color:var(--on-surface-muted);font-size:13px;margin:0}
+    .trash-restore{height:30px;padding:0 12px;border-radius:var(--radius-pill);border:1px solid var(--outline-variant);background:var(--surface-high);font:inherit;font-size:12px;font-weight:600;cursor:pointer;color:var(--on-surface)}
+    .map-menu-float{
+      position:fixed;min-width:152px;background:var(--surface-high);border:1px solid var(--outline-variant);
+      border-radius:14px;box-shadow:var(--shadow-card);padding:6px;z-index:300;display:none;
+    }
+    .map-menu-float.open{display:block}
+    .map-menu-float button{
+      display:block;width:100%;text-align:left;border:none;background:transparent;color:var(--on-surface);
+      padding:9px 11px;font:inherit;font-size:13px;border-radius:10px;cursor:pointer;
+    }
+    .map-menu-float button:hover{background:var(--primary-soft)}
+    .map-menu-float button.danger{color:var(--error)}
+    .map-menu-float button:disabled{opacity:.45;cursor:not-allowed}
+    #toast{
+      position:fixed;left:50%;bottom:28px;transform:translateX(-50%) translateY(8px);
+      background:var(--on-surface);color:var(--surface-high);padding:12px 18px;border-radius:20px;
+      font-size:13px;font-weight:600;opacity:0;pointer-events:none;transition:opacity var(--dur-fast) var(--ease-standard),transform var(--dur-fast) var(--ease-standard);
+      z-index:500;max-width:min(90vw,420px);text-align:center;
+    }
+    #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+    @media (max-width:720px){
+      .hero-grid{grid-template-columns:1fr}
+      .hero-flow-arrow{display:none}
+      .map-row{grid-template-columns:auto 1fr auto;grid-template-rows:auto auto}
+      .map-test{grid-column:3;grid-row:1}
+      .map-menu-btn{grid-column:3;grid-row:2;justify-self:end}
+    }
+    @media (prefers-reduced-motion:reduce){
+      *,*::before,*::after{animation:none!important;transition:none!important}
+      .btn:active:not(:disabled),.list-add:active:not(:disabled),.map-test:active:not(:disabled),.btn-test-send:active:not(:disabled){transform:none}
     }
   </style>
 </head>
 <body>
   <div class="app">
-    <div class="shell">
-      <div class="topbar">
-        <div class="brand" id="appTitle">语音启动设置</div>
-        <div class="topbar-right">
-          <div class="chips">
-            <button class="chip-btn" id="btnTheme" type="button" title="主题">☀</button>
-            <button class="chip-btn" id="btnLang" type="button" title="语言">中</button>
+    <header class="app-header">
+      <h1 class="app-title" id="appTitle">语音启动设置</h1>
+      <button type="button" id="btnSettings">设置</button>
+    </header>
+
+    <main class="main-scroll">
+      <div class="editor-zone">
+        <div class="hero-grid" id="editorWrap">
+        <section class="bubble-card trigger-card" id="leftCard">
+          <div class="card-head">
+            <h2 class="title"><span class="step-mark" aria-hidden="true">①</span><svg class="title-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg><span id="triggerTitle">录启动按键</span></h2>
+            <div class="badge" id="leftBadge">未设置</div>
           </div>
-          <div class="save" id="saveState">已自动保存</div>
+          <div class="display empty" id="triggerDisplay">
+            <span class="display-value" id="triggerView">未设置</span>
+          </div>
+          <div class="actions">
+            <button class="btn secondary record-btn" id="btnRecordTrigger" type="button">设置启动按键</button>
+          </div>
+          <p class="help" id="triggerHelp">录制我的专属VibeCoding按键</p>
+          <span class="sr-only" id="triggerState" aria-live="polite"></span>
+        </section>
+
+        <div class="hero-flow-arrow" aria-hidden="true">→</div>
+
+        <section class="bubble-card target-card" id="rightCard">
+          <div class="card-head">
+            <h2 class="title"><span class="step-mark" aria-hidden="true">②</span><svg class="title-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M8 14h8"/></svg><span id="targetTitle">录输入法按键</span></h2>
+            <div class="badge" id="rightBadge">未设置</div>
+          </div>
+          <div class="display empty" id="targetDisplay">
+            <span class="display-value" id="targetView">未设置</span>
+          </div>
+          <div class="actions">
+            <button class="btn secondary record-btn" id="btnRecordTarget" type="button">录制语音输入按键</button>
+          </div>
+          <p class="help" id="targetHelp">录制语音输入法的激活快捷键，注意先退出或切换输入法，避免冲突或者无法收录。</p>
+          <span class="sr-only" id="targetState" aria-live="polite"></span>
+        </section>
+        </div>
+        <div class="record-cancel-bar" id="recordCancelBar">
+          <button type="button" class="btn-cancel-record" id="btnCancelRecord">取消录制</button>
         </div>
       </div>
 
-      <div class="editor-wrap" id="editorWrap">
-      <div class="grid">
-        <section class="card" id="leftCard">
-          <div class="card-head">
-            <div class="title" id="triggerTitle">录制触发键</div>
-            <div class="badge" id="leftBadge">等待按键…</div>
-          </div>
-          <div class="display empty" id="triggerView">点击录制触发键</div>
-          <div class="actions">
-            <button class="btn primary" id="btnRecordTrigger">录制触发键</button>
-          </div>
-          <div class="help" id="triggerHelp">点击后，请按下您的设备按键。<br>备注：这是蓝牙外设的真实按键，不改名字，只做记录。</div>
-          <div class="state" id="triggerState">等待按键…</div>
-        </section>
-
-        <div class="arrow">→</div>
-
-        <section class="card" id="rightCard">
-          <div class="card-head">
-            <div class="title" id="targetTitle">设置目标键</div>
-            <div class="badge" id="rightBadge">等待按键…</div>
-          </div>
-          <div class="display empty" id="targetView">点击录制目标键</div>
-          <div class="actions">
-            <button class="btn secondary" id="btnRecordTarget">录制目标键</button>
-          </div>
-          <div class="help" id="targetHelp">点击后，请按下您的语音输入快捷键（支持键盘、媒体键、鼠标侧键）。<br>备注：请先退出/切换语音输入法，避免冲突或无法录制；也可在配置里手写如 Volume_Up、LButton、Ctrl+Shift。</div>
-          <div class="state" id="targetState">等待按键…</div>
-        </section>
-      </div>
-      </div>
-
-      <section class="list-card">
+      <section class="bubble-card mapping-section">
         <div class="list-head">
-          <h2 id="mappingListTitle">快捷键映射</h2>
-          <button class="list-add" id="btnAddMapping" type="button">+ 添加</button>
+          <h2 id="mappingListTitle">我的方案</h2>
+          <button class="list-add" id="btnAddMapping" type="button">添加新方案</button>
+        </div>
+        <div class="draft-hint" id="mappingDraftHint"></div>
+        <div class="mapping-empty" id="mappingEmpty" hidden>
+          <strong id="mappingEmptyTitle">还没有方案</strong>
+          <span id="mappingEmptyHint">请先在上方完成启动按键与语音快捷键设置。</span>
         </div>
         <div id="mappingList"></div>
+        <div class="status-section">
+          <div class="status-left">
+            <div class="conflict-pill" id="conflictBanner" role="status"></div>
+          </div>
+          <button type="button" class="btn-test-send" id="btnTestSend" disabled>请先设置语音快捷键</button>
+        </div>
       </section>
+    </main>
+  </div>
 
-      <details class="advanced">
-        <summary><span id="advTitle">高级</span><span class="chip" id="listenState">监听中</span></summary>
-        <div class="adv-body">
-          <div>
-            <div class="mini-title" id="logTitle">事件日志</div>
-            <pre class="log" id="rawEventLog">等待录制…</pre>
-          </div>
-          <div>
-            <div class="mini-title" id="runtimeTitle">运行解释</div>
-            <div class="row2">
-              <div class="item"><span>key</span><span id="dbKey">-</span></div>
-              <div class="item"><span>code</span><span id="dbCode">-</span></div>
-              <div class="item"><span id="actionLabel">动作</span><span id="liveAction">-</span></div>
-              <div class="item"><span id="sendLabel">发送</span><span id="liveTimer">-</span></div>
-            </div>
-          </div>
-          <div>
-            <div class="mini-title" id="sourceTitle">当前源组</div>
-            <pre class="log" id="sourceExplain">source: 右 Alt
+  <div class="settings-overlay" id="drawerOverlay"></div>
+  <aside class="settings-drawer" id="settingsDrawer" aria-hidden="true">
+    <div class="drawer-head">
+      <h2 id="settingsTitle">设置</h2>
+      <button type="button" class="drawer-close" id="btnDrawerClose" aria-label="关闭">×</button>
+    </div>
+    <div class="drawer-body">
+      <div class="appearance-row">
+        <button type="button" class="appearance-pill" id="btnTheme">☀ 浅色</button>
+        <button type="button" class="appearance-pill" id="btnLang">中</button>
+      </div>
+      <div class="drawer-section" style="border-top:0;padding-top:0">
+        <div class="mini-title" id="listenTitle">监听状态</div>
+        <span class="chip" id="listenState">监听中</span>
+      </div>
+      <div class="drawer-section">
+        <div class="mini-title" id="sourceTitle">当前源组</div>
+        <pre class="log" id="sourceExplain">source: 右 Alt
 grouping: exact
 events:
 - key=Alt code=AltRight hotkey=RAlt</pre>
-          </div>
-          <div>
-            <div class="mini-title" id="noteTitle">说明</div>
-            <p class="mini" id="noteText">录制真实按钮，状态机只接管动作，不接管用户的命名方式。清除当前设置放在这里，避免首页干扰。</p>
-            <div class="clear-panel"><button class="clear-btn" id="btnClearAll">清除全部映射</button></div>
-          </div>
-          <div class="trash-box">
-            <div class="mini-title" id="trashTitle">回收站</div>
-            <p class="trash-empty" id="trashEmpty">暂无已删除的映射</p>
-            <div id="trashList"></div>
-          </div>
+      </div>
+      <div class="drawer-section">
+        <div class="mini-title" id="logTitle">事件日志</div>
+        <pre class="log" id="rawEventLog">等待录制…</pre>
+      </div>
+      <div class="drawer-section">
+        <div class="mini-title" id="runtimeTitle">运行解释</div>
+        <div class="row2">
+          <div class="item"><span>key</span><span id="dbKey">-</span></div>
+          <div class="item"><span>code</span><span id="dbCode">-</span></div>
+          <div class="item"><span id="actionLabel">动作</span><span id="liveAction">-</span></div>
+          <div class="item"><span id="sendLabel">发送</span><span id="liveTimer">-</span></div>
         </div>
-      </details>
+      </div>
+      <div class="drawer-section">
+        <div class="mini-title" id="trashTitle">回收站</div>
+        <p class="trash-empty" id="trashEmpty">暂无已删除的映射</p>
+        <div id="trashList"></div>
+      </div>
+      <div class="drawer-section">
+        <div class="mini-title" id="noteTitle">说明</div>
+        <p class="mini" id="noteText">录制真实按钮，状态机只接管动作，不接管用户的命名方式。</p>
+        <div class="clear-panel"><button type="button" class="clear-btn" id="btnClearAll">清除全部映射</button></div>
+      </div>
     </div>
-  </div>
+  </aside>
+
   <div class="map-menu-float" id="mapMenuFloat">
     <button type="button" data-act="dup" id="menuActDup"></button>
     <button type="button" data-act="up" id="menuActUp"></button>
     <button type="button" data-act="down" id="menuActDown"></button>
+    <button type="button" class="danger" data-act="del" id="menuActDel"></button>
   </div>
-  <div class="toast" id="toast"></div>
+  <div class="toast" id="toast" role="status"></div>
 
   <script>
   (function(){
     const listeners={message:[]};
     const invoke=window.__TAURI_INTERNALS__?function(cmd,args){return window.__TAURI_INTERNALS__.invoke(cmd,args);}:function(){return Promise.resolve();};
+    window.__vp_invoke__=invoke;
     window.chrome={webview:{}};
     window.chrome.webview.postMessage=function(msg){
       const type=msg&&msg.type;
@@ -237,6 +458,7 @@ events:
       else if(type==='mvp_pause')invoke('cmd_pause',{});
       else if(type==='mvp_resume')invoke('cmd_resume',{});
       else if(type==='mvp_frontend_keydown')invoke('cmd_frontend_keydown',{key:msg.key||'',mapping_id:msg.mappingId||'',mode:msg.mode||'trigger'});
+      else if(type==='mvp_test_send')invoke('cmd_test_send',{mapping_id:msg.mappingId||null,target_key:msg.targetKey||null});
     };
     window.chrome.webview.addEventListener=function(event,cb){ if(!listeners[event]) listeners[event]=[]; listeners[event].push(cb); };
     window.__vp_bridge__=function(type,data){ const event={data:Object.assign({type:type},data||{})}; (listeners.message||[]).forEach(function(cb){ try{cb(event);}catch(e){} }); };
@@ -260,82 +482,271 @@ events:
   let menuAnchorBtn=null;
   let theme='light';
   let lang='zh';
+  let testSendState='idle';
+  let testSendTimer=0;
+  let testSendWatchdog=0;
+  let testSendFromFooter=false;
+  let testSendMappingId=null;
+  const ui={drawerOpen:false};
+  let conflictRows=[];
+  let editorTriggerKey='';
+  let editorTargetKey='';
+  let recordSnapshot=null;
+  let pendingNewDraftId=null;
   const targetCapture={pendingModifier:'',mods:{ctrl:false,shift:false,alt:false,meta:false},modSide:{ctrl:'',shift:'',alt:'',meta:''}};
   const I18N={
     zh:{
-      appTitle:'语音启动设置',saved:'已自动保存',recordingSave:'正在录制…',
-      mappingListTitle:'快捷键映射',addMapping:'+ 添加',
-      triggerTitle:'录制触发键',targetTitle:'设置目标键',
-      btnRecordTrigger:'录制触发键',btnRecordTarget:'录制目标键',
-      triggerPlaceholder:'点击录制触发键',targetPlaceholder:'点击录制目标键',
-      triggerHelp:'点击后，请按下您的设备按键。<br>备注：这是蓝牙外设的真实按键，不改名字，只做记录。',
-      targetHelp:'点击后，请按下您的语音输入快捷键（支持键盘、媒体键、鼠标侧键）。<br>备注：请先退出/切换语音输入法，避免冲突或无法录制；也可在配置里手写如 Volume_Up、LButton、Ctrl+Shift。',
-      waitingKey:'等待按键…',recordingBadge:'正在录制…',recordedBadge:'已录制',setBadge:'已设置',
-      triggerRecordHint:'请按下设备/白名单触发键',targetRecordHint:'请按下语音输入快捷键',
-      comboHint:'等待组合键…',enabled:'启用',disabled:'停用',
+      appTitle:'语音启动设置',
+      mappingListTitle:'我的方案',addMapping:'添加新方案',
+      triggerTitle:'录启动按键',targetTitle:'录输入法按键',
+      btnRecordTrigger:'设置启动按键',btnRecordTarget:'录制语音输入按键',
+      btnRerecordTrigger:'重新设置',btnRerecordTarget:'重新设置',
+      triggerPlaceholder:'未设置',targetPlaceholder:'未设置',
+      triggerHelp:'录制我的专属VibeCoding按键',
+      targetHelp:'录制语音输入法的激活快捷键，注意先退出或切换输入法，避免冲突或者无法收录。',
+      badgeNotRecorded:'未设置',badgeRecording:'录制中',badgeRecorded:'已设置',
+      badgeNotSet:'未设置',badgeSet:'已设置',
+      mappingEmptyTitle:'还没有方案',mappingEmptyHint:'请先在上方完成启动按键与语音快捷键设置。',
+      draftHint:'请先在上方完成当前方案的两项设置，再添加新方案。',
+      addNeedComplete:'请先完成当前方案的设置',
+      cancelRecord:'取消录制',cancelDraft:'取消新方案',
+      groupLabel:'分组',enabled:'已启用',disabled:'已停用',
       duplicate:'复制',moveUp:'上移',moveDown:'下移',delete:'删除',
-      confirmDelete:'要删除这条快捷键吗？\n\n删除后会先放进下方「高级 → 回收站」，需要时还能恢复。',
+      confirmDelete:'要删除这条快捷键吗？\n\n删除后会先放进「设置 → 回收站」，需要时还能恢复。',
+      confirmDeleteDraft:'确定删除这个未完成的方案？',
       confirmClear:'确定清除全部映射并恢复默认？',
-      movedToTrash:'已移入回收站，可在「高级」中恢复',
+      movedToTrash:'已移入回收站，可在「设置」中恢复',
       trashTitle:'回收站',trashEmpty:'暂无已删除的映射',trashRestore:'恢复',
-      advTitle:'高级',listenOn:'监听中',listenPaused:'已暂停监听',
+      settingsTitle:'设置',listenTitle:'监听状态',
+      testSendDisabled:'请先设置语音快捷键',
+      testSendTarget:'测试语音快捷键',testSending:'发送中…',testSent:'已发送',
+      testShort:'测试',testFailed:'发送失败，请检查目标键',
+      testSentToast:'已发送：',selectedLabel:'已选中',
       logTitle:'事件日志',runtimeTitle:'运行解释',actionLabel:'动作',sendLabel:'发送',
       sourceTitle:'当前源组',noteTitle:'说明',
-      noteText:'录制真实按钮，状态机只接管动作，不接管用户的命名方式。清除当前设置放在这里，避免首页干扰。',
-      clearAll:'清除全部映射',      waitLog:'等待录制…',
+      listenOn:'监听中',listenPaused:'已暂停监听',
+      themeLight:'☀ 浅色',themeDark:'🌙 深色',
+      noteText:'录制真实按钮，状态机只接管动作，不接管用户的命名方式。',
+      clearAll:'清除全部映射',waitLog:'等待录制…',
       triggerRejected:'未能识别该按键，请再试一次',
       whitelistRejected:'未能识别该按键，请再试一次',conflictDisabled:'已停用冲突映射',
-      restoredDefault:'已恢复默认映射',logStartTrigger:'开始录制触发键...',logStartTarget:'开始录制目标键...',
-      logTimeout:'录制超时',logTriggerDone:'已录制触发键: ',logTargetDone:'已录制目标键: ',logWaitMain:'等待按下主键...'
+      conflictBannerCount:'{n} 处按键重复',
+      conflictRowHint:'重复：已用于 {key}',
+      restoredDefault:'已恢复默认方案',logStartTrigger:'开始设置启动按键...',logStartTarget:'开始设置语音快捷键...',
+      logTimeout:'设置超时',logTriggerDone:'已设置启动按键: ',logTargetDone:'已设置语音快捷键: ',logWaitMain:'等待按下主键...',
+      comboHint:'等待组合键…',triggerRecordHint:'请按下设备按键',targetRecordHint:'请按下语音快捷键'
     },
     en:{
-      appTitle:'Voice Launch Settings',saved:'Auto-saved',recordingSave:'Recording…',
-      mappingListTitle:'Shortcut Mappings',addMapping:'+ Add',
-      triggerTitle:'Record Trigger Key',targetTitle:'Set Target Key',
-      btnRecordTrigger:'Record Trigger',btnRecordTarget:'Record Target',
-      triggerPlaceholder:'Tap to record trigger',targetPlaceholder:'Tap to record target',
-      triggerHelp:'After tapping, press your device button.<br>Note: we record the real Bluetooth key as-is.',
-      targetHelp:'After tapping, press your voice-input shortcut (keyboard, media, mouse side buttons).<br>Note: switch away from the IME first to avoid conflicts; you can also type values like Volume_Up, LButton, Ctrl+Shift.',
-      waitingKey:'Waiting for key…',recordingBadge:'Recording…',recordedBadge:'Recorded',setBadge:'Set',
-      triggerRecordHint:'Press device / whitelist trigger key',targetRecordHint:'Press voice-input shortcut',
-      comboHint:'Waiting for combo…',enabled:'On',disabled:'Off',
+      appTitle:'Voice Launch Settings',
+      mappingListTitle:'My profiles',addMapping:'Add profile',
+      triggerTitle:'Record launch key',targetTitle:'Record IME key',
+      btnRecordTrigger:'Set launch key',btnRecordTarget:'Record voice input key',
+      btnRerecordTrigger:'Set again',btnRerecordTarget:'Set again',
+      triggerPlaceholder:'Not set',targetPlaceholder:'Not set',
+      triggerHelp:'Record your VibeCoding key',
+      targetHelp:'Record your voice-IME activation shortcut. Exit or switch IME first to avoid conflicts or missed keys.',
+      badgeNotRecorded:'Not set',badgeRecording:'Recording',badgeRecorded:'Set',
+      badgeNotSet:'Not set',badgeSet:'Set',
+      mappingEmptyTitle:'No profiles yet',mappingEmptyHint:'Complete launch key and voice shortcut above first.',
+      draftHint:'Finish both settings above before adding another profile.',
+      addNeedComplete:'Complete the current profile first',
+      cancelRecord:'Cancel recording',cancelDraft:'Cancel new profile',
+      groupLabel:'Group',enabled:'On',disabled:'Off',
       duplicate:'Duplicate',moveUp:'Move up',moveDown:'Move down',delete:'Delete',
-      confirmDelete:'Remove this shortcut?\n\nIt will go to Advanced → Recycle Bin and you can restore it later.',
+      confirmDelete:'Remove this shortcut?\n\nIt will go to Settings → Recycle Bin and you can restore it later.',
+      confirmDeleteDraft:'Delete this incomplete profile?',
       confirmClear:'Clear all mappings and restore default?',
-      movedToTrash:'Moved to recycle bin (see Advanced)',
+      movedToTrash:'Moved to recycle bin (see Settings)',
       trashTitle:'Recycle Bin',trashEmpty:'No deleted mappings',trashRestore:'Restore',
-      advTitle:'Advanced',listenOn:'Listening',listenPaused:'Paused',
+      settingsTitle:'Settings',listenTitle:'Listen status',
+      testSendDisabled:'Set a voice shortcut first',
+      testSendTarget:'Test voice shortcut',testSending:'Sending…',testSent:'Sent',
+      testShort:'Test',testFailed:'Send failed — check target key',
+      testSentToast:'Sent: ',selectedLabel:'Selected',
       logTitle:'Event Log',runtimeTitle:'Live Status',actionLabel:'Action',sendLabel:'Send',
       sourceTitle:'Source Group',noteTitle:'Note',
-      noteText:'Record the real button; the state machine handles actions, not naming. Clear-all stays here to keep the homepage clean.',
-      clearAll:'Clear all mappings',      waitLog:'Waiting to record…',
+      listenOn:'Listening',listenPaused:'Paused',
+      themeLight:'☀ Light',themeDark:'🌙 Dark',
+      noteText:'Record the real button; the state machine handles actions, not naming.',
+      clearAll:'Clear all mappings',waitLog:'Waiting to record…',
       triggerRejected:'Could not recognize that key — please try again',
       whitelistRejected:'Could not recognize that key — please try again',conflictDisabled:'Conflicting mappings disabled',
+      conflictBannerCount:'{n} duplicate key(s)',
+      conflictRowHint:'Duplicate: used by {key}',
       restoredDefault:'Default mapping restored',logStartTrigger:'Start recording trigger...',logStartTarget:'Start recording target...',
-      logTimeout:'Recording timed out',logTriggerDone:'Trigger recorded: ',logTargetDone:'Target recorded: ',logWaitMain:'Waiting for main key...'
+      logTimeout:'Recording timed out',logTriggerDone:'Trigger recorded: ',logTargetDone:'Target recorded: ',logWaitMain:'Waiting for main key...',
+      comboHint:'Waiting for combo…',triggerRecordHint:'Press device key',targetRecordHint:'Press voice shortcut'
     }
   };
 
   function t(key){ return (I18N[lang]&&I18N[lang][key])||key; }
 
+  function isSavedMapping(m){
+    return !!(m&&m.triggerKey&&m.targetKey);
+  }
+
+  function isDraftMapping(m){
+    return !!(m&&!isSavedMapping(m));
+  }
+
+  function hasDraftMappings(){
+    return sortedMappings().some(isDraftMapping);
+  }
+
+  function isDraftPristine(m){
+    return isDraftMapping(m)&&!m.triggerKey&&!m.targetKey;
+  }
+
+  function removeDraftMapping(id){
+    ensureConfig();
+    const m=state.config.mappings.find(function(x){return x.id===id;});
+    if(!m||isSavedMapping(m)) return;
+    state.config.mappings=state.config.mappings.filter(function(x){return x.id!==id;});
+    if(pendingNewDraftId===id) pendingNewDraftId=null;
+    if(state.selectedMappingId===id){
+      const remain=state.config.mappings;
+      state.selectedMappingId=remain.length?remain[remain.length-1].id:null;
+      syncEditorFromSelection();
+    }
+    save();
+    render();
+  }
+
+  function abandonDraftIfPristine(id){
+    const m=state.config.mappings.find(function(x){return x.id===id;});
+    if(!m||!isDraftPristine(m)) return false;
+    removeDraftMapping(id);
+    return true;
+  }
+
+  function beginRecordSnapshot(){
+    const m=selectedMapping();
+    recordSnapshot={
+      editorTrigger:editorTriggerKey||'',
+      editorTarget:editorTargetKey||'',
+      mappingTrigger:m.triggerKey||'',
+      mappingTarget:m.targetKey||'',
+    };
+  }
+
+  function cancelRecording(){
+    if(recordingMode==='none') return;
+    const draftId=state.selectedMappingId;
+    clearTimeout(recordTimer);
+    recordingMode='none';
+    if(recordSnapshot){
+      editorTriggerKey=recordSnapshot.editorTrigger;
+      editorTargetKey=recordSnapshot.editorTarget;
+      const m=selectedMapping();
+      m.triggerKey=recordSnapshot.mappingTrigger;
+      m.targetKey=recordSnapshot.mappingTarget;
+      m.label=(recordSnapshot.mappingTrigger||'?')+' → '+(recordSnapshot.mappingTarget||'?');
+    }
+    recordSnapshot=null;
+    resetTargetCapture();
+    try{window.chrome?.webview?.postMessage({type:'mvp_stop_recording'});}catch(_){}
+    setRecording('none');
+    if(abandonDraftIfPristine(draftId)) return;
+    render();
+  }
+
+  function cancelDraftOrRecording(){
+    if(recordingMode!=='none'){
+      cancelRecording();
+      return;
+    }
+    const m=selectedMapping();
+    if(m&&isDraftMapping(m)) removeDraftMapping(m.id);
+  }
+
+  function syncEditorFromSelection(){
+    const m=selectedMapping();
+    editorTriggerKey=m.triggerKey||'';
+    editorTargetKey=m.targetKey||'';
+  }
+
+  function mappingTargetKey(id){
+    const m=state.config&&state.config.mappings.find(function(x){return x.id===id;});
+    return m&&(m.targetKey||'?');
+  }
+
+  function conflictsForMapping(id){
+    return conflictRows.filter(function(c){return c.mappingId===id||c.otherId===id;});
+  }
+
+  function otherIdInConflict(c,selfId){
+    return c.mappingId===selfId?c.otherId:c.mappingId;
+  }
+
+  function conflictHintForRow(c,selfId){
+    const otherId=otherIdInConflict(c,selfId);
+    const key=mappingTargetKey(otherId);
+    return t('conflictRowHint').replace('{key}',key);
+  }
+
+  function focusMapping(id){
+    state.selectedMappingId=id;
+    render();
+    const row=document.querySelector('.map-row[data-id="'+id+'"]');
+    if(row) row.scrollIntoView({block:'nearest',behavior:'smooth'});
+  }
+
+  function countConflictPairs(){
+    const seen={};
+    conflictRows.forEach(function(c){
+      seen[[c.mappingId,c.otherId].sort().join('|')]=true;
+    });
+    return Object.keys(seen).length;
+  }
+
+  function renderConflictBanner(){
+    const el=$('conflictBanner');
+    if(!el) return;
+    const n=countConflictPairs();
+    if(!n){ el.classList.remove('show'); el.textContent=''; return; }
+    el.textContent=t('conflictBannerCount').replace('{n}',String(n));
+    el.classList.add('show');
+  }
+
   function applyTheme(){
     document.documentElement.setAttribute('data-theme',theme);
-    $('btnTheme').textContent=theme==='light'?'☀':'☾';
+    $('btnTheme').textContent=theme==='light'?t('themeLight'):t('themeDark');
     try{ localStorage.setItem('vp_theme',theme); }catch(_){ }
+  }
+
+  function openDrawer(){
+    ui.drawerOpen=true;
+    $('settingsDrawer').classList.add('open');
+    $('drawerOverlay').classList.add('open');
+    $('settingsDrawer').setAttribute('aria-hidden','false');
+  }
+
+  function closeDrawer(){
+    ui.drawerOpen=false;
+    $('settingsDrawer').classList.remove('open');
+    $('drawerOverlay').classList.remove('open');
+    $('settingsDrawer').setAttribute('aria-hidden','true');
   }
 
   function applyLang(){
     const d=I18N[lang];
     $('appTitle').textContent=d.appTitle;
+    $('btnSettings').textContent=d.settingsTitle;
+    $('settingsTitle').textContent=d.settingsTitle;
     $('mappingListTitle').textContent=d.mappingListTitle;
     $('btnAddMapping').textContent=d.addMapping;
+    $('btnCancelRecord').textContent=d.cancelRecord;
     $('triggerTitle').textContent=d.triggerTitle;
     $('targetTitle').textContent=d.targetTitle;
-    $('btnRecordTrigger').textContent=d.btnRecordTrigger;
-    $('btnRecordTarget').textContent=d.btnRecordTarget;
+    $('btnRecordTrigger').textContent=editorTriggerKey?t('btnRerecordTrigger'):t('btnRecordTrigger');
+    $('btnRecordTarget').textContent=editorTargetKey?t('btnRerecordTarget'):t('btnRecordTarget');
+    $('mappingEmptyTitle').textContent=d.mappingEmptyTitle;
+    $('mappingEmptyHint').textContent=d.mappingEmptyHint;
+    const draftHint=$('mappingDraftHint');
+    if(draftHint) draftHint.textContent=d.draftHint;
     $('triggerHelp').innerHTML=d.triggerHelp;
     $('targetHelp').innerHTML=d.targetHelp;
-    $('advTitle').textContent=d.advTitle;
+    $('listenTitle').textContent=d.listenTitle;
     $('logTitle').textContent=d.logTitle;
     $('runtimeTitle').textContent=d.runtimeTitle;
     $('actionLabel').textContent=d.actionLabel;
@@ -349,7 +760,9 @@ events:
     $('menuActDup').textContent=d.duplicate;
     $('menuActUp').textContent=d.moveUp;
     $('menuActDown').textContent=d.moveDown;
+    $('menuActDel').textContent=d.delete;
     $('btnLang').textContent=lang==='zh'?'中':'EN';
+    applyTheme();
     if(recordingMode==='none') setRecording('none');
     render();
     try{ localStorage.setItem('vp_lang',lang); }catch(_){ }
@@ -390,7 +803,7 @@ events:
     return JSON.stringify({
       version:3,
       mappings:state.config.mappings.map(function(m,i){
-        return {id:m.id,label:m.label||((m.triggerKey||'?')+' → '+(m.targetKey||'?')),group:m.group||'默认',triggerKey:m.triggerKey||'AutoTrigger',targetKey:m.targetKey||'RAlt',enabled:!!m.enabled,order:i,triggerMode:m.triggerMode||'tap',triggerSource:m.triggerSource||null};
+        return {id:m.id,label:m.label||((m.triggerKey&&m.targetKey)?((m.triggerKey||'?')+' → '+(m.targetKey||'?')):''),group:m.group||'默认',triggerKey:m.triggerKey||'',targetKey:m.targetKey||'',enabled:!!m.enabled,order:i,triggerMode:m.triggerMode||'tap',triggerSource:m.triggerSource||null};
       }),
       trash:(state.config.trash||[]).map(function(m){
         return {id:m.id,label:m.label||'',group:m.group||'默认',triggerKey:m.triggerKey||'',targetKey:m.targetKey||'',enabled:false,order:m.order||0,triggerMode:m.triggerMode||'tap',triggerSource:m.triggerSource||null};
@@ -407,7 +820,6 @@ events:
 
   function save(){
     try{ window.chrome?.webview?.postMessage({type:'mvp_save',json:buildSavePayload()}); }catch(_){ }
-    $('saveState').textContent=t('saved');
   }
 
   function normalizeTriggerKey(key){
@@ -523,7 +935,11 @@ events:
   }
 
   function sortedMappings(){
-    return state.config.mappings.slice().sort(function(a,b){return (a.order||0)-(b.order||0);});
+    return state.config.mappings.slice().sort(function(a,b){
+      const ae=!!a.enabled, be=!!b.enabled;
+      if(ae!==be) return ae?-1:1;
+      return (a.order||0)-(b.order||0);
+    });
   }
 
   function closeFloatMenu(){
@@ -555,8 +971,25 @@ events:
     if(row) row.classList.add('menu-open');
     const list=sortedMappings();
     const i=list.findIndex(function(m){return m.id===id;});
-    $('menuActUp').disabled=i<=0;
-    $('menuActDown').disabled=i<0||i>=list.length-1;
+    const m=state.config.mappings.find(function(x){return x.id===id;});
+    const isDraft=m&&isDraftMapping(m);
+    $('menuActDup').disabled=!!isDraft;
+    $('menuActUp').disabled=!!isDraft||i<=0;
+    $('menuActDown').disabled=!!isDraft||i<0||i>=list.length-1;
+    $('menuActDel').disabled=false;
+  }
+
+  function deleteMappingFromMenu(id){
+    ensureConfig();
+    const m=state.config.mappings.find(function(x){return x.id===id;});
+    if(!m) return;
+    if(isDraftMapping(m)){
+      if((m.triggerKey||m.targetKey)&&!confirm(t('confirmDeleteDraft'))) return;
+      closeFloatMenu();
+      removeDraftMapping(id);
+      return;
+    }
+    softDeleteMapping(id);
   }
 
   function reorderMapping(id, dir){
@@ -597,6 +1030,7 @@ events:
       state.selectedMappingId=newId;
     }
     state.config.mappings.forEach(function(m,i){ m.order=i; });
+    syncEditorFromSelection();
     closeFloatMenu();
     save();
     render();
@@ -612,6 +1046,7 @@ events:
     item.order=state.config.mappings.length;
     state.config.mappings.push(item);
     state.selectedMappingId=item.id;
+    syncEditorFromSelection();
     save();
     render();
   }
@@ -631,19 +1066,168 @@ events:
     box.innerHTML=html;
   }
 
+  function hasCompleteMappings(){
+    return sortedMappings().some(isSavedMapping);
+  }
+
+  function resolveTestTarget(forMappingId){
+    ensureConfig();
+    if(forMappingId){
+      const m=state.config.mappings.find(function(x){return x.id===forMappingId;});
+      if(m&&m.targetKey) return {mappingId:m.id,targetKey:m.targetKey};
+      return null;
+    }
+    if(state.selectedMappingId){
+      const m=state.config.mappings.find(function(x){return x.id===state.selectedMappingId;});
+      if(m&&m.targetKey) return {mappingId:m.id,targetKey:m.targetKey};
+    }
+    if(editorTargetKey){
+      const m=selectedMapping();
+      return {mappingId:m.id,targetKey:editorTargetKey};
+    }
+    return null;
+  }
+
+  function isCurrentDraftComplete(){
+    return !!(editorTriggerKey&&editorTargetKey);
+  }
+
+  function renderAddButton(){
+    const btn=$('btnAddMapping');
+    if(!btn) return;
+    const ready=isCurrentDraftComplete();
+    btn.disabled=!ready;
+    btn.title=ready?'':t('addNeedComplete');
+  }
+
+  function renderDraftHint(){
+    const el=$('mappingDraftHint');
+    if(!el) return;
+    const m=selectedMapping();
+    const incomplete=!isCurrentDraftComplete();
+    const hideForDraft=m&&isDraftMapping(m);
+    el.classList.toggle('show',incomplete&&!hideForDraft);
+    if(incomplete&&!hideForDraft) el.textContent=t('draftHint');
+  }
+
+  function updatePrimaryCTA(){
+    const triggerBtn=$('btnRecordTrigger');
+    const targetBtn=$('btnRecordTarget');
+    if(!triggerBtn||!targetBtn) return;
+    triggerBtn.className='btn secondary record-btn';
+    targetBtn.className='btn secondary record-btn';
+    if(!editorTriggerKey){
+      triggerBtn.className='btn primary record-btn';
+    }else if(!editorTargetKey){
+      targetBtn.className='btn primary record-btn';
+    }
+  }
+
+  function resetTestSendState(){
+    clearTimeout(testSendTimer);
+    clearTimeout(testSendWatchdog);
+    testSendState='idle';
+    testSendMappingId=null;
+    testSendFromFooter=false;
+  }
+
+  function renderTestSendButton(){
+    const btn=$('btnTestSend');
+    if(!btn) return;
+    const rowSending=testSendState==='sending'&&!testSendFromFooter;
+    btn.classList.toggle('sending',testSendState==='sending'&&testSendFromFooter);
+    if(testSendState==='sending'&&testSendFromFooter){
+      btn.disabled=true;
+      btn.textContent=t('testSending');
+      return;
+    }
+    if(testSendState==='sent'&&testSendFromFooter){
+      btn.disabled=false;
+      btn.textContent=t('testSent');
+      return;
+    }
+    if(rowSending){
+      btn.disabled=false;
+    }
+    const target=resolveTestTarget(null);
+    if(!target){
+      btn.disabled=true;
+      btn.textContent=t('testSendDisabled');
+      return;
+    }
+    btn.disabled=false;
+    btn.textContent=t('testSendTarget');
+  }
+
+  function fireTestSend(forMappingId){
+    const target=resolveTestTarget(forMappingId||null);
+    if(!target||testSendState==='sending') return;
+    testSendState='sending';
+    testSendMappingId=target.mappingId;
+    testSendFromFooter=!forMappingId;
+    clearTimeout(testSendWatchdog);
+    testSendWatchdog=setTimeout(function(){
+      if(testSendState==='sending'){
+        resetTestSendState();
+        renderTestSendButton();
+        renderMappingList();
+      }
+    },3000);
+    renderTestSendButton();
+    renderMappingList();
+    try{
+      window.chrome?.webview?.postMessage({
+        type:'mvp_test_send',
+        mappingId:target.mappingId,
+        targetKey:target.targetKey
+      });
+    }catch(_){
+      resetTestSendState();
+      renderTestSendButton();
+      renderMappingList();
+      toast(t('testFailed'));
+    }
+  }
+
   function renderMappingList(){
     ensureConfig();
     const list=$('mappingList');
+    const empty=$('mappingEmpty');
     const d=I18N[lang];
+    const hasRows=hasCompleteMappings()||hasDraftMappings();
+    if(empty) empty.hidden=hasRows;
+    if(!hasRows){ list.innerHTML=''; return; }
     let html='';
     sortedMappings().forEach(function(m){
+      if(isDraftMapping(m)){
+        const sel=m.id===state.selectedMappingId;
+        const left=m.triggerKey||d.triggerPlaceholder;
+        const right=m.targetKey||d.targetPlaceholder;
+        html+='<div class="map-row map-row-draft'+(sel?' selected':'')+'" data-id="'+m.id+'">';
+        html+='<div class="toggle" role="presentation" aria-hidden="true"></div>';
+        html+='<div class="map-main"><div class="map-pair map-pair-draft">';
+        html+='<span class="draft-ph">'+left+'</span> → <span class="draft-ph">'+right+'</span>';
+        html+='</div></div>';
+        html+='<button type="button" class="map-test" disabled>'+d.testShort+'</button>';
+        html+='<button type="button" class="map-menu-btn" data-menu="'+m.id+'">⋮</button>';
+        html+='</div>';
+        return;
+      }
+      if(!isSavedMapping(m)) return;
       const sel=m.id===state.selectedMappingId;
       const on=!!m.enabled;
-      html+='<div class="map-row'+(sel?' selected':'')+(on?'':' disabled')+(openMenuId===m.id?' menu-open':'')+'" data-id="'+m.id+'">';
+      const hasTarget=!!m.targetKey;
+      const rowConflicts=conflictsForMapping(m.id);
+      const hasConflict=rowConflicts.length>0;
+      html+='<div class="map-row'+(sel?' selected':'')+(on?' is-on':'')+(openMenuId===m.id?' menu-open':'')+'" data-id="'+m.id+'">';
+      html+='<div class="toggle'+(on?' on':'')+'" data-toggle="'+m.id+'" role="switch" aria-checked="'+(on?'true':'false')+'"></div>';
       html+='<div class="map-main"><div class="map-pair">'+(m.triggerKey||'?')+' → '+(m.targetKey||'?')+'</div>';
-      html+='<div class="map-meta">'+(on?d.enabled:d.disabled)+'</div></div>';
-      html+='<div class="toggle'+(on?' on':'')+'" data-toggle="'+m.id+'" role="switch" aria-checked="'+(on?'true':'false')+'" title="'+(on?d.disabled:d.enabled)+'"></div>';
-      html+='<button type="button" class="map-del" data-del="'+m.id+'" title="'+d.delete+'" aria-label="'+d.delete+'">×</button>';
+      if(hasConflict){
+        const c=rowConflicts[0];
+        html+='<div class="map-conflict">'+conflictHintForRow(c,m.id)+'</div>';
+      }
+      html+='</div>';
+      html+='<button type="button" class="map-test'+(testSendState==='sending'&&testSendMappingId===m.id?' sending':'')+'" data-test="'+m.id+'"'+(hasTarget?'':' disabled')+'>'+d.testShort+'</button>';
       html+='<button type="button" class="map-menu-btn" data-menu="'+m.id+'">⋮</button>';
       html+='</div>';
     });
@@ -651,60 +1235,115 @@ events:
   }
 
   function renderEditor(){
-    const m=selectedMapping();
     const d=I18N[lang];
-    $('triggerView').textContent=m.triggerKey||d.triggerPlaceholder;
-    $('targetView').textContent=m.targetKey||d.targetPlaceholder;
-    $('triggerView').classList.toggle('empty',!m.triggerKey);
-    $('targetView').classList.toggle('empty',!m.targetKey);
+    const triggerEl=$('triggerView');
+    const targetEl=$('targetView');
+    const triggerDisp=$('triggerDisplay');
+    const targetDisp=$('targetDisplay');
+    triggerEl.textContent=editorTriggerKey||d.triggerPlaceholder;
+    targetEl.textContent=editorTargetKey||d.targetPlaceholder;
+    if(triggerDisp) triggerDisp.classList.toggle('empty',!editorTriggerKey);
+    if(targetDisp) targetDisp.classList.toggle('empty',!editorTargetKey);
+    $('btnRecordTrigger').textContent=editorTriggerKey?t('btnRerecordTrigger'):t('btnRecordTrigger');
+    $('btnRecordTarget').textContent=editorTargetKey?t('btnRerecordTarget'):t('btnRecordTarget');
+    updatePrimaryCTA();
+    renderHeroBadges();
+    renderRecordCancelBar();
+  }
+
+  function renderHeroBadges(){
+    const d=I18N[lang];
+    const leftBadge=$('leftBadge');
+    const rightBadge=$('rightBadge');
+    const leftCard=$('leftCard');
+    const rightCard=$('rightCard');
+    const triggerBtn=$('btnRecordTrigger');
+    const targetBtn=$('btnRecordTarget');
+    if(recordingMode==='trigger'){
+      leftBadge.textContent=d.badgeRecording;
+      rightBadge.textContent=editorTargetKey?d.badgeSet:d.badgeNotSet;
+      if(leftCard) leftCard.classList.add('is-recording');
+      if(rightCard) rightCard.classList.remove('is-recording');
+      if(triggerBtn) triggerBtn.classList.add('is-recording');
+      if(targetBtn) targetBtn.classList.remove('is-recording');
+    }else if(recordingMode==='target'){
+      rightBadge.textContent=d.badgeRecording;
+      leftBadge.textContent=editorTriggerKey?d.badgeRecorded:d.badgeNotRecorded;
+      if(rightCard) rightCard.classList.add('is-recording');
+      if(leftCard) leftCard.classList.remove('is-recording');
+      if(targetBtn) targetBtn.classList.add('is-recording');
+      if(triggerBtn) triggerBtn.classList.remove('is-recording');
+    }else{
+      leftBadge.textContent=editorTriggerKey?d.badgeRecorded:d.badgeNotRecorded;
+      rightBadge.textContent=editorTargetKey?d.badgeSet:d.badgeNotSet;
+      if(leftCard) leftCard.classList.remove('is-recording');
+      if(rightCard) rightCard.classList.remove('is-recording');
+      if(triggerBtn) triggerBtn.classList.remove('is-recording');
+      if(targetBtn) targetBtn.classList.remove('is-recording');
+    }
   }
 
   function render(){
     renderMappingList();
     renderEditor();
     renderTrashList();
+    renderTestSendButton();
+    renderConflictBanner();
+    renderAddButton();
+    renderDraftHint();
+    renderRecordCancelBar();
     $('listenState').textContent=runtime.paused?t('listenPaused'):t('listenOn');
     $('liveAction').textContent=runtime.lastAction||'-';
     $('liveTimer').textContent=runtime.timerActive?'⏳':'-';
   }
 
+  function renderRecordCancelBar(){
+    const bar=$('recordCancelBar');
+    const btn=$('btnCancelRecord');
+    if(!bar) return;
+    const m=selectedMapping();
+    const showDraft=m&&isDraftMapping(m);
+    const show=recordingMode!=='none'||showDraft;
+    bar.classList.toggle('show',show);
+    if(btn) btn.textContent=recordingMode!=='none'?t('cancelRecord'):t('cancelDraft');
+  }
+
   function setRecording(mode){
     recordingMode=mode;
     clearTimeout(recordTimer);
-    const m=selectedMapping();
     const d=I18N[lang];
     if(mode==='trigger'){
-      $('leftBadge').textContent=d.recordingBadge;
       $('triggerState').textContent=d.triggerRecordHint;
     }else if(mode==='target'){
-      $('rightBadge').textContent=d.recordingBadge;
       $('targetState').textContent=d.targetRecordHint;
     }else{
-      $('leftBadge').textContent=m.triggerKey?d.recordedBadge:d.waitingKey;
-      $('rightBadge').textContent=m.targetKey?d.setBadge:d.waitingKey;
-      $('triggerState').textContent=m.triggerKey||d.waitingKey;
-      $('targetState').textContent=m.targetKey||d.waitingKey;
+      $('triggerState').textContent='';
+      $('targetState').textContent='';
     }
+    renderHeroBadges();
+    renderRecordCancelBar();
   }
 
   function startTriggerRecord(){
     ensureConfig();
-    recordingMode='trigger';
-    $('saveState').textContent=t('recordingSave');
+    beginRecordSnapshot();
     setRecording('trigger');
     try{window.chrome?.webview?.postMessage({type:'mvp_start_recording',mappingId:state.selectedMappingId,mode:'trigger'});}catch(_){ }
     pushLog(t('logStartTrigger'));
-    recordTimer=setTimeout(function(){ if(recordingMode==='trigger'){ recordingMode='none'; setRecording('none'); pushLog(t('logTimeout')); try{window.chrome?.webview?.postMessage({type:'mvp_stop_recording'});}catch(_){} } },30000);
+    recordTimer=setTimeout(function(){
+      if(recordingMode==='trigger'){ cancelRecording(); pushLog(t('logTimeout')); }
+    },30000);
   }
 
   function startTargetRecord(){
     ensureConfig();
-    recordingMode='target';
-    $('saveState').textContent=t('recordingSave');
+    beginRecordSnapshot();
     setRecording('target');
     resetTargetCapture();
     pushLog(t('logStartTarget'));
-    recordTimer=setTimeout(function(){ if(recordingMode==='target'){ recordingMode='none'; setRecording('none'); resetTargetCapture(); pushLog(t('logTimeout')); } },30000);
+    recordTimer=setTimeout(function(){
+      if(recordingMode==='target'){ cancelRecording(); pushLog(t('logTimeout')); }
+    },30000);
   }
 
   function finishTriggerCapture(key){
@@ -712,9 +1351,10 @@ events:
     if(!isAllowedTriggerKey(k)){ toast(t('triggerRejected')); return; }
     const m=selectedMapping();
     m.triggerKey=k;
+    editorTriggerKey=k;
     m.label=k+' → '+(m.targetKey||'?');
     pushLog(t('logTriggerDone')+k);
-    recordingMode='none';
+    recordSnapshot=null;
     clearTimeout(recordTimer);
     setRecording('none');
     save();
@@ -725,9 +1365,11 @@ events:
   function finishTargetCapture(combo){
     const m=selectedMapping();
     m.targetKey=combo;
+    editorTargetKey=combo;
     m.label=(m.triggerKey||'?')+' → '+combo;
+    if(pendingNewDraftId===m.id) pendingNewDraftId=null;
     pushLog(t('logTargetDone')+combo);
-    recordingMode='none';
+    recordSnapshot=null;
     clearTimeout(recordTimer);
     setRecording('none');
     resetTargetCapture();
@@ -737,24 +1379,40 @@ events:
 
   $('btnTheme').onclick=function(){ theme=theme==='light'?'dark':'light'; applyTheme(); };
   $('btnLang').onclick=function(){ lang=lang==='zh'?'en':'zh'; applyLang(); };
-
+  $('btnSettings').onclick=openDrawer;
+  $('btnDrawerClose').onclick=closeDrawer;
+  $('drawerOverlay').onclick=closeDrawer;
+  $('btnTestSend').onclick=function(){ fireTestSend(null); };
   $('btnRecordTrigger').onclick=startTriggerRecord;
   $('btnRecordTarget').onclick=startTargetRecord;
+  $('btnCancelRecord').onclick=cancelDraftOrRecording;
 
   $('btnAddMapping').onclick=function(){
+    if(!isCurrentDraftComplete()){
+      toast(t('addNeedComplete'));
+      renderDraftHint();
+      return;
+    }
     ensureConfig();
     const id=newMappingId();
     state.config.mappings.push({id:id,label:'',group:'默认',triggerKey:'',targetKey:'',enabled:false,order:state.config.mappings.length,triggerMode:'tap'});
     state.selectedMappingId=id;
+    pendingNewDraftId=id;
+    editorTriggerKey='';
+    editorTargetKey='';
+    syncEditorFromSelection();
     save();
     render();
-    startTriggerRecord();
+    renderRecordCancelBar();
+    const hero=$('editorWrap');
+    if(hero) hero.scrollIntoView({behavior:'smooth',block:'start'});
   };
 
   $('btnClearAll').onclick=function(){
     if(!confirm(t('confirmClear'))) return;
     state.config=defaultConfig();
     state.selectedMappingId=state.config.mappings[0].id;
+    syncEditorFromSelection();
     save();
     render();
     toast(t('restoredDefault'));
@@ -772,6 +1430,12 @@ events:
       try{window.chrome?.webview?.postMessage({type:'mvp_mapping_toggle',id:id,enabled:next});}catch(_){ }
       return;
     }
+    const testBtn=el.closest&&el.closest('[data-test]');
+    if(testBtn){
+      e.stopPropagation();
+      if(!testBtn.disabled) fireTestSend(testBtn.dataset.test);
+      return;
+    }
     const delBtn=el.closest&&el.closest('[data-del]');
     if(delBtn){
       e.stopPropagation();
@@ -787,6 +1451,7 @@ events:
     const row=el.closest&&el.closest('.map-row');
     if(row&&row.dataset.id){
       state.selectedMappingId=row.dataset.id;
+      syncEditorFromSelection();
       closeFloatMenu();
       render();
     }
@@ -800,6 +1465,7 @@ events:
     const act=actBtn.dataset.act;
     if(!id) return;
     if(act==='dup'){ closeFloatMenu(); try{window.chrome?.webview?.postMessage({type:'mvp_mapping_duplicate',id:id});}catch(_){ } return; }
+    if(act==='del'){ closeFloatMenu(); deleteMappingFromMenu(id); return; }
     if(act==='up'||act==='down'){ reorderMapping(id, act); return; }
   });
 
@@ -821,6 +1487,12 @@ events:
   window.addEventListener('scroll',function(){ if(openMenuId) closeFloatMenu(); }, true);
 
   document.addEventListener('keydown',function(e){
+    if(e.key==='Escape'){
+      if(recordingMode!=='none'){ e.preventDefault(); cancelRecording(); return; }
+      const m=selectedMapping();
+      if(m&&isDraftMapping(m)){ e.preventDefault(); removeDraftMapping(m.id); return; }
+      if(ui.drawerOpen){ closeDrawer(); return; }
+    }
     $('dbKey').textContent=e.key;
     $('dbCode').textContent=e.code;
     pushLog(new Date().toLocaleTimeString()+' key='+e.key+' code='+e.code);
@@ -898,12 +1570,14 @@ events:
   window.chrome?.webview?.addEventListener?.('message',function(e){
     const msg=e&&e.data;
     if(!msg||typeof msg!=='object') return;
-    if(msg.type==='mvp_init'&&msg.config){
-      state.config=msg.config;
+    if(msg.type==='mvp_init'){
+      if(msg.config) state.config=msg.config;
+      if(Array.isArray(msg.conflicts)) conflictRows=msg.conflicts;
       ensureConfig();
+      syncEditorFromSelection();
       render();
     }
-    if(msg.type==='mvp_saved'&&msg.ok){ $('saveState').textContent=t('saved'); }
+    if(msg.type==='mvp_saved'&&msg.ok){ /* persisted */ }
     if(msg.type==='mvp_mapping_toggled'&&msg.ok){
       const m=state.config&&state.config.mappings.find(function(x){return x.id===msg.id;});
       if(m) m.enabled=!!msg.enabled;
@@ -911,7 +1585,10 @@ events:
       render();
     }
     if(msg.type==='mvp_mapping_duplicated'&&msg.ok){ /* backend persisted; wait mvp_init */ }
-    if(msg.type==='mvp_record_rejected'){ toast(t('whitelistRejected')); recordingMode='none'; setRecording('none'); }
+    if(msg.type==='mvp_record_rejected'){
+      toast(t('whitelistRejected'));
+      cancelRecording();
+    }
     if(msg.type==='mvp_key_captured'){
       const key = msg.key || 'AutoTrigger';
       if(recordingMode==='trigger'){
@@ -932,6 +1609,33 @@ events:
         render();
       }
     }
+    if(msg.type==='mvp_test_sent'){
+      clearTimeout(testSendWatchdog);
+      const wasFooter=testSendFromFooter;
+      if(msg.ok){
+        if(wasFooter){
+          testSendState='sent';
+          renderTestSendButton();
+          toast(t('testSentToast')+(msg.key||''));
+          clearTimeout(testSendTimer);
+          testSendTimer=setTimeout(function(){
+            resetTestSendState();
+            renderTestSendButton();
+            renderMappingList();
+          },800);
+        }else{
+          resetTestSendState();
+          renderTestSendButton();
+          renderMappingList();
+          toast(t('testSentToast')+(msg.key||''));
+        }
+      }else{
+        resetTestSendState();
+        renderTestSendButton();
+        renderMappingList();
+        toast(t('testFailed'));
+      }
+    }
   });
 
   try{
@@ -942,7 +1646,7 @@ events:
   }catch(_){}
   state.config=defaultConfig();
   ensureConfig();
-  applyTheme();
+  syncEditorFromSelection();
   applyLang();
   setRecording('none');
   pushLog(t('waitLog'));
