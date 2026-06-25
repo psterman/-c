@@ -289,11 +289,16 @@ global FloatingToolbarCmdVisibleCount := 7
 global FloatingToolbarMaxVisibleIcons := 9
 global FloatingToolbarLastClosedX := 0
 global FloatingToolbarLastClosedY := 0
-global g_FTB_BlockedCmdIds := Map("ch_t", true, "pqp_capture", true, "ss_menu", true)
+global g_FTB_BlockedCmdIds := Map(
+    "ch_t", true,
+    "pqp_capture", true,
+    "ss_menu", true,
+    "ftb_unified_workbench", true,
+    "UnifiedWorkbench", true
+)
 global g_FTB_AllowedCmdIds := Map(
     "ftb_ai_workbench", true,
     "ftb_cli_workbench", true,
-    "ftb_unified_workbench", false,
     "sc_activate_search", true,
     "qa_clipboard", true,
     "ch_b", true,
@@ -908,11 +913,20 @@ FloatingToolbar_PushLayoutDeferred(*) {
     }
 }
 
+FloatingToolbar_IsCmdBarAllowed(cmdId) {
+    global g_FTB_BlockedCmdIds, g_FTB_AllowedCmdIds
+    c := Trim(String(cmdId))
+    if (c = "" || g_FTB_BlockedCmdIds.Has(c))
+        return false
+    if (g_FTB_AllowedCmdIds.Has(c) && !g_FTB_AllowedCmdIds[c])
+        return false
+    return true
+}
+
 FloatingToolbar_GetFallbackCmdIds() {
     return [
         "ftb_ai_workbench",
         "ftb_cli_workbench",
-        "ftb_unified_workbench",
         "sc_activate_search",
         "qa_clipboard",
         "ch_b",
@@ -1042,7 +1056,7 @@ FloatingToolbar_BuildItemsFromSceneToolbarLayout() {
         cid := Trim(String(FloatingToolbar_ResolveSceneCmdId(sid)))
         if (cid = "" && IsSet(_VK_SceneIdToToolbarCmdId))
             cid := Trim(String(_VK_SceneIdToToolbarCmdId(sid)))
-        if (cid = "" || !cmdList.Has(cid) || g_FTB_BlockedCmdIds.Has(cid) || seenCids.Has(cid))
+        if (cid = "" || !cmdList.Has(cid) || !FloatingToolbar_IsCmdBarAllowed(cid) || seenCids.Has(cid))
             continue
         seenCids[cid] := true
         rowPayload := FloatingToolbar_BuildToolbarItemPayload(cid, cmdList, sid)
@@ -7842,7 +7856,7 @@ FloatingToolbarPushCmdLayoutToWeb() {
             if !row.Has("visible_in_bar") || !row["visible_in_bar"]
                 continue
             cid := Trim(String(row["cmdId"]))
-            if (cid = "" || !cmdList.Has(cid) || g_FTB_BlockedCmdIds.Has(cid) || seenCids.Has(cid))
+            if (cid = "" || !cmdList.Has(cid) || !FloatingToolbar_IsCmdBarAllowed(cid) || seenCids.Has(cid))
                 continue
             sid := FloatingToolbar_CmdIdToSceneId(cid)
             if (sid != "" && seenScenes.Has(sid))

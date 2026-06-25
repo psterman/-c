@@ -504,36 +504,72 @@ _VK_SyncBuiltinCommands() {
         g_Commands := Map()
     if !g_Commands.Has("Bindings") || !(g_Commands["Bindings"] is Map)
         g_Commands["Bindings"] := Map()
+    if !g_Commands.Has("CommandList") || !(g_Commands["CommandList"] is Map)
+        g_Commands["CommandList"] := Map()
+    if !g_Commands.Has("SuggestedBindings") || !(g_Commands["SuggestedBindings"] is Map)
+        g_Commands["SuggestedBindings"] := Map()
+    if !g_Commands.Has("Categories") || !(g_Commands["Categories"] is Array)
+        g_Commands["Categories"] := []
 
-    catalog := _VK_BuiltinCommandCatalog()
-    cmdList := Map()
-    cats := []
-    suggested := Map()
-
-    for cat in catalog {
-        defs := cat["commands"]
-        cmdIds := []
-        for def in defs {
-            cmdId := def["id"]
-            cmdIds.Push(cmdId)
-            cmdList[cmdId] := Map(
-                "name", def["name"],
-                "desc", def["desc"],
-                "fn", def["fn"]
-            )
-            if def.Has("suggested") && def["suggested"] != ""
-                suggested[cmdId] := def["suggested"]
-            for optKey in ["iconClass", "iconPath", "SvgIcon", "IconFile"] {
-                if def.Has(optKey) && def[optKey] != ""
-                    cmdList[cmdId][optKey] := def[optKey]
-            }
-        }
-        cats.Push(Map("id", cat["id"], "name", cat["name"], "commands", cmdIds))
+    cmdList := g_Commands["CommandList"]
+    suggested := g_Commands["SuggestedBindings"]
+    cats := g_Commands["Categories"]
+    catById := Map()
+    for i, cat in cats {
+        if (cat is Map) && cat.Has("id")
+            catById[cat["id"]] := i
     }
 
-    g_Commands["CommandList"] := cmdList
-    g_Commands["Categories"] := cats
-    g_Commands["SuggestedBindings"] := suggested
+    catalog := _VK_BuiltinCommandCatalog()
+    for cat in catalog {
+        catId := cat["id"]
+        builtinCmdIds := []
+        for def in cat["commands"] {
+            cmdId := def["id"]
+            builtinCmdIds.Push(cmdId)
+            if !cmdList.Has(cmdId)
+                cmdList[cmdId] := Map()
+            ent := cmdList[cmdId]
+            if !(ent is Map) {
+                ent := Map()
+                cmdList[cmdId] := ent
+            }
+            for fk in ["name", "desc", "fn"] {
+                if def.Has(fk) && def[fk] != "" {
+                    if !ent.Has(fk) || ent[fk] = ""
+                        ent[fk] := def[fk]
+                }
+            }
+            for optKey in ["iconClass", "iconPath", "SvgIcon", "IconFile"] {
+                if def.Has(optKey) && def[optKey] != "" {
+                    if !ent.Has(optKey) || ent[optKey] = ""
+                        ent[optKey] := def[optKey]
+                }
+            }
+            if def.Has("suggested") && def["suggested"] != "" && !suggested.Has(cmdId)
+                suggested[cmdId] := def["suggested"]
+        }
+
+        if catById.Has(catId) {
+            existing := cats[catById[catId]]
+            cmdIds := (existing.Has("commands") && existing["commands"] is Array) ? existing["commands"] : []
+            seen := Map()
+            for cid in cmdIds
+                seen[cid] := true
+            for cid in builtinCmdIds {
+                if !seen.Has(cid) {
+                    cmdIds.Push(cid)
+                    seen[cid] := true
+                }
+            }
+            existing["commands"] := cmdIds
+            if (!existing.Has("name") || existing["name"] = "") && cat.Has("name")
+                existing["name"] := cat["name"]
+        } else {
+            cats.Push(Map("id", catId, "name", cat["name"], "commands", builtinCmdIds))
+            catById[catId] := cats.Length
+        }
+    }
 }
 
 _LoadCommands() {
@@ -556,39 +592,39 @@ _LoadCommands() {
             p := ""
         }
     }
-    if (p = "") {
-        OutputDebug("[VK] Commands.json path empty, skip load")
-        return
-    }
-    try {
-        if !FileExist(p) {
-            OutputDebug("[VK] Commands.json not found: " . p)
-            return
-        }
-    } catch {
-        OutputDebug("[VK] Commands.json path invalid, skip load: " . p)
-        return
-    }
+    if (p != "")
+        g_JsonPath := p
 
-    try {
-        raw := FileRead(p, "UTF-8")
-        if (SubStr(raw, 1, 1) == Chr(0xFEFF))
-            raw := SubStr(raw, 2)
-        parsed := Jxon_Load(raw)
-        if !(parsed is Map) {
-            OutputDebug("[VK] Commands.json 根节点无效（可能编码/BOM/内容损坏），已跳过加载")
-            return
+    loaded := false
+    if (p != "") {
+        try {
+            if FileExist(p) {
+                raw := FileRead(p, "UTF-8")
+                if (SubStr(raw, 1, 1) == Chr(0xFEFF))
+                    raw := SubStr(raw, 2)
+                parsed := Jxon_Load(raw)
+                if (parsed is Map) {
+                    g_Commands := parsed
+                    loaded := true
+                } else {
+                    OutputDebug("[VK] Commands.json 根节点无效（可能编码/BOM/内容损坏），已跳过文件内容")
+                }
+            } else {
+                OutputDebug("[VK] Commands.json not found: " . p)
+            }
+        } catch as e {
+            OutputDebug("[VK] Commands load error: " . e.Message)
         }
-        g_Commands := parsed
-    } catch as e {
-        OutputDebug("[VK] JSON parse error: " . e.Message)
-        return
+    } else {
+        OutputDebug("[VK] Commands.json path empty, using builtin catalog")
     }
 
     if !(g_Commands is Map)
-        return
+        g_Commands := Map()
 
     _VK_SyncBuiltinCommands()
+    if !loaded
+        OutputDebug("[VK] LoadCommands: file unavailable or parse failed; builtin catalog merged as fallback")
     try {
         trayCount := (g_Commands.Has("SceneMenus") && g_Commands["SceneMenus"] is Map
             && g_Commands["SceneMenus"].Has("tray_menu") && g_Commands["SceneMenus"]["tray_menu"] is Array)
@@ -1221,7 +1257,6 @@ _VK_DefaultToolbarLayoutCmdIds() {
     return [
         "ftb_ai_workbench",
         "ftb_cli_workbench",
-        "ftb_unified_workbench",
         "sc_activate_search",
         "qa_clipboard",
         "ch_b",
@@ -1348,6 +1383,10 @@ _VK_SyncToolbarLayoutFromSceneToolbar() {
         if !(tlRow is Map) || !tlRow.Has("cmdId")
             continue
         cid := Trim(String(tlRow["cmdId"]))
+        if (cid = "ftb_unified_workbench" || cid = "UnifiedWorkbench") {
+            tlRow["visible_in_bar"] := false
+            continue
+        }
         if sceneBar.Has(cid)
             tlRow["visible_in_bar"] := sceneBar[cid]
     }
@@ -1986,7 +2025,7 @@ _VK_SceneCtxActMap(sceneKey) {
     }
     if (sk = "floating_bar") {
         m := Map()
-        for c in ["ftm_reset_scale", "ftm_search_center", "ftm_switch_hole", "ftm_clipboard", "ftm_minimize_to_edge", "ftm_exit_app", "ftm_hide_toolbar", "ftm_open_config", "ftm_toggle_toolbar", "ftm_reload_script", "ftb_ai_workbench", "ftb_cli_workbench", "ftb_unified_workbench", "ftb_scratchpad", "ftb_screenshot", "ftb_cursor_menu", "ftb_cloud_player", "hub_capsule", "pqp_capture", "qa_clipboard", "sc_activate_search", "sys_show_vk"]
+        for c in ["ftm_reset_scale", "ftm_search_center", "ftm_switch_hole", "ftm_clipboard", "ftm_minimize_to_edge", "ftm_exit_app", "ftm_hide_toolbar", "ftm_open_config", "ftm_toggle_toolbar", "ftm_reload_script", "ftb_ai_workbench", "ftb_cli_workbench", "ftb_scratchpad", "ftb_screenshot", "ftb_cursor_menu", "ftb_cloud_player", "hub_capsule", "pqp_capture", "qa_clipboard", "sc_activate_search", "sys_show_vk"]
             m[c] := c
         return m
     }

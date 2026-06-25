@@ -166,6 +166,34 @@ _CliWb_GetThemeMode() {
     return "dark"
 }
 
+_CliWb_EngineIconWebUrl(engineId) {
+    eng := Trim(String(engineId))
+    iconPath := ""
+    if FuncExists("GetSearchEngineIcon") {
+        try iconPath := GetSearchEngineIcon(eng)
+        catch {
+        }
+    }
+    if (iconPath = "" || !FileExist(iconPath))
+        return ""
+    if FuncExists("_SCWV_PathToWebAssetUrl") {
+        try return _SCWV_PathToWebAssetUrl(iconPath)
+        catch {
+        }
+    }
+    if FuncExists("BuildAppLocalUrl") {
+        normalized := StrReplace(iconPath, "\", "/")
+        scriptRoot := StrReplace(A_ScriptDir, "\", "/") . "/"
+        if (InStr(normalized, scriptRoot) = 1) {
+            rel := SubStr(normalized, StrLen(scriptRoot) + 1)
+            try return BuildAppLocalUrl(rel)
+            catch {
+            }
+        }
+    }
+    return ""
+}
+
 _CliWb_BuildCliEnginePayload() {
     static labels := Map(
         "codex_cli", "Codex",
@@ -186,7 +214,7 @@ _CliWb_BuildCliEnginePayload() {
         payload.Push(Map(
             "name", labels.Has(eng) ? labels[eng] : eng,
             "value", eng,
-            "iconUrl", ""
+            "iconUrl", _CliWb_EngineIconWebUrl(eng)
         ))
     }
     return payload

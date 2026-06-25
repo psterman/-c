@@ -3475,7 +3475,7 @@ function escapeHtml(s) {
   return d.innerHTML;
 }
 
-const SCENARIO_ORDER = ['ai', 'search', 'clipboard', 'prompts', 'scratchpad', 'screenshot', 'settings', 'hotkeys', 'floating_bar', 'tray_menu', 'cursor', 'cloudplayer'];
+const SCENARIO_ORDER = ['ai_workbench', 'cli_workbench', 'ai', 'search', 'clipboard', 'prompts', 'scratchpad', 'screenshot', 'settings', 'hotkeys', 'floating_bar', 'tray_menu', 'cursor', 'cloudplayer'];
 const SCENE_MENU_KEYS = ['search', 'scratchpad', 'clipboard', 'prompts', 'screenshot', 'settings', 'cursor', 'cloudplayer', 'global_hotkeys', 'tray_menu', 'floating_bar', 'mobile_browser'];
 const SCENE_MENU_LABELS = {
   search: '搜索中心',
@@ -3508,6 +3508,8 @@ function isDynamicSceneMenuKey(key) {
   return key !== 'search';
 }
 const SCENARIO_META = {
+  ai_workbench: { name: '🧠 AI 工作台', icon: 'fa-brain',             color: '#00d4ff' },
+  cli_workbench:{ name: '⌨️ CLI 工作台', icon: 'fa-terminal',          color: '#34d399' },
   ai:         { name: '🤖 牛马 AI',   icon: 'fa-robot',             color: '#00d4ff' },
   search:     { name: '🔍 搜索中心', icon: 'fa-magnifying-glass',  color: '#6ee7b7' },
   clipboard:  { name: '📋 剪贴板',   icon: 'fa-clipboard',         color: '#34d399' },
@@ -3527,8 +3529,6 @@ const SCENARIO_TOOLBAR_CMD_MAP = {
   ai_workbench: 'ftb_ai_workbench',
   cli_workbench: 'ftb_cli_workbench',
   unified_workbench: 'ftb_unified_workbench',
-  ai: 'ftb_ai_workbench',
-  cli: 'ftb_cli_workbench',
   search: 'sc_activate_search',
   clipboard: 'qa_clipboard',
   prompts: 'ch_b',
@@ -4606,6 +4606,23 @@ function buildScenariosFromCategories() {
     scenario.tabs.push({ id: tabId, name: '未分类', commands: looseCommands });
     for (const cmdId of looseCommands) {
       if (!commandRoutes[cmdId]) commandRoutes[cmdId] = { scenarioId: 'settings', tabId };
+    }
+  }
+
+  // 悬浮栏工作台入口：与 AHK SceneToolbarLayout（ai_workbench/cli_workbench）对齐，独立于搜索中心分类。
+  for (const spec of [
+    { id: 'ai_workbench', cmdIds: ['ftb_ai_workbench'] },
+    { id: 'cli_workbench', cmdIds: ['ftb_cli_workbench'] },
+  ]) {
+    const cmdIds = spec.cmdIds.filter((cmdId) => !!state.commands[cmdId]);
+    if (!cmdIds.length) continue;
+    const scenario = ensureScenario(spec.id);
+    const tabId = `${spec.id}:main`;
+    if (!scenario.tabs.some((tab) => tab.id === tabId)) {
+      scenario.tabs.push({ id: tabId, name: '入口', commands: cmdIds });
+      for (const cmdId of cmdIds) {
+        if (!commandRoutes[cmdId]) commandRoutes[cmdId] = { scenarioId: spec.id, tabId };
+      }
     }
   }
 
@@ -6046,8 +6063,10 @@ function setCmdToolbarBarFlag(cmdId, wantEligible) {
       break;
     }
   }
+  syncStateSceneToolbarLayout();
   reorderToolbarBarPoolFlags();
   saveToolbarLayout();
+  saveSceneToolbarLayout();
   renderSidebar();
   renderToolbarPreviewSandbox();
   renderCommandList();
@@ -7348,25 +7367,23 @@ function renderSidebar() {
   for (const scenario of state.scenarios) {
     const mappedCmdId = getToolbarCmdIdByScenarioId(scenario.id);
     const mappedRow = mappedCmdId ? state.toolbarLayout.find((x) => x.cmdId === mappedCmdId) : null;
-    const isLogoScene = scenario.id === 'ai';
-    const checked = isLogoScene || !!(mappedRow && mappedRow.visible_in_bar);
+    const hasToolbarMapping = !!mappedCmdId;
+    const checked = !!(mappedRow && mappedRow.visible_in_bar);
     const item = document.createElement('div');
     item.className = 'sidebar-item' + (state.activeScenarioId === scenario.id ? ' active' : '');
-    if (scenario.id === 'ai') item.classList.add('fixed-scene');
     item.dataset.sceneId = scenario.id;
     item.draggable = false;
     item.innerHTML = ''
-      + (!isLogoScene
+      + (hasToolbarMapping
         ? `<input class="scene-checkbox" type="checkbox" ${checked ? 'checked' : ''} aria-label="显示场景到工具栏">`
-        : '<span class="scene-checkbox fixed" title="牛马图标固定保留"></span>')
+        : '')
       + `<span class="mol-ico">${scenarioIconHtml(scenario.id)}</span>`
       + `<span class="mol-name">${escapeHtml(scenarioLabelText(scenario.name))}</span>`
       + `<span class="mol-count">${scenario.commandCount || 0}</span>`;
     const handle = document.createElement('span');
     handle.className = 'scene-drag-handle';
     handle.textContent = '::';
-    handle.title = scenario.id === 'ai' ? '牛马AI 固定置顶' : '拖拽排序';
-    if (scenario.id === 'ai') handle.style.opacity = '0.35';
+    handle.title = '拖拽排序';
     item.appendChild(handle);
     const checkbox = item.querySelector('.scene-checkbox:not(.fixed)');
     if (checkbox) {
@@ -7426,7 +7443,6 @@ function renderToolbarPreviewSandbox() {
     const cmd = state.commands[cmdId] || {};
     const tile = document.createElement('div');
     tile.className = 'vk-toolbar-preview-item';
-    if (scenario.id === 'ai') tile.classList.add('fixed');
     tile.dataset.sceneId = scenario.id;
     tile.title = cmd.name || scenario.name;
     tile.innerHTML = toolbarIconSvgHtml(cmdId);
@@ -7436,13 +7452,8 @@ function renderToolbarPreviewSandbox() {
 
 function reorderScenariosByIds(ids) {
   const byId = new Map(state.scenarios.map((s) => [s.id, s]));
-  const aiScene = byId.get('ai') || null;
   const ordered = [];
   const used = new Set();
-  if (aiScene) {
-    ordered.push(aiScene);
-    used.add('ai');
-  }
   for (const id of ids) {
     const scene = byId.get(id);
     if (!scene || used.has(id)) continue;
@@ -7469,7 +7480,7 @@ function initSceneLayoutSortables() {
       animation: 140,
       ghostClass: 'vk-scene-sortable-ghost',
       chosenClass: 'vk-scene-sortable-chosen',
-      draggable: '.vk-toolbar-preview-item:not(.fixed)',
+      draggable: '.vk-toolbar-preview-item',
       onEnd: () => {
         const visibleSceneIds = Array.from(preview.querySelectorAll('.vk-toolbar-preview-item'))
           .map((el) => String(el.dataset.sceneId || ''))
@@ -7479,6 +7490,7 @@ function initSceneLayoutSortables() {
         renderSidebar();
         renderToolbarPreviewSandbox();
         saveToolbarLayout();
+        saveSceneToolbarLayout();
         renderCommandList();
       },
     });
@@ -7490,7 +7502,7 @@ function initSceneLayoutSortables() {
       ghostClass: 'vk-scene-sortable-ghost',
       chosenClass: 'vk-scene-sortable-chosen',
       handle: '.scene-drag-handle',
-      draggable: '.sidebar-item:not(.fixed-scene)',
+      draggable: '.sidebar-item',
       scroll: true,
       bubbleScroll: true,
       scrollSensitivity: 48,
@@ -7505,6 +7517,7 @@ function initSceneLayoutSortables() {
         renderSidebar();
         renderToolbarPreviewSandbox();
         saveToolbarLayout();
+        saveSceneToolbarLayout();
       },
     });
   }

@@ -915,28 +915,36 @@ GetSortedSearchEngines(Category := "") {
 
 ; CLI 图标：优先 lib\images 下与引擎同名的 jpg/png（见目录内 codex.jpg、gemini.jpg、qwen.png 等）
 VoiceInput_ResolveCliIconInLibImages(EngineValue) {
+    eng := Trim(String(EngineValue))
     static CliIconFiles := 0
     if !IsObject(CliIconFiles) {
         CliIconFiles := Map(
-            "codex_cli", ["codex.jpg", "codex.png", "codex1.png"],
-            "gemini_cli", ["gemini.jpg", "gemini.png"],
-            "openclaw_cli", ["openclaw.jpg", "openclaw.png"],
-            "qwen_cli", ["qwen.png", "qwen.jpg"],
-            "ollama_cli", ["ollama.png", "ollama.jpg"],
-            "claude_cli", ["claude.jpg", "claude.png", "Claude.png"],
-            "deepseek_cli", ["DeepSeek.png", "deepseek.png", "deepseek.jpg"],
-            "kimi_cli", ["kimi.png", "Kimi.png", "kimi.jpg"],
-            "zhipu_cli", ["zhipu.png", "zhipu.jpg"],
-            "copilot_cli", ["copilot.png", "Copilot.png", "copilot.jpg", "ChatGPT.png"]
+            "codex_cli", ["codex.svg", "codex.png", "openai.svg", "copilot.svg"],
+            "gemini_cli", ["gemini.svg", "gemini.png"],
+            "openclaw_cli", ["openclaw.svg", "openclaw.png"],
+            "qwen_cli", ["qwen.svg", "qwen.png"],
+            "ollama_cli", ["ollama.svg", "ollama.png", "llama.svg"],
+            "claude_cli", ["claude.svg", "claude.png", "Claude.png"],
+            "deepseek_cli", ["deepseek.svg", "DeepSeek.png", "deepseek.png"],
+            "kimi_cli", ["kimi.svg", "kimi.png", "Kimi.png"],
+            "zhipu_cli", ["zhipu.svg", "glm.svg", "zhipu.png"],
+            "copilot_cli", ["copilot.svg", "copilot.png", "Copilot.png", "openai.svg"]
         )
     }
-    if !CliIconFiles.Has(EngineValue)
+    if !CliIconFiles.Has(eng)
         return ""
-    imgDir := Nmer_AssetsIconsAppDir() . "\"
-    for _, fileName in CliIconFiles[EngineValue] {
-        full := imgDir . fileName
-        if FileExist(full)
-            return full
+    dirs := []
+    if FuncExists("Nmer_AssetsIconsAppDir")
+        dirs.Push(Nmer_AssetsIconsAppDir())
+    if FuncExists("Nmer_AssetsIconsAiDir")
+        dirs.Push(Nmer_AssetsIconsAiDir())
+    dirs.Push(A_ScriptDir . "\lib\images")
+    for _, dir in dirs {
+        for _, fileName in CliIconFiles[eng] {
+            full := dir . "\" . fileName
+            if FileExist(full)
+                return full
+        }
     }
     return ""
 }

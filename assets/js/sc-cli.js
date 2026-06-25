@@ -42,6 +42,18 @@ const SC_CLI_ENGINE_ROLE = {
   zhipu_cli: "智谱 CLI",
   copilot_cli: "Copilot CLI"
 };
+const SC_CLI_ENGINE_ICONS = {
+  codex_cli: "https://app.local/assets/icons/app/codex.svg",
+  gemini_cli: "https://app.local/assets/icons/app/gemini.svg",
+  openclaw_cli: "https://app.local/assets/icons/ai/openclaw.svg",
+  qwen_cli: "https://app.local/assets/icons/app/qwen.svg",
+  ollama_cli: "https://app.local/assets/icons/app/ollama.svg",
+  claude_cli: "https://app.local/assets/icons/app/claude.svg",
+  deepseek_cli: "https://app.local/assets/icons/app/deepseek.svg",
+  kimi_cli: "https://app.local/assets/icons/app/kimi.svg",
+  zhipu_cli: "https://app.local/assets/icons/app/zhipu.svg",
+  copilot_cli: "https://app.local/assets/icons/app/copilot.svg"
+};
 const SC_CLI_ENGINE_META = {
   codex_cli: { vendor: "OpenAI", capabilities: ["CLI", "代码"] },
   gemini_cli: { vendor: "Google", capabilities: ["CLI"] },
@@ -654,6 +666,10 @@ function isKnownCliEngineId(v) {
   const id = normalizeCliEngineId(v);
   return Object.prototype.hasOwnProperty.call(SC_CLI_PORTS, id);
 }
+function cliEngineIconUrl(engineId) {
+  const id = normalizeCliEngineId(engineId);
+  return SC_CLI_ENGINE_ICONS[id] || "";
+}
 
 function getCliEnginesForTabs() {
   const rows = Array.isArray(state.engines) ? state.engines : [];
@@ -667,11 +683,12 @@ function getCliEnginesForTabs() {
   // 固定全量引擎标签，避免后端偶发返回不全导致标签消失
   return SC_CLI_ENGINE_ORDER.map((id) => {
     const base = byId.get(id) || {};
+    const iconUrl = String(base.iconUrl || "").trim() || cliEngineIconUrl(id);
     return Object.assign({
       value: id,
       name: id.replace(/_cli$/, "").replace(/^./, (c) => c.toUpperCase()),
-      iconUrl: ""
-    }, base, { value: id });
+      iconUrl: iconUrl
+    }, base, { value: id, iconUrl: iconUrl });
   });
 }
 const _cliOpenThrottleByEngine = new Map();
