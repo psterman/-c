@@ -623,6 +623,7 @@ _LoadCommands() {
         g_Commands := Map()
 
     _VK_SyncBuiltinCommands()
+    _VK_EnsureSceneMenuKeyOrder()
     if !loaded
         OutputDebug("[VK] LoadCommands: file unavailable or parse failed; builtin catalog merged as fallback")
     try {
@@ -1526,9 +1527,41 @@ _VK_SceneToolbarLayoutToJson() {
     return json
 }
 
-; ── SceneMenus：五套场景右键菜单 cmdId 序列（Commands.json 顶层 SceneMenus） ──
-_VK_SceneMenuCanonicalKeys() {
+; ── SceneMenus：场景右键菜单 cmdId 序列（Commands.json 顶层 SceneMenus） ──
+_VK_DefaultSceneMenuKeyOrder() {
     return ["search", "scratchpad", "clipboard", "prompts", "screenshot", "settings", "cursor", "cloudplayer", "global_hotkeys", "tray_menu", "floating_bar", "mobile_browser"]
+}
+
+_VK_EnsureSceneMenuKeyOrder() {
+    global g_Commands
+    if !(g_Commands is Map)
+        g_Commands := Map()
+    defaults := _VK_DefaultSceneMenuKeyOrder()
+    valid := Map()
+    for key in defaults
+        valid[key] := true
+    out := []
+    seen := Map()
+    raw := (g_Commands.Has("SceneMenuKeyOrder") && g_Commands["SceneMenuKeyOrder"] is Array) ? g_Commands["SceneMenuKeyOrder"] : []
+    for item in raw {
+        key := Trim(String(item))
+        if (key = "" || !valid.Has(key) || seen.Has(key))
+            continue
+        out.Push(key)
+        seen[key] := true
+    }
+    for key in defaults {
+        if seen.Has(key)
+            continue
+        out.Push(key)
+        seen[key] := true
+    }
+    g_Commands["SceneMenuKeyOrder"] := out
+    return out
+}
+
+_VK_SceneMenuCanonicalKeys() {
+    return _VK_EnsureSceneMenuKeyOrder()
 }
 
 _VK_SceneMenuKeysWithDefaultCommands() {
@@ -1885,6 +1918,18 @@ _VK_SceneMenusToJson() {
         sep := ","
     }
     json .= "}"
+    return json
+}
+
+_VK_SceneMenuKeyOrderToJson() {
+    arr := _VK_EnsureSceneMenuKeyOrder()
+    json := "["
+    sep := ""
+    for key in arr {
+        json .= sep . _JsonStr(Trim(String(key)))
+        sep := ","
+    }
+    json .= "]"
     return json
 }
 
@@ -2347,6 +2392,35 @@ _VK_ApplySceneMenuFromWeb(msg) {
     }
     if (key = "floating_bar")
         _VK_SyncContextMenuLayoutFromFloatingSceneMenu()
+    return true
+}
+
+_VK_ApplySceneMenuKeyOrderFromWeb(msg) {
+    global g_Commands
+    if !(g_Commands is Map)
+        g_Commands := Map()
+    if !(msg is Map) || !msg.Has("sceneMenuKeyOrder") || !(msg["sceneMenuKeyOrder"] is Array)
+        return false
+    defaults := _VK_DefaultSceneMenuKeyOrder()
+    valid := Map()
+    for key in defaults
+        valid[key] := true
+    out := []
+    seen := Map()
+    for item in msg["sceneMenuKeyOrder"] {
+        key := Trim(String(item))
+        if (key = "" || !valid.Has(key) || seen.Has(key))
+            continue
+        out.Push(key)
+        seen[key] := true
+    }
+    for key in defaults {
+        if seen.Has(key)
+            continue
+        out.Push(key)
+        seen[key] := true
+    }
+    g_Commands["SceneMenuKeyOrder"] := out
     return true
 }
 
@@ -3044,6 +3118,7 @@ _SerializeCommands() {
     dashPinnedJson := _VK_DashboardPinnedJson()
     tlJson := _VK_ToolbarLayoutToJson()
     stlJson := _VK_SceneToolbarLayoutToJson()
+    smKeyOrderJson := _VK_SceneMenuKeyOrderToJson()
     smJson := _VK_SceneMenusToJson()
     smVisJson := _VK_SceneMenuVisibilityToJson()
     return '{"Categories":' . catJson . ',"CommandList":' . clJson . ',"Bindings":' . bJson
@@ -3053,6 +3128,7 @@ _SerializeCommands() {
         . ',"DashboardPinned":' . dashPinnedJson
         . ',"ToolbarLayout":' . tlJson
         . ',"SceneToolbarLayout":' . stlJson
+        . ',"SceneMenuKeyOrder":' . smKeyOrderJson
         . ',"SceneMenus":' . smJson
         . ',"SceneMenuVisibility":' . smVisJson . '}'
 }
@@ -4324,6 +4400,9 @@ _OnWebMessage(sender, args) {
                         OutputDebug("[VK] FloatingToolbarReloadFromToolbarLayout(sceneMenu): " . e.Message)
                 }
             }
+        case "saveSceneMenuKeyOrder":
+            if _VK_ApplySceneMenuKeyOrderFromWeb(msg)
+                _SaveBindings()
 
         default:
             OutputDebug("[VK] Unknown msg: " . msg["type"])
@@ -5581,6 +5660,7 @@ _PushInit() {
     dashPinned := _VK_DashboardPinnedJson()
     tlJson := _VK_ToolbarLayoutToJson()
     stlJson := _VK_SceneToolbarLayoutToJson()
+    smKeyOrderJson := _VK_SceneMenuKeyOrderToJson()
     smJson := _VK_SceneMenusToJson()
     smVisJson := _VK_SceneMenuVisibilityToJson()
     sysIdsJson := _VK_SceneMenuSystemIdsJson()
@@ -5609,6 +5689,7 @@ _PushInit() {
         . ',"dashboardPinned":' . dashPinned
         . ',"toolbarLayout":' . tlJson
         . ',"sceneToolbarLayout":' . stlJson
+        . ',"sceneMenuKeyOrder":' . smKeyOrderJson
         . ',"sceneMenus":' . smJson
         . ',"sceneMenuVisibility":' . smVisJson
         . ',"sceneMenuSystemIds":' . sysIdsJson . '}'
