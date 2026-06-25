@@ -155,12 +155,12 @@ SearchCenterWebLlmBridge_ApplyColumnLayout(rawLayout, context) {
 }
 
 ScWebLlm_PostJsonToHost(payload) {
-    if FuncExists("UnifiedWb_IsVisible") && UnifiedWb_IsVisible() {
-        SearchCenterWebLlmBridge_PostJson(payload, "unified_workbench")
-        return
-    }
     if FuncExists("AiWb_IsVisible") && AiWb_IsVisible() {
         SearchCenterWebLlmBridge_PostJson(payload, "ai_workbench")
+        return
+    }
+    if FuncExists("UnifiedWb_IsVisible") && UnifiedWb_IsVisible() {
+        SearchCenterWebLlmBridge_PostJson(payload, "unified_workbench")
         return
     }
     SearchCenterWebLlmBridge_PostJson(payload, "search_center")
@@ -190,6 +190,12 @@ SearchCenterWebLlmBridge_HandleMessage(msg, context := "ai_workbench") {
         case "webLlmContentRect":
             if !embedCtx
                 return false
+            if SearchCenterWebLlmBridge_IsUnifiedContext(context) && FuncExists("ScWebLlm_ClearUnifiedMultiColumnRects") {
+                try ScWebLlm_ClearUnifiedMultiColumnRects()
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e)
+                }
+            }
             if FuncExists("SearchCenterWebLlm_MarkEmbedRequested")
                 SearchCenterWebLlm_MarkEmbedRequested()
             rect := (msg.Has("rect") && (msg["rect"] is Map)) ? msg["rect"] : msg
@@ -334,6 +340,8 @@ SearchCenterWebLlmBridge_HandleMessage(msg, context := "ai_workbench") {
         case "webLlmLayoutLive":
             if !embedCtx || !SearchCenterWebLlmBridge_IsUnifiedContext(context)
                 return false
+            if FuncExists("ScWebLlm_IsUnifiedScEmbedLayout") && ScWebLlm_IsUnifiedScEmbedLayout()
+                return true
             if !msg.Has("aiColumns")
                 return false
             maxActive := msg.Has("maxActiveAiEmbeds") ? Integer(msg["maxActiveAiEmbeds"]) : 0
@@ -360,6 +368,12 @@ SearchCenterWebLlmBridge_HandleMessage(msg, context := "ai_workbench") {
         case "webLlmBootstrap":
             if !embedCtx
                 return false
+            if SearchCenterWebLlmBridge_IsUnifiedContext(context) && msg.Has("rect") && FuncExists("ScWebLlm_ClearUnifiedMultiColumnRects") {
+                try ScWebLlm_ClearUnifiedMultiColumnRects()
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e)
+                }
+            }
             if SearchCenterWebLlmBridge_IsUnifiedContext(context) && msg.Has("aiColumns") {
                 if FuncExists("_UnifiedWb_HandleWebLlmBootstrap") {
                     try return !!_UnifiedWb_HandleWebLlmBootstrap(msg)

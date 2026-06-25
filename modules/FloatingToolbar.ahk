@@ -293,7 +293,7 @@ global g_FTB_BlockedCmdIds := Map("ch_t", true, "pqp_capture", true, "ss_menu", 
 global g_FTB_AllowedCmdIds := Map(
     "ftb_ai_workbench", true,
     "ftb_cli_workbench", true,
-    "ftb_unified_workbench", true,
+    "ftb_unified_workbench", false,
     "sc_activate_search", true,
     "qa_clipboard", true,
     "ch_b", true,
@@ -7717,27 +7717,36 @@ FloatingToolbar_DeferredToolbarCmd(cmdId) {
         return
     }
     if (c = "ftb_cli_workbench") {
-        try SurfaceIntent_Open("unified_workbench", Map("initialIntent", "cli", "source", "ftb_cli_workbench"))
+        try SurfaceIntent_Open("cli_workbench", Map("source", "ftb_cli_workbench"))
         catch as e {
-            try OutputDebug("[FloatingToolbar] unified cli workbench open failed: " . e.Message)
+            try OutputDebug("[FloatingToolbar] cli workbench open failed: " . e.Message)
             catch {
             }
         }
         return
     }
-    if (c = "ftb_unified_workbench" || c = "UnifiedWorkbench") {
-        try SurfaceIntent_Open("unified_workbench", Map("initialIntent", "ai", "source", "ftb_unified_workbench"))
+    if (c = "ftb_unified_workbench" || c = "UnifiedWorkbench" || c = "AiWorkbench") {
+        try SurfaceIntent_Open("ai_workbench", Map("source", c))
         catch as e {
-            try OutputDebug("[FloatingToolbar] unified workbench open failed: " . e.Message)
+            try OutputDebug("[FloatingToolbar] ai workbench open failed: " . e.Message)
             catch {
             }
         }
         return
     }
     if (c = "ftb_ai_workbench") {
-        try SurfaceIntent_Open("unified_workbench", Map("initialIntent", "ai", "source", "ftb_ai_workbench"))
+        try SurfaceIntent_Open("ai_workbench", Map("source", "ftb_ai_workbench"))
         catch as e {
-            try OutputDebug("[FloatingToolbar] unified ai workbench open failed: " . e.Message)
+            try OutputDebug("[FloatingToolbar] ai workbench open failed: " . e.Message)
+            catch {
+            }
+        }
+        return
+    }
+    if (c = "CliWorkbench") {
+        try SurfaceIntent_Open("cli_workbench", Map("source", "CliWorkbench"))
+        catch as e {
+            try OutputDebug("[FloatingToolbar] cli workbench open failed: " . e.Message)
             catch {
             }
         }

@@ -135,11 +135,6 @@ _AiWb_NudgeWebBootstrap(*) {
         catch {
         }
     }
-    if FuncExists("ScWebLlm_EnsureFallbackContentRect") {
-        try ScWebLlm_EnsureFallbackContentRect(true)
-        catch {
-        }
-    }
     AiWb_PostJson(Map("type", "hostLayout"))
     AiWb_PostJson(Map("type", "hostPaintNudge", "reason", "bootstrap"))
 }
@@ -287,8 +282,31 @@ _AiWb_OnWebMessage(sender, args) {
         return
     }
     if (typ = "syncSelectedEngines") {
-        if msg.Has("selectedEngines") && FuncExists("_SCWV_ApplySelectedEnginesFromWeb")
-            _SCWV_ApplySelectedEnginesFromWeb(msg["selectedEngines"])
+        if msg.Has("selectedEngines") {
+            if FuncExists("_SCWV_ApplySelectedEnginesFromWeb")
+                _SCWV_ApplySelectedEnginesFromWeb(msg["selectedEngines"])
+            if FuncExists("ScWebLlm_SyncBroadcastLayoutFromColumnIds") {
+                try ScWebLlm_SyncBroadcastLayoutFromColumnIds(msg["selectedEngines"])
+                catch {
+                }
+            }
+        }
+        if FuncExists("SearchCenterWebLlm_EnsureMissingSites") {
+            h := AiWb_GetHostHwnd()
+            if h {
+                try SearchCenterWebLlm_EnsureMissingSites(false, h)
+                catch {
+                }
+            }
+        }
+        if FuncExists("SearchCenterWebLlm_ApplyBounds") {
+            h := AiWb_GetHostHwnd()
+            if h {
+                try SearchCenterWebLlm_ApplyBounds(h)
+                catch {
+                }
+            }
+        }
         return
     }
     if (typ = "webEmbedDebugAction") {

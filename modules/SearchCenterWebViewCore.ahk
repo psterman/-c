@@ -7201,7 +7201,13 @@ _SCWV_MarkAiEmbedBroadcastSynced(engines) {
         return
     if !FuncExists("ScWebLlm_IsEmbedEngine") || !ScWebLlm_IsEmbedEngine(engines[1])
         return
-    if (StrLower(Trim(String(GetSearchCenterCurrentCategoryKey()))) != "ai")
+    isAiHost := (StrLower(Trim(String(GetSearchCenterCurrentCategoryKey()))) = "ai")
+    if !isAiHost && FuncExists("AiWb_IsVisible") {
+        try isAiHost := AiWb_IsVisible()
+        catch {
+        }
+    }
+    if !isAiHost
         return
     global g_SCWebLlm_BroadcastSynced, g_SCWebLlm_LayoutSiteIds
     g_SCWebLlm_BroadcastSynced := true
@@ -7240,7 +7246,13 @@ _SCWV_ApplySelectedEnginesFromWeb(raw) {
     }
     if (next.Length = 0)
         return false
-    if (StrLower(Trim(CategoryKey)) = "ai" && FuncExists("ScWebLlm_NormalizeBroadcastSiteIds")) {
+    isAiEmbedHost := (StrLower(Trim(CategoryKey)) = "ai")
+    if !isAiEmbedHost && FuncExists("AiWb_IsVisible") {
+        try isAiEmbedHost := AiWb_IsVisible()
+        catch {
+        }
+    }
+    if (isAiEmbedHost && FuncExists("ScWebLlm_NormalizeBroadcastSiteIds")) {
         normalized := ScWebLlm_NormalizeBroadcastSiteIds(next)
         if (normalized.Length)
             next := normalized
@@ -7408,8 +7420,6 @@ _SCWV_IsWebSearchCategoryKey(key) {
 }
 
 _SCWV_ShouldShowWebEmbed() {
-    if FuncExists("UnifiedWb_IsVisible") && UnifiedWb_IsVisible()
-        return true
     if FuncExists("AiWb_IsVisible") && AiWb_IsVisible()
         return true
     return false
@@ -10007,6 +10017,11 @@ _SCWV_BoundsMapToScreen(boundsMap, &rx, &ry, &rw, &rh) {
     } catch {
     }
     sc := _SCWV_WebViewRasterScale()
+    if (boundsMap is Map) && boundsMap.Has("dpr") {
+        dpr := Float(boundsMap["dpr"])
+        if (dpr > 0.1 && dpr < 10)
+            sc := dpr
+    }
     cl := 0.0
     ct := 0.0
     cw := bw / Max(sc, 0.01)

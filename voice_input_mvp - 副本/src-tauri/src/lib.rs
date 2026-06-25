@@ -11,7 +11,6 @@ mod hotkey_win;
 
 use parking_lot::Mutex;
 use std::sync::Arc;
-use std::time::Instant;
 use tauri::Manager;
 use tokio::time::{sleep, Duration};
 
@@ -25,6 +24,8 @@ pub struct AppState {
     pub hotkey_mgr: Mutex<Option<hotkey_win::HotkeyManager>>,
     pub recording: Mutex<bool>,
     pub recording_target: Mutex<Option<RecordingTarget>>,
+    pub record_hw_pending: Mutex<Option<String>>,
+    pub record_started_at: Mutex<Option<std::time::Instant>>,
     pub paused: Mutex<bool>,
 }
 
@@ -38,6 +39,8 @@ pub fn run() {
         hotkey_mgr: Mutex::new(None),
         recording: Mutex::new(false),
         recording_target: Mutex::new(None),
+        record_hw_pending: Mutex::new(None),
+        record_started_at: Mutex::new(None),
         paused: Mutex::new(false),
     });
 
@@ -52,6 +55,10 @@ pub fn run() {
             let mgr = hotkey_win::HotkeyManager::new();
             let bindings = app_state.cfg.lock().bindings();
             mgr.bind_all(&bindings);
+            #[cfg(windows)]
+            if let Some(hwnd) = main_window_hwnd(&window) {
+                mgr.attach_app_window(hwnd as isize);
+            }
             *app_state.hotkey_mgr.lock() = Some(mgr);
 
             let json = ipc::mvp_init_json(&app_state, &backdrop_mode);
@@ -87,57 +94,11 @@ pub fn run() {
                     }
 
                     if *state2.recording.lock() {
-                        ipc::finish_hardware_capture(&state2, &win2, &key_name);
+                        ipc::handle_hardware_record_key(&state2, &win2, &key_name);
                         continue;
                     }
 
-                    let now = Instant::now();
-                    let (mapping_id, duration_ms, action) = {
-                        let cfg = state2.cfg.lock();
-                        let Some(mapping) = cfg.find_mapping_by_physical(&key_name) else {
-                            continue;
-                        };
-                        let mapping_id = mapping.id.clone();
-                        let duration_ms = cfg.key_press_duration_ms;
-                        let action = state2
-                            .machine_pool
-                            .lock()
-                            .get_or_create(&mapping_id)
-                            .trigger(&cfg, mapping, &key_name, now);
-                        (mapping_id, duration_ms, action)
-                    };
-
-                    match action {
-                        state::Action::SendKey { key } => {
-                            let sent = keyboard::send_chord(&key, duration_ms);
-                            let label = if sent { key.as_str() } else { "send_failed" };
-                            ipc::push_runtime(&state2, &win2, label, &mapping_id);
-                        }
-                        state::Action::SendEsc => {
-                            keyboard::send_escape();
-                            ipc::push_runtime(&state2, &win2, "esc", &mapping_id);
-                        }
-                        state::Action::ScheduleEnter { delay_ms } => {
-                            let s3 = state2.clone();
-                            let w3 = win2.clone();
-                            let mid = mapping_id.clone();
-                            let d = delay_ms;
-                            tauri::async_runtime::spawn(async move {
-                                sleep(Duration::from_millis(d as u64)).await;
-                                let action = s3.machine_pool.lock().get_or_create(&mid).on_enter_timer();
-                                if matches!(action, state::Action::SendEnter) {
-                                    keyboard::send_enter();
-                                    ipc::push_runtime(&s3, &w3, "enter", &mid);
-                                }
-                            });
-                            ipc::push_runtime(&state2, &win2, "enter_scheduled", &mapping_id);
-                        }
-                        state::Action::SendEnter => {
-                            keyboard::send_enter();
-                            ipc::push_runtime(&state2, &win2, "enter", &mapping_id);
-                        }
-                        state::Action::None => {}
-                    }
+                    ipc::handle_physical_key(&state2, &win2, &key_name);
                 }
             });
 
@@ -151,13 +112,18 @@ pub fn run() {
             ipc::cmd_pause,
             ipc::cmd_resume,
             ipc::cmd_request_runtime,
+            ipc::cmd_capture_source,
             ipc::cmd_frontend_keydown,
+            ipc::cmd_physical_trigger,
+            ipc::cmd_test_send,
             ipc::cmd_mapping_toggle,
             ipc::cmd_mapping_delete,
             ipc::cmd_mapping_duplicate,
             ipc::cmd_mapping_reorder,
             ipc::cmd_mapping_set_group,
+            ipc::cmd_mapping_set_source_key,
             ipc::cmd_mapping_conflicts,
+            ipc::cmd_reload_latest,
             ipc::cmd_window_minimize,
             ipc::cmd_window_close,
             ipc::cmd_sync_theme_backdrop,
@@ -165,3 +131,15 @@ pub fn run() {
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
+
+#[cfg(windows)]
+fn main_window_hwnd(window: &tauri::WebviewWindow) -> Option<winapi::shared::windef::HWND> {
+    use raw_window_handle::{HasWindowHandle, RawWindowHandle};
+    let handle = window.window_handle().ok()?;
+    match handle.as_raw() {
+        RawWindowHandle::Win32(platform) => Some(platform.hwnd.get() as _),
+        _ => None,
+    }
+}
+
+

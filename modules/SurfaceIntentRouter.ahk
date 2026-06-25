@@ -69,6 +69,29 @@ SurfaceIntent_ShouldObserveRequest(*) {
     return false
 }
 
+; 混排工作台已弃用：统一改道到独立 AI / CLI 工作台
+SurfaceIntent_OpenUnifiedWorkbenchRedirect(meta := 0) {
+    m := meta is Map ? meta : Map()
+    intent := "ai"
+    if m.Has("initialIntent") {
+        it := StrLower(Trim(String(m["initialIntent"])))
+        if (it = "cli")
+            intent := "cli"
+    } else if m.Has("intent") {
+        it := StrLower(Trim(String(m["intent"])))
+        if (it = "cli")
+            intent := "cli"
+    }
+    if (intent = "cli") {
+        if FuncExists("CliWorkbenchRouter_Open")
+            return CliWorkbenchRouter_Open(m)
+        return SurfaceManager_InvokeOptional("CliWb_Show", m)
+    }
+    if FuncExists("AiWorkbenchRouter_Open")
+        return AiWorkbenchRouter_Open(m)
+    return SurfaceManager_InvokeOptional("AiWb_Show", m)
+}
+
 SurfaceIntent_Record(kind, surfaceId, meta := 0, requestId := 0) {
     if !FuncExists("SurfaceManager_RecordEvent")
         return
@@ -128,10 +151,7 @@ SurfaceIntent_ExecuteOpen(surfaceId, meta := 0) {
             else
                 SurfaceManager_InvokeOptional("CliWb_Show", m)
         case "unified_workbench":
-            if FuncExists("UnifiedWorkbenchRouter_Open")
-                UnifiedWorkbenchRouter_Open(m)
-            else
-                SurfaceManager_InvokeOptional("UnifiedWb_Show", m)
+            SurfaceIntent_OpenUnifiedWorkbenchRedirect(m)
         case "virtual_keyboard":
             SurfaceManager_InvokeOptional("VK_Show")
         case "config_webview":
@@ -179,10 +199,14 @@ SurfaceIntent_ExecuteClose(surfaceId, meta := 0) {
             else
                 SurfaceManager_InvokeOptional("CliWb_Hide")
         case "unified_workbench":
-            if FuncExists("UnifiedWorkbenchRouter_Hide")
-                UnifiedWorkbenchRouter_Hide(m)
+            if FuncExists("AiWorkbenchRouter_Hide")
+                AiWorkbenchRouter_Hide(m)
             else
-                SurfaceManager_InvokeOptional("UnifiedWb_Hide")
+                SurfaceManager_InvokeOptional("AiWb_Hide")
+            if FuncExists("CliWorkbenchRouter_Hide")
+                CliWorkbenchRouter_Hide(m)
+            else
+                SurfaceManager_InvokeOptional("CliWb_Hide")
         case "virtual_keyboard":
             SurfaceManager_InvokeOptional("VK_Hide")
         case "config_webview":

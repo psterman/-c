@@ -291,6 +291,90 @@ html[data-theme="light"] {
   padding: 8px 10px 0;
 }
 
+.wb-compose.wb-compose-bottom {
+  flex-shrink: 0;
+  padding: 8px 10px 10px;
+  margin-top: 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(8, 12, 22, 0.42);
+  position: relative;
+  z-index: 12;
+}
+
+html[data-theme="light"] body.wb-ai-layout .wb-content.wb-stage {
+  background: rgba(248, 250, 252, 0.72);
+  border-color: rgba(15, 23, 42, 0.12);
+}
+
+html[data-theme="light"] .wb-compose.wb-compose-bottom {
+  border-top-color: rgba(15, 23, 42, 0.1);
+  background: rgba(255, 255, 255, 0.55);
+}
+
+body.wb-ai-layout .wb-main {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+body.wb-ai-layout .wb-main > .web-embed-debug-panel {
+  flex-shrink: 0;
+}
+
+body.wb-ai-layout .wb-content {
+  grid-row: 2;
+  min-height: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 4px 8px 8px;
+}
+
+body.wb-ai-layout .wb-content.wb-stage {
+  position: relative;
+  isolation: isolate;
+  min-width: 0;
+  border: 1px solid rgba(255, 141, 42, 0.32);
+  border-radius: 16px;
+  background: rgba(5, 9, 17, 0.42);
+  box-shadow:
+    0 10px 28px rgba(0, 0, 0, 0.2),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+
+body.wb-ai-layout.sc-web-embed-layout .web-embed-omnibar-url-host,
+body.uwb-layout.sc-web-embed-layout .web-embed-omnibar-url-host {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 12px;
+  color: rgba(226, 232, 240, 0.78);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 0 10px;
+  line-height: 32px;
+}
+
+html[data-theme="light"] body.wb-ai-layout.sc-web-embed-layout .web-embed-omnibar-url-host,
+html[data-theme="light"] body.uwb-layout.sc-web-embed-layout .web-embed-omnibar-url-host {
+  color: rgba(30, 41, 59, 0.82);
+}
+
+body.wb-ai-layout.sc-web-embed-layout .web-embed-toolbar .web-omnibar-glass {
+  min-height: 34px;
+}
+
+body.wb-ai-layout #web-embed-toolbar {
+  flex-shrink: 0;
+}
+
+body.wb-ai-layout #search-box-anchor:empty {
+  display: none;
+}
+
 .wb-compose-inner {
   display: flex;
   align-items: stretch;
@@ -339,20 +423,72 @@ html[data-theme="light"] {
   min-height: 22px;
 }
 
-/* AI 工作台：侧栏内嵌 nav 占满高度 */
-body.wb-ai-layout .web-embed-workspace {
+/* AI 工作台：侧栏内嵌 nav 占满高度；覆盖 sc-web-embed 的 height:100% / min-height:280px */
+#layout.wb-app.sc-web-embed-active .web-embed-workspace,
+body.wb-ai-layout.sc-web-embed-layout .web-embed-workspace {
   flex: 1 1 auto;
   min-height: 0;
   display: flex;
   flex-direction: column;
+  height: auto;
+  max-height: 100%;
+  overflow: hidden;
+  gap: 0;
 }
 
-body.wb-ai-layout .wb-content {
-  padding-top: 4px;
+/* 与早期 git 一致：输入框在 wb-main 层、内嵌区之外，避免 WebView2 子窗体盖住 HTML */
+body.wb-ai-layout .wb-main > .wb-compose-bottom {
+  grid-row: 3;
+  flex-shrink: 0;
+  margin: 0 8px 8px;
+  border-radius: 0 0 14px 14px;
 }
 
-body.wb-ai-layout #search-box-anchor:empty {
-  display: none;
+body.wb-ai-layout #web-embed-hscroll-row {
+  flex-shrink: 0;
+}
+
+body.wb-ai-layout .web-embed-host-frame,
+#layout.wb-app.sc-web-embed-active .web-embed-host-frame {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+body.wb-ai-layout.sc-web-embed-layout .web-embed-scroll-viewport,
+#layout.wb-app.sc-web-embed-active .web-embed-scroll-viewport,
+#layout.wb-app.sc-web-embed-active .web-embed-host-frame .web-embed-scroll-viewport {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: auto;
+  max-height: 100%;
+}
+
+body.wb-ai-layout .web-embed-scroll-track {
+  min-height: 100%;
+  height: 100%;
+  align-items: stretch;
+  justify-content: flex-start;
+}
+
+body.wb-ai-layout .web-embed-column-slot {
+  flex: 0 0 auto;
+  align-self: stretch;
+}
+
+body.wb-ai-layout.sc-web-embed-layout #web-embed-toolbar {
+  flex-shrink: 0;
+  gap: 8px;
+  padding-bottom: 8px;
+}
+
+body.sc-web-embed-debug-open.wb-ai-layout .wb-content {
+  min-height: 0;
+}
+
+body.sc-web-embed-debug-open.wb-ai-layout .web-embed-scroll-viewport {
+  min-height: 120px;
 }
 
 /* CLI 工作台：侧栏纵向引擎列表 */

@@ -1016,7 +1016,9 @@ function syncWebEmbedHScrollUi() {
   const viewport = document.getElementById("web-embed-scroll-viewport");
   if (!row || !slider || !viewport) return;
   const show = isWebEmbedActive() && webEmbedNeedsHorizontalScroll();
+  const wasShown = !row.classList.contains("hidden");
   row.classList.toggle("hidden", !show);
+  if (wasShown !== show) scheduleWebEmbedContentRect(false);
   if (!show) return;
   const maxScroll = getWebEmbedMaxScrollPx();
   slider.max = String(maxScroll);
@@ -1239,6 +1241,22 @@ function cancelWebEmbedRectTimers() {
   _scWebEmbedRectRetries = 0;
 }
 
+function isWebEmbedComposeBottom() {
+  return document.body.classList.contains("wb-ai-layout")
+    || document.body.classList.contains("uwb-layout");
+}
+
+function ensureWebEmbedOmnibarUrlHost() {
+  const slot = document.getElementById("web-embed-search-slot");
+  if (!slot) return null;
+  let host = document.getElementById("web-embed-omnibar-url");
+  if (!host) {
+    slot.innerHTML = "<div class=\"web-embed-omnibar-url-host\" id=\"web-embed-omnibar-url\" aria-live=\"polite\"></div>";
+    host = document.getElementById("web-embed-omnibar-url");
+  }
+  return host;
+}
+
 function syncWebEmbedSearchDock(embed) {
   const box = document.getElementById("searchBoxInner");
   const anchor = document.getElementById("search-box-anchor");
@@ -1246,6 +1264,24 @@ function syncWebEmbedSearchDock(embed) {
   const toolbar = document.getElementById("web-embed-toolbar");
   const workspace = document.getElementById("web-embed-workspace");
   const icon = document.getElementById("search-icon-inline");
+  const composeBottom = isWebEmbedComposeBottom();
+  if (composeBottom) {
+    if (workspace && embed) workspace.classList.remove("hidden");
+    if (box && anchor && box.parentElement !== anchor) anchor.appendChild(box);
+    if (box) box.classList.remove("web-embed-search-compact");
+    if (toolbar) toolbar.classList.remove("web-embed-toolbar-with-search");
+    if (icon) icon.innerHTML = "&#127760;";
+    const input = document.getElementById("search");
+    if (input) input.removeAttribute("aria-label");
+    if (embed) ensureWebEmbedOmnibarUrlHost();
+    else if (slot) slot.innerHTML = "";
+    if (embed) {
+      scheduleWebEmbedContentRect();
+      setTimeout(scheduleWebEmbedContentRect, 80);
+      setTimeout(scheduleWebEmbedContentRect, 260);
+    } else dismissWebEmbedHost();
+    return;
+  }
   if (!box || !anchor || !slot) return;
   if (workspace && embed) workspace.classList.remove("hidden");
   const target = embed ? slot : anchor;
@@ -1269,28 +1305,88 @@ function syncWebEmbedSearchDock(embed) {
   }
 }
 
+function getWebEmbedComposeBottomEl() {
+  if (!isWebEmbedComposeBottom()) return null;
+  return document.querySelector("#wb-compose-bottom, .wb-compose-bottom, form.uwb-compose, #compose-form");
+}
+
+function getWebEmbedHostMeasureEl() {
+  return document.getElementById("web-embed-host-frame")
+    || document.getElementById("web-embed-scroll-viewport");
+}
+
+function getWebEmbedComposeReservePx() {
+  const el = getWebEmbedComposeBottomEl();
+  if (!el) return 0;
+  const r = el.getBoundingClientRect();
+  return Math.max(0, Math.round(r.height || el.offsetHeight || 0));
+}
+
+function clampWebEmbedHostRectToComposeBottom(rect) {
+  if (!rect || !isWebEmbedComposeBottom()) return rect;
+  const compose = getWebEmbedComposeBottomEl();
+  if (!compose) return rect;
+  const cb = compose.getBoundingClientRect();
+  const top = Number(rect.top) || 0;
+  let maxBottom = top + (Number(rect.height) || 0);
+  if (cb.top > top + 40) {
+    maxBottom = Math.min(maxBottom, cb.top - 2);
+  }
+  const nextH = Math.max(0, Math.round(maxBottom - top));
+  if (nextH < 80) return rect;
+  if (nextH >= (Number(rect.height) || 0)) return rect;
+  return Object.assign({}, rect, { height: nextH });
+}
+
 function measureWebEmbedHostRect() {
+  const measureEl = getWebEmbedHostMeasureEl();
   const viewport = document.getElementById("web-embed-scroll-viewport");
   const ws = document.getElementById("web-embed-workspace");
-  if (!viewport || !ws || ws.classList.contains("hidden")) return null;
-  const box = viewport.getBoundingClientRect();
-  const cs = getComputedStyle(viewport);
+  if (!measureEl || !ws || ws.classList.contains("hidden")) return null;
+  const box = measureEl.getBoundingClientRect();
+  const cs = getComputedStyle(measureEl);
   const borderL = parseFloat(cs.borderLeftWidth) || 0;
   const borderT = parseFloat(cs.borderTopWidth) || 0;
-  const width = Math.max(0, Math.round(viewport.clientWidth || 0));
-  let height = Math.max(0, Math.round(viewport.clientHeight || 0));
-  const track = document.getElementById("web-embed-scroll-track");
-  if (track && height > 0) {
-    const trackH = Math.max(0, Math.round(track.clientHeight || 0));
-    if (trackH > height + 8) height = trackH;
+  const borderB = parseFloat(cs.borderBottomWidth) || 0;
+  const width = Math.max(0, Math.round((viewport && viewport.clientWidth) ? viewport.clientWidth : measureEl.clientWidth || 0));
+  let top = Math.round(box.top + borderT);
+  let height = Math.max(0, Math.round(measureEl.clientHeight || 0));
+  if (height < 80 && box.height > 0) {
+    height = Math.max(0, Math.round(box.height - borderT - borderB));
+  }
+  if (isWebEmbedComposeBottom()) {
+    const compose = getWebEmbedComposeBottomEl();
+    const toolbar = document.getElementById("web-embed-toolbar");
+    const anchorTop = toolbar ? Math.round(toolbar.getBoundingClientRect().bottom) : top;
+    const stage = document.getElementById("wb-stage");
+    if (stage) {
+      const sb = stage.getBoundingClientRect();
+      if (sb.bottom > anchorTop + 40) {
+        const stageCap = Math.round(sb.bottom - anchorTop - 4);
+        if (stageCap >= 100) {
+          top = anchorTop;
+          height = Math.min(height, stageCap);
+        }
+      }
+    }
+    if (compose) {
+      const cb = compose.getBoundingClientRect();
+      if (cb.top > anchorTop + 8) {
+        const capH = Math.round(cb.top - anchorTop - 4);
+        if (capH >= 100) {
+          top = anchorTop;
+          height = Math.min(height, capH);
+        }
+      }
+    }
   }
   if (width < 140 || height < 100) return null;
-  return {
+  return clampWebEmbedHostRectToComposeBottom({
     left: box.left + borderL,
-    top: box.top + borderT,
+    top,
     width,
     height
-  };
+  });
 }
 
 let _scWebEmbedLayoutRo = null;
@@ -1305,12 +1401,20 @@ function ensureWebEmbedLayoutObserver() {
   _scWebEmbedLayoutRo.observe(ws);
   const frame = document.getElementById("web-embed-scroll-viewport");
   if (frame) _scWebEmbedLayoutRo.observe(frame);
+  const hostFrame = document.getElementById("web-embed-host-frame");
+  if (hostFrame) _scWebEmbedLayoutRo.observe(hostFrame);
   const track = document.getElementById("web-embed-scroll-track");
   if (track) _scWebEmbedLayoutRo.observe(track);
   const bar = document.getElementById("web-embed-toolbar");
   if (bar) _scWebEmbedLayoutRo.observe(bar);
+  const compose = getWebEmbedComposeBottomEl();
+  if (compose) _scWebEmbedLayoutRo.observe(compose);
   const nav = document.getElementById("sc-mode-nav");
   if (nav) _scWebEmbedLayoutRo.observe(nav);
+  const stage = document.getElementById("wb-stage");
+  if (stage) _scWebEmbedLayoutRo.observe(stage);
+  const debugPanel = document.getElementById("web-embed-debug-panel");
+  if (debugPanel) _scWebEmbedLayoutRo.observe(debugPanel);
 }
 
 let _scWebEmbedRectRetries = 0;
@@ -1482,19 +1586,24 @@ function scheduleWebEmbedLayoutResync() {
 function postWebEmbedContentRect(force) {
   if (!isWebEmbedActive()) return;
   const measured = measureWebEmbedHostRect();
-  const el = document.getElementById("web-embed-scroll-viewport");
+  const el = getWebEmbedHostMeasureEl();
   let r = measured;
   if (!r && el) {
     const box = el.getBoundingClientRect();
     const cs = getComputedStyle(el);
     const borderL = parseFloat(cs.borderLeftWidth) || 0;
     const borderT = parseFloat(cs.borderTopWidth) || 0;
-    r = {
+    const borderB = parseFloat(cs.borderBottomWidth) || 0;
+    r = clampWebEmbedHostRectToComposeBottom({
       left: box.left + borderL,
       top: box.top + borderT,
       width: Math.max(0, Math.round(el.clientWidth || 0)),
       height: Math.max(0, Math.round(el.clientHeight || 0))
-    };
+    });
+    if (r && r.height < 80 && box.height > 0) {
+      r.height = Math.max(0, Math.round(box.height - borderT - borderB));
+      r = clampWebEmbedHostRectToComposeBottom(r);
+    }
   }
   if (!r || r.width < 80 || r.height < 60) {
     if (_scWebEmbedRectRetries < 20) {
@@ -1514,7 +1623,9 @@ function postWebEmbedContentRect(force) {
     top: Math.round(r.top),
     width: Math.max(200, Math.round(r.width)),
     height: Math.max(140, Math.round(r.height)),
-    dpr: Number(window.devicePixelRatio) || 1
+    dpr: Number(window.devicePixelRatio) || 1,
+    composeBottom: !!isWebEmbedComposeBottom(),
+    composeReservePx: getWebEmbedComposeReservePx()
   };
   const layoutPayload = buildWebEmbedColumnLayoutPayload();
   if (!force && key === _scWebEmbedLastRectKey) {
@@ -1560,6 +1671,11 @@ function applyWebLlmChromeState(payload) {
   const url = String(payload.url || "").trim();
   const loading = !!payload.loading;
   if (status) status.textContent = loading ? "加载中…" : (title || url || "多栏移动版 · 点击书签切换焦点");
+  const urlHost = document.getElementById("web-embed-omnibar-url");
+  if (urlHost && isWebEmbedComposeBottom()) {
+    urlHost.textContent = loading ? "加载中…" : (url || title || "—");
+    urlHost.title = url || title || "";
+  }
   const input = document.getElementById("search");
   if (input && isWebEmbedActive() && !String(input.value || "").trim()) {
     input.placeholder = SC_WEB_EMBED_INPUT_HINT;

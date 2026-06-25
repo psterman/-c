@@ -4606,6 +4606,7 @@ dependencies = [
  "image",
  "notify",
  "parking_lot",
+ "raw-window-handle",
  "serde",
  "serde_json",
  "tauri",

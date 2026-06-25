@@ -1469,7 +1469,7 @@ function __settingsStudioTestInline(payloadJson, testId, flat) {
       if (s === "^^") return "Double Ctrl";
       if (s === "++") return "Double Shift";
       if (s === "!!") return "Double Alt";
-      if (/^(Ctrl|Alt|Shift|Win|CapsLock|Double )/i.test(s) && !/[\^!+#]/.test(s)) return s;
+      if (/^(LCtrl|RCtrl|LShift|RShift|LAlt|RAlt|Ctrl|Alt|Shift|Win|CapsLock|Double )/i.test(s) && !/[\^!+#]/.test(s)) return s;
       let display = "";
       let key = s;
       if (key.includes("^")) {

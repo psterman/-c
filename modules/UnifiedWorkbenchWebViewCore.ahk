@@ -268,6 +268,8 @@ UnifiedWb_EnsureAiEmbedLayering() {
     global g_UnifiedWb_LastLayoutWaitNudge
     if FuncExists("Nmer_IsAppShuttingDown") && Nmer_IsAppShuttingDown()
         return
+    if FuncExists("ScWebLlm_IsUnifiedColumnResizeActive") && ScWebLlm_IsUnifiedColumnResizeActive()
+        return
     if FuncExists("ScWebLlm_IsUnifiedLayoutPaused") && ScWebLlm_IsUnifiedLayoutPaused()
         return
     if !g_UnifiedWb_Visible || !IsObject(g_UnifiedWb_Gui)
@@ -294,6 +296,11 @@ UnifiedWb_EnsureAiEmbedLayering() {
         return
     if FuncExists("SearchCenterWebLlm_ApplyBounds") {
         try SearchCenterWebLlm_ApplyBounds(ph)
+        catch {
+        }
+    }
+    if FuncExists("SearchCenterWebLlm_ApplyUnifiedColumnResizeRails") {
+        try SearchCenterWebLlm_ApplyUnifiedColumnResizeRails(ph)
         catch {
         }
     }
@@ -389,8 +396,12 @@ UnifiedWb_StoreBootstrapFromWeb(aiColumns, maxActive := 0, focusSiteId := "", em
 }
 
 UnifiedWb_ReplayStoredBootstrap(forceNavHome := false, notifyPage := true) {
-    global g_UnifiedWb_LastAiColumns, g_UnifiedWb_LastBootstrapMeta, g_UnifiedWb_Gui, g_SCWebLlm_EmbedBootstrapped
+    global g_UnifiedWb_LastAiColumns, g_UnifiedWb_LastBootstrapMeta, g_UnifiedWb_Gui, g_SCWebLlm_EmbedBootstrapped, g_SCWebLlm_ContentRectReady
     if FuncExists("Nmer_IsAppShuttingDown") && Nmer_IsAppShuttingDown()
+        return false
+    if FuncExists("ScWebLlm_IsUnifiedScEmbedLayout") && ScWebLlm_IsUnifiedScEmbedLayout()
+        return false
+    if FuncExists("ScWebLlm_IsUnifiedWorkbenchHost") && ScWebLlm_IsUnifiedWorkbenchHost() && g_SCWebLlm_ContentRectReady
         return false
     if !(g_UnifiedWb_LastAiColumns is Array) || !g_UnifiedWb_LastAiColumns.Length
         return false
@@ -428,8 +439,12 @@ UnifiedWb_ReplayStoredBootstrap(forceNavHome := false, notifyPage := true) {
 }
 
 UnifiedWb_ScheduleStoredBootstrapReplay() {
-    global g_UnifiedWb_BootstrapReplayGen
+    global g_UnifiedWb_BootstrapReplayGen, g_SCWebLlm_ContentRectReady
     if FuncExists("Nmer_IsAppShuttingDown") && Nmer_IsAppShuttingDown()
+        return
+    if FuncExists("ScWebLlm_IsUnifiedScEmbedLayout") && ScWebLlm_IsUnifiedScEmbedLayout()
+        return
+    if FuncExists("ScWebLlm_IsUnifiedWorkbenchHost") && ScWebLlm_IsUnifiedWorkbenchHost() && g_SCWebLlm_ContentRectReady
         return
     if !(g_UnifiedWb_LastAiColumns is Array) || !g_UnifiedWb_LastAiColumns.Length
         return
@@ -872,16 +887,61 @@ _UnifiedWb_OnWebMessage(sender, args) {
         }
         return
     }
+    if (typ = "unifiedColumnResizeBegin") {
+        leftColId := msg.Has("leftColId") ? String(msg["leftColId"]) : ""
+        rightColId := msg.Has("rightColId") ? String(msg["rightColId"]) : ""
+        startLeftW := msg.Has("startLeftW") ? Integer(msg["startLeftW"]) : 0
+        startRightW := msg.Has("startRightW") ? Integer(msg["startRightW"]) : 0
+        if (leftColId != "" && rightColId != "" && FuncExists("ScWebLlm_BeginUnifiedColumnResizeDrag")) {
+            try ScWebLlm_BeginUnifiedColumnResizeDrag(leftColId, rightColId, startLeftW, startRightW, true)
+            catch {
+            }
+        }
+        return
+    }
+    if (typ = "unifiedColumnResizeEnd") {
+        if FuncExists("ScWebLlm_FinishUnifiedColumnResizeDrag") {
+            try ScWebLlm_FinishUnifiedColumnResizeDrag()
+            catch {
+            }
+        } else if FuncExists("ScWebLlm_SetUnifiedColumnResizeInteract") {
+            try ScWebLlm_SetUnifiedColumnResizeInteract(false)
+            catch {
+            }
+        }
+        return
+    }
+    if (typ = "unifiedColumnResizeInteract") {
+        if FuncExists("ScWebLlm_SetUnifiedColumnResizeInteract") {
+            active := msg.Has("active") ? !!msg["active"] : true
+            try ScWebLlm_SetUnifiedColumnResizeInteract(active)
+            catch {
+            }
+        }
+        return
+    }
     if (typ = "webLlmLayoutLive") {
         if FuncExists("Nmer_IsAppShuttingDown") && Nmer_IsAppShuttingDown()
             return
-        if !msg.Has("aiColumns") || !FuncExists("SearchCenterWebLlm_ApplyUnifiedMultiColumnFromWeb")
+        if FuncExists("ScWebLlm_IsUnifiedScEmbedLayout") && ScWebLlm_IsUnifiedScEmbedLayout()
             return
-        maxActive := msg.Has("maxActiveAiEmbeds") ? Integer(msg["maxActiveAiEmbeds"]) : 0
-        focusSid := msg.Has("focusSiteId") ? Trim(String(msg["focusSiteId"])) : ""
-        embedVp := (msg.Has("embedViewport") && (msg["embedViewport"] is Map)) ? msg["embedViewport"] : 0
-        try SearchCenterWebLlm_ApplyUnifiedMultiColumnFromWeb(msg["aiColumns"], maxActive, focusSid, embedVp, true)
-        catch {
+        if msg.Has("allColumns") && FuncExists("ScWebLlm_UnifiedSetWebColumns") {
+            try ScWebLlm_UnifiedSetWebColumns(msg["allColumns"])
+            catch {
+            }
+        }
+        if msg.Has("aiColumns") && FuncExists("SearchCenterWebLlm_ApplyUnifiedMultiColumnFromWeb") {
+            maxActive := msg.Has("maxActiveAiEmbeds") ? Integer(msg["maxActiveAiEmbeds"]) : 0
+            focusSid := msg.Has("focusSiteId") ? Trim(String(msg["focusSiteId"])) : ""
+            embedVp := (msg.Has("embedViewport") && (msg["embedViewport"] is Map)) ? msg["embedViewport"] : 0
+            try SearchCenterWebLlm_ApplyUnifiedMultiColumnFromWeb(msg["aiColumns"], maxActive, focusSid, embedVp, true)
+            catch {
+            }
+        }
+        if FuncExists("SearchCenterWebLlm_ApplyUnifiedColumnResizeRails") {
+            try SearchCenterWebLlm_ApplyUnifiedColumnResizeRails()
+            catch {
+            }
         }
         return
     }
@@ -995,6 +1055,18 @@ _UnifiedWb_OnWebMessage(sender, args) {
         return
     }
     if (typ = "webLlmBootstrap") {
+        hasRect := msg.Has("rect") && (msg["rect"] is Map)
+        hasAiCols := msg.Has("aiColumns")
+        if hasRect && !hasAiCols {
+            if FuncExists("SearchCenterWebLlmBridge_HandleMessage") {
+                SearchCenterWebLlmBridge_HandleMessage(msg, "unified_workbench")
+            }
+            return
+        }
+        if hasAiCols && FuncExists("ScWebLlm_IsUnifiedScEmbedLayout") && ScWebLlm_IsUnifiedScEmbedLayout() {
+            UnifiedWb_Trace("web_bootstrap_msg", true, Map("reason", "sc_embed_skip_aiColumns"))
+            return
+        }
         _UnifiedWb_HandleWebLlmBootstrap(msg)
         return
     }
@@ -1019,6 +1091,10 @@ _UnifiedWb_HandleWebLlmBootstrap(msg) {
         return false
     if !(msg is Map)
         return false
+    if FuncExists("ScWebLlm_IsUnifiedScEmbedLayout") && ScWebLlm_IsUnifiedScEmbedLayout() {
+        UnifiedWb_Trace("web_bootstrap_msg", true, Map("reason", "sc_embed_layout_active"))
+        return true
+    }
     if !msg.Has("aiColumns") {
         UnifiedWb_Trace("web_bootstrap_msg", false, Map("reason", "missing_aiColumns"))
         return false
@@ -1046,11 +1122,26 @@ _UnifiedWb_HandleWebLlmBootstrap(msg) {
         catch {
         }
     }
+    if FuncExists("ScWebLlm_NotifyUnifiedHostComposition") {
+        try ScWebLlm_NotifyUnifiedHostComposition()
+        catch {
+        }
+    }
     if FuncExists("SearchCenterWebLlm_ApplyUnifiedMultiColumnFromWeb") {
         try SearchCenterWebLlm_ApplyUnifiedMultiColumnFromWeb(cols, maxActive, focusSid, embedVp)
         catch as e {
             UnifiedWb_Trace("web_bootstrap_apply", false, Map("error", e.Message))
             return false
+        }
+    }
+    if msg.Has("allColumns") && FuncExists("ScWebLlm_UnifiedSetWebColumns") {
+        try ScWebLlm_UnifiedSetWebColumns(msg["allColumns"])
+        catch {
+        }
+    }
+    if FuncExists("SearchCenterWebLlm_ApplyUnifiedColumnResizeRails") {
+        try SearchCenterWebLlm_ApplyUnifiedColumnResizeRails()
+        catch {
         }
     }
     if FuncExists("UnifiedWb_StoreBootstrapFromWeb")
@@ -1129,6 +1220,23 @@ _UnifiedWb_HandleDebugAction(msg) {
                     result["ok"] := false
                 }
             }
+        case "rebootstrap_sc_embed":
+            global g_SCWebLlm_EmbedBootstrapped, g_SCWebLlm_ContentRectReady
+            if FuncExists("ScWebLlm_ClearUnifiedMultiColumnRects") {
+                try ScWebLlm_ClearUnifiedMultiColumnRects()
+                catch {
+                }
+            }
+            g_SCWebLlm_EmbedBootstrapped := false
+            g_SCWebLlm_ContentRectReady := false
+            if FuncExists("SearchCenterWebLlm_PrepareForWebModeShow") {
+                try SearchCenterWebLlm_PrepareForWebModeShow(false)
+                catch {
+                }
+            }
+            UnifiedWb_PostCriticalJson(Map("type", "hostOpenBootstrap", "reason", "debug_sc_embed_rebootstrap", "includeCli", false), true)
+            result["ok"] := true
+            UnifiedWb_Trace("debug_sc_embed_rebootstrap", true, Map())
         case "rebootstrap":
             global g_UnifiedWb_Gui, g_SCWebLlm_EmbedBootstrapped
             ph := 0
@@ -1204,6 +1312,8 @@ _UnifiedWb_HandleDebugAction(msg) {
 }
 
 UnifiedWb_Show(meta := 0) {
+    if FuncExists("SurfaceIntent_OpenUnifiedWorkbenchRedirect")
+        return SurfaceIntent_OpenUnifiedWorkbenchRedirect(meta)
     if FuncExists("SurfaceIntent_RouteExternalOpen") && SurfaceIntent_RouteExternalOpen("unified_workbench", meta)
         return true
     global g_UnifiedWb_Visible, g_UnifiedWb_Ready, g_UnifiedWb_PendingKeyword, g_UnifiedWb_InitialIntent
@@ -1231,6 +1341,11 @@ UnifiedWb_Show(meta := 0) {
     if !g_UnifiedWb_Gui
         return false
     UnifiedWb_BindScWebLlmHost()
+    if FuncExists("ScWebLlm_ResetUnifiedColumnResizeState") {
+        try ScWebLlm_ResetUnifiedColumnResizeState()
+        catch {
+        }
+    }
     resuming := false
     if FuncExists("SearchCenterWebLlm_UnifiedHasResumableSites") {
         try resuming := SearchCenterWebLlm_UnifiedHasResumableSites()
@@ -1342,6 +1457,8 @@ UnifiedWb_Dispose(reason := "") {
 }
 
 UnifiedWorkbenchRouter_Open(meta := 0) {
+    if FuncExists("SurfaceIntent_OpenUnifiedWorkbenchRedirect")
+        return SurfaceIntent_OpenUnifiedWorkbenchRedirect(meta)
     return UnifiedWb_Show(meta)
 }
 

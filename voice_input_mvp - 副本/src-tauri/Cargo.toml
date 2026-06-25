@@ -13,6 +13,7 @@ enigo = "0.2"
 notify = { version = "6", features = ["macos_kqueue"] }
 directories = "5"
 parking_lot = "0.12"
+raw-window-handle = "0.6"
 
 [target.'cfg(windows)'.dependencies]
 winapi = { version = "0.3", features = ["winuser", "libloaderapi", "minwindef", "synchapi", "processthreadsapi"] }

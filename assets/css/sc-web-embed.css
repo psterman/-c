@@ -997,6 +997,29 @@ body.web-bookmarks-hide-labels .webllm-site-chip {
   position: relative;
   z-index: 3;
 }
+.web-embed-host-frame {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+body.wb-ai-layout .web-embed-host-frame,
+body.uwb-layout .web-embed-host-frame {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.web-embed-host-frame .web-embed-scroll-viewport {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: auto;
+  max-height: 100%;
+}
+.web-embed-host-frame .web-embed-hscroll-row {
+  flex-shrink: 0;
+}
 .web-embed-scroll-viewport {
   position: relative;
   flex: 1 1 auto;
@@ -1930,3 +1953,40 @@ html[data-theme="light"] .web-embed-column-slot:not(.focus-active) {
   display: flex;
   flex-direction: column;
   gap: 0;
+}
+
+/* 鐙珛宸ヤ綔鍙帮紙AI / 缁熶竴锛夛細搴曢儴杈撳叆鍖哄浐瀹氾紝鍐呭祵鍖哄脊鎬ф敹缂╋紝閬垮厤閬尅 compose */
+#layout.wb-app.sc-web-embed-active .web-embed-workspace,
+body.wb-ai-layout.sc-web-embed-layout .web-embed-workspace,
+body.uwb-layout.sc-web-embed-layout .web-embed-workspace {
+  height: auto;
+  max-height: 100%;
+  overflow: hidden;
+}
+body.wb-ai-layout.sc-web-embed-layout .web-embed-scroll-viewport,
+body.uwb-layout.sc-web-embed-layout .web-embed-scroll-viewport,
+#layout.wb-app.sc-web-embed-active .web-embed-scroll-viewport,
+#layout.wb-app.sc-web-embed-active .web-embed-host-frame .web-embed-scroll-viewport {
+  min-height: 0;
+  flex: 1 1 auto;
+  height: auto;
+  max-height: 100%;
+}
+
+/* 独立工作台（AI / 统一）：底部输入区固定，内嵌区弹性收缩，避免遮挡 compose */
+#layout.wb-app.sc-web-embed-active .web-embed-workspace,
+body.wb-ai-layout.sc-web-embed-layout .web-embed-workspace,
+body.uwb-layout.sc-web-embed-layout .web-embed-workspace {
+  height: auto;
+  max-height: 100%;
+  overflow: hidden;
+}
+body.wb-ai-layout.sc-web-embed-layout .web-embed-scroll-viewport,
+body.uwb-layout.sc-web-embed-layout .web-embed-scroll-viewport,
+#layout.wb-app.sc-web-embed-active .web-embed-scroll-viewport,
+#layout.wb-app.sc-web-embed-active .web-embed-host-frame .web-embed-scroll-viewport {
+  min-height: 0;
+  flex: 1 1 auto;
+  height: auto;
+  max-height: 100%;
+}

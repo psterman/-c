@@ -1376,7 +1376,7 @@ _VK_DefaultSceneToolbarLayoutRows() {
     return [
         Map("sceneId", "ai_workbench", "visible_in_bar", true, "order_bar", 0),
         Map("sceneId", "cli_workbench", "visible_in_bar", true, "order_bar", 1),
-        Map("sceneId", "unified_workbench", "visible_in_bar", true, "order_bar", 2),
+        Map("sceneId", "unified_workbench", "visible_in_bar", false, "order_bar", 99),
         Map("sceneId", "search", "visible_in_bar", true, "order_bar", 3),
         Map("sceneId", "clipboard", "visible_in_bar", true, "order_bar", 4),
         Map("sceneId", "prompts", "visible_in_bar", true, "order_bar", 5),
@@ -4611,6 +4611,94 @@ _OnVkPreviewKeyUp(ih, vk, sc) {
     VK_SendToWeb('{"type":"keyPreview","phase":"up","base":"' . _VkJsonStr(base) . '"}')
 }
 
+; 录制期间预览钩子已关闭，由录制钩子转发 keyPreview，保证右侧键帽随物理按键高亮
+_VkSendRecordKeyPreview(vk, sc, phase) {
+    base := _VkPreviewKeyBaseFromHook(vk, sc)
+    if base = ""
+        return
+    VK_SendToWeb('{"type":"keyPreview","phase":"' . phase . '","base":"' . _VkJsonStr(base) . '"}')
+}
+
+_VkGetPressedModifierSides() {
+    return Map(
+        "lctrl", !!GetKeyState("LControl", "P"),
+        "rctrl", !!GetKeyState("RControl", "P"),
+        "lshift", !!GetKeyState("LShift", "P"),
+        "rshift", !!GetKeyState("RShift", "P"),
+        "lalt", !!GetKeyState("LMenu", "P"),
+        "ralt", !!GetKeyState("RMenu", "P"),
+    )
+}
+
+_VkModSideLabel(kind, sides) {
+    if (kind = "ctrl") {
+        if sides["lctrl"] && !sides["rctrl"]
+            return "LCtrl"
+        if sides["rctrl"] && !sides["lctrl"]
+            return "RCtrl"
+        return "Ctrl"
+    }
+    if (kind = "shift") {
+        if sides["lshift"] && !sides["rshift"]
+            return "LShift"
+        if sides["rshift"] && !sides["lshift"]
+            return "RShift"
+        return "Shift"
+    }
+    if (kind = "alt") {
+        if sides["lalt"] && !sides["ralt"]
+            return "LAlt"
+        if sides["ralt"] && !sides["lalt"]
+            return "RAlt"
+        return "Alt"
+    }
+    return ""
+}
+
+_VkBuildRecordDisplayKey(ahkKey, sides) {
+    if (ahkKey = "^^")
+        return "Double Ctrl"
+    if (ahkKey = "++")
+        return "Double Shift"
+    if (ahkKey = "!!")
+        return "Double Alt"
+    display := ""
+    key := ahkKey
+    if InStr(key, "^") {
+        display .= _VkModSideLabel("ctrl", sides) . "+"
+        key := StrReplace(key, "^", "")
+    }
+    if InStr(key, "!") {
+        display .= _VkModSideLabel("alt", sides) . "+"
+        key := StrReplace(key, "!", "")
+    }
+    if InStr(key, "+") {
+        display .= _VkModSideLabel("shift", sides) . "+"
+        key := StrReplace(key, "+", "")
+    }
+    if InStr(key, "#") {
+        display .= "Win+"
+        key := StrReplace(key, "#", "")
+    }
+    tail := key
+    static specialMap := Map(
+        "Escape", "Esc", "Enter", "Enter", "Space", "Space", "Tab", "Tab",
+        "Backspace", "Bks", "Delete", "Del", "Insert", "Ins",
+        "Home", "Home", "End", "End", "PgUp", "PgUp", "PgDn", "PgDn",
+        "Up", "↑", "Down", "↓", "Left", "←", "Right", "→",
+        "LShift", "LShift", "RShift", "RShift",
+        "LCtrl", "LCtrl", "RCtrl", "RCtrl",
+        "LAlt", "LAlt", "RAlt", "RAlt",
+        "LWin", "Win", "RWin", "Win", "AppsKey", "Menu",
+        "PrintScreen", "PrtSc", "ScrollLock", "ScrLk", "Pause", "Pause"
+    )
+    if specialMap.Has(tail)
+        tail := specialMap[tail]
+    else if StrLen(tail) = 1
+        tail := Format("{:U}", tail)
+    return display . tail
+}
+
 _StartKeyPreviewHook() {
     global g_VK_PreviewHook
     if IsObject(g_VK_PreviewHook)
@@ -5099,6 +5187,8 @@ _OnRecordKeyUp(ih, vk, sc) {
     if keyName = ""
         return
 
+    _VkSendRecordKeyPreview(vk, sc, "up")
+
     if !_IsModifierOnlyKey(keyName)
         return
 
@@ -5111,7 +5201,7 @@ _OnRecordKeyUp(ih, vk, sc) {
     if (prev > 0 && now - prev < g_VK_DblModIntervalMs) {
         g_VK_RecordDblModLast[grp] := 0
         dbl := grp = "ctrl" ? "^^" : grp = "shift" ? "++" : "!!"
-        dblDisp := grp = "ctrl" ? "双按 Ctrl" : grp = "shift" ? "双按 Shift" : "双按 Alt"
+        dblDisp := grp = "ctrl" ? "Double Ctrl" : grp = "shift" ? "Double Shift" : "Double Alt"
         VK_SendToWeb('{"type":"recordPending","displayKey":"' . _VkJsonStr(dblDisp) . '","kind":"dblMod"}')
         _VkFinalizeRecordedHotkey(dbl)
         return
@@ -5133,6 +5223,7 @@ _EndRecord(restartPreview := true) {
     g_RecordPendingKey := ""
     g_RecordPendingTick := 0
     g_RecordFinalizeToken += 1
+    VK_SendToWeb('{"type":"keyPreviewClear"}')
     if restartPreview && g_VK_Ready
         _StartKeyPreviewHook()
 }
@@ -5159,18 +5250,21 @@ _OnRecordKeyDown(ih, vk, sc) {
     if (keyName = "CapsLock" || vk = 0x14)
         return
 
+    _VkSendRecordKeyPreview(vk, sc, "down")
+
     if !_IsModifierOnlyKey(keyName) {
         g_VK_RecordDblModLast["ctrl"] := 0
         g_VK_RecordDblModLast["shift"] := 0
         g_VK_RecordDblModLast["alt"] := 0
     } else {
-        ; 修饰键按下时不处理，等待 KeyUp；这里只需确保非修饰键清零时间戳
+        ; 修饰键按下时不处理，等待 KeyUp；预览已在上方发送
         return
     }
 
-    isCtrl := GetKeyState("Ctrl", "P")
-    isAlt := GetKeyState("Alt", "P")
-    isShift := GetKeyState("Shift", "P")
+    modSides := _VkGetPressedModifierSides()
+    isCtrl := modSides["lctrl"] || modSides["rctrl"]
+    isAlt := modSides["lalt"] || modSides["ralt"]
+    isShift := modSides["lshift"] || modSides["rshift"]
     ahkKey := _NormalizeToAhkHotkey(keyName, isCtrl, isAlt, isShift)
     if !ahkKey
         return
@@ -5189,7 +5283,7 @@ _OnRecordKeyDown(ih, vk, sc) {
     g_RecordPendingTick := now
     token := g_RecordFinalizeToken + 1
     g_RecordFinalizeToken := token
-    dispWait := _ToDisplayKey(ahkKey)
+    dispWait := _VkBuildRecordDisplayKey(ahkKey, modSides)
     VK_SendToWeb('{"type":"recordPending","displayKey":"' . _VkJsonStr(dispWait)
         . '","waitMs":' . g_VK_SequenceIntervalMs . '}')
     SetTimer(_VkMakeRecordFinalizeTimer(token), -g_VK_SequenceIntervalMs)
@@ -5219,7 +5313,8 @@ _VkFinalizeRecordedHotkey(ahkKey) {
         return
     cmdId := g_RecordCtx["commandId"]
     bindPolicy := g_RecordCtx.Has("bindPolicy") ? String(g_RecordCtx["bindPolicy"]) : "scene_compatible"
-    displayKey := _ToDisplayKey(ahkKey)
+    modSides := _VkGetPressedModifierSides()
+    displayKey := _VkBuildRecordDisplayKey(ahkKey, modSides)
 
     if (cmdId = "__summon_hotkey__") {
         _EndRecord()

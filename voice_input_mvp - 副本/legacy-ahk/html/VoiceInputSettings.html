@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>心动 · VibeGo</title>
+  <style>
+    :root{
+      --bg:#f4f5f7; --bg2:#eef0f4; --card:#fff; --line:#dde1e7; --txt:#16181d; --muted:#666c77;
+      --accent:#0b77ff; --accent2:#eaf2ff; --green:#17a34a; --red:#e5484d;
+      --shadow:0 8px 26px rgba(24,39,75,.08);
+      font-family:"SF Pro Display","SF Pro Text","PingFang SC","Segoe UI",system-ui,sans-serif;
+    }
+    html[data-theme="dark"]{
+      --bg:#1c1c1e; --bg2:#111315; --card:#2c2c2e; --line:#3a3a3c; --txt:#f5f5f7; --muted:#a1a1a6;
+      --accent:#4da6ff; --accent2:rgba(77,166,255,.14);
+      --shadow:0 10px 28px rgba(0,0,0,.25);
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;height:100%;background:var(--bg2);color:var(--txt)}
+    body{overflow:hidden}
+    .app{height:100%;display:flex;flex-direction:column}
+    .topbar{height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 12px;border-bottom:1px solid var(--line);background:color-mix(in srgb,var(--card) 78%, transparent);backdrop-filter:blur(18px)}
+    .brand{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700}
+    .brand .dot{width:18px;height:18px;border-radius:6px;background:var(--accent);box-shadow:inset 0 0 0 3px rgba(223,234,255,.95)}
+    .chips{display:flex;gap:6px}.chip{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:4px 10px;font-size:12px;color:var(--txt)}
+    .main{flex:1;overflow:auto;padding:18px 14px 14px}
+    .layout{max-width:960px;margin:0 auto;display:block}
+    .panel{background:var(--card);border:1px solid var(--line);border-radius:24px;box-shadow:var(--shadow);padding:18px}
+    .title{margin:0;font-size:30px;line-height:1.05;letter-spacing:-.04em;font-weight:800}
+    .subtitle{margin:8px 0 0;color:var(--muted);font-size:14px;line-height:1.6}
+    .badge{display:inline-flex;align-items:center;gap:8px;padding:9px 14px;border-radius:999px;background:var(--accent2);color:var(--accent);font-size:12px;font-weight:800}
+    .block{padding:14px 0}
+    .block + .block{border-top:1px solid var(--line)}
+    .block h3{margin:0 0 8px;font-size:15px}.mini{margin:0;color:var(--muted);font-size:12px;line-height:1.55}
+    .center{text-align:center}
+    .title2{display:flex;align-items:center;justify-content:center;gap:8px;font-size:13px;font-weight:800;letter-spacing:.01em;color:var(--muted);text-transform:none}
+    .icon-emoji{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:999px;background:var(--accent2);color:var(--accent);font-size:11px}
+    .record-key{margin:12px auto 10px;display:flex;align-items:center;justify-content:center;min-height:50px;min-width:160px;padding:12px 20px;border-radius:18px;background:var(--accent2);border:1px solid #cfe0ff;color:var(--accent);font-size:20px;font-weight:800;letter-spacing:-.02em}
+    .btn{border:1px solid var(--line);border-radius:999px;height:38px;padding:0 16px;font:inherit;cursor:pointer;background:var(--card);color:var(--txt);box-shadow:0 1px 0 rgba(255,255,255,.6) inset}
+    .btn.primary{background:linear-gradient(180deg,#1a84ff,#0a72ff);color:#fff;border-color:#1a84ff;height:52px;width:100%;font-size:16px;font-weight:800;box-shadow:0 8px 18px rgba(10,114,255,.22)}
+    .btn.link{background:transparent;border-color:transparent;color:var(--accent);height:auto;padding:0;box-shadow:none}
+    .row{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap}
+    .hint{margin:10px 0 2px;color:var(--muted);line-height:1.6;font-size:13px;text-align:center}
+    .section{margin-top:18px;border-top:1px solid var(--line);padding-top:14px}
+    .section-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+    .section-title{font-size:13px;font-weight:800;letter-spacing:.02em}.section-sub{font-size:11px;color:var(--muted)}
+    .block-title{display:flex;align-items:center;justify-content:space-between;font-size:16px;font-weight:700;margin-bottom:8px;gap:12px}
+    .block-desc{font-size:13px;color:var(--muted);line-height:1.55;margin-left:28px}
+    .toggle{width:44px;height:26px;border-radius:999px;background:#cfd5dd;position:relative;flex:none;box-shadow:inset 0 1px 2px rgba(0,0,0,.08)}.toggle.on{background:var(--green)}
+    .toggle::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:.18s;box-shadow:0 1px 2px rgba(0,0,0,.22)}
+    .toggle.on::after{left:20px}
+    .range-line{display:flex;align-items:center;gap:10px;margin-top:12px;margin-left:28px}
+    input[type=range]{width:100%}
+    input[type=number]{width:82px;border:1px solid var(--line);border-radius:10px;height:32px;padding:0 8px;font:inherit;text-align:center}
+    details.advanced{margin-top:16px}
+    details.advanced>summary{list-style:none;cursor:pointer;padding:12px 2px 10px;display:flex;align-items:center;justify-content:space-between;font-weight:800;font-size:15px;border-top:1px solid var(--line)}
+    details.advanced>summary::-webkit-details-marker{display:none}
+    .adv-body{padding:10px 0 0;display:grid;gap:14px}
+    .adv-box{padding:0}
+    .status-box{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+    .status-item{background:transparent;border-top:1px solid var(--line);border-radius:0;padding:10px 0;font-size:13px;display:flex;justify-content:space-between;gap:10px;align-items:center}
+    .badge-small{padding:2px 8px;border-radius:999px;background:var(--accent2);color:var(--accent);font-weight:700}
+    .log{font:12px/1.55 SFMono-Regular,Consolas,monospace;background:transparent;border-top:1px solid var(--line);padding:10px 0 0;min-height:80px;white-space:pre-wrap;word-break:break-word}
+    .foot{display:flex;justify-content:space-between;align-items:center;margin-top:12px;color:var(--muted);font-size:12px;line-height:1.45}
+    .mini-title{font-size:12px;font-weight:800;margin:0 0 8px}
+    @media (max-width:1100px){body{overflow:auto}.layout{grid-template-columns:1fr}.status-box{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <div class="brand"><span class="dot"></span><span id="appName">心动</span><span id="appSub" style="color:var(--muted);font-weight:600">VibeGo</span></div>
+    <div class="chips"><button class="chip" id="btnTheme">☀</button><button class="chip" id="btnLang">中</button></div>
+  </div>
+  <div class="main">
+    <div class="layout">
+      <section class="panel">
+        <div class="center">
+          <div id="recordKeyView" class="record-key">AutoTrigger</div>
+          <div class="row"><button class="btn primary" id="btnRecord">一键录制</button></div>
+          <div class="row" style="margin-top:8px"><button class="btn link" id="btnClear">清除</button></div>
+          <div class="hint">点「一键录制」，按下蓝牙遥控器上的按钮，松手就自动保存，不用管其他设置。</div>
+          <div class="hint" id="recordState">等待录制</div>
+        </div>
+        <div class="section">
+          <div class="section-head"><div class="section-title" id="sectionTitle">⚙ 动作设置</div><div class="section-sub" id="sectionSub">自动保存</div></div>
+          <div class="block" style="border-top:0;padding-top:0">
+            <div class="block-title"><span><span class="icon-emoji">◎</span> <span id="startTitle">启动语音输入</span></span><span class="badge-small" id="startBadge">监听中</span></div>
+            <div class="block-desc" id="startDesc">按下外设按键 → 发送右 Alt 唤醒语音输入</div>
+          </div>
+          <div class="block">
+            <div class="block-title"><span><span class="icon-emoji">⊗</span> <span id="cancelTitle">撤销输入</span></span><div class="toggle on" id="switchCancel"></div></div>
+            <div class="block-desc" id="cancelDesc">在 <b id="threshCancelVal">1.2</b> 秒内再次按下 → 发送 Esc 取消</div>
+            <div class="range-line"><input type="range" id="intervalSlider" min="200" max="5000" step="50" value="1200"><input type="number" id="intervalMs" min="200" max="5000" step="50" value="1200"><span>秒</span></div>
+          </div>
+          <div class="block">
+            <div class="block-title"><span><span class="icon-emoji">↑</span> <span id="sendTitle">自动发送</span></span><div class="toggle on" id="switchSend"></div></div>
+            <div class="block-desc" id="sendDesc">撤销等待后再次按下 → 等待 <b id="threshSendVal">5.0</b> 秒 → 自动发送 Enter</div>
+            <div class="range-line"><input type="range" id="enterDelaySlider" min="1000" max="15000" step="100" value="5000"><input type="number" id="enterDelayMs" min="1000" max="15000" step="100" value="5000"><span>秒</span></div>
+          </div>
+        </div>
+        <details class="advanced" id="advPanel">
+          <summary><span>› <span id="advTitle">高级</span></span><span id="listenState">监听中</span></summary>
+          <div class="adv-body">
+            <div class="adv-box"><p class="mini-title" id="logTitle">事件日志</p><pre id="rawEventLog" class="log">等待按键…</pre></div>
+            <div class="adv-box"><p class="mini-title" id="runtimeTitle">运行解释</p><div class="status-box"><div class="status-item"><span>key</span><span id="dbKey">-</span></div><div class="status-item"><span>code</span><span id="dbCode">-</span></div><div class="status-item"><span>动作</span><span id="liveAction">-</span></div><div class="status-item"><span>发送</span><span id="liveTimer">-</span></div></div></div>
+            <div class="adv-box"><p class="mini-title" id="sourceTitle">当前源组</p><pre id="sourceExplain" class="log">source: 右 Alt
+grouping: exact
+events:
+- key=Alt code=AltRight hotkey=RAlt</pre></div>
+            <div class="adv-box"><p class="mini-title" id="noteTitle">说明</p><p class="mini" id="noteText">这里保留 AHK 版的最小核心：录制按键、撤销输入、自动发送。其他复杂说明不放首页。</p></div>
+          </div>
+        </details>
+        <div class="foot"><div id="footText">录制真实按钮，状态机只接管动作，不接管用户的命名方式。</div><div id="dirtyState">待保存</div></div>
+      </section>
+    </div>
+  </div>
+</div>
+<script>
+(function(){'use strict';
+var listeners={message:[]};
+var invoke=window.__TAURI_INTERNALS__?function(cmd,args){return window.__TAURI_INTERNALS__.invoke(cmd,args);}:function(){return Promise.resolve();};
+window.chrome={webview:{}};
+window.chrome.webview.postMessage=function(msg){var type=msg&&msg.type; if(type==='mvp_ready')invoke('cmd_ready',{}); else if(type==='mvp_save')invoke('cmd_save',{json:msg.json||'{}'}); else if(type==='mvp_start_recording')invoke('cmd_start_recording',{}); else if(type==='mvp_stop_recording')invoke('cmd_stop_recording',{}); else if(type==='mvp_pause')invoke('cmd_pause',{}); else if(type==='mvp_resume')invoke('cmd_resume',{}); else if(type==='mvp_capture_source')invoke('cmd_capture_source',{raw_events:msg.rawEvents||[]});};
+window.chrome.webview.addEventListener=function(event,cb){if(!listeners[event])listeners[event]=[];listeners[event].push(cb);};
+window.__vp_bridge__=function(type,data){var event={data:Object.assign({type:type},data||{})};(listeners.message||[]).forEach(function(cb){try{cb(event);}catch(e){}});};
+if(window.__TAURI_INTERNALS__&&window.__TAURI_INTERNALS__.listen){window.__TAURI_INTERNALS__.listen('to_js',function(event){var payload=event.payload;if(payload&&typeof payload==='object'){(listeners.message||[]).forEach(function(cb){try{cb({data:payload});}catch(e){}});}});}
+})();
+</script>
+<script>
+const $=id=>document.getElementById(id);
+const state={recordKey:'AutoTrigger',intervalMs:1200,enterDelayMs:5000,cancelEnabled:true,autoEnterEnabled:true};
+const runtime={lastAction:'-',timerActive:false,paused:false};
+const logLines=[];
+let recording=false;
+let recordingTimer=0;
+let theme='light';
+let lang='zh';
+const I18N={zh:{appName:'心动',appSub:'VibeGo',recTitle:'一键完成你的 vibecoding',hintText:'一键完成你的 vibecoding：按下按钮，松手就自动保存，不用管其他设置。',sectionTitle:'⚙ 动作设置',sectionSub:'自动保存',startTitle:'启动语音输入',startBadge:'监听中',startDesc:'按下外设按键 → 发送右 Alt 唤醒语音输入',cancelTitle:'撤销输入',cancelDesc:'在',sendTitle:'自动发送',sendDesc:'撤销等待后再次按下 → 等待',advTitle:'高级',listenState:'监听中',logTitle:'事件日志',runtimeTitle:'运行解释',sourceTitle:'当前源组',noteTitle:'说明',noteText:'这里保留 AHK 版的最小核心：录制按键、撤销输入、自动发送。其他复杂说明不放首页。',footText:'录制真实按钮，状态机只接管动作，不接管用户的命名方式。',dirtyState:'待保存',waiting:'等待录制',recording:'录制中... 按下目标键',timeout:'录制超时',cleared:'已清除',recordedPrefix:'已录制: '},en:{appName:'HeartBeat',appSub:'VibeGo',recTitle:'One Tap Vibecoding',hintText:'One tap completes your vibecoding: press the button, release to save automatically, no other setup needed.',sectionTitle:'⚙ Action Settings',sectionSub:'Auto-save',startTitle:'Start Voice Input',startBadge:'Listening',startDesc:'Press device button → sends RAlt to wake voice input',cancelTitle:'Cancel Input',cancelDesc:'Within',sendTitle:'Auto Send',sendDesc:'After cancel window, press again → wait',advTitle:'Advanced',listenState:'Listening',logTitle:'Event Log',runtimeTitle:'Live Status',sourceTitle:'Source Group',noteTitle:'Note',noteText:'This keeps the AHK MVP core: record key, cancel, auto send. Extra details stay out of the homepage.',footText:'We record the real button and let the state machine manage actions, not the naming style.',dirtyState:'Unsaved',waiting:'Waiting to record',recording:'Recording... press target key',timeout:'Recording timed out',cleared:'Cleared',recordedPrefix:'Recorded: '}};
+function applyLang(){const d=I18N[lang];$('appName').textContent=d.appName;$('appSub').textContent=d.appSub;$('recTitle').textContent=d.recTitle;$('hintText').textContent=d.hintText;$('sectionTitle').textContent=d.sectionTitle;$('sectionSub').textContent=d.sectionSub;$('startTitle').textContent=d.startTitle;$('startBadge').textContent=d.startBadge;$('startDesc').textContent=d.startDesc;$('cancelTitle').textContent=d.cancelTitle;$('sendTitle').textContent=d.sendTitle;$('advTitle').textContent=d.advTitle;$('listenState').textContent=d.listenState;$('logTitle').textContent=d.logTitle;$('runtimeTitle').textContent=d.runtimeTitle;$('sourceTitle').textContent=d.sourceTitle;$('noteTitle').textContent=d.noteTitle;$('noteText').textContent=d.noteText;$('footText').textContent=d.footText;$('dirtyState').textContent=d.dirtyState;$('btnLang').textContent=lang==='zh'?'中':'EN';if(!recording&&state.recordKey==='')$('recordState').textContent=d.waiting;}
+function applyTheme(){document.documentElement.setAttribute('data-theme',theme);$('btnTheme').textContent=theme==='light'?'☀':'☾';}
+function save(){try{window.chrome?.webview?.postMessage({type:'mvp_save',json:JSON.stringify(state)})}catch(_){}localStorage.setItem('voice_input_mvp',JSON.stringify(state));}
+function render(){ $('recordKeyView').textContent=state.recordKey||'AutoTrigger'; $('intervalSlider').value=state.intervalMs; $('intervalMs').value=state.intervalMs; $('enterDelaySlider').value=state.enterDelayMs; $('enterDelayMs').value=state.enterDelayMs; $('threshCancelVal').textContent=(state.intervalMs/1000).toFixed(1); $('threshSendVal').textContent=(state.enterDelayMs/1000).toFixed(1); $('switchCancel').classList.toggle('on',state.cancelEnabled); $('switchSend').classList.toggle('on',state.autoEnterEnabled); $('listenState').textContent=runtime.paused?'已暂停监听':'监听中'; $('liveAction').textContent=runtime.lastAction||'-'; $('liveTimer').textContent=runtime.timerActive?'⏳':'-'; }
+function pushLog(line){logLines.unshift(line);logLines.length=Math.min(logLines.length,20);$('rawEventLog').textContent=logLines.join('\n');}
+$('btnRecord').onclick=function(){recording=true;clearTimeout(recordingTimer);$('recordState').textContent=I18N[lang].recording;try{window.chrome?.webview?.postMessage({type:'mvp_start_recording'});}catch(_){}pushLog(lang==='zh'?'开始录制...':'Start recording...');recordingTimer=setTimeout(function(){if(recording){recording=false;$('recordState').textContent=I18N[lang].timeout;try{window.chrome?.webview?.postMessage({type:'mvp_stop_recording'});}catch(_){}}},30000);};
+$('btnClear').onclick=function(){recording=false;clearTimeout(recordingTimer);state.recordKey='';save();render();$('recordState').textContent=I18N[lang].cleared;pushLog(lang==='zh'?'已清除录制按键':'Recording cleared');};
+$('btnTheme').onclick=function(){theme=theme==='light'?'dark':'light';applyTheme();};
+$('btnLang').onclick=function(){lang=lang==='zh'?'en':'zh';applyLang();};
+$('switchCancel').onclick=function(){state.cancelEnabled=!state.cancelEnabled;save();render();};
+$('switchSend').onclick=function(){state.autoEnterEnabled=!state.autoEnterEnabled;save();render();};
+$('intervalSlider').oninput=function(){$('intervalMs').value=this.value;state.intervalMs=Number(this.value);save();render();};
+$('intervalMs').onchange=function(){state.intervalMs=Number(this.value||1200);save();render();};
+$('enterDelaySlider').oninput=function(){$('enterDelayMs').value=this.value;state.enterDelayMs=Number(this.value);save();render();};
+$('enterDelayMs').onchange=function(){state.enterDelayMs=Number(this.value||5000);save();render();};
+document.addEventListener('keydown',function(e){$('dbKey').textContent=e.key;$('dbCode').textContent=e.code;pushLog(new Date().toLocaleTimeString()+' key='+e.key+' code='+e.code);},true);
+window.chrome?.webview?.addEventListener?.('message',function(e){var msg=e&&e.data;if(!msg||typeof msg!=='object')return;if(msg.type==='mvp_init'&&msg.config){if(typeof msg.config.recordKey==='string')state.recordKey=msg.config.recordKey;if(Number.isFinite(Number(msg.config.intervalMs)))state.intervalMs=Number(msg.config.intervalMs);if(Number.isFinite(Number(msg.config.enterDelayMs)))state.enterDelayMs=Number(msg.config.enterDelayMs);if(typeof msg.config.cancelEnabled==='boolean')state.cancelEnabled=msg.config.cancelEnabled;if(typeof msg.config.autoEnterEnabled==='boolean')state.autoEnterEnabled=msg.config.autoEnterEnabled;render();}if(msg.type==='mvp_key_captured'){recording=false;clearTimeout(recordingTimer);state.recordKey=msg.key||'RAlt';$('recordState').textContent=I18N[lang].recordedPrefix+state.recordKey;save();render();pushLog((lang==='zh'?'已录制: ':'Recorded: ')+state.recordKey);if(typeof msg.key==='string')try{window.chrome?.webview?.postMessage({type:'mvp_stop_recording'});}catch(_){}}if(msg.type==='mvp_paused'&&msg.ok){runtime.paused=true;render();}if(msg.type==='mvp_resumed'&&msg.ok){runtime.paused=false;render();}if(msg.type==='mvp_runtime'){runtime.lastAction=msg.lastAction||'-';runtime.timerActive=!!msg.timerActive;runtime.paused=!!msg.paused;render();}});
+try{var saved=JSON.parse(localStorage.getItem('voice_input_mvp')||'{}');Object.assign(state,saved||{});}catch(_){}
+applyTheme();applyLang();render();try{window.chrome?.webview?.postMessage({type:'mvp_ready'});}catch(_){}
+</script>
+</body>
+</html>

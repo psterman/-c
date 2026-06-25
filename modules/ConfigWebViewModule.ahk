@@ -967,7 +967,7 @@ ConfigWebView_RelayVkWebJson(jsonStr) {
     if (t = "")
         return
     switch t {
-        case "bindingUpdated", "recordHint", "recordPending", "confirmConflict", "bind_blocked", "summonKeyRecorded":
+        case "bindingUpdated", "recordHint", "recordPending", "confirmConflict", "bind_blocked", "summonKeyRecorded", "keyPreview", "keyPreviewClear":
             ConfigWebView_Send(Map("type", "vkWebEvent", "event", evt))
         default:
     }

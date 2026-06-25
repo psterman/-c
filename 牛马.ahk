@@ -652,14 +652,15 @@ global Language := "zh"  ; 语言设置：zh=中文, en=英文
 global DefaultStartTab := "general"  ; 默认启动页面：general=通用, appearance=外观, prompts=提示词, hotkeys=快捷键, advanced=高级
 ; 快捷操作按钮（历史产物，已移除 QuickActions 面板与槽位配置；保留空数组供旧版 GUI 残留引用）
 global QuickActionButtons := []
-global FloatingToolbarButtonItems := ["Search", "Record", "Prompt", "NewPrompt", "UnifiedWorkbench", "Screenshot", "Settings", "VirtualKeyboard"]
+global FloatingToolbarButtonItems := ["Search", "Record", "Prompt", "NewPrompt", "AiWorkbench", "CliWorkbench", "Screenshot", "Settings", "VirtualKeyboard"]
 global FloatingToolbarMenuItems := ["ToggleToolbar", "MinimizeToEdge", "ResetScale", "SearchCenter", "Clipboard", "OpenConfig", "HideToolbar", "ReloadScript", "ExitApp"]
 global FloatingToolbarButtonOptions := [
     Map("id", "Search", "name", "搜索"),
     Map("id", "Record", "name", "记录"),
     Map("id", "Prompt", "name", "提示词"),
     Map("id", "NewPrompt", "name", "草稿本"),
-    Map("id", "UnifiedWorkbench", "name", "混排工作台"),
+    Map("id", "AiWorkbench", "name", "AI 工作台"),
+    Map("id", "CliWorkbench", "name", "CLI 工作台"),
     Map("id", "Screenshot", "name", "截图"),
     Map("id", "Settings", "name", "设置"),
     Map("id", "VirtualKeyboard", "name", "虚拟键盘")

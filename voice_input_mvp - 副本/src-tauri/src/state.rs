@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 use std::time::{Duration, Instant};
 
-use crate::config::{canonical_trigger, MappingEntry, VoiceConfig};
+use crate::config::{MappingEntry, VoiceConfig};
 
 #[derive(Debug, Clone)]
 pub enum Action {
@@ -39,25 +39,16 @@ impl StateMachine {
         }
     }
 
+    /// 严格单击直通：每次有效触发只发送一次 target，不走撤销/连击 Enter 状态机。
     pub fn trigger(
         &mut self,
         cfg: &VoiceConfig,
         mapping: &MappingEntry,
-        trigger_key: &str,
+        _trigger_key: &str,
         now: Instant,
     ) -> Action {
         let debounce_ms = cfg.debounce_ms as u64;
-        let reset_ms = cfg.interval_ms as u64;
-        let normalized = canonical_trigger(trigger_key);
         let target = mapping.target_key.clone();
-
-        if normalized == "AutoTrigger" {
-            self.last_trigger = Some(now);
-            self.last_tick = Some(now);
-            self.count = 0;
-            self.enter_timer_active = false;
-            return Action::SendKey { key: target };
-        }
 
         if let Some(last) = self.last_trigger {
             if now.duration_since(last) < Duration::from_millis(debounce_ms) {
@@ -65,33 +56,9 @@ impl StateMachine {
             }
         }
         self.last_trigger = Some(now);
-
-        let delta_ms = self
-            .last_tick
-            .map(|t| now.duration_since(t).as_millis() as u64)
-            .unwrap_or(0);
-
-        if cfg.cancel_enabled && self.last_tick.is_some() && delta_ms < reset_ms {
-            self.enter_timer_active = false;
-            self.count = 0;
-            self.last_tick = Some(now);
-            return Action::SendEsc;
-        }
-
-        self.count += 1;
         self.last_tick = Some(now);
+        self.count = 0;
         self.enter_timer_active = false;
-
-        if cfg.auto_enter_enabled && self.count == 2 {
-            self.enter_timer_active = true;
-            return Action::ScheduleEnter {
-                delay_ms: cfg.enter_delay_ms,
-            };
-        }
-
-        if self.count >= 3 {
-            self.count = 1;
-        }
 
         Action::SendKey { key: target }
     }

@@ -2,133 +2,295 @@
   "version": 3,
   "mappings": [
     {
-      "id": "m-1782182329928-mnpbn",
-      "label": "AutoTrigger → F2",
+      "id": "m-1782303207769-ochl5",
+      "label": "Alt → RAlt",
       "group": "默认",
-      "triggerKey": "AutoTrigger",
-      "targetKey": "F2",
+      "triggerKey": "Alt",
+      "targetKey": "RAlt",
       "enabled": true,
       "order": 0,
       "triggerMode": "tap",
-      "triggerSource": null
-    },
-    {
-      "id": "m-1782183360375-5re54",
-      "label": "AutoTrigger → LCtrl+LButton",
-      "group": "默认",
-      "triggerKey": "AutoTrigger",
-      "targetKey": "LCtrl+LButton",
-      "enabled": false,
-      "order": 1,
-      "triggerMode": "tap",
-      "triggerSource": null
+      "triggerSource": {
+        "id": "source_peripheral_mixed",
+        "label": "外设混合单键",
+        "mode": "single_press",
+        "grouping": "same_source_group",
+        "rawEvents": [
+          {
+            "device": "keyboard",
+            "key": "AudioVolumeDown",
+            "code": "AudioVolumeDown",
+            "location": 0,
+            "type": "keydown",
+            "hotkey": "Volume_Down",
+            "label": "音量下",
+            "button": null
+          },
+          {
+            "device": "keyboard",
+            "key": "AudioVolumeUp",
+            "code": "AudioVolumeUp",
+            "location": 0,
+            "type": "keydown",
+            "hotkey": "Volume_Up",
+            "label": "音量上",
+            "button": null
+          }
+        ]
+      },
+      "sourceKey": "Volume_Down",
+      "sourceTime": ""
     }
   ],
   "trash": [
     {
-      "id": "m-1782186468068-a7o3b",
-      "label": "? → ?",
+      "id": "m-1782277227254-epehq",
+      "label": "1 → RAlt",
       "group": "默认",
-      "triggerKey": "AutoTrigger",
+      "triggerKey": "1",
       "targetKey": "RAlt",
-      "enabled": false,
-      "order": 2,
-      "triggerMode": "tap",
-      "triggerSource": null
-    },
-    {
-      "id": "m-1782184494826-ativv",
-      "label": "? → ?",
-      "group": "默认",
-      "triggerKey": "AutoTrigger",
-      "targetKey": "RAlt",
-      "enabled": false,
-      "order": 2,
-      "triggerMode": "tap",
-      "triggerSource": null
-    },
-    {
-      "id": "m-1782184495954-td3dm",
-      "label": "? → ?",
-      "group": "默认",
-      "triggerKey": "AutoTrigger",
-      "targetKey": "RAlt",
-      "enabled": false,
-      "order": 3,
-      "triggerMode": "tap",
-      "triggerSource": null
-    },
-    {
-      "id": "m-1782184491455-qnzx1",
-      "label": "? → ?",
-      "group": "默认",
-      "triggerKey": "AutoTrigger",
-      "targetKey": "RAlt",
-      "enabled": false,
-      "order": 2,
-      "triggerMode": "tap",
-      "triggerSource": null
-    },
-    {
-      "id": "m-1782175248814",
-      "label": "AutoTrigger → LButton",
-      "group": "默认",
-      "triggerKey": "AutoTrigger",
-      "targetKey": "LButton",
       "enabled": false,
       "order": 0,
       "triggerMode": "tap",
-      "triggerSource": null
+      "triggerSource": {
+        "id": "source_peripheral_mixed",
+        "label": "外设混合单键",
+        "mode": "single_press",
+        "grouping": "same_source_group",
+        "rawEvents": [
+          {
+            "device": "keyboard",
+            "key": "AudioVolumeDown",
+            "code": "AudioVolumeDown",
+            "location": 0,
+            "type": "keydown",
+            "hotkey": "Volume_Down",
+            "label": "音量下",
+            "button": null
+          },
+          {
+            "device": "keyboard",
+            "key": "AudioVolumeUp",
+            "code": "AudioVolumeUp",
+            "location": 0,
+            "type": "keydown",
+            "hotkey": "Volume_Up",
+            "label": "音量上",
+            "button": null
+          }
+        ]
+      },
+      "sourceKey": "",
+      "sourceTime": ""
     },
     {
-      "id": "m-1782177424048-6etm7",
-      "label": "? → ?",
+      "id": "m-1782274663475-xtuks",
+      "label": "E → RAlt",
       "group": "默认",
-      "triggerKey": "AutoTrigger",
+      "triggerKey": "E",
       "targetKey": "RAlt",
       "enabled": false,
-      "order": 1,
+      "order": 0,
       "triggerMode": "tap",
-      "triggerSource": null
+      "triggerSource": {
+        "id": "source_peripheral_mixed",
+        "label": "外设混合单键",
+        "mode": "single_press",
+        "grouping": "same_source_group",
+        "rawEvents": [
+          {
+            "device": "keyboard",
+            "key": "AudioVolumeDown",
+            "code": "AudioVolumeDown",
+            "location": 0,
+            "type": "keydown",
+            "hotkey": "Volume_Down",
+            "label": "音量下",
+            "button": null
+          },
+          {
+            "device": "keyboard",
+            "key": "AudioVolumeUp",
+            "code": "AudioVolumeUp",
+            "location": 0,
+            "type": "keydown",
+            "hotkey": "Volume_Up",
+            "label": "音量上",
+            "button": null
+          }
+        ]
+      },
+      "sourceKey": "",
+      "sourceTime": ""
     },
     {
-      "id": "m-1782176592996",
-      "label": "AutoTrigger → F2（副本）",
-      "group": "默认",
-      "triggerKey": "AutoTrigger",
-      "targetKey": "F2",
-      "enabled": false,
-      "order": 1,
-      "triggerMode": "tap",
-      "triggerSource": null
-    },
-    {
-      "id": "m-1782177049683-ipu6q",
-      "label": "z → RAlt",
-      "group": "默认",
-      "triggerKey": "z",
-      "targetKey": "RAlt",
-      "enabled": false,
-      "order": 2,
-      "triggerMode": "tap",
-      "triggerSource": null
-    },
-    {
-      "id": "m-1782176275671",
+      "id": "m-1782269627831-lwf9l",
       "label": "AutoTrigger → RAlt",
       "group": "默认",
       "triggerKey": "AutoTrigger",
       "targetKey": "RAlt",
       "enabled": false,
-      "order": 1,
+      "order": 0,
       "triggerMode": "tap",
-      "triggerSource": null
+      "triggerSource": {
+        "id": "source_peripheral_mixed",
+        "label": "外设混合单键",
+        "mode": "single_press",
+        "grouping": "same_source_group",
+        "rawEvents": [
+          {
+            "device": "keyboard",
+            "key": "AudioVolumeDown",
+            "code": "AudioVolumeDown",
+            "location": 0,
+            "type": "keydown",
+            "hotkey": "Volume_Down",
+            "label": "音量下",
+            "button": null
+          },
+          {
+            "device": "keyboard",
+            "key": "AudioVolumeUp",
+            "code": "AudioVolumeUp",
+            "location": 0,
+            "type": "keydown",
+            "hotkey": "Volume_Up",
+            "label": "音量上",
+            "button": null
+          },
+          {
+            "device": "keyboard",
+            "key": "F1",
+            "code": "F1",
+            "location": 0,
+            "type": "keydown",
+            "hotkey": "F1",
+            "label": "F1",
+            "button": null
+          }
+        ]
+      },
+      "sourceKey": "",
+      "sourceTime": ""
+    },
+    {
+      "id": "m-1782219204313-f22j7",
+      "label": "LButton → RAlt",
+      "group": "默认",
+      "triggerKey": "LButton",
+      "targetKey": "RAlt",
+      "enabled": false,
+      "order": 0,
+      "triggerMode": "tap",
+      "triggerSource": {
+        "id": "source_peripheral_mixed",
+        "label": "外设混合单键",
+        "mode": "single_press",
+        "grouping": "same_source_group",
+        "rawEvents": [
+          {
+            "device": "keyboard",
+            "key": "AudioVolumeDown",
+            "code": "AudioVolumeDown",
+            "location": 0,
+            "type": "keydown",
+            "hotkey": "Volume_Down",
+            "label": "音量下",
+            "button": null
+          },
+          {
+            "device": "keyboard",
+            "key": "AudioVolumeUp",
+            "code": "AudioVolumeUp",
+            "location": 0,
+            "type": "keydown",
+            "hotkey": "Volume_Up",
+            "label": "音量上",
+            "button": null
+          },
+          {
+            "device": "keyboard",
+            "key": "F1",
+            "code": "F1",
+            "location": 0,
+            "type": "keydown",
+            "hotkey": "F1",
+            "label": "F1",
+            "button": null
+          }
+        ]
+      },
+      "sourceKey": "",
+      "sourceTime": ""
+    },
+    {
+      "id": "m-1782219170411-w6shc",
+      "label": "LButton → RAlt",
+      "group": "默认",
+      "triggerKey": "LButton",
+      "targetKey": "RAlt",
+      "enabled": false,
+      "order": 0,
+      "triggerMode": "tap",
+      "triggerSource": null,
+      "sourceKey": "",
+      "sourceTime": ""
+    },
+    {
+      "id": "m-autotrigger-ralt",
+      "label": "AutoTrigger → RAlt",
+      "group": "默认",
+      "triggerKey": "AutoTrigger",
+      "targetKey": "RAlt",
+      "enabled": false,
+      "order": 0,
+      "triggerMode": "tap",
+      "triggerSource": {
+        "id": "source_peripheral_mixed",
+        "label": "外设混合单键",
+        "mode": "single_press",
+        "grouping": "same_source_group",
+        "rawEvents": [
+          {
+            "device": "keyboard",
+            "key": "AudioVolumeDown",
+            "code": "AudioVolumeDown",
+            "location": 0,
+            "type": "keydown",
+            "hotkey": "Volume_Down",
+            "label": "音量下",
+            "button": null
+          },
+          {
+            "device": "keyboard",
+            "key": "AudioVolumeUp",
+            "code": "AudioVolumeUp",
+            "location": 0,
+            "type": "keydown",
+            "hotkey": "Volume_Up",
+            "label": "音量上",
+            "button": null
+          },
+          {
+            "device": "keyboard",
+            "key": "F1",
+            "code": "F1",
+            "location": 0,
+            "type": "keydown",
+            "hotkey": "F1",
+            "label": "F1",
+            "button": null
+          }
+        ]
+      },
+      "sourceKey": "",
+      "sourceTime": ""
     }
   ],
   "intervalMs": 1200,
   "enterDelayMs": 5000,
-  "cancelEnabled": true,
-  "autoEnterEnabled": true,
+  "cancelEnabled": false,
+  "autoEnterEnabled": false,
   "debounceMs": 80,
   "keyPressDurationMs": 250,
   "scenes": null

@@ -535,9 +535,9 @@ VK_ExecCursorHelperCmd(cmdId) {
                 }
                 executed := true
             case "ftb_unified_workbench":
-                try SurfaceIntent_Open("unified_workbench", Map("initialIntent", "ai", "source", "vk_exec"))
+                try SurfaceIntent_Open("ai_workbench", Map("source", "vk_exec"))
                 catch {
-                    try UnifiedWb_Show(Map("initialIntent", "ai", "source", "vk_exec"))
+                    try AiWb_Show(Map("source", "vk_exec"))
                     catch as _e {
                         NmerCatch(A_ThisFunc, _e)
                     }

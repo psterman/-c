@@ -532,28 +532,49 @@ class AhkInterface {
     /** 探测设置页宿主对象是否可用 */
     PingStudioBridge(_hint := "") => "ok"
 
-    /** 统一工作台：拖动列宽时同步重定位 AI 嵌入（避免 postMessage 滞后） */
+    /** 统一工作台：列宽拖动已改走 sc-web-embed 标准协议，此入口停用 */
     UnifiedWbApplyLayoutLive(payloadJson) {
+        return "skip"
+    }
+
+    /** 统一工作台：列缝拖动走搜索中心同款原生轨（BeginUnifiedColumnResizeDrag） */
+    UnifiedWbBeginColumnResize(payloadJson) {
         try {
             if FuncExists("Nmer_IsAppShuttingDown") && Nmer_IsAppShuttingDown()
                 return "skip"
-            if !FuncExists("ScWebLlm_IsUnifiedWorkbenchHost") || !ScWebLlm_IsUnifiedWorkbenchHost()
-                return "skip"
-            if !FuncExists("SearchCenterWebLlm_ApplyUnifiedMultiColumnFromWeb")
+            if !FuncExists("ScWebLlm_BeginUnifiedColumnResizeDrag")
                 return "err:no_fn"
+            msg := Map()
             raw := Trim(String(payloadJson))
-            if (raw = "")
-                return "err:empty"
-            msg := Jxon_Load(raw)
-            if !(msg is Map)
-                return "err:bad_json"
-            cols := msg.Has("aiColumns") ? msg["aiColumns"] : 0
-            if !(cols is Array) || !cols.Length
-                return "err:no_cols"
-            maxActive := msg.Has("maxActiveAiEmbeds") ? Integer(msg["maxActiveAiEmbeds"]) : 0
-            focusSid := msg.Has("focusSiteId") ? Trim(String(msg["focusSiteId"])) : ""
-            embedVp := msg.Has("embedViewport") ? msg["embedViewport"] : 0
-            SearchCenterWebLlm_ApplyUnifiedMultiColumnFromWeb(cols, maxActive, focusSid, embedVp, true)
+            if (raw != "" && raw != "{}") {
+                try msg := Jxon_Load(raw)
+                catch {
+                    msg := Map()
+                }
+                if !(msg is Map)
+                    msg := Map()
+            }
+            leftColId := msg.Has("leftColId") ? String(msg["leftColId"]) : ""
+            rightColId := msg.Has("rightColId") ? String(msg["rightColId"]) : ""
+            startLeftW := msg.Has("startLeftW") ? Integer(msg["startLeftW"]) : 0
+            startRightW := msg.Has("startRightW") ? Integer(msg["startRightW"]) : 0
+            if (leftColId = "" || rightColId = "")
+                return "err:cols"
+            if ScWebLlm_BeginUnifiedColumnResizeDrag(leftColId, rightColId, startLeftW, startRightW, true)
+                return "ok"
+            return "err:begin"
+        } catch as e {
+            return "err:" . e.Message
+        }
+    }
+
+    /** 统一工作台：列宽拖动结束，对齐嵌入与布局 */
+    UnifiedWbEndColumnResize(_hint := "") {
+        try {
+            if FuncExists("ScWebLlm_FinishUnifiedColumnResizeDrag")
+                ScWebLlm_FinishUnifiedColumnResizeDrag()
+            else if FuncExists("ScWebLlm_SetUnifiedColumnResizeInteract")
+                ScWebLlm_SetUnifiedColumnResizeInteract(false)
             return "ok"
         } catch as e {
             return "err:" . e.Message

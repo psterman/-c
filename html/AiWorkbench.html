@@ -94,15 +94,7 @@ html[data-theme="light"], html[data-theme="light"] body {
       <span class="wb-topbar-status" id="webllm-status-top" aria-live="polite"></span>
       <button type="button" class="wb-close" id="ai-wb-close" title="关闭" aria-label="关闭">×</button>
     </header>
-    <div class="wb-compose">
-      <div id="search-box-anchor" class="search-box-anchor">
-        <div class="wb-compose-inner" id="searchBoxInner">
-          <span class="wb-compose-icon" id="search-icon-inline">&#127760;</span>
-          <textarea id="search" rows="1" placeholder="输入问题，向所有已选 AI 提问…" autocomplete="off" spellcheck="false"></textarea>
-        </div>
-      </div>
-    </div>
-    <div class="wb-content">
+    <div class="wb-content wb-stage" id="wb-stage">
       <div id="web-embed-workspace" class="web-embed-workspace" aria-label="内嵌浏览器">
         <div id="web-embed-toolbar" class="web-embed-chrome" aria-label="内嵌浏览器控制">
           <div class="web-omnibar-row">
@@ -123,6 +115,7 @@ html[data-theme="light"], html[data-theme="light"] body {
           </div>
           <span id="webllm-status" class="web-omnibar-status" aria-live="polite"></span>
         </div>
+        <div id="web-embed-host-frame" class="web-embed-host-frame" aria-hidden="true">
         <div id="web-embed-scroll-viewport" class="web-embed-scroll-viewport" aria-label="内嵌浏览器横向滚动">
           <div id="web-embed-scroll-track" class="web-embed-scroll-track"></div>
         </div>
@@ -131,33 +124,42 @@ html[data-theme="light"], html[data-theme="light"] body {
           <input type="range" id="web-embed-hscroll-slider" class="web-embed-hscroll-slider" min="0" max="0" value="0" step="1" />
           <button type="button" id="web-embed-hscroll-next" class="web-embed-hscroll-btn">&#9654;</button>
         </div>
-        <div id="web-embed-debug-panel" class="web-embed-debug-panel hidden" aria-label="联网内嵌调试">
-          <div class="web-embed-debug-head">
-            <h4>联网内嵌 · 调试</h4>
-            <div class="web-embed-debug-actions">
-              <button type="button" class="web-embed-debug-btn" id="web-embed-debug-refresh">刷新</button>
-              <button type="button" class="web-embed-debug-btn" id="web-embed-debug-rebootstrap">重试 Bootstrap</button>
-              <button type="button" class="web-embed-debug-btn" id="web-embed-debug-copy">复制诊断</button>
-              <button type="button" class="web-embed-debug-btn" id="web-embed-debug-open-log">打开日志目录</button>
-              <button type="button" class="web-embed-debug-btn" id="web-embed-debug-close">关闭</button>
-            </div>
+        </div>
+      </div>
+    </div>
+    <div class="wb-compose wb-compose-bottom" id="wb-compose-bottom">
+      <div id="search-box-anchor" class="search-box-anchor">
+        <div class="wb-compose-inner" id="searchBoxInner">
+          <span class="wb-compose-icon" id="search-icon-inline">&#127760;</span>
+          <textarea id="search" rows="1" placeholder="输入问题，向所有已选 AI 提问…（Enter 发送）" autocomplete="off" spellcheck="false"></textarea>
+        </div>
+      </div>
+    </div>
+    <div id="web-embed-debug-panel" class="web-embed-debug-panel hidden" aria-label="联网内嵌调试">
+      <div class="web-embed-debug-head">
+        <h4>联网内嵌 · 调试</h4>
+        <div class="web-embed-debug-actions">
+          <button type="button" class="web-embed-debug-btn" id="web-embed-debug-refresh">刷新</button>
+          <button type="button" class="web-embed-debug-btn" id="web-embed-debug-rebootstrap">重试 Bootstrap</button>
+          <button type="button" class="web-embed-debug-btn" id="web-embed-debug-copy">复制诊断</button>
+          <button type="button" class="web-embed-debug-btn" id="web-embed-debug-open-log">打开日志目录</button>
+          <button type="button" class="web-embed-debug-btn" id="web-embed-debug-close">关闭</button>
+        </div>
+      </div>
+      <div class="web-embed-debug-body">
+        <div class="web-embed-debug-col">
+          <div id="web-embed-debug-issues" class="web-embed-debug-issues"></div>
+          <dl id="web-embed-debug-kv" class="web-embed-debug-kv"></dl>
+          <div id="web-embed-debug-sites" class="web-embed-debug-sites"></div>
+        </div>
+        <div class="web-embed-debug-col">
+          <div class="web-embed-debug-log-tabs" id="web-embed-debug-log-tabs">
+            <button type="button" class="web-embed-debug-log-tab is-active" data-log-tab="js">页面事件</button>
+            <button type="button" class="web-embed-debug-log-tab" data-log-tab="webLlm">webLlm</button>
+            <button type="button" class="web-embed-debug-log-tab" data-log-tab="scwv">scwv</button>
+            <button type="button" class="web-embed-debug-log-tab" data-log-tab="wv2">wv2</button>
           </div>
-          <div class="web-embed-debug-body">
-            <div class="web-embed-debug-col">
-              <div id="web-embed-debug-issues" class="web-embed-debug-issues"></div>
-              <dl id="web-embed-debug-kv" class="web-embed-debug-kv"></dl>
-              <div id="web-embed-debug-sites" class="web-embed-debug-sites"></div>
-            </div>
-            <div class="web-embed-debug-col">
-              <div class="web-embed-debug-log-tabs" id="web-embed-debug-log-tabs">
-                <button type="button" class="web-embed-debug-log-tab is-active" data-log-tab="js">页面事件</button>
-                <button type="button" class="web-embed-debug-log-tab" data-log-tab="webLlm">webLlm</button>
-                <button type="button" class="web-embed-debug-log-tab" data-log-tab="scwv">scwv</button>
-                <button type="button" class="web-embed-debug-log-tab" data-log-tab="wv2">wv2</button>
-              </div>
-              <pre id="web-embed-debug-log" class="web-embed-debug-log"></pre>
-            </div>
-          </div>
+          <pre id="web-embed-debug-log" class="web-embed-debug-log"></pre>
         </div>
       </div>
     </div>
@@ -252,19 +254,31 @@ function handleAiHostPaintNudge() {
 }
 function handleAiHostLayout() {
   requestAnimationFrame(function () {
+    try { void document.body.offsetHeight; } catch (_) {}
     try { window.dispatchEvent(new Event("resize")); } catch (_) {}
     nudgeAiWebEmbedLoad(true);
+    setTimeout(function () { nudgeAiWebEmbedLoad(true); }, 120);
   });
+}
+
+function applyAiWbBroadcastSites(payload) {
+  let sites = typeof loadWebEmbedBroadcastSitesPref === "function"
+    ? loadWebEmbedBroadcastSitesPref() : [];
+  const fromHost = (payload && Array.isArray(payload.selectedEngines))
+    ? payload.selectedEngines.filter(Boolean) : [];
+  if (fromHost.length > sites.length) sites = fromHost.slice();
+  else if (!sites.length && fromHost.length) sites = fromHost.slice();
+  if (typeof normalizeWebEmbedBroadcastSites === "function")
+    sites = normalizeWebEmbedBroadcastSites(sites);
+  state.webEmbedBroadcastSites = sites;
+  state.selectedEngines = sites.slice();
 }
 
 function applyInit(payload) {
   if (!payload || typeof payload !== "object") return;
   if (payload.themeMode) applyTheme(payload.themeMode);
   if (Array.isArray(payload.engines)) state.engines = payload.engines.slice();
-  if (Array.isArray(payload.selectedEngines)) {
-    state.selectedEngines = payload.selectedEngines.filter(Boolean).slice();
-    state.webEmbedBroadcastSites = state.selectedEngines.slice();
-  }
+  applyAiWbBroadcastSites(payload);
   if (payload.keyword != null) {
     state.keyword = String(payload.keyword || "");
     const input = document.getElementById("search");
@@ -278,10 +292,13 @@ function applyInit(payload) {
   if (typeof renderWebModeNavBody === "function") renderWebModeNavBody();
   if (typeof syncWebModeNavAiRows === "function") syncWebModeNavAiRows();
   if (typeof syncWebEmbedLayout === "function") syncWebEmbedLayout();
+  if (typeof renderWebEmbedColumnTrack === "function") renderWebEmbedColumnTrack();
+  if (typeof syncWebEmbedBroadcastUi === "function") syncWebEmbedBroadcastUi(true);
   syncAiWbFocusTitle();
   mirrorWebLlmStatus();
   if (typeof scheduleWebEmbedContentRect === "function") scheduleWebEmbedContentRect(true);
   else if (typeof postWebEmbedContentRect === "function") postWebEmbedContentRect(true);
+  setTimeout(function () { nudgeAiWebEmbedLoad(true); }, 200);
 }
 
 function runAiSearch() {
@@ -353,6 +370,9 @@ requestAnimationFrame(function () {
   requestAnimationFrame(function () { nudgeAiWebEmbedLoad(true); });
 });
 setTimeout(function () { nudgeAiWebEmbedLoad(true); }, 450);
+setTimeout(function () {
+  if (typeof syncWebEmbedSearchDock === "function") syncWebEmbedSearchDock(true);
+}, 180);
 window.addEventListener("resize", () => {
   if (typeof scheduleWebEmbedContentRect === "function") scheduleWebEmbedContentRect(false);
 });

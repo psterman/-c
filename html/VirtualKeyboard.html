@@ -3309,6 +3309,7 @@ const state = {
   promptTplTab: '基础',      // legacy
   search:      '',
   recording:   null,        // cmdId being recorded
+  recordingMods: null,      // 录制待保存组合键的修饰键侧（LCtrl / RShift 等）
   focusedCmdId: null,       // 当前右侧选中的命令（聚焦模式）
   focusedMods: null,        // 聚焦命令要求的修饰键（来自 ahkKey 的 ^ ! +）
   activeMods:  { ctrl:false, alt:false, shift:false, win:false }, // 兼容旧逻辑（实时合并值）
@@ -4955,6 +4956,117 @@ function trackWebKeyDown(e) {
   checkLayoutMismatch();
 }
 
+function ahkDisplayPartToDataKeys(part) {
+  const p = String(part || '').trim();
+  if (!p) return [];
+  const lower = p.toLowerCase();
+  const map = {
+    ctrl: ['LCtrl', 'RCtrl'],
+    lctrl: ['LCtrl'],
+    rctrl: ['RCtrl'],
+    shift: ['LShift', 'RShift'],
+    lshift: ['LShift'],
+    rshift: ['RShift'],
+    alt: ['LAlt', 'RAlt'],
+    lalt: ['LAlt'],
+    ralt: ['RAlt'],
+    win: ['LWin', 'RWin'],
+    lwin: ['LWin'],
+    rwin: ['RWin'],
+    'double ctrl': ['LCtrl', 'RCtrl'],
+    'double shift': ['LShift', 'RShift'],
+    'double alt': ['LAlt', 'RAlt'],
+  };
+  if (map[lower]) return map[lower];
+  if (p.length === 1) return [p.toLowerCase()];
+  return [p];
+}
+
+function parseRecordingDisplayKeys(displayKey) {
+  const d = String(displayKey || '').trim();
+  if (!d) return [];
+  if (/^double\s+/i.test(d))
+    return ahkDisplayPartToDataKeys(d);
+  const head = d.split(/\s+then\s+/i)[0].replace(/\s+twice$/i, '').trim();
+  return head.split('+').map((x) => x.trim()).filter(Boolean)
+    .flatMap((part) => ahkDisplayPartToDataKeys(part));
+}
+
+function parseAhkKeyToDataKeys(ahkKey) {
+  const k = String(ahkKey || '').trim();
+  if (!k) return [];
+  if (k === '^^') return ['LCtrl', 'RCtrl'];
+  if (k === '++') return ['LShift', 'RShift'];
+  if (k === '!!') return ['LAlt', 'RAlt'];
+  const keys = [];
+  if (k.includes('^')) keys.push('LCtrl', 'RCtrl');
+  if (k.includes('!')) keys.push('LAlt', 'RAlt');
+  if (k.includes('+')) keys.push('LShift', 'RShift');
+  if (k.includes('#')) keys.push('LWin', 'RWin');
+  const base = k.replace(/[\^!+#]/g, '');
+  if (base) keys.push(base.length === 1 ? base.toLowerCase() : base);
+  return keys;
+}
+
+function highlightBoundAhkKey(ahkKey, displayKey) {
+  if (displayKey) {
+    highlightRecordKeysFromDisplay(displayKey);
+    return;
+  }
+  document.querySelectorAll('.k.key-live').forEach((e) => e.classList.remove('key-live'));
+  parseAhkKeyToDataKeys(ahkKey).forEach((keyName) => {
+    document.querySelector(`.k[data-ahkkey="${CSS.escape(keyName)}"]`)?.classList.add('key-live');
+  });
+  const k = String(ahkKey || '');
+  state.recordingMods = {
+    ctrl: k.includes('^'),
+    alt: k.includes('!'),
+    shift: k.includes('+'),
+    win: k.includes('#'),
+    lctrl: false,
+    rctrl: false,
+    lshift: false,
+    rshift: false,
+    lalt: false,
+    ralt: false,
+  };
+  renderModifierKeys();
+}
+
+function highlightRecordKeysFromDisplay(displayKey, opts) {
+  const o = opts || {};
+  if (!o.keepLive)
+    document.querySelectorAll('.k.key-live').forEach((e) => e.classList.remove('key-live'));
+  const keys = parseRecordingDisplayKeys(displayKey);
+  keys.forEach((k) => {
+    document.querySelector(`.k[data-ahkkey="${CSS.escape(k)}"]`)?.classList.add('key-live');
+  });
+  state.recordingMods = buildRecordingModsFromDisplay(displayKey);
+  renderModifierKeys();
+}
+
+function buildRecordingModsFromDisplay(displayKey) {
+  const keys = parseRecordingDisplayKeys(displayKey);
+  return {
+    ctrl: keys.includes('LCtrl') || keys.includes('RCtrl'),
+    alt: keys.includes('LAlt') || keys.includes('RAlt'),
+    shift: keys.includes('LShift') || keys.includes('RShift'),
+    win: keys.includes('LWin') || keys.includes('RWin'),
+    lctrl: keys.includes('LCtrl'),
+    rctrl: keys.includes('RCtrl'),
+    lshift: keys.includes('LShift'),
+    rshift: keys.includes('RShift'),
+    lalt: keys.includes('LAlt'),
+    ralt: keys.includes('RAlt'),
+  };
+}
+
+function clearRecordingKeyHighlight() {
+  state.recordingMods = null;
+  document.querySelectorAll('.k.key-live').forEach((e) => e.classList.remove('key-live'));
+  renderModifierKeys();
+}
+
 function trackAhkPreview(base, phase) {
   if (phase !== 'down') return;
   if (!base || isModifierOnlyAhkBase(base)) return;
@@ -5013,12 +5125,15 @@ function handleAhkMessage(msg) {
       break;
     }
     case 'keyPreviewClear':
-      document.querySelectorAll('.k.key-live').forEach((e) => e.classList.remove('key-live'));
+      clearRecordingKeyHighlight();
       break;
     case 'recordHint':
       if (msg.active) {
         state.recording = msg.commandId || state.recording;
+        if (state.recording)
+          state.focusedCmdId = state.recording;
         renderCommandList();
+        renderKeyboardSlots();
         renderModifierKeys();
         setHud('MODE: CONFIG | SELECTED: ' + state.recording + ' | PRESS KEY OR DOUBLE-TAP');
       } else {
@@ -5033,6 +5148,7 @@ function handleAhkMessage(msg) {
         setHud('录制：' + d + ' · 正在保存绑定…');
       else
         setHud('录制：已收到 「' + d + '」 · 约 ' + sec + ' 秒内可再按一键组成序列，否则保存为单键');
+      highlightRecordKeysFromDisplay(d, { keepLive: true });
       break;
     }
     case 'quickBindState':
@@ -6281,21 +6397,34 @@ function ahkBaseToDisplay(baseKey) {
   return map[baseKey] || baseKey;
 }
 
+function modifierChipHtml(part) {
+  const p = String(part || '').trim();
+  const lower = p.toLowerCase();
+  if (lower === 'ctrl' || lower === 'lctrl' || lower === 'rctrl')
+    return `<span class="vk-key-chip"><i class="fa-solid fa-chevron-up"></i> ${escapeHtml(p)}</span>`;
+  if (lower === 'shift' || lower === 'lshift' || lower === 'rshift')
+    return `<span class="vk-key-chip"><i class="fa-solid fa-arrow-up"></i> ${escapeHtml(p)}</span>`;
+  if (lower === 'alt' || lower === 'lalt' || lower === 'ralt')
+    return `<span class="vk-key-chip"><i class="fa-solid fa-bolt"></i> ${escapeHtml(p)}</span>`;
+  if (lower === 'win' || lower === 'lwin' || lower === 'rwin')
+    return `<span class="vk-key-chip"><i class="fa-brands fa-windows"></i> ${escapeHtml(p)}</span>`;
+  if (lower === 'capslock')
+    return '<span class="vk-key-chip">CapsLock</span>';
+  return `<span class="vk-key-chip">${escapeHtml(p.length === 1 ? p.toUpperCase() : p)}</span>`;
+}
+
 function translateKey(ahkKey) {
   if (!ahkKey) return '—';
   const rawInput = String(ahkKey).trim();
-  // Display-string path: supports "CapsLock+F", "Ctrl+Shift+Q" etc. (not AHK symbols)
+  // Display-string path: supports "CapsLock+F", "LCtrl+Shift+Q", "Ctrl+Shift+Q" 等（非 AHK 符号）
+  if (!/[\^!+#]/.test(rawInput) && /\+/.test(rawInput)) {
+    const parts = rawInput.split('+').map((x) => String(x || '').trim()).filter(Boolean);
+    const chips = parts.map((part) => modifierChipHtml(part));
+    return `<span class="vk-key-chord">${chips.join('<span class="vk-key-join">+</span>')}</span>`;
+  }
   if (/^(capslock\+|ctrl\+|alt\+|shift\+|win\+)/i.test(rawInput)) {
     const parts = rawInput.split('+').map((x) => String(x || '').trim()).filter(Boolean);
-    const chips = parts.map((part) => {
-      const p = part.toLowerCase();
-      if (p === 'ctrl') return '<span class="vk-key-chip"><i class="fa-solid fa-chevron-up"></i> Ctrl</span>';
-      if (p === 'shift') return '<span class="vk-key-chip"><i class="fa-solid fa-arrow-up"></i> Shift</span>';
-      if (p === 'alt') return '<span class="vk-key-chip"><i class="fa-solid fa-bolt"></i> Alt</span>';
-      if (p === 'win') return '<span class="vk-key-chip"><i class="fa-brands fa-windows"></i> Win</span>';
-      if (p === 'capslock') return '<span class="vk-key-chip">CapsLock</span>';
-      return `<span class="vk-key-chip">${escapeHtml(part.length === 1 ? part.toUpperCase() : part)}</span>`;
-    });
+    const chips = parts.map((part) => modifierChipHtml(part));
     return `<span class="vk-key-chord">${chips.join('<span class="vk-key-join">+</span>')}</span>`;
   }
   if (ahkKey === '^^') return '<span class="vk-key-chord"><span class="vk-key-chip"><i class="fa-solid fa-chevron-up"></i> Ctrl ×2</span></span>';
@@ -8055,27 +8184,46 @@ function getEffectiveMods() {
 function renderModifierKeys() {
   const mod = getEffectiveMods();
   const fmod = state.focusedMods || { ctrl:false, alt:false, shift:false, win:false };
+  const rmod = state.recordingMods;
   document.querySelectorAll('.k.mod-active').forEach(el => el.classList.remove('mod-active'));
-  if (mod.ctrl || fmod.ctrl) {
-    document.querySelectorAll('.k[data-ahkkey="LCtrl"], .k[data-ahkkey="RCtrl"]')
-      .forEach(el => el.classList.add('mod-active'));
-  }
-  if (mod.alt || fmod.alt) {
-    document.querySelectorAll('.k[data-ahkkey="LAlt"], .k[data-ahkkey="RAlt"]')
-      .forEach(el => el.classList.add('mod-active'));
-  }
-  if (mod.shift || fmod.shift) {
-    document.querySelectorAll('.k[data-ahkkey="LShift"], .k[data-ahkkey="RShift"]')
-      .forEach(el => el.classList.add('mod-active'));
-  }
-  if (mod.win || fmod.win) {
-    document.querySelectorAll('.k[data-ahkkey="LWin"], .k[data-ahkkey="RWin"]')
-      .forEach(el => el.classList.add('mod-active'));
-  }
-  // 聚焦非录制：提示「当前命令多为 CapsLock+键」；录制中勿用 mod-active，否则像物理一直按住 CapsLock
-  if (state.focusedCmdId && !state.recording) {
-    document.querySelectorAll('.k[data-ahkkey="CapsLock"]')
-      .forEach(el => el.classList.add('mod-active'));
+
+  const addModActive = (selectors) => {
+    selectors.forEach((sel) => {
+      document.querySelectorAll(sel).forEach((el) => el.classList.add('mod-active'));
+    });
+  };
+
+  if (state.recording && rmod) {
+    if (rmod.lctrl) addModActive(['.k[data-ahkkey="LCtrl"]']);
+    else if (rmod.rctrl) addModActive(['.k[data-ahkkey="RCtrl"]']);
+    else if (rmod.ctrl) addModActive(['.k[data-ahkkey="LCtrl"]', '.k[data-ahkkey="RCtrl"]']);
+
+    if (rmod.lalt) addModActive(['.k[data-ahkkey="LAlt"]']);
+    else if (rmod.ralt) addModActive(['.k[data-ahkkey="RAlt"]']);
+    else if (rmod.alt) addModActive(['.k[data-ahkkey="LAlt"]', '.k[data-ahkkey="RAlt"]']);
+
+    if (rmod.lshift) addModActive(['.k[data-ahkkey="LShift"]']);
+    else if (rmod.rshift) addModActive(['.k[data-ahkkey="RShift"]']);
+    else if (rmod.shift) addModActive(['.k[data-ahkkey="LShift"]', '.k[data-ahkkey="RShift"]']);
+
+    if (rmod.win) addModActive(['.k[data-ahkkey="LWin"]', '.k[data-ahkkey="RWin"]']);
+  } else {
+    if (mod.ctrl || fmod.ctrl) {
+      addModActive(['.k[data-ahkkey="LCtrl"]', '.k[data-ahkkey="RCtrl"]']);
+    }
+    if (mod.alt || fmod.alt) {
+      addModActive(['.k[data-ahkkey="LAlt"]', '.k[data-ahkkey="RAlt"]']);
+    }
+    if (mod.shift || fmod.shift) {
+      addModActive(['.k[data-ahkkey="LShift"]', '.k[data-ahkkey="RShift"]']);
+    }
+    if (mod.win || fmod.win) {
+      addModActive(['.k[data-ahkkey="LWin"]', '.k[data-ahkkey="RWin"]']);
+    }
+    // 聚焦非录制：提示「当前命令多为 CapsLock+键」；录制中勿用 mod-active，否则像物理一直按住 CapsLock
+    if (state.focusedCmdId && !state.recording) {
+      addModActive(['.k[data-ahkkey="CapsLock"]']);
+    }
   }
 }
 
@@ -8099,7 +8247,19 @@ function triggerKeyRipple(ahkKey) {
     document.querySelectorAll('.k[data-ahkkey="LAlt"], .k[data-ahkkey="RAlt"]').forEach(runRipple);
     return;
   }
-  const base = ahkKey.replace(/[\^!+]/g, '');
+  if (ahkKey.includes('^')) {
+    document.querySelectorAll('.k[data-ahkkey="LCtrl"], .k[data-ahkkey="RCtrl"]').forEach(runRipple);
+  }
+  if (ahkKey.includes('+')) {
+    document.querySelectorAll('.k[data-ahkkey="LShift"], .k[data-ahkkey="RShift"]').forEach(runRipple);
+  }
+  if (ahkKey.includes('!')) {
+    document.querySelectorAll('.k[data-ahkkey="LAlt"], .k[data-ahkkey="RAlt"]').forEach(runRipple);
+  }
+  if (ahkKey.includes('#')) {
+    document.querySelectorAll('.k[data-ahkkey="LWin"], .k[data-ahkkey="RWin"]').forEach(runRipple);
+  }
+  const base = ahkKey.replace(/[\^!+#]/g, '');
   runRipple(document.querySelector(`.k[data-ahkkey="${CSS.escape(base)}"]`));
 }
 
@@ -8316,7 +8476,9 @@ function startRecording(cmdId) {
   if (state.recording) stopRecording();
   if (state.keyboardCollapsed) setKeyboardCollapsed(false, true);
   state.recording = cmdId;
+  state.focusedCmdId = cmdId;
   renderCommandList();
+  renderKeyboardSlots();
   renderModifierKeys();
   // highlight corresponding key on keyboard if already bound
   if (state.bindings[cmdId]?.ahkKey) {
@@ -8326,7 +8488,8 @@ function startRecording(cmdId) {
         document.querySelector(`.k[data-ahkkey="${CSS.escape(k)}"]`)?.classList.add('recording-target');
       });
     } else {
-      const baseKey = ak.replace(/[\^!+]/g, '');
+      highlightBoundAhkKey(ak, state.bindings[cmdId].displayKey || '');
+      const baseKey = ak.replace(/[\^!+#]/g, '');
       document.querySelector(`.k[data-ahkkey="${CSS.escape(baseKey)}"]`)
         ?.classList.add('recording-target');
     }
@@ -8344,7 +8507,9 @@ function stopRecording(restoreHud = true) {
   document.querySelectorAll('.k.recording-target').forEach(e => e.classList.remove('recording-target'));
   const wasRecording = state.recording != null;
   state.recording = null;
+  clearRecordingKeyHighlight();
   renderCommandList();
+  renderKeyboardSlots();
   renderModifierKeys();
   if (wasRecording)
     postToAhk({ type: 'cancelRecord' });

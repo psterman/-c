@@ -6,6 +6,7 @@
 <title>统一工作台</title>
 <link rel="stylesheet" href="https://app.local/assets/css/sc-workbench-shell.css">
 <link rel="stylesheet" href="https://app.local/assets/css/sc-cli.css">
+<link rel="stylesheet" href="https://app.local/assets/css/sc-web-embed.css">
 <style>
 @font-face { font-family: "AppUi"; src: local("Segoe UI"); }
 @font-face { font-family: "AppUi"; src: local("DengXian"), local("Microsoft YaHei UI"), local("Microsoft YaHei"); }
@@ -52,11 +53,14 @@ html[data-theme="light"], html[data-theme="light"] body {
 .uwb-sidebar {
   position: relative;
   z-index: 20;
+  display: flex;
+  flex-direction: column;
   flex-shrink: 0;
   width: 276px;
   min-width: 276px;
   max-width: 276px;
   min-height: 0;
+  height: 100%;
   border-radius: 16px;
   border: 1px solid rgba(255, 141, 42, 0.28);
   background: rgba(8,12,22,.62);
@@ -64,15 +68,22 @@ html[data-theme="light"], html[data-theme="light"] body {
   box-shadow: inset 0 1px 0 rgba(255,255,255,.1), 0 10px 28px rgba(0,0,0,.2);
 }
 .uwb-side-head {
+  flex: 0 0 auto;
   padding: 12px;
   border-bottom: 1px solid var(--border-subtle);
 }
 .uwb-side-title { font-size: 14px; font-weight: 800; }
 .uwb-side-sub { margin-top: 4px; color: var(--muted); font-size: 11px; line-height: 1.35; }
 .uwb-side-body {
-  height: calc(100% - 62px);
+  flex: 1 1 auto;
+  min-height: 0;
   padding: 10px;
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
 }
 .uwb-group { margin-bottom: 14px; }
 .uwb-group-title {
@@ -102,7 +113,17 @@ html[data-theme="light"], html[data-theme="light"] body {
 .uwb-add:disabled:hover { border-color: var(--border-subtle); background: rgba(255,255,255,.04); }
 .uwb-add-main { display: block; font-size: 12px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .uwb-add-sub { display: block; margin-top: 2px; font-size: 10px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.uwb-nav-group { margin-bottom: 12px; border: 1px solid var(--border-subtle); border-radius: 12px; background: rgba(255,255,255,.03); overflow: hidden; }
+.uwb-nav-group {
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 auto;
+  align-self: stretch;
+  margin-bottom: 12px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  background: rgba(255,255,255,.03);
+  overflow: hidden;
+}
 .uwb-nav-group-head {
   width: 100%;
   display: flex;
@@ -123,13 +144,25 @@ html[data-theme="light"], html[data-theme="light"] body {
 .uwb-nav-group.is-collapsed .uwb-nav-group-chevron { transform: rotate(-90deg); }
 .uwb-nav-group.is-collapsed .uwb-nav-list,
 .uwb-nav-group.is-collapsed .uwb-nav-foot { display: none; }
-.uwb-nav-list { display: flex; flex-direction: column; gap: 4px; padding: 0 8px 8px; }
+.uwb-nav-list {
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 auto;
+  justify-content: flex-start;
+  align-items: stretch;
+  gap: 4px;
+  padding: 0 8px 8px;
+}
 .uwb-nav-item {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   gap: 8px;
   align-items: center;
+  flex: none;
   width: 100%;
+  height: auto;
+  min-height: 44px;
+  max-height: 52px;
   border: 1px solid transparent;
   border-radius: 10px;
   background: rgba(255,255,255,.02);
@@ -177,7 +210,7 @@ html[data-theme="light"], html[data-theme="light"] body {
 }
 .uwb-nav-act:hover { background: rgba(255,255,255,.08); color: var(--text); }
 .uwb-nav-act.danger:hover { color: #ff8a80; }
-.uwb-nav-foot { padding: 0 8px 8px; }
+.uwb-nav-foot { flex: 0 0 auto; padding: 0 8px 8px; }
 .uwb-nav-add {
   width: 100%;
   min-height: 34px;
@@ -237,6 +270,42 @@ html[data-theme="light"], html[data-theme="light"] body {
   overflow: hidden;
   box-shadow: var(--shadow), inset 0 0 0 1px rgba(255,255,255,.04);
 }
+.uwb-stage-split {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.uwb-ai-embed-pane {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.uwb-ai-embed-pane.hidden { display: none !important; }
+.uwb-ai-embed-pane .web-embed-workspace {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.uwb-ai-embed-pane .web-embed-scroll-viewport {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.uwb-cli-strip {
+  flex: 0 0 auto;
+  min-height: 0;
+  max-height: 42%;
+  border-top: 1px solid rgba(255, 141, 42, 0.22);
+  background: rgba(4, 8, 16, 0.35);
+}
+.uwb-cli-strip.hidden { display: none !important; }
+.uwb-cli-strip .uwb-columns {
+  height: 100%;
+  min-height: 140px;
+  max-height: 320px;
+}
 .uwb-stage::after {
   content: "";
   position: absolute;
@@ -245,7 +314,59 @@ html[data-theme="light"], html[data-theme="light"] body {
   border: 2px solid rgba(255, 141, 42, 0.38);
   box-shadow: inset 0 0 24px rgba(0,0,0,.18);
   pointer-events: none;
-  z-index: 6;
+  z-index: 1;
+}
+body.uwb-layout.sc-web-embed-layout .uwb-main.sc-web-embed-active {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  grid-template-rows: none;
+}
+body.uwb-layout.sc-web-embed-layout .uwb-main.sc-web-embed-active .uwb-stage-split {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+body.uwb-layout.sc-web-embed-layout .web-embed-workspace {
+  gap: 0;
+}
+body.uwb-layout.sc-web-embed-layout .web-embed-scroll-viewport {
+  border-color: rgba(255,255,255,.12);
+  flex: 1 1 auto;
+  min-height: 0;
+  height: auto;
+  max-height: 100%;
+}
+body.uwb-layout.sc-web-embed-layout .web-embed-workspace > form.uwb-compose {
+  flex-shrink: 0;
+  margin: 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(8, 12, 22, 0.42);
+  padding: 8px 10px 10px;
+  border-radius: 0 0 12px 12px;
+}
+body.uwb-layout.sc-web-embed-layout .web-embed-column-label {
+  opacity: 0.92;
+}
+body.uwb-layout.sc-web-embed-layout #web-embed-toolbar {
+  gap: 8px;
+  padding-bottom: 8px;
+  flex-shrink: 0;
+}
+body.uwb-layout .uwb-stage-split {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+body.uwb-layout .uwb-ai-embed-pane {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+body.uwb-layout .uwb-cli-strip {
+  flex-shrink: 0;
+}
+body.uwb-layout form.uwb-compose {
+  flex-shrink: 0;
 }
 .uwb-columns {
   height: 100%;
@@ -314,8 +435,8 @@ html[data-theme="light"], html[data-theme="light"] body {
 .uwb-col-head-split {
   position: absolute;
   top: 0;
-  right: -7px;
-  width: 14px;
+  right: -9px;
+  width: 18px;
   height: 100%;
   border: 0;
   padding: 0;
@@ -373,14 +494,15 @@ html[data-theme="light"], html[data-theme="light"] body {
 .uwb-col-resize-left { left: -7px; }
 .uwb-col-resize-right { right: -7px; }
 .uwb-col-divider {
-  flex: 0 0 14px;
-  width: 14px;
+  flex: 0 0 28px;
+  width: 28px;
   align-self: stretch;
   position: relative;
-  z-index: 55;
+  z-index: 120;
   cursor: ew-resize;
   touch-action: none;
   flex-shrink: 0;
+  background: rgba(255, 141, 42, 0.06);
 }
 .uwb-columns.virtualized .uwb-col-divider {
   position: absolute;
@@ -462,17 +584,18 @@ html[data-theme="light"], html[data-theme="light"] body {
 }
 .uwb-col-foot {
   position: relative;
-  z-index: 65;
+  z-index: 150;
   flex-shrink: 0;
   height: 24px;
+  pointer-events: auto;
   border-top: 1px solid var(--border-subtle);
   background: rgba(0, 0, 0, 0.28);
 }
 .uwb-col-foot-split {
   position: absolute;
   top: 0;
-  right: -7px;
-  width: 14px;
+  right: -9px;
+  width: 18px;
   height: 100%;
   border: 0;
   padding: 0;
@@ -480,7 +603,7 @@ html[data-theme="light"], html[data-theme="light"] body {
   background: transparent;
   cursor: ew-resize;
   touch-action: none;
-  z-index: 70;
+  z-index: 160;
 }
 .uwb-col-foot-split:hover,
 .uwb-col-foot-split.dragging {
@@ -564,6 +687,9 @@ html[data-theme="light"], html[data-theme="light"] body {
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 8px;
   align-items: end;
+  position: relative;
+  z-index: 12;
+  flex-shrink: 0;
 }
 .uwb-compose-inner {
   min-height: 46px;
@@ -704,7 +830,7 @@ html[data-theme="light"], html[data-theme="light"] body {
 }
 </style>
 </head>
-<body>
+<body class="sc-web-embed-layout uwb-layout">
 <div class="uwb-app">
   <aside class="uwb-sidebar">
     <div class="uwb-side-head">
@@ -743,8 +869,48 @@ html[data-theme="light"], html[data-theme="light"] body {
         <button type="button" class="uwb-btn uwb-close" id="close" title="关闭" aria-label="关闭">×</button>
       </div>
     </header>
-    <section class="uwb-stage">
-      <div class="uwb-columns" id="columns" aria-label="横向列式工作区"></div>
+    <section class="uwb-stage uwb-stage-split" id="uwb-stage">
+      <div id="web-embed-workspace" class="web-embed-workspace uwb-ai-embed-pane" aria-label="联网搜索 AI 内嵌">
+        <div id="web-embed-toolbar" class="web-embed-chrome" aria-label="内嵌浏览器控制">
+          <div class="web-omnibar-row">
+            <div class="web-omnibar-glass">
+              <div id="web-embed-omnibar-chips" class="web-embed-omnibar-chips" hidden aria-label="已选 AI"></div>
+              <div id="web-embed-omnibar-badge" class="web-embed-omnibar-badge" hidden aria-hidden="true"></div>
+              <div id="web-embed-search-slot" class="web-embed-search-slot" aria-label="地址栏"></div>
+            </div>
+            <div class="web-omnibar-actions web-omnibar-actions-glass" aria-label="浏览器操作">
+              <button type="button" class="web-chrome-btn" id="webllm-btn-back" title="后退" aria-label="后退">&#8592;</button>
+              <button type="button" class="web-chrome-btn" id="webllm-btn-forward" title="前进" aria-label="前进">&#8594;</button>
+              <button type="button" class="web-chrome-btn" id="webllm-btn-reload" title="刷新当前 AI" aria-label="刷新">&#8635;</button>
+              <button type="button" class="web-chrome-btn" id="webllm-btn-reload-all" title="刷新全部已选 AI" aria-label="刷新全部">&#10227;</button>
+              <button type="button" class="web-chrome-btn" id="webllm-btn-home" title="首页" aria-label="首页">&#8962;</button>
+              <button type="button" class="web-chrome-btn" id="webllm-btn-copyurl" title="复制链接" aria-label="复制链接">&#128279;</button>
+              <button type="button" class="web-chrome-btn" id="webllm-btn-debug" title="内嵌 AI 调试" aria-label="调试">&#128027;</button>
+            </div>
+          </div>
+          <span id="webllm-status" class="web-omnibar-status" aria-live="polite"></span>
+        </div>
+        <div id="web-embed-host-frame" class="web-embed-host-frame" aria-hidden="true">
+        <div id="web-embed-scroll-viewport" class="web-embed-scroll-viewport" aria-label="内嵌浏览器横向滚动">
+          <div id="web-embed-scroll-track" class="web-embed-scroll-track"></div>
+        </div>
+        <div id="web-embed-hscroll-row" class="web-embed-hscroll-row hidden" aria-label="横向滚动条">
+          <button type="button" id="web-embed-hscroll-prev" class="web-embed-hscroll-btn">&#9664;</button>
+          <input type="range" id="web-embed-hscroll-slider" class="web-embed-hscroll-slider" min="0" max="0" value="0" step="1" />
+          <button type="button" id="web-embed-hscroll-next" class="web-embed-hscroll-btn">&#9654;</button>
+        </div>
+        </div>
+        <form class="uwb-compose" id="compose-form">
+          <div class="uwb-compose-inner">
+            <span class="uwb-compose-target" id="compose-target">AI</span>
+            <textarea id="compose" rows="1" placeholder="Enter 发送到焦点列；Ctrl+Enter 或 /all 广播全部 AI；Shift+Enter 换行；$ 前缀发 CLI"></textarea>
+          </div>
+          <button type="submit" class="uwb-send">发送</button>
+        </form>
+      </div>
+      <div class="uwb-cli-strip hidden" id="uwb-cli-strip">
+        <div class="uwb-columns uwb-columns-cli" id="columns" aria-label="CLI 终端列"></div>
+      </div>
     </section>
     <div id="web-embed-debug-panel" class="web-embed-debug-panel hidden" aria-label="统一工作台诊断">
       <div class="web-embed-debug-head">
@@ -774,13 +940,6 @@ html[data-theme="light"], html[data-theme="light"] body {
         </div>
       </div>
     </div>
-    <form class="uwb-compose" id="compose-form">
-      <div class="uwb-compose-inner">
-        <span class="uwb-compose-target" id="compose-target">AI</span>
-        <textarea id="compose" rows="1" placeholder="Enter 发送到焦点列；Ctrl+Enter 或 /all 广播全部 AI；Shift+Enter 换行；$ 前缀发 CLI"></textarea>
-      </div>
-      <button type="submit" class="uwb-send">发送</button>
-    </form>
   </main>
 </div>
 <div class="uwb-toast hidden" id="toast"></div>
@@ -796,7 +955,7 @@ function postToAhk(obj) {
   return window.BasePanel.postToAhk(obj);
 }
 const UWB_COL_GAP = 10;
-const UWB_COL_DIVIDER_W = 14;
+const UWB_COL_DIVIDER_W = 28;
 const UWB_COL_PAD = 10;
 const UWB_VIRTUAL_BUFFER = 1;
 const CLI_PORTS = {
@@ -821,6 +980,7 @@ const state = {
   virtualColumnThreshold: 9,
   maxActiveAiEmbeds: 8,
   columnResizeActive: false,
+  columnsCustomized: false,
   memoryTierCap: 4,
   ignoreMemoryTierCap: false,
   aiFocusLru: {},
@@ -828,8 +988,101 @@ const state = {
   hostArmed: false,
   initGen: 0,
   sidebarExpanded: { ai: true, cli: true },
-  sidebarPicker: { ai: false, cli: false }
+  sidebarPicker: { ai: false, cli: false },
+  useScWebEmbedAi: true,
+  uiMode: "web",
+  currentCategoryKey: "ai",
+  selectedEngines: [],
+  webEmbedSiteId: "",
+  webEmbedBroadcastSites: [],
+  webEmbedSiteChrome: {}
 };
+function getUIMode() { return "web"; }
+function isWebEmbedCategory() { return true; }
+function setUIMode() { state.uiMode = "web"; state.currentCategoryKey = "ai"; }
+function selectCategoryLocal() { state.currentCategoryKey = "ai"; }
+function renderCategories() {}
+function renderEngines() {}
+function escapeHtml(text) { return esc(text); }
+function escapeAttr(text) { return esc(text); }
+function stageColumns() {
+  return state.columns.filter(function (c) { return c.type === "cli"; });
+}
+function uwbHasAiColumns() {
+  return state.columns.some(function (c) { return c.type === "ai"; });
+}
+function uwbHasCliColumns() {
+  return state.columns.some(function (c) { return c.type === "cli"; });
+}
+function columnsForLayout() {
+  return state.useScWebEmbedAi ? stageColumns() : state.columns;
+}
+function syncUwbWebEmbedSites() {
+  const ids = state.columns.filter(function (c) { return c.type === "ai"; }).map(function (c) {
+    if (typeof normalizeWebEmbedSiteId === "function") return normalizeWebEmbedSiteId(c.siteId);
+    return String(c.siteId || "deepseek").trim().toLowerCase();
+  });
+  if (typeof normalizeWebEmbedBroadcastSites === "function") {
+    state.webEmbedBroadcastSites = normalizeWebEmbedBroadcastSites(ids);
+  } else if (ids.length) {
+    state.webEmbedBroadcastSites = ids;
+  } else {
+    state.webEmbedBroadcastSites = ["deepseek"];
+  }
+  state.selectedEngines = state.webEmbedBroadcastSites.slice();
+}
+function syncUwbStageLayout() {
+  const aiPane = document.getElementById("web-embed-workspace");
+  const cliStrip = document.getElementById("uwb-cli-strip");
+  const hasAi = uwbHasAiColumns();
+  const hasCli = uwbHasCliColumns();
+  if (aiPane) aiPane.classList.toggle("hidden", !hasAi || !state.useScWebEmbedAi);
+  if (cliStrip) cliStrip.classList.toggle("hidden", !hasCli);
+}
+function nudgeWebEmbedLayout(force) {
+  if (!state.useScWebEmbedAi || !uwbHasAiColumns()) return;
+  if (typeof scheduleWebEmbedContentRect === "function") scheduleWebEmbedContentRect(!!force);
+  else if (typeof postWebEmbedContentRect === "function") postWebEmbedContentRect(!!force);
+}
+function ensureUwbWebEmbedColumnWidths() {
+  if (!state.useScWebEmbedAi || typeof getWebEmbedLayoutSites !== "function") return;
+  const def = typeof SC_WEB_EMBED_COL_DEFAULT_WIDTH !== "undefined" ? SC_WEB_EMBED_COL_DEFAULT_WIDTH : 390;
+  const min = typeof SC_WEB_EMBED_COL_MIN_WIDTH !== "undefined" ? SC_WEB_EMBED_COL_MIN_WIDTH : 280;
+  getWebEmbedLayoutSites().forEach(function (id) {
+    const w = typeof getWebEmbedColumnWidth === "function" ? getWebEmbedColumnWidth(id) : 0;
+    if (!Number.isFinite(w) || w < min) {
+      if (typeof setWebEmbedColumnWidth === "function") setWebEmbedColumnWidth(id, def, false);
+    }
+  });
+}
+function uwbSyncWebEmbedSearchDock(embed) {
+  if (typeof syncWebEmbedSearchDock === "function") syncWebEmbedSearchDock(!!embed);
+}
+function refreshWebEmbedUi(force) {
+  if (!state.useScWebEmbedAi || !uwbHasAiColumns()) return;
+  syncUwbStageLayout();
+  syncUwbWebEmbedSites();
+  ensureUwbWebEmbedColumnWidths();
+  document.body.classList.add("sc-web-embed-layout");
+  const main = document.getElementById("uwb-main");
+  if (main) main.classList.add("sc-web-embed-active");
+  const ws = document.getElementById("web-embed-workspace");
+  if (ws) ws.classList.remove("hidden");
+  uwbSyncWebEmbedSearchDock(true);
+  if (typeof validateWebEmbedCatalog === "function") validateWebEmbedCatalog();
+  if (typeof initWebLlmToolbar === "function" && !refreshWebEmbedUi._toolbarReady) {
+    refreshWebEmbedUi._toolbarReady = true;
+    initWebLlmToolbar();
+  }
+  if (typeof renderWebEmbedColumnTrack === "function") renderWebEmbedColumnTrack();
+  if (typeof syncWebEmbedHScrollUi === "function") syncWebEmbedHScrollUi();
+  if (typeof ensureWebEmbedLayoutObserver === "function") ensureWebEmbedLayoutObserver();
+  nudgeWebEmbedLayout(!!force);
+  if (force) {
+    setTimeout(function () { nudgeWebEmbedLayout(true); }, 120);
+    setTimeout(function () { nudgeWebEmbedLayout(true); }, 360);
+  }
+}
 let seq = 0;
 function armHostBootstrap() {
   state.hostArmed = true;
@@ -895,6 +1148,48 @@ function firstAi() {
 function firstCli() {
   return state.cliEngines[0] || { value: "codex_cli", name: "Codex" };
 }
+function columnsStageWidth() {
+  const stage = document.getElementById("columns");
+  return stage ? stage.clientWidth : 1200;
+}
+function computeFitColumnWidth(columnCount) {
+  const n = Math.max(1, columnCount || state.columns.length || 1);
+  const viewW = columnsStageWidth();
+  const dividers = UWB_COL_DIVIDER_W * Math.max(0, n - 1);
+  const available = viewW - UWB_COL_PAD * 2 - dividers;
+  const fit = Math.floor(available / n);
+  const maxFit = Math.max(columnResizeMinWidth() + 40, Math.min(columnResizeMaxWidth(), Math.round(available * 0.96)));
+  return Math.max(columnResizeMinWidth(), Math.min(maxFit, fit));
+}
+function fitColumnsToViewport(opts) {
+  opts = opts || {};
+  if (isColumnResizing() && !opts.force) return false;
+  if (state.columnsCustomized && !opts.redistributeAll && !opts.force) return false;
+  const layoutCols = columnsForLayout();
+  const n = layoutCols.length;
+  if (!n) return false;
+  const { totalWidth } = columnMetrics();
+  const viewW = columnsStageWidth();
+  if (!opts.redistributeAll && totalWidth <= viewW + 2) return false;
+  const targetW = computeFitColumnWidth(n);
+  let changed = false;
+  layoutCols.forEach(function (col) {
+    const cur = columnWidthPx(col);
+    if (opts.redistributeAll || cur > targetW + 4) {
+      if (cur !== targetW) {
+        col.width = targetW;
+        changed = true;
+      }
+    }
+  });
+  if (!changed) return false;
+  invalidateColumnMetrics();
+  syncAllColumnWidthsToDom();
+  if (shouldVirtualizeColumns()) refreshVirtualColumnWindow();
+  scheduleAiEmbedSync(60);
+  if (!isColumnResizing()) schedulePersistSession(400);
+  return true;
+}
 function clampLayoutInt(v, min, max, fallback) {
   const n = parseInt(v, 10);
   if (!Number.isFinite(n)) return fallback;
@@ -940,11 +1235,12 @@ function columnMetrics() {
   if (columnMetrics._cache && columnMetrics._sig === sig) return columnMetrics._cache;
   const items = [];
   let left = UWB_COL_PAD;
-  state.columns.forEach(function (col, idx) {
+  const layoutCols = columnsForLayout();
+  layoutCols.forEach(function (col, idx) {
     const w = columnWidthPx(col);
     items.push({ col: col, left: left, width: w, right: left + w });
     left += w;
-    if (idx < state.columns.length - 1)
+    if (idx < layoutCols.length - 1)
       left += UWB_COL_DIVIDER_W;
   });
   const totalWidth = items.length ? left + UWB_COL_PAD : UWB_COL_PAD * 2;
@@ -969,6 +1265,22 @@ function listVisibleAiColumns(aiCols) {
 function listAiEmbedColumns() {
   const maxN = Math.max(1, state.maxActiveAiEmbeds || 8);
   const aiCols = state.columns.filter(function (c) { return c.type === "ai"; });
+  if (state.useScWebEmbedAi) {
+    if (aiCols.length <= maxN) return aiCols.slice();
+    const picked = [];
+    const seen = new Set();
+    const focusCol = getActiveAiColumn();
+    if (focusCol && !seen.has(focusCol.id)) {
+      picked.push(focusCol);
+      seen.add(focusCol.id);
+    }
+    aiCols.forEach(function (col) {
+      if (picked.length >= maxN || seen.has(col.id)) return;
+      picked.push(col);
+      seen.add(col.id);
+    });
+    return picked;
+  }
   if (aiCols.length <= maxN) return aiCols.slice();
   const picked = [];
   const seen = new Set();
@@ -1131,7 +1443,7 @@ function columnResizeMinWidth() {
   const viewW = stage ? stage.clientWidth : 1200;
   const n = Math.max(1, state.columns.length);
   const fitMin = Math.floor((viewW - UWB_COL_PAD * 2 - UWB_COL_DIVIDER_W * Math.max(0, n - 1)) / n);
-  return Math.max(240, Math.min(360, fitMin));
+  return Math.max(160, Math.min(320, fitMin));
 }
 function columnResizeMaxWidth() {
   const stage = document.getElementById("columns");
@@ -1165,6 +1477,9 @@ function applyColumnWidthLive(col, partner) {
   }
   if (isColumnResizing()) {
     syncAllColumnWidthsToDom();
+    scheduleAiEmbedsLiveSync();
+    delete pushUnifiedColumnRails._sig;
+    requestAnimationFrame(pushUnifiedColumnRails);
   }
 }
 function buildSessionSnapshot() {
@@ -1231,6 +1546,7 @@ function restoreColumnsFromSession(saved) {
     }
   });
   if (!cols.length) return false;
+  state.columnsCustomized = true;
   seq = Math.max(maxSeq, seq, ...cols.map(function (c) {
     const m = String(c.id || "").match(/(\d+)$/);
     return m ? parseInt(m[1], 10) : 0;
@@ -1261,6 +1577,39 @@ function applySavedScrollLeft() {
   if (!stage) return;
   stage.scrollLeft = left;
   delete restoreColumnsFromSession._scrollLeft;
+}
+function measureColumnFrameRect(col) {
+  if (!col) return null;
+  const root = document.querySelector("[data-column-id='" + col.id + "']");
+  if (root) {
+    void root.offsetWidth;
+    const r = root.getBoundingClientRect();
+    if (r.width >= 80 && r.height >= 80) {
+      return withEmbedCoordMeta({
+        left: Math.round(r.left),
+        top: Math.round(r.top),
+        width: Math.round(r.width),
+        height: Math.round(r.height)
+      });
+    }
+  }
+  return col.type === "ai" ? measureAiColumnRectLayout(col) : null;
+}
+function collectAllWebColumnsPayload() {
+  const out = [];
+  state.columns.forEach(function (col) {
+    const rect = measureColumnFrameRect(col);
+    if (!rect) return;
+    out.push({
+      columnId: col.id,
+      type: col.type,
+      siteId: col.siteId || "",
+      engine: col.engine || "",
+      width: columnWidthPx(col),
+      rect: rect
+    });
+  });
+  return out;
 }
 function collectAiEmbedPayload(fast) {
   if (!state.columns.length || !canAutoBootstrap()) return null;
@@ -1293,7 +1642,12 @@ function collectAiEmbedPayload(fast) {
   };
 }
 function pushAiEmbedsLayoutLive(payload) {
+  if (state.useScWebEmbedAi) {
+    nudgeWebEmbedLayout(true);
+    return true;
+  }
   if (!payload) return false;
+  payload.allColumns = collectAllWebColumnsPayload();
   try {
     const hoSync = window.chrome && window.chrome.webview && window.chrome.webview.hostObjects && window.chrome.webview.hostObjects.sync;
     if (hoSync && hoSync.ahk && typeof hoSync.ahk.UnifiedWbApplyLayoutLive === "function") {
@@ -1304,15 +1658,39 @@ function pushAiEmbedsLayoutLive(payload) {
   postToAhk(Object.assign({ type: "webLlmLayoutLive" }, payload));
   return false;
 }
+function pushUnifiedColumnRails() {
+  if (state.useScWebEmbedAi) return;
+  const allColumns = collectAllWebColumnsPayload();
+  if (!allColumns || allColumns.length < 2) return;
+  const sig = allColumns.map(function (c) {
+    return c.columnId + "@" + c.rect.left + "," + c.rect.width + "," + c.width;
+  }).join("|");
+  if (pushUnifiedColumnRails._sig === sig) return;
+  pushUnifiedColumnRails._sig = sig;
+  postToAhk({ type: "webLlmLayoutLive", allColumns: allColumns });
+}
 function syncAiEmbedsLive() {
   if (!isColumnResizing()) return;
+  if (state.useScWebEmbedAi) {
+    nudgeWebEmbedLayout(false);
+    return;
+  }
   const payload = collectAiEmbedPayload(true);
   if (!payload) return;
+  const sig = (payload.aiColumns || []).map(function (c) {
+    return c.siteId + "@" + c.rect.left + "," + c.rect.width;
+  }).join("|");
+  if (syncAiEmbedsLive._sig === sig) return;
+  syncAiEmbedsLive._sig = sig;
   pushAiEmbedsLayoutLive(payload);
 }
 function scheduleAiEmbedsLiveSync() {
   if (!isColumnResizing()) return;
-  syncAiEmbedsLive();
+  if (scheduleAiEmbedsLiveSync._raf) return;
+  scheduleAiEmbedsLiveSync._raf = requestAnimationFrame(function () {
+    scheduleAiEmbedsLiveSync._raf = 0;
+    syncAiEmbedsLive();
+  });
 }
 function isColumnResizing() {
   return !!state.columnResizeActive || !!document.getElementById("columns")?.classList.contains("uwb-resizing");
@@ -1322,8 +1700,40 @@ function cancelPendingLayoutSync() {
   clearTimeout(scheduleAiEmbedSync._t);
   scheduleLayoutSync._pendingCli = false;
 }
+function requestNativeColumnResizeBegin(leftCol, rightCol) {
+  const msg = {
+    leftColId: leftCol.id,
+    rightColId: rightCol.id,
+    startLeftW: columnWidthPx(leftCol),
+    startRightW: columnWidthPx(rightCol)
+  };
+  const payload = JSON.stringify(msg);
+  try {
+    const ho = window.chrome && window.chrome.webview && window.chrome.webview.hostObjects && window.chrome.webview.hostObjects.sync;
+    if (ho && ho.ahk && typeof ho.ahk.UnifiedWbBeginColumnResize === "function") {
+      if (String(ho.ahk.UnifiedWbBeginColumnResize(payload)) === "ok") return true;
+    }
+  } catch (_) {}
+  postToAhk(Object.assign({ type: "unifiedColumnResizeBegin" }, msg));
+  return true;
+}
+function requestNativeColumnResizeEnd() {
+  try {
+    const ho = window.chrome && window.chrome.webview && window.chrome.webview.hostObjects && window.chrome.webview.hostObjects.sync;
+    if (ho && ho.ahk && typeof ho.ahk.UnifiedWbEndColumnResize === "function") {
+      ho.ahk.UnifiedWbEndColumnResize("");
+      return;
+    }
+  } catch (_) {}
+  postToAhk({ type: "unifiedColumnResizeEnd" });
+}
 function setAiEmbedLayoutPaused(paused) {
-  postToAhk({ type: "webLlmLayoutPause", paused: !!paused });
+  if (paused) {
+    postToAhk({ type: "webLlmLayoutPause", paused: true });
+    return;
+  }
+  requestNativeColumnResizeEnd();
+  postToAhk({ type: "webLlmLayoutPause", paused: false });
 }
 function attachColumnBoundarySplit(container, leftCol, rightCol, className, side) {
   if (!container || !leftCol || !rightCol) return;
@@ -1384,11 +1794,21 @@ function createColumnDivider(leftCol, rightCol) {
   });
   return div;
 }
+function requestColumnResizeInteract(active) {
+  if (active) return;
+  try {
+    const ho = window.chrome && window.chrome.webview && window.chrome.webview.hostObjects && window.chrome.webview.hostObjects.sync;
+    if (ho && ho.ahk && typeof ho.ahk.UnifiedWbEndColumnResize === "function") {
+      ho.ahk.UnifiedWbEndColumnResize("");
+      return;
+    }
+  } catch (_) {}
+  postToAhk({ type: "unifiedColumnResizeEnd" });
+}
 function beginColumnResizeSession(handleEl) {
   cancelPendingLayoutSync();
   state.columnResizeActive = true;
   syncAiEmbedsLive._lastSig = "";
-  setAiEmbedLayoutPaused(true);
   const stage = document.getElementById("columns");
   if (stage) stage.classList.add("uwb-resizing");
   if (handleEl) handleEl.classList.add("dragging");
@@ -1398,15 +1818,17 @@ function endColumnResizeSession(handleEl, ev) {
   if (handleEl) handleEl.classList.remove("dragging");
   if (stage) stage.classList.remove("uwb-resizing");
   state.columnResizeActive = false;
+  state.columnsCustomized = true;
   if (ev && handleEl) {
     try { handleEl.releasePointerCapture(ev.pointerId); } catch (_) {}
   }
-  syncAllAiEmbeds._lastSig = "";
-  syncAiEmbedsLive._lastSig = "";
   normalizeColumnWidths();
   syncAllColumnWidthsToDom();
-  setAiEmbedLayoutPaused(false);
+  requestColumnResizeInteract(false);
+  syncAllAiEmbeds._lastSig = "";
   syncAllAiEmbeds(true);
+  delete pushUnifiedColumnRails._sig;
+  requestAnimationFrame(pushUnifiedColumnRails);
   schedulePersistSession(80);
 }
 function applyCoupledColumnWidths(leftCol, rightCol, leftW, rightW) {
@@ -1416,23 +1838,29 @@ function applyCoupledColumnWidths(leftCol, rightCol, leftW, rightW) {
 function startDividerResize(e, leftCol, rightCol, handleEl) {
   e.preventDefault();
   e.stopPropagation();
-  beginColumnResizeSession(handleEl);
-  const startX = e.clientX;
   const startLeftW = columnWidthPx(leftCol);
   const startRightW = columnWidthPx(rightCol);
-  try { handleEl.setPointerCapture(e.pointerId); } catch (_) {}
+  if (requestNativeColumnResizeBegin(leftCol, rightCol)) {
+    beginColumnResizeSession(handleEl);
+    return;
+  }
+  beginColumnResizeSession(handleEl);
+  const startX = e.clientX;
+  try { if (handleEl) handleEl.setPointerCapture(e.pointerId); } catch (_) {}
   function onMove(ev) {
+    if (ev.pointerId !== e.pointerId) return;
     resizeCoupledPair(leftCol, rightCol, startLeftW, startRightW, ev.clientX - startX);
   }
   function onUp(ev) {
-    handleEl.removeEventListener("pointermove", onMove);
-    handleEl.removeEventListener("pointerup", onUp);
-    handleEl.removeEventListener("pointercancel", onUp);
+    if (ev.pointerId !== e.pointerId) return;
+    document.removeEventListener("pointermove", onMove);
+    document.removeEventListener("pointerup", onUp);
+    document.removeEventListener("pointercancel", onUp);
     endColumnResizeSession(handleEl, ev);
   }
-  handleEl.addEventListener("pointermove", onMove);
-  handleEl.addEventListener("pointerup", onUp);
-  handleEl.addEventListener("pointercancel", onUp);
+  document.addEventListener("pointermove", onMove);
+  document.addEventListener("pointerup", onUp);
+  document.addEventListener("pointercancel", onUp);
 }
 function startColumnResize(e, col, side, handleEl) {
   e.preventDefault();
@@ -1446,6 +1874,7 @@ function startColumnResize(e, col, side, handleEl) {
   const startNextW = nextCol ? columnWidthPx(nextCol) : 0;
   try { handleEl.setPointerCapture(e.pointerId); } catch (_) {}
   function onMove(ev) {
+    if (ev.pointerId !== e.pointerId) return;
     const dx = ev.clientX - startX;
     if (side === "right" && nextCol) {
       resizeCoupledPair(col, nextCol, startW, startNextW, dx);
@@ -1464,14 +1893,15 @@ function startColumnResize(e, col, side, handleEl) {
     }
   }
   function onUp(ev) {
-    handleEl.removeEventListener("pointermove", onMove);
-    handleEl.removeEventListener("pointerup", onUp);
-    handleEl.removeEventListener("pointercancel", onUp);
+    if (ev.pointerId !== e.pointerId) return;
+    document.removeEventListener("pointermove", onMove);
+    document.removeEventListener("pointerup", onUp);
+    document.removeEventListener("pointercancel", onUp);
     endColumnResizeSession(handleEl, ev);
   }
-  handleEl.addEventListener("pointermove", onMove);
-  handleEl.addEventListener("pointerup", onUp);
-  handleEl.addEventListener("pointercancel", onUp);
+  document.addEventListener("pointermove", onMove);
+  document.addEventListener("pointerup", onUp);
+  document.addEventListener("pointercancel", onUp);
 }
 function createColumnRoot(col, idx, oldCliFrames) {
   const root = document.createElement("article");
@@ -1490,7 +1920,7 @@ function createColumnRoot(col, idx, oldCliFrames) {
         "<button type=\"button\" class=\"uwb-col-btn\" data-act=\"close\" title=\"关闭\">×</button>" +
       "</div>" +
     "</header><div class=\"uwb-col-body\"></div>" +
-    "<footer class=\"uwb-col-foot\"><span class=\"uwb-col-foot-hint\">列底拖动列宽</span></footer>";
+    "<footer class=\"uwb-col-foot\"><span class=\"uwb-col-foot-hint\">按住列间竖线左右拖动调宽</span></footer>";
   root.addEventListener("pointerdown", function (e) {
     if (e.target.closest(".uwb-col-resize, .uwb-col-head-split, .uwb-col-foot-split, .uwb-col-divider")) return;
     if (isColumnResizing()) return;
@@ -1507,7 +1937,7 @@ function updateColumnRoot(root, col) {
   if (!root.querySelector(".uwb-col-foot")) {
     const foot = document.createElement("footer");
     foot.className = "uwb-col-foot";
-    foot.innerHTML = "<span class=\"uwb-col-foot-hint\">列底拖动列宽</span>";
+    foot.innerHTML = "<span class=\"uwb-col-foot-hint\">按住列间竖线左右拖动调宽</span>";
     root.appendChild(foot);
   }
   root.style.setProperty("--col-w", String(columnWidthPx(col)) + "px");
@@ -1549,12 +1979,14 @@ function syncVirtualDividers() {
 }
 function renderColumnsFlex(oldCliFrames) {
   const wrap = document.getElementById("columns");
+  const layoutCols = columnsForLayout();
   wrap.classList.remove("virtualized");
   wrap.innerHTML = "";
-  state.columns.forEach(function (col, idx) {
-    wrap.appendChild(createColumnRoot(col, idx, oldCliFrames));
-    if (idx < state.columns.length - 1)
-      wrap.appendChild(createColumnDivider(col, state.columns[idx + 1]));
+  layoutCols.forEach(function (col, idx) {
+    const globalIdx = state.columns.findIndex(function (c) { return c.id === col.id; });
+    wrap.appendChild(createColumnRoot(col, globalIdx >= 0 ? globalIdx : idx, oldCliFrames));
+    if (idx < layoutCols.length - 1)
+      wrap.appendChild(createColumnDivider(col, layoutCols[idx + 1]));
   });
 }
 function renderColumnsVirtual(oldCliFrames) {
@@ -1666,12 +2098,8 @@ function nextAvailableAiEngine() {
   return firstAi();
 }
 function defaultColumnWidth() {
-  const n = Math.max(1, state.defaultAiColumns + state.defaultCliColumns);
-  if (n <= 3) return 520;
-  if (n <= 4) return 480;
-  if (n <= 6) return 440;
-  if (n <= 10) return 400;
-  return 360;
+  const n = Math.max(1, state.columns.length || (state.defaultAiColumns + state.defaultCliColumns));
+  return computeFitColumnWidth(n);
 }
 function columnTitle(base, type) {
   const prefix = type === "cli" ? "CLI" : "AI";
@@ -1812,7 +2240,14 @@ function addColumn(type, opts) {
   }
   invalidateColumnMetrics();
   state.columns.push(col);
-  appendColumnDom(col);
+  if (col.type === "ai" && state.useScWebEmbedAi) {
+    render();
+  } else if (fitColumnsToViewport({ redistributeAll: true })) {
+    renderColumns();
+    syncAllColumnWidthsToDom();
+  } else {
+    appendColumnDom(col);
+  }
   renderSidebar();
   setFocus(col.id);
   preserveCliColumns();
@@ -1833,6 +2268,7 @@ function removeColumn(id) {
   state.columns.splice(idx, 1);
   if (!state.columns.length) addColumn("ai");
   else if (wasFocused) setFocus(state.columns[Math.max(0, idx - 1)].id);
+  fitColumnsToViewport({ redistributeAll: true });
   render();
   preserveCliColumns();
   scheduleAiEmbedSync(100);
@@ -1856,7 +2292,11 @@ function setFocus(id) {
   postToAhk({ type: "column_focus", columnId: id, columnType: col.type, engine: col.engine || "", siteId: col.siteId || "" });
   updateFocusUi();
   if (col.type === "ai") {
-    postToAhk({ type: "webLlmFocusSite", siteId: col.siteId || "", preserveLayout: true });
+    if (typeof setWebEmbedFocusSite === "function") {
+      setWebEmbedFocusSite(col.siteId || "", true);
+    } else {
+      postToAhk({ type: "webLlmFocusSite", siteId: col.siteId || "", preserveLayout: true });
+    }
     if (shouldVirtualizeColumns()) scrollColumnIntoView(col.id);
     scheduleAiEmbedSync(80);
   } else if (col.type === "cli") ensureCli(col);
@@ -2074,13 +2514,26 @@ function renderSidebar() {
   updateSidebarFocus();
 }
 function renderColumns() {
+  syncUwbStageLayout();
   const wrap = document.getElementById("columns");
   const oldCliFrames = harvestCliFrames(wrap);
-  if (shouldVirtualizeColumns()) renderColumnsVirtual(oldCliFrames);
-  else renderColumnsFlex(oldCliFrames);
+  if (uwbHasCliColumns()) {
+    if (shouldVirtualizeColumns()) renderColumnsVirtual(oldCliFrames);
+    else renderColumnsFlex(oldCliFrames);
+  } else if (wrap) {
+    wrap.classList.remove("virtualized");
+    wrap.innerHTML = "";
+  }
   updateFocusUi();
   updateAiPlaceholderHints();
   updateComposeTargetUi();
+  if (state.useScWebEmbedAi && uwbHasAiColumns()) {
+    refreshWebEmbedUi(false);
+  } else {
+    requestAnimationFrame(function () {
+      requestAnimationFrame(pushUnifiedColumnRails);
+    });
+  }
 }
 function cliUrlsEquivalent(a, b) {
   try {
@@ -2152,9 +2605,36 @@ function observeColumnStage() {
   if (!stage || !window.ResizeObserver) return;
   observeColumnStage._ro = new ResizeObserver(function () {
     if (isColumnResizing()) return;
-    scheduleLayoutSync(false, 80);
+    onEmbedViewportGeometryChanged();
   });
   observeColumnStage._ro.observe(stage);
+}
+function onEmbedViewportGeometryChanged() {
+  if (state.useScWebEmbedAi) {
+    nudgeWebEmbedLayout(false);
+    return;
+  }
+  const vp = measureEmbedViewport();
+  if (!vp) return;
+  const sig = vp.left + "," + vp.top + "," + vp.width + "," + vp.height;
+  if (onEmbedViewportGeometryChanged._sig === sig) return;
+  onEmbedViewportGeometryChanged._sig = sig;
+  syncAllAiEmbeds._lastSig = "";
+  delete pushUnifiedColumnRails._sig;
+  scheduleLayoutSync(false, 60);
+  requestAnimationFrame(pushUnifiedColumnRails);
+}
+function observeEmbedViewport() {
+  if (observeEmbedViewport._ro) return;
+  const stage = state.useScWebEmbedAi
+    ? document.getElementById("web-embed-scroll-viewport")
+  : document.querySelector(".uwb-stage");
+  if (!stage || !window.ResizeObserver) return;
+  observeEmbedViewport._ro = new ResizeObserver(function () {
+    if (isColumnResizing()) return;
+    onEmbedViewportGeometryChanged();
+  });
+  observeEmbedViewport._ro.observe(stage);
 }
 function postInitialFocusOnce() {
   if (postInitialFocusOnce._done || !canAutoBootstrap()) return;
@@ -2190,7 +2670,7 @@ function pulseAiActivation(reason) {
 function syncLayoutOnce(includeCli) {
   if (isColumnResizing()) return;
   if (!canAutoBootstrap()) return;
-  ensureAiSlotDom();
+  if (!state.useScWebEmbedAi) ensureAiSlotDom();
   syncAllAiEmbeds(false);
   updateComposeTargetUi();
   if (includeCli) bootstrapAllCliColumns();
@@ -2519,6 +2999,15 @@ function requestUwbDebugSnapshot() {
   }
 }
 function buildUwbDebugRebootstrapPayload() {
+  syncUwbWebEmbedSites();
+  ensureUwbWebEmbedColumnWidths();
+  if (state.useScWebEmbedAi) {
+    return {
+      type: "webEmbedDebugAction",
+      action: "rebootstrap_sc_embed",
+      client: buildUwbClientDebugSnapshot()
+    };
+  }
   const targets = listAiEmbedColumns();
   const aiColumns = [];
   const seen = new Set();
@@ -2577,7 +3066,7 @@ function handleUwbDebugActionResult(payload) {
   const ok = !!(payload && payload.ok);
   uwbDebugLog(ok ? "info" : "error", "action " + act + (ok ? " OK" : " FAIL") + (payload && payload.error ? ": " + payload.error : ""));
   if (act === "copy_trace" && ok) toast("诊断已复制到剪贴板");
-  if (act === "rebootstrap") setTimeout(requestUwbDebugSnapshot, 400);
+  if (act === "rebootstrap" || act === "rebootstrap_sc_embed") setTimeout(requestUwbDebugSnapshot, 400);
 }
 function embedCoordScale() {
   const dpr = typeof window.devicePixelRatio === "number" ? window.devicePixelRatio : 1;
@@ -2587,12 +3076,16 @@ function withEmbedCoordMeta(rect, coordSpace) {
   if (!rect) return rect;
   const out = Object.assign({}, rect);
   if (coordSpace) out.coordSpace = coordSpace;
+  out.dpr = embedCoordScale();
   return out;
 }
 function measureEmbedViewport() {
-  const stage = document.querySelector(".uwb-stage") || document.getElementById("columns");
-  if (!stage) return null;
-  const r = stage.getBoundingClientRect();
+  const columns = document.getElementById("columns");
+  const stage = document.querySelector(".uwb-stage");
+  const el = columns || stage;
+  if (!el) return null;
+  void el.offsetHeight;
+  const r = el.getBoundingClientRect();
   if (r.width < 80 || r.height < 80) return null;
   return withEmbedCoordMeta({
     left: Math.round(r.left),
@@ -2618,21 +3111,28 @@ function measureAiColumnBodyRect(col) {
   };
 }
 function measureAiColumnEmbedRect(col) {
+  const bodyRect = measureAiColumnBodyRect(col);
   const root = document.querySelector("[data-column-id='" + col.id + "'] .uwb-ai-embed-slot")
     || document.querySelector("[data-column-id='" + col.id + "'] .uwb-col-body");
   if (root) {
     void root.offsetWidth;
     const r = root.getBoundingClientRect();
     if (r.width >= 80 && r.height >= 60) {
+      let top = Math.round(r.top);
+      let height = Math.round(r.height);
+      if (bodyRect) {
+        top = bodyRect.top;
+        height = Math.max(60, Math.round(bodyRect.height - 2));
+      }
       return withEmbedCoordMeta({
         left: Math.round(r.left),
-        top: Math.round(r.top),
+        top: top,
         width: Math.round(r.width),
-        height: Math.round(r.height)
+        height: height
       });
     }
   }
-  return measureAiColumnRectLayout(col);
+  return bodyRect ? withEmbedCoordMeta(bodyRect) : measureAiColumnRectLayout(col);
 }
 function measureAiColumnRectLayout(col) {
   const stage = document.getElementById("columns");
@@ -2684,6 +3184,13 @@ function syncAllAiEmbeds(force) {
   if (!state.columns.length) return;
   if (!canAutoBootstrap()) {
     uwbDebugLog("warn", "sync skip: canAutoBootstrap=false hostLive=" + !!state.hostLive + " armed=" + !!state.hostArmed);
+    return;
+  }
+  if (!uwbHasAiColumns()) return;
+  if (state.useScWebEmbedAi) {
+    syncUwbStageLayout();
+    refreshWebEmbedUi(!!force);
+    if (!isColumnResizing()) renderSidebar();
     return;
   }
   const targets = listAiEmbedColumns();
@@ -2738,11 +3245,14 @@ function syncAllAiEmbeds(force) {
       postToAhk({
         type: "webLlmBootstrap",
         aiColumns: aiColumns,
+        allColumns: collectAllWebColumnsPayload(),
         embedViewport: embedViewport,
         maxActiveAiEmbeds: state.maxActiveAiEmbeds,
         selectedEngines: aiColumns.map((c) => c.siteId),
         focusSiteId: focusSiteId
       });
+      delete pushUnifiedColumnRails._sig;
+      requestAnimationFrame(pushUnifiedColumnRails);
       if (!isColumnResizing()) renderSidebar();
       if (focusSiteId && force) {
         postToAhk({ type: "webLlmFocusSite", siteId: focusSiteId, preserveLayout: true });
@@ -2802,12 +3312,18 @@ function applyInit(payload, opts) {
     document.documentElement.setAttribute("data-theme", state.themeMode);
     state.aiEngines = Array.isArray(payload.aiEngines) ? payload.aiEngines.slice() : state.aiEngines;
     state.cliEngines = Array.isArray(payload.cliEngines) ? payload.cliEngines.slice() : state.cliEngines;
+    if (Array.isArray(payload.selectedEngines) && payload.selectedEngines.length) {
+      state.selectedEngines = payload.selectedEngines.filter(Boolean).slice();
+      state.webEmbedBroadcastSites = state.selectedEngines.slice();
+    }
     if (payload.initialIntent)
       state.initialIntent = String(payload.initialIntent) === "cli" ? "cli" : "ai";
     applyLayoutPrefs(payload);
     if (softOnly) {
       state.initGen = (state.initGen || 0) + 1;
       renderSidebar();
+      syncUwbStageLayout();
+      if (state.useScWebEmbedAi && uwbHasAiColumns()) refreshWebEmbedUi(true);
       if (payload.keyword) {
         document.getElementById("compose").value = String(payload.keyword);
         autoSizeCompose();
@@ -2844,8 +3360,12 @@ function applyInit(payload, opts) {
       if (state.focusedColumnId) touchAiFocusLru(state.focusedColumnId);
     }
     render();
+    if (!restored) fitColumnsToViewport({ redistributeAll: true });
+    else fitColumnsToViewport();
     applySavedScrollLeft();
     observeColumnStage();
+    observeEmbedViewport();
+    onEmbedViewportGeometryChanged();
     document.getElementById("status").textContent = layoutStatusText();
     if (payload.keyword) {
       document.getElementById("compose").value = String(payload.keyword);
@@ -2938,7 +3458,11 @@ document.getElementById("compose").addEventListener("keydown", (e) => {
     submitCompose();
   }
 });
-window.addEventListener("resize", () => scheduleLayoutSync(false, 120));
+window.addEventListener("resize", () => {
+  if (!state.columnsCustomized && fitColumnsToViewport()) return;
+  onEmbedViewportGeometryChanged();
+  scheduleLayoutSync(false, 120);
+});
 document.getElementById("columns").addEventListener("scroll", () => {
   if (isColumnResizing()) return;
   clearTimeout(syncAllAiEmbeds._scrollT);
@@ -2949,6 +3473,138 @@ document.getElementById("columns").addEventListener("scroll", () => {
   }, 20);
 });
 observeColumnStage();
+observeEmbedViewport();
+function applyUnifiedColumnLayoutState(payload) {
+  if (state.useScWebEmbedAi) {
+    if (typeof applyWebLlmColumnLayoutState === "function") {
+      applyWebLlmColumnLayoutState(payload);
+      if (typeof syncWebEmbedScrollNav === "function") syncWebEmbedScrollNav();
+    }
+    return;
+  }
+  if (!payload || !Array.isArray(payload.columns)) return;
+  const dragging = !!payload.dragging;
+  const byId = new Map();
+  payload.columns.forEach(function (c) {
+    const id = String(c.columnId || c.id || "").trim();
+    if (!id) return;
+    byId.set(id, clampColumnWidth(c.width));
+  });
+  if (!byId.size) return;
+  let changed = false;
+  state.columns.forEach(function (col) {
+    if (!byId.has(col.id)) return;
+    const w = byId.get(col.id);
+    if (columnWidthPx(col) !== w) {
+      col.width = w;
+      changed = true;
+    }
+  });
+  if (!changed && !dragging) return;
+  delete pushUnifiedColumnRails._sig;
+  invalidateColumnMetrics();
+  syncAllColumnWidthsToDom();
+  if (shouldVirtualizeColumns()) {
+    if (dragging) patchVirtualColumnWidthsLive();
+    else refreshVirtualColumnWindow();
+  }
+  if (dragging) {
+    if (!isColumnResizing()) {
+      state.columnResizeActive = true;
+      const stage = document.getElementById("columns");
+      if (stage) stage.classList.add("uwb-resizing");
+    }
+    scheduleAiEmbedsLiveSync();
+  } else {
+    const wasRailResize = !!state.columnResizeActive;
+    state.columnResizeActive = false;
+    delete syncAiEmbedsLive._sig;
+    if (wasRailResize) {
+      state.columnsCustomized = true;
+    }
+    const stage = document.getElementById("columns");
+    if (stage) stage.classList.remove("uwb-resizing");
+    document.querySelectorAll(".uwb-col-divider.dragging, .uwb-col-head-split.dragging, .uwb-col-foot-split.dragging").forEach(function (el) {
+      el.classList.remove("dragging");
+    });
+    if (wasRailResize || payload.persist) {
+      syncAllAiEmbeds._lastSig = "";
+      syncAllAiEmbeds(true);
+      delete pushUnifiedColumnRails._sig;
+      requestAnimationFrame(pushUnifiedColumnRails);
+    } else {
+      scheduleAiEmbedSync(40);
+    }
+  }
+  if (payload.persist) schedulePersistSession(80);
+}
+function applyHostColumnLayoutState(payload) {
+  if (!payload || !Array.isArray(payload.columns)) return;
+  if (state.useScWebEmbedAi && typeof applyWebLlmColumnLayoutState === "function") {
+    const mapped = {
+      columns: payload.columns.map(function (c) {
+        return { id: String(c.id || c.siteId || "").trim(), width: c.width };
+      }).filter(function (c) { return c.id; }),
+      scrollX: payload.scrollX,
+      dragging: payload.dragging,
+      persist: payload.persist,
+      fillExtra: payload.fillExtra
+    };
+    applyWebLlmColumnLayoutState(mapped);
+    if (typeof syncWebEmbedScrollNav === "function") syncWebEmbedScrollNav();
+    return;
+  }
+  const dragging = !!payload.dragging;
+  const bySite = new Map();
+  payload.columns.forEach(function (c) {
+    const sid = String(c.id || c.siteId || "").trim();
+    if (!sid) return;
+    bySite.set(sid, clampColumnWidth(c.width));
+  });
+  if (!bySite.size) return;
+  let changed = false;
+  state.columns.forEach(function (col) {
+    if (col.type !== "ai") return;
+    const sid = String(col.siteId || "").trim();
+    if (!sid || !bySite.has(sid)) return;
+    const w = bySite.get(sid);
+    if (columnWidthPx(col) !== w) {
+      col.width = w;
+      changed = true;
+    }
+  });
+  if (!changed) return;
+  invalidateColumnMetrics();
+  syncAllColumnWidthsToDom();
+  if (shouldVirtualizeColumns()) {
+    if (dragging) patchVirtualColumnWidthsLive();
+    else refreshVirtualColumnWindow();
+  }
+  if (dragging) {
+    if (!isColumnResizing()) {
+      state.columnResizeActive = true;
+      const stage = document.getElementById("columns");
+      if (stage) stage.classList.add("uwb-resizing");
+    }
+    scheduleAiEmbedsLiveSync();
+  } else {
+    const wasRailResize = !!state.columnResizeActive;
+    state.columnResizeActive = false;
+    delete syncAiEmbedsLive._sig;
+    if (wasRailResize) {
+      state.columnsCustomized = true;
+    }
+    if (wasRailResize) {
+      syncAllAiEmbeds._lastSig = "";
+      syncAllAiEmbeds(true);
+      delete pushUnifiedColumnRails._sig;
+      requestAnimationFrame(pushUnifiedColumnRails);
+    } else {
+      scheduleAiEmbedSync(40);
+    }
+  }
+  if (payload.persist) schedulePersistSession(80);
+}
 function handleHostPayload(payload) {
   if (typeof payload === "string") {
     try { payload = JSON.parse(payload); } catch (_) { return; }
@@ -2976,7 +3632,22 @@ function handleHostPayload(payload) {
   else if (payload.type === "ttyd_ready") handleTtydReady(payload);
   else if (payload.type === "ttyd_error") handleTtydError(payload);
   else if (payload.type === "focusCliFrame") focusCliFrame(payload.engine || "");
-  else if (payload.type === "hostLayout" || payload.type === "hostPaintNudge") scheduleLayoutSync(!!payload.includeCli, 160);
+  else if (payload.type === "hostLayout" || payload.type === "hostPaintNudge") {
+    if (state.useScWebEmbedAi && uwbHasAiColumns()) {
+      nudgeWebEmbedLayout(true);
+    } else {
+      scheduleLayoutSync(!!payload.includeCli, 160);
+    }
+  }
+  else if (payload.type === "webLlmChromeState" && typeof applyWebLlmChromeState === "function") applyWebLlmChromeState(payload);
+  else if (payload.type === "webLlmColumnLayoutState") {
+    if (typeof applyWebLlmColumnLayoutState === "function") {
+      applyWebLlmColumnLayoutState(payload);
+      if (typeof syncWebEmbedScrollNav === "function") syncWebEmbedScrollNav();
+    } else {
+      applyHostColumnLayoutState(payload);
+    }
+  }
   else if (payload.type === "requestLayoutSnapshot") persistSessionNow();
   else if (payload.type === "webEmbedDebugResult") handleUwbDebugResult(payload);
   else if (payload.type === "webEmbedDebugActionResult") handleUwbDebugActionResult(payload);
@@ -2997,6 +3668,43 @@ setTimeout(function () {
     }, 500);
   }
 }, 1200);
+</script>
+<script src="https://app.local/assets/js/sc-web-embed.js"></script>
+<script>
+if (typeof validateWebEmbedCatalog === "function") validateWebEmbedCatalog();
+if (typeof isWebEmbedActive === "function") {
+  window._scIsWebEmbedActiveOrig = isWebEmbedActive;
+  isWebEmbedActive = function () {
+    if (state.useScWebEmbedAi && typeof uwbHasAiColumns === "function" && uwbHasAiColumns()) return true;
+    return window._scIsWebEmbedActiveOrig();
+  };
+}
+if (typeof initWebEmbedDebugPanel === "function") {
+  initWebEmbedDebugPanel = function () {
+    const dbg = document.getElementById("webllm-btn-debug");
+    if (dbg && !dbg.getAttribute("data-uwb-bound")) {
+      dbg.setAttribute("data-uwb-bound", "1");
+      dbg.addEventListener("click", function () { toggleUwbDebugPanel(); });
+    }
+  };
+}
+if (typeof initWebLlmToolbar === "function" && !refreshWebEmbedUi._toolbarReady) {
+  refreshWebEmbedUi._toolbarReady = true;
+  initWebLlmToolbar();
+}
+window.addEventListener("resize", function () {
+  if (state.useScWebEmbedAi && typeof scheduleWebEmbedContentRect === "function") {
+    scheduleWebEmbedContentRect(false);
+  }
+});
+document.body.classList.add("sc-web-embed-layout");
+const _uwbMain = document.getElementById("uwb-main");
+if (_uwbMain) _uwbMain.classList.add("sc-web-embed-active");
+if (state.useScWebEmbedAi && typeof uwbHasAiColumns === "function" && uwbHasAiColumns()) {
+  ensureUwbWebEmbedColumnWidths();
+  setTimeout(function () { refreshWebEmbedUi(true); }, 80);
+  setTimeout(function () { refreshWebEmbedUi(true); }, 320);
+}
 </script>
 </body>
 </html>
