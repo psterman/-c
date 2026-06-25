@@ -382,6 +382,7 @@ function renderWebEmbedColumnTrack() {
   renderWebEmbedTabBar();
   animateWebEmbedFocusFrame(getWebEmbedActiveEngine(), true);
   syncWebEmbedHScrollUi();
+  syncWebEmbedWorkbenchLayoutClasses();
 }
 
 function syncWebEmbedColumnSlotWidths(columns) {
@@ -510,11 +511,12 @@ function getWebEmbedColumnSlotMetrics(siteId) {
   const track = document.getElementById("web-embed-scroll-track");
   const slot = document.querySelector('.web-embed-column-slot[data-site="' + String(siteId || "") + '"]');
   if (!track || !slot) return null;
-  const padX = 5;
-  const padY = 6;
+  const aiCard = document.body.classList.contains("wb-ai-layout");
+  const padX = aiCard ? 0 : 5;
+  const padY = aiCard ? 0 : 6;
   const left = slot.offsetLeft + padX;
   const width = Math.max(28, slot.offsetWidth - padX * 2);
-  const height = Math.max(0, track.clientHeight - padY * 2);
+  const height = Math.max(0, (aiCard ? slot.offsetHeight : track.clientHeight) - padY * 2);
   return { left, width, top: padY, height };
 }
 
@@ -661,6 +663,7 @@ function syncWebEmbedTabBar(immediateIndicator) {
   syncWebEmbedOmnibarBadge(focus);
   animateWebEmbedTabIndicator(focus, !!immediateIndicator);
   syncWebModeNavAiRows();
+  syncWebEmbedWorkbenchLayoutClasses();
 }
 
 const SC_WEB_EMBED_INPUT_HINT = "输入问题，向所有AI提问";
@@ -1006,7 +1009,7 @@ function setWebEmbedScrollPx(px, postHost = true, options = null) {
   if (!isDrag && maxScroll > 0 && target >= maxScroll - 2) {
     const sites = getWebEmbedLayoutSites();
     const last = sites.length ? sites[sites.length - 1] : "";
-    if (last) postToAhk({ type: "webLlmFocusSite", siteId: last });
+    if (last) scheduleWebEmbedFocusHost(last);
   }
 }
 
@@ -1132,6 +1135,50 @@ function initWebEmbedScrollNav() {
   }
 }
 
+let _scWebEmbedFocusHostDebounce = 0;
+let _scWebEmbedPendingFocusHost = "";
+
+function syncWebEmbedFocusScrollToHost(finalize) {
+  if (!isWebEmbedActive()) return;
+  const viewport = document.getElementById("web-embed-scroll-viewport");
+  if (!viewport) return;
+  const sites = getWebEmbedLayoutSites();
+  const vpW = getWebEmbedViewportWidthPx();
+  const stripW = getWebEmbedStripWidth(sites);
+  const maxScroll = getWebEmbedMaxScrollPx();
+  const scrollX = Math.min(Math.max(0, Math.round(viewport.scrollLeft || 0)), maxScroll);
+  const payload = {
+    type: "webLlmScroll",
+    scrollX,
+    viewportWidth: vpW,
+    stripWidth: stripW
+  };
+  if (finalize) payload.finalize = true;
+  flushWebEmbedScrollHostSync(payload);
+}
+
+function flushWebEmbedFocusHost() {
+  _scWebEmbedFocusHostDebounce = 0;
+  const eng = String(_scWebEmbedPendingFocusHost || "").trim();
+  _scWebEmbedPendingFocusHost = "";
+  if (!eng) return;
+  const sites = getWebEmbedLayoutSites();
+  const inLayout = sites.indexOf(eng) >= 0;
+  if (!inLayout) {
+    postToAhk({ type: "syncSelectedEngines", selectedEngines: sites.slice() });
+  }
+  syncWebEmbedFocusScrollToHost(true);
+  postToAhk({ type: "webLlmFocusSite", siteId: eng });
+}
+
+function scheduleWebEmbedFocusHost(siteId) {
+  const eng = String(siteId || "").trim();
+  if (!eng) return;
+  _scWebEmbedPendingFocusHost = eng;
+  if (_scWebEmbedFocusHostDebounce) clearTimeout(_scWebEmbedFocusHostDebounce);
+  _scWebEmbedFocusHostDebounce = setTimeout(flushWebEmbedFocusHost, 80);
+}
+
 function setWebEmbedFocusSite(siteId, postHost = true) {
   const eng = String(siteId || "").trim();
   if (!eng) return;
@@ -1151,18 +1198,13 @@ function setWebEmbedFocusSite(siteId, postHost = true) {
     }
     scrollWebEmbedColumnIntoView(eng, false);
     if (postHost) {
-      const sites = getWebEmbedLayoutSites();
-      const inLayout = sites.indexOf(eng) >= 0;
-      if (!inLayout) {
-        postToAhk({ type: "syncSelectedEngines", selectedEngines: sites.slice() });
-      }
-      postToAhk({ type: "webLlmFocusSite", siteId: eng });
+      scheduleWebEmbedFocusHost(eng);
     } else {
       scrollWebEmbedColumnIntoView(eng, true);
     }
     syncWebEmbedScrollNav();
   } else if (postHost) {
-    postToAhk({ type: "webLlmFocusSite", siteId: eng });
+    scheduleWebEmbedFocusHost(eng);
   }
 }
 
@@ -1246,6 +1288,25 @@ function isWebEmbedComposeBottom() {
     || document.body.classList.contains("uwb-layout");
 }
 
+function syncWebEmbedWorkbenchLayoutClasses() {
+  if (!document.body.classList.contains("wb-ai-layout")) return;
+  const sites = getWebEmbedLayoutSites();
+  const n = sites.length;
+  const single = n === 1;
+  const multi = n > 1;
+  const track = document.getElementById("web-embed-scroll-track");
+  if (track) {
+    track.classList.toggle("has-single-column", single);
+    track.classList.toggle("has-multi-column", multi);
+  }
+  const ws = document.getElementById("web-embed-workspace");
+  if (ws) {
+    ws.classList.toggle("has-single-column", single);
+    ws.classList.toggle("has-multi-column", multi);
+  }
+  document.body.classList.toggle("wb-ai-broadcast", getWebEmbedBroadcastSites().length > 1);
+}
+
 function ensureWebEmbedOmnibarUrlHost() {
   const slot = document.getElementById("web-embed-search-slot");
   if (!slot) return null;
@@ -1311,8 +1372,35 @@ function getWebEmbedComposeBottomEl() {
 }
 
 function getWebEmbedHostMeasureEl() {
-  return document.getElementById("web-embed-host-frame")
-    || document.getElementById("web-embed-scroll-viewport");
+  return document.getElementById("web-embed-scroll-viewport")
+    || document.getElementById("web-embed-host-frame");
+}
+
+function getWebEmbedHScrollReservePx() {
+  const row = document.getElementById("web-embed-hscroll-row");
+  if (!row || row.classList.contains("hidden")) return 0;
+  const r = row.getBoundingClientRect();
+  return Math.max(0, Math.round(r.height || row.offsetHeight || 0));
+}
+
+function getWebEmbedAiCardBottomPx() {
+  const hscroll = document.getElementById("web-embed-hscroll-row");
+  if (hscroll && !hscroll.classList.contains("hidden")) {
+    const hr = hscroll.getBoundingClientRect();
+    if (hr.top > 0) return Math.round(hr.top);
+  }
+  const slot = document.querySelector(".web-embed-column-slot");
+  if (slot) return Math.round(slot.getBoundingClientRect().bottom);
+  const frame = document.getElementById("web-embed-host-frame");
+  if (frame) {
+    const fr = frame.getBoundingClientRect();
+    const cs = getComputedStyle(frame);
+    const borderB = parseFloat(cs.borderBottomWidth) || 0;
+    return Math.round(fr.bottom - borderB);
+  }
+  const viewport = document.getElementById("web-embed-scroll-viewport");
+  if (viewport) return Math.round(viewport.getBoundingClientRect().bottom);
+  return 0;
 }
 
 function getWebEmbedComposeReservePx() {
@@ -1355,27 +1443,38 @@ function measureWebEmbedHostRect() {
     height = Math.max(0, Math.round(box.height - borderT - borderB));
   }
   if (isWebEmbedComposeBottom()) {
-    const compose = getWebEmbedComposeBottomEl();
-    const toolbar = document.getElementById("web-embed-toolbar");
-    const anchorTop = toolbar ? Math.round(toolbar.getBoundingClientRect().bottom) : top;
-    const stage = document.getElementById("wb-stage");
-    if (stage) {
-      const sb = stage.getBoundingClientRect();
-      if (sb.bottom > anchorTop + 40) {
-        const stageCap = Math.round(sb.bottom - anchorTop - 4);
-        if (stageCap >= 100) {
-          top = anchorTop;
-          height = Math.min(height, stageCap);
+    if (document.body.classList.contains("wb-ai-layout")) {
+      const cardBottom = getWebEmbedAiCardBottomPx();
+      if (cardBottom > top + 100) {
+        height = Math.min(height, cardBottom - top);
+      }
+    } else {
+      const hscrollReserve = getWebEmbedHScrollReservePx();
+      if (hscrollReserve > 0) {
+        height = Math.max(0, height - hscrollReserve);
+      }
+      const compose = getWebEmbedComposeBottomEl();
+      const toolbar = document.getElementById("web-embed-toolbar");
+      const anchorTop = toolbar ? Math.round(toolbar.getBoundingClientRect().bottom) : top;
+      const stage = document.getElementById("wb-stage");
+      if (stage) {
+        const sb = stage.getBoundingClientRect();
+        if (sb.bottom > anchorTop + 40) {
+          const stageCap = Math.round(sb.bottom - anchorTop - 4);
+          if (stageCap >= 100) {
+            top = anchorTop;
+            height = Math.min(height, stageCap);
+          }
         }
       }
-    }
-    if (compose) {
-      const cb = compose.getBoundingClientRect();
-      if (cb.top > anchorTop + 8) {
-        const capH = Math.round(cb.top - anchorTop - 4);
-        if (capH >= 100) {
-          top = anchorTop;
-          height = Math.min(height, capH);
+      if (compose) {
+        const cb = compose.getBoundingClientRect();
+        if (cb.top > anchorTop + 8) {
+          const capH = Math.round(cb.top - anchorTop - 4);
+          if (capH >= 100) {
+            top = anchorTop;
+            height = Math.min(height, capH);
+          }
         }
       }
     }
@@ -1403,6 +1502,8 @@ function ensureWebEmbedLayoutObserver() {
   if (frame) _scWebEmbedLayoutRo.observe(frame);
   const hostFrame = document.getElementById("web-embed-host-frame");
   if (hostFrame) _scWebEmbedLayoutRo.observe(hostFrame);
+  const hscrollRow = document.getElementById("web-embed-hscroll-row");
+  if (hscrollRow) _scWebEmbedLayoutRo.observe(hscrollRow);
   const track = document.getElementById("web-embed-scroll-track");
   if (track) _scWebEmbedLayoutRo.observe(track);
   const bar = document.getElementById("web-embed-toolbar");
@@ -1517,6 +1618,7 @@ function syncWebEmbedLayout() {
     renderWebModeNavBody();
     renderEngines();
   }
+  syncWebEmbedWorkbenchLayoutClasses();
 }
 
 function buildWebExternalEmptyStateHtml() {
@@ -1625,7 +1727,8 @@ function postWebEmbedContentRect(force) {
     height: Math.max(140, Math.round(r.height)),
     dpr: Number(window.devicePixelRatio) || 1,
     composeBottom: !!isWebEmbedComposeBottom(),
-    composeReservePx: getWebEmbedComposeReservePx()
+    composeReservePx: getWebEmbedComposeReservePx(),
+    hscrollReservePx: getWebEmbedHScrollReservePx()
   };
   const layoutPayload = buildWebEmbedColumnLayoutPayload();
   if (!force && key === _scWebEmbedLastRectKey) {

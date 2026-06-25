@@ -520,19 +520,26 @@ ScWebLlm_ApplyHostViewportClip(hostHwnd, colL, colW, colH, embedLeft, embedW) {
         }
         return false
     }
+    useRound := ScWebLlm_ShouldUseAiWbRoundHostClip()
     if (colL >= embedLeft && colRight <= embedRight) {
-        clipKey := "in" . "x" . colW
+        clipW := colW
+        clipH := colH
+        if useRound
+            ScWebLlm_GetHostClientSize(hostHwnd, &clipW, &clipH)
+        clipKey := useRound ? ("rin:" . clipW . "x" . clipH) : ("in" . "x" . colW)
         if !g_SCWebLlm_UnifiedLayoutLiveDrag {
             if g_SCWebLlm_HostClipCache.Has(hostHwnd) && (g_SCWebLlm_HostClipCache[hostHwnd] = clipKey)
                 return true
         }
-        prevClip := g_SCWebLlm_HostClipCache.Has(hostHwnd) ? g_SCWebLlm_HostClipCache[hostHwnd] : ""
         g_SCWebLlm_HostClipCache[hostHwnd] := clipKey
-        if (prevClip != "" && prevClip != "in") {
-            try DllCall("user32\SetWindowRgn", "Ptr", hostHwnd, "Ptr", 0, "Int", 1)
-            catch as e {
-                ScWebLlm_Catch(e)
-            }
+        if useRound {
+            rgn := ScWebLlm_CreateAiWbRoundHostRgn(0, 0, clipW, clipH)
+            if rgn && ScWebLlm_SetHostClipRegion(hostHwnd, rgn)
+                return true
+        }
+        try DllCall("user32\SetWindowRgn", "Ptr", hostHwnd, "Ptr", 0, "Int", 1)
+        catch as e {
+            ScWebLlm_Catch(e)
         }
         return true
     }
@@ -540,12 +547,43 @@ ScWebLlm_ApplyHostViewportClip(hostHwnd, colL, colW, colH, embedLeft, embedW) {
     visR := Min(colRight, embedRight)
     rgnL := visL - colL
     rgnR := visR - colL
-    clipKey := "c" . rgnL . "x" . rgnR . "x" . embedW . "x" . colW
+    clipW := colW
+    clipH := colH
+    if useRound
+        ScWebLlm_GetHostClientSize(hostHwnd, &clipW, &clipH)
+    clipKey := useRound ? ("rcr:" . rgnL . "x" . rgnR . "x" . clipW . "x" . clipH) : ("c" . rgnL . "x" . rgnR . "x" . embedW . "x" . colW)
     if !g_SCWebLlm_UnifiedLayoutLiveDrag {
         if g_SCWebLlm_HostClipCache.Has(hostHwnd) && (g_SCWebLlm_HostClipCache[hostHwnd] = clipKey)
             return true
     }
     g_SCWebLlm_HostClipCache[hostHwnd] := clipKey
+    if useRound {
+        roundRgn := ScWebLlm_CreateAiWbRoundHostRgn(0, 0, clipW, clipH)
+        if roundRgn {
+            visRgn := 0
+            comb := 0
+            try {
+                visRgn := DllCall("gdi32\CreateRectRgn", "Int", rgnL, "Int", 0, "Int", rgnR + 1, "Int", clipH + 1, "Ptr")
+                if visRgn {
+                    comb := DllCall("gdi32\CreateRectRgn", "Int", 0, "Int", 0, "Int", 1, "Int", 1, "Ptr")
+                    if comb && DllCall("gdi32\CombineRgn", "Ptr", comb, "Ptr", roundRgn, "Ptr", visRgn, "Int", 1) {
+                        DllCall("gdi32\DeleteObject", "Ptr", roundRgn)
+                        DllCall("gdi32\DeleteObject", "Ptr", visRgn)
+                        if ScWebLlm_SetHostClipRegion(hostHwnd, comb)
+                            return true
+                    }
+                }
+            } catch as e {
+                ScWebLlm_Catch(e)
+            }
+            if roundRgn
+                try DllCall("gdi32\DeleteObject", "Ptr", roundRgn)
+            if visRgn
+                try DllCall("gdi32\DeleteObject", "Ptr", visRgn)
+            if comb
+                try DllCall("gdi32\DeleteObject", "Ptr", comb)
+        }
+    }
     try {
         rgn := DllCall("gdi32\CreateRectRgn", "Int", rgnL, "Int", 0, "Int", rgnR, "Int", colH, "Ptr")
         if rgn {
@@ -732,6 +770,73 @@ ScWebLlm_IsAiWorkbenchHost() {
         }
     }
     return false
+}
+
+; 与 body.wb-ai-layout .web-embed-column-slot 的 --wb-ai-radius-lg 对齐
+ScWebLlm_AiWbHostCornerRadiusCss() {
+    return 14
+}
+
+ScWebLlm_ShouldUseAiWbRoundHostClip() {
+    if !ScWebLlm_IsAiWorkbenchHost()
+        return false
+    if ScWebLlm_IsRailDragging()
+        return false
+    global g_SCWebLlm_UnifiedLayoutLiveDrag, g_SCWebLlm_ScrollOnlyPass
+    if g_SCWebLlm_UnifiedLayoutLiveDrag || g_SCWebLlm_ScrollOnlyPass
+        return false
+    return true
+}
+
+ScWebLlm_CreateAiWbRoundHostRgn(rgnL, rgnT, rgnR, rgnB) {
+    w := rgnR - rgnL
+    h := rgnB - rgnT
+    if (w <= 0 || h <= 0)
+        return 0
+    rad := ScWebLlm_CssToPhysical(ScWebLlm_AiWbHostCornerRadiusCss())
+    maxR := Floor(Min(w, h) / 2)
+    if (rad > maxR)
+        rad := maxR
+    if (rad < 1)
+        return 0
+    ; GDI 圆角椭圆宽高 = 直径；与 CommandPalette 一致，右下坐标 +1
+    ellipse := rad * 2
+    try {
+        return DllCall("gdi32\CreateRoundRectRgn",
+            "Int", rgnL, "Int", rgnT, "Int", rgnR + 1, "Int", rgnB + 1,
+            "Int", ellipse, "Int", ellipse, "Ptr")
+    } catch as e {
+        ScWebLlm_Catch(e)
+        return 0
+    }
+}
+
+ScWebLlm_GetHostClientSize(hostHwnd, &cw, &ch) {
+    cw := 0
+    ch := 0
+    if !hostHwnd
+        return false
+    try {
+        WinGetClientPos(, , &cw, &ch, hostHwnd)
+        return (cw > 0 && ch > 0)
+    } catch as e {
+        ScWebLlm_Catch(e)
+        return false
+    }
+}
+
+ScWebLlm_SetHostClipRegion(hostHwnd, rgn) {
+    if !hostHwnd || !rgn
+        return false
+    try DllCall("user32\SetWindowRgn", "Ptr", hostHwnd, "Ptr", rgn, "Int", 1)
+    catch as e {
+        ScWebLlm_Catch(e)
+        try DllCall("gdi32\DeleteObject", "Ptr", rgn)
+        catch {
+        }
+        return false
+    }
+    return true
 }
 
 ScWebLlm_ClampAiWorkbenchEmbedRect(parentHwnd, &embedLeft, &embedTop, &embedW, &embedH) {
@@ -1279,6 +1384,8 @@ ScWebLlm_ApplyEmbedScrollCss(scrollX, viewportCss := 0, stripCss := 0, finalize 
         g_SCWebLlm_ScrollX := nx
         g_SCWebLlm_LastBoundsKey := ""
         ScWebLlm_InvalidateScrollClipCaches()
+        global g_SCWebLlm_SiteBoundsSig
+        g_SCWebLlm_SiteBoundsSig := Map()
     }
     h := ScWebLlm_ResolveEmbedHostHwnd()
     if h {
@@ -1704,6 +1811,7 @@ ScWebLlm_FinishRailDrag() {
     }
     g_SCWebLlm_RailDrag := 0
     g_SCWebLlm_SiteBoundsSig := Map()
+    g_SCWebLlm_HostClipCache := Map()
     g_SCWebLlm_RailLayoutPushDue := 0
     g_SCWebLlm_LastBoundsKey := ""
 }
@@ -5984,6 +6092,11 @@ SearchCenterWebLlm_SetContentRect(rect) {
         if (rv > 0)
             g_SCWebLlm_PendingContentRect["composeReservePx"] := rv
     }
+    if rect.Has("hscrollReservePx") {
+        rv := Integer(rect["hscrollReservePx"])
+        if (rv > 0)
+            g_SCWebLlm_PendingContentRect["hscrollReservePx"] := rv
+    }
     SetTimer(ScWebLlm_ApplyPendingContentRect, -48)
 }
 
@@ -6040,6 +6153,11 @@ SearchCenterWebLlm_ApplyContentRectNow(rect) {
         rv := Integer(rect["composeReservePx"])
         if (rv > 0)
             g_SCWebLlm_ContentRect["composeReservePx"] := rv
+    }
+    if rect.Has("hscrollReservePx") {
+        rv := Integer(rect["hscrollReservePx"])
+        if (rv > 0)
+            g_SCWebLlm_ContentRect["hscrollReservePx"] := rv
     }
     if rect.Has("dpr") {
         dpr := Float(rect["dpr"])
@@ -6213,12 +6331,18 @@ SearchCenterWebLlm_ApplyBounds(parentHwnd := 0) {
             if showCol {
                 SearchCenterWebLlm_PositionChildHost(hostHwnd, colL, colT, colW, colH, true, hwnd)
                 ScWebLlm_ApplyHostViewportClip(hostHwnd, colL, colW, colH, embedLeft, embedW)
+                if ScWebLlm_IsAiWorkbenchHost() && IsObject(rec["ctrl"]) {
+                    try rec["ctrl"].NotifyParentWindowPositionChanged()
+                    catch as e {
+                        ScWebLlm_Catch(e)
+                    }
+                }
             } else {
                 ScWebLlm_ClearHostViewportClip(hostHwnd)
                 SearchCenterWebLlm_PositionChildHost(hostHwnd, 0, 0, 0, 0, false, hwnd)
             }
         }
-        boundsSig := colW . "x" . colH
+        boundsSig := colL . "x" . colW . "x" . colH
         skipWebBounds := (dragActive || g_SCWebLlm_ScrollOnlyPass) && g_SCWebLlm_SiteBoundsSig.Has(sid) && (g_SCWebLlm_SiteBoundsSig[sid] = boundsSig)
         if !skipWebBounds
             g_SCWebLlm_SiteBoundsSig[sid] := boundsSig

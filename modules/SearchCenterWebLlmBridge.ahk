@@ -1,6 +1,68 @@
 ; SearchCenterWebLlmBridge.ahk — webLlm* 消息桥（AI 工作台 / 遗留 SearchCenter 宿主）
 #Requires AutoHotkey v2.0
 
+global g_SCWebLlmBridge_PendingFocusSite := ""
+global g_SCWebLlmBridge_PendingFocusCtx := ""
+
+SearchCenterWebLlmBridge_ScheduleFocusSite(siteId, context := "ai_workbench") {
+    global g_SCWebLlmBridge_PendingFocusSite, g_SCWebLlmBridge_PendingFocusCtx
+    sid := FuncExists("ScWebLlm_NormalizeSiteId") ? ScWebLlm_NormalizeSiteId(String(siteId)) : Trim(String(siteId))
+    if (sid = "")
+        return false
+    g_SCWebLlmBridge_PendingFocusSite := sid
+    g_SCWebLlmBridge_PendingFocusCtx := String(context)
+    SetTimer(SearchCenterWebLlmBridge_FlushPendingFocusSite, -85)
+    return true
+}
+
+SearchCenterWebLlmBridge_FlushPendingFocusSite(*) {
+    global g_SCWebLlmBridge_PendingFocusSite, g_SCWebLlmBridge_PendingFocusCtx
+    sid := g_SCWebLlmBridge_PendingFocusSite
+    ctx := g_SCWebLlmBridge_PendingFocusCtx
+    g_SCWebLlmBridge_PendingFocusSite := ""
+    g_SCWebLlmBridge_PendingFocusCtx := ""
+    if (sid = "")
+        return
+    if SearchCenterWebLlmBridge_IsUnifiedContext(ctx) {
+        global g_SCWebLlm_UnifiedMultiRectActive, g_SCWebLlm_ActiveSiteId
+        if g_SCWebLlm_UnifiedMultiRectActive {
+            g_SCWebLlm_ActiveSiteId := sid
+            if FuncExists("ScWebLlm_EnsureUnifiedMultiHostStack") {
+                try ScWebLlm_EnsureUnifiedMultiHostStack(sid)
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e)
+                }
+            }
+            hostGui := SearchCenterWebLlmBridge_HostGui(ctx)
+            ph := 0
+            if hostGui {
+                try ph := hostGui.Hwnd
+                catch {
+                }
+            }
+            if FuncExists("SearchCenterWebLlm_EnsureMissingSites")
+                try SearchCenterWebLlm_EnsureMissingSites(false, ph)
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e)
+                }
+            if FuncExists("SearchCenterWebLlm_ApplyBounds") && ph
+                try SearchCenterWebLlm_ApplyBounds(ph)
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e)
+                }
+            if FuncExists("ScWebLlm_ApplyActiveSiteChrome")
+                try ScWebLlm_ApplyActiveSiteChrome(sid, ph)
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e)
+                }
+            return
+        }
+        SearchCenterWebLlmBridge_ApplyUnifiedEmbedSites([sid])
+    }
+    if FuncExists("SearchCenterWebLlm_FocusSite")
+        SearchCenterWebLlm_FocusSite(sid)
+}
+
 SearchCenterWebLlmBridge_IsEmbedContext(context) {
     ctx := String(context)
     return (ctx = "ai_workbench" || ctx = "unified_workbench")
@@ -234,58 +296,48 @@ SearchCenterWebLlmBridge_HandleMessage(msg, context := "ai_workbench") {
                 return false
             sid := Trim(String(msg["siteId"]))
             preserveLayout := msg.Has("preserveLayout") && !!msg["preserveLayout"]
-            if (sid != "") {
-                sidNorm := FuncExists("ScWebLlm_NormalizeSiteId") ? ScWebLlm_NormalizeSiteId(sid) : sid
-                if SearchCenterWebLlmBridge_IsUnifiedContext(context) {
-                    global g_SCWebLlm_UnifiedMultiRectActive, g_SCWebLlm_ActiveSiteId
-                    if preserveLayout || g_SCWebLlm_UnifiedMultiRectActive {
-                        g_SCWebLlm_ActiveSiteId := sidNorm
-                        if g_SCWebLlm_UnifiedMultiRectActive && FuncExists("ScWebLlm_EnsureUnifiedMultiHostStack") {
-                            try ScWebLlm_EnsureUnifiedMultiHostStack(sidNorm)
-                            catch as _e {
-                                NmerCatch(A_ThisFunc, _e)
-                            }
-                        } else if FuncExists("ScWebLlm_EnsureEmbedHostStack") {
-                            try ScWebLlm_EnsureEmbedHostStack(sidNorm)
-                            catch as _e {
-                                NmerCatch(A_ThisFunc, _e)
-                            }
-                        }
-                        if FuncExists("SearchCenterWebLlm_FocusSiteInput")
-                            try SearchCenterWebLlm_FocusSiteInput(sidNorm)
-                            catch as _e {
-                                NmerCatch(A_ThisFunc, _e)
-                            }
-                        hostGui := SearchCenterWebLlmBridge_HostGui(context)
-                        ph := 0
-                        if hostGui {
-                            try ph := hostGui.Hwnd
-                            catch {
-                            }
-                        }
-                        if FuncExists("SearchCenterWebLlm_EnsureMissingSites")
-                            try SearchCenterWebLlm_EnsureMissingSites(false, ph)
-                            catch as _e {
-                                NmerCatch(A_ThisFunc, _e)
-                            }
-                        if FuncExists("SearchCenterWebLlm_ApplyBounds") && ph
-                            try SearchCenterWebLlm_ApplyBounds(ph)
-                            catch as _e {
-                                NmerCatch(A_ThisFunc, _e)
-                            }
-                        if FuncExists("ScWebLlm_ApplyActiveSiteChrome")
-                            try ScWebLlm_ApplyActiveSiteChrome(sidNorm, ph)
-                            catch as _e {
-                                NmerCatch(A_ThisFunc, _e)
-                            }
-                        return true
+            if (sid = "")
+                return true
+            sidNorm := FuncExists("ScWebLlm_NormalizeSiteId") ? ScWebLlm_NormalizeSiteId(sid) : sid
+            if preserveLayout && SearchCenterWebLlmBridge_IsUnifiedContext(context) {
+                global g_SCWebLlm_UnifiedMultiRectActive, g_SCWebLlm_ActiveSiteId
+                g_SCWebLlm_ActiveSiteId := sidNorm
+                if g_SCWebLlm_UnifiedMultiRectActive && FuncExists("ScWebLlm_EnsureUnifiedMultiHostStack") {
+                    try ScWebLlm_EnsureUnifiedMultiHostStack(sidNorm)
+                    catch as _e {
+                        NmerCatch(A_ThisFunc, _e)
                     }
-                    SearchCenterWebLlmBridge_ApplyUnifiedEmbedSites([sidNorm])
+                } else if FuncExists("ScWebLlm_EnsureEmbedHostStack") {
+                    try ScWebLlm_EnsureEmbedHostStack(sidNorm)
+                    catch as _e {
+                        NmerCatch(A_ThisFunc, _e)
+                    }
                 }
-                if FuncExists("SearchCenterWebLlm_FocusSite")
-                    SearchCenterWebLlm_FocusSite(sidNorm)
+                hostGui := SearchCenterWebLlmBridge_HostGui(context)
+                ph := 0
+                if hostGui {
+                    try ph := hostGui.Hwnd
+                    catch {
+                    }
+                }
+                if FuncExists("SearchCenterWebLlm_EnsureMissingSites")
+                    try SearchCenterWebLlm_EnsureMissingSites(false, ph)
+                    catch as _e {
+                        NmerCatch(A_ThisFunc, _e)
+                    }
+                if FuncExists("SearchCenterWebLlm_ApplyBounds") && ph
+                    try SearchCenterWebLlm_ApplyBounds(ph)
+                    catch as _e {
+                        NmerCatch(A_ThisFunc, _e)
+                    }
+                if FuncExists("ScWebLlm_ApplyActiveSiteChrome")
+                    try ScWebLlm_ApplyActiveSiteChrome(sidNorm, ph)
+                    catch as _e {
+                        NmerCatch(A_ThisFunc, _e)
+                    }
+                return true
             }
-            return true
+            return SearchCenterWebLlmBridge_ScheduleFocusSite(sidNorm, context)
         case "webLlmNavigate":
             if !embedCtx || !msg.Has("url") || !FuncExists("SearchCenterWebLlm_NavigateUrl")
                 return false
