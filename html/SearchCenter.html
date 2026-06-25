@@ -2619,21 +2619,290 @@ mark {
   transition: max-height .28s ease, opacity .22s ease, padding .22s ease;
 }
 .sc-mode-card.is-active .sc-mode-card-body {
-  max-height: 560px;
+  max-height: min(72vh, 680px);
   opacity: 1;
   pointer-events: auto;
   padding: 0 10px 12px;
   overflow-y: auto;
 }
-.sc-mode-nav-placeholder {
+.sc-mode-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.sc-mode-section + .sc-mode-section {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-subtle);
+}
+.sc-mode-section.hidden {
+  display: none;
+}
+.sc-mode-section-title {
   margin: 0;
-  padding: 8px 10px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  color: var(--muted);
+}
+.sc-mode-status-line {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
   font-size: 11px;
   line-height: 1.45;
   color: var(--muted);
+}
+.sc-mode-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #7a8a9a;
+  box-shadow: 0 0 0 1px rgba(255,255,255,.08);
+  flex-shrink: 0;
+}
+.sc-mode-status-dot.ready { background: #4ade80; box-shadow: 0 0 8px rgba(74,222,128,.6); }
+.sc-mode-status-dot.active { background: #22d3ee; box-shadow: 0 0 8px rgba(34,211,238,.6); }
+.sc-mode-status-dot.warn { background: #f97316; box-shadow: 0 0 8px rgba(249,115,22,.7); }
+.sc-mode-history-list,
+.sc-mode-hotkey-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.sc-mode-history-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  padding: 7px 8px;
+  border-radius: 9px;
+  border: 1px solid rgba(255,255,255,.08);
+  background: rgba(255,255,255,.035);
+  color: var(--text);
+  text-align: left;
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+.sc-mode-history-item:hover {
+  border-color: rgba(255,179,71,.38);
+  background: rgba(255,179,71,.10);
+}
+.sc-mode-history-icon {
+  flex-shrink: 0;
+  opacity: .85;
+}
+.sc-mode-history-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sc-mode-empty {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+.sc-mode-hotkey-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  font-size: 11px;
+  color: var(--muted);
+}
+.sc-mode-hotkey-key {
+  color: var(--text);
+  font-weight: 700;
+  white-space: nowrap;
+}
+.sc-mode-hotkey-key.is-bindable {
+  cursor: pointer;
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 6px;
+  padding: 2px 6px;
+  background: rgba(255,255,255,.05);
+  font: inherit;
+}
+.sc-mode-hotkey-key.is-bindable:hover {
+  border-color: rgba(255,179,71,.45);
+  color: var(--accent);
+}
+.sc-mode-hotkey-footer {
+  margin-top: 6px;
+}
+.sc-mode-hotkey-plus {
+  width: 100%;
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px dashed rgba(255,179,71,.35);
+  background: rgba(255,179,71,.06);
+  color: var(--accent);
+  font-size: 11px;
+  cursor: pointer;
+}
+.sc-mode-hotkey-plus:hover {
+  background: rgba(255,179,71,.12);
+}
+body.sc-mode-fulltext-active .sc-status-group-ft {
+  display: none;
+}
+.sc-mode-nav-global {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 8px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,.08);
+  background: rgba(255,255,255,.03);
+}
+.sc-mode-nav-global-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 9px;
+  border-radius: 9px;
+  border: 1px solid rgba(255,255,255,.08);
+  background: rgba(255,255,255,.035);
+  color: var(--text);
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+  text-align: left;
+}
+.sc-mode-nav-global-btn:hover {
+  border-color: rgba(255,179,71,.38);
+  background: rgba(255,179,71,.10);
+}
+.sc-mode-nav-global-btn .sc-mode-nav-global-icon {
+  flex-shrink: 0;
+  opacity: .9;
+}
+.sc-mode-nav-global-btn .sc-mode-nav-global-cap {
+  flex: 1;
+  min-width: 0;
+}
+.sc-mode-nav-global-badge {
+  flex-shrink: 0;
+  min-width: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  text-align: center;
+  background: rgba(255,179,71,.18);
+  color: var(--accent);
+}
+.sc-mode-nav-global-badge.muted {
+  opacity: .45;
+}
+.sc-mode-nav-global-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 2px;
+}
+.sc-mode-nav-global-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--muted);
+}
+.sc-mode-nav-global-meta-row strong {
+  color: var(--text);
+  font-weight: 700;
+}
+.sc-mode-nav-global-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: #7a8a9a;
+  box-shadow: 0 0 0 1px rgba(255,255,255,.08);
+}
+.sc-mode-nav-global-dot.ready { background: #4ade80; box-shadow: 0 0 8px rgba(74,222,128,.55); }
+.sc-mode-nav-global-dot.active { background: #22d3ee; box-shadow: 0 0 8px rgba(34,211,238,.55); }
+.sc-mode-nav-global-dot.warn { background: #f97316; box-shadow: 0 0 8px rgba(249,115,22,.65); }
+.sc-mode-drawer-overlay {
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 12px;
+  background: rgba(5,10,18,.58);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 1200;
+}
+.sc-mode-drawer-overlay.open {
+  display: flex;
+}
+.sc-mode-drawer-card {
+  width: min(100%, 520px);
+  max-height: min(78vh, 760px);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  border-radius: 18px;
+  border: 1px solid rgba(255,255,255,.12);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.03)),
+    rgba(10,14,24,.96);
+  box-shadow: 0 18px 60px rgba(0,0,0,.34);
+}
+.sc-mode-drawer-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 14px 16px 10px;
+  border-bottom: 1px solid rgba(255,255,255,.08);
+}
+.sc-mode-drawer-title {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--text);
+}
+.sc-mode-drawer-close {
+  width: 32px;
+  height: 32px;
   border-radius: 10px;
-  border: 1px dashed rgba(255,255,255,.12);
-  background: rgba(0,0,0,.12);
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(255,255,255,.05);
+  color: var(--text);
+  cursor: pointer;
+}
+.sc-mode-drawer-close:hover {
+  border-color: rgba(255,179,71,.45);
+  color: var(--accent);
+}
+.sc-mode-drawer-body {
+  padding: 12px 16px 16px;
+  overflow: auto;
+}
+.sc-mode-card-body .compose-local-filters,
+.sc-mode-card-body .compose-clip-filters,
+.sc-mode-card-body .fulltext-context-status {
+  width: 100%;
+}
+.sc-mode-card-body .compose-local-filters .results-head-row {
+  gap: 6px;
+}
+.sc-mode-card-body .compose-local-filters #filters {
+  flex-wrap: wrap;
+  overflow: visible;
+  max-height: none;
 }
 .sc-section {
   display: flex;
@@ -3196,6 +3465,29 @@ html[data-theme="light"] .search-wrapper.has-content .search-box-inner {
   .sc-mode-card.is-active .sc-mode-card-body {
     display: none !important;
   }
+  .sc-mode-nav-global {
+    padding: 6px;
+  }
+  .sc-mode-nav-global-btn {
+    justify-content: center;
+    padding: 8px 6px;
+  }
+  .sc-mode-nav-global-meta {
+    display: none;
+  }
+  .sc-mode-nav-global-cap,
+  .sc-mode-nav-global-badge {
+    display: none;
+  }
+  .sc-status-group-dock {
+    display: none;
+  }
+  .sc-status-group-cpu .sc-status-cap {
+    display: none;
+  }
+  .sc-status-bar .sc-status-spacer {
+    display: none;
+  }
 }
 html[data-theme="light"] .sc-mode-bar-vertical {
   border-color: rgba(15,23,42,.1);
@@ -3245,7 +3537,17 @@ html[data-theme="light"] .sc-web-ai-row.is-active {
 <div id="app" class="sc-container sc-shell-with-nav">
   <aside id="sc-mode-nav" class="sc-mode-nav" aria-label="搜索大目录">
     <div class="sc-mode-bar sc-mode-bar-vertical" id="mode-bar" role="tablist" aria-orientation="vertical" aria-label="搜索模式"></div>
+    <div id="sc-mode-nav-global" class="sc-mode-nav-global" aria-label="全局快捷"></div>
   </aside>
+  <div id="sc-mode-drawer-overlay" class="sc-mode-drawer-overlay" aria-hidden="true">
+    <div class="sc-mode-drawer-card" role="dialog" aria-modal="true" aria-labelledby="sc-mode-drawer-title">
+      <div class="sc-mode-drawer-head">
+        <div id="sc-mode-drawer-title" class="sc-mode-drawer-title">模式详情</div>
+        <button type="button" id="sc-mode-drawer-close" class="sc-mode-drawer-close" title="关闭">×</button>
+      </div>
+      <div id="sc-mode-drawer-body" class="sc-mode-drawer-body"></div>
+    </div>
+  </div>
   <div class="sc-body-column">
   <section class="sc-search-mid sc-page-column">
     <div class="search-wrapper sc-compose-stack" id="searchWrapper">
@@ -3525,19 +3827,6 @@ html[data-theme="light"] .sc-web-ai-row.is-active {
           </span>
           <span class="sc-status-cap sc-status-cap-live" id="dock-status-cap">已同步</span>
         </div>
-        <div class="sc-status-item">
-          <button type="button" id="btn-sc-recycle" class="sc-status-btn" title="搜索中心回收站" aria-label="搜索回收站">
-            <span class="sc-status-icon">🗑</span>
-            <span class="recycle-badge muted" id="recycle-badge">0</span>
-          </button>
-          <span class="sc-status-cap" id="sc-recycle-cap">搜索回收站</span>
-        </div>
-        <div class="sc-status-item">
-          <button type="button" id="btn-win-recycle-sc" class="sc-status-btn" title="打开系统回收站" aria-label="系统回收站">
-            <span class="sc-status-icon">♻</span>
-          </button>
-          <span class="sc-status-cap">系统回收站</span>
-        </div>
       </div>
     </div>
     <div class="sc-status-metrics-hidden" aria-hidden="true">
@@ -3806,7 +4095,12 @@ const state = {
   webEmbedBroadcastSites: [],
   webBookmarkShowLabels: null,
   filters: [],
+  searchHistory: [],
+  recentClipboard: [],
+  clipboardSummary: {},
+  capsEntryHotkeys: {},
   filterType: "",
+  modeNavDrawerMode: "",
   resultsRaw: [],
   results: [],
   resultBuckets: { priority: [], others: [] },
@@ -4581,6 +4875,7 @@ async function applyHotkeyBindDialog() {
   renderCategories();
   renderEngines();
   renderFilters();
+  syncModeNavBodies();
   scheduleScHotkeyBindingsSync(50);
   closeHotkeyBindDialog();
 }
@@ -4862,6 +5157,7 @@ function syncComposeContext() {
   if (!ctx) return;
   const mode = getUIMode();
   ctx.setAttribute("data-active-mode", mode);
+  ctx.classList.toggle("hidden", mode === "local" || mode === "clipboard" || mode === "fulltext");
   ctx.querySelectorAll(".compose-context-slot").forEach((slot) => {
     const slotMode = String(slot.getAttribute("data-mode") || "");
     slot.classList.toggle("hidden", slotMode !== mode);
@@ -5156,6 +5452,12 @@ function isFulltextResultRow(item) {
 function getDisplayResults() {
   const rows = Array.isArray(state.results) ? state.results : [];
   const mode = getUIMode();
+  if (mode === "local" && !String(state.keyword || "").trim()) {
+    return rows.filter((item) => {
+      const dt = resultRowDataType(item);
+      return dt !== "history" && dt !== "clipboard_top";
+    });
+  }
   if (mode === "clipboard") {
     const view = String(state.clipboardViewFilter || "all");
     if (view === "all") return rows;
@@ -5415,6 +5717,7 @@ function syncModeSections() {
   dismissWebEmbedHost();
   if (isSearchResults) mountInlinePreview();
   else unmountInlinePreview();
+  syncModeNavBodies();
 }
 
 function getModeBarItems() {
@@ -5433,12 +5736,338 @@ const SC_MODE_NAV_META = Object.freeze({
   cli: { icon: ">_", statHint: "打开 CLI 工作台" }
 });
 
-const SC_MODE_NAV_PLACEHOLDER = Object.freeze({
-  local: "子标签与筛选即将迁入侧栏",
-  clipboard: "剪贴板筛选即将迁入侧栏",
-  fulltext: "全文索引状态即将迁入侧栏",
-  cli: "终端引擎标签即将迁入侧栏"
+function getLocalFilterLabel() {
+  const key = String(state.filterType || "");
+  if (!key) return "全部";
+  const row = (state.filters || []).find((f) => String((f && f.key) || "") === key);
+  return String((row && row.text) || key);
+}
+
+function getModeNavStat(mode) {
+  const m = normalizeUiMode(mode);
+  const n = Array.isArray(state.results) ? getDisplayResults().length : 0;
+  if (m === "clipboard") {
+    const total = Number(state.clipboardSummary && state.clipboardSummary.total) || n || (state.recentClipboard || []).length;
+    const viewMap = { all: "全部", text: "文本", image: "图片", url: "链接" };
+    const view = viewMap[String(state.clipboardViewFilter || "all")] || "全部";
+    return `${total} 条 · ${view}`;
+  }
+  if (m === "fulltext") {
+    const model = buildFulltextStatusModel(state.fulltext || {});
+    return model.libraryCount > 0 ? `${model.caption} · ${model.libraryCount} 文件` : model.caption;
+  }
+  return `${n} 条 · ${getLocalFilterLabel()} · ${String(state.engineMode || "go").toUpperCase()}`;
+}
+
+function ensureModeNavSection(body, name, title) {
+  let section = body.querySelector(`[data-mode-section="${name}"]`);
+  if (!section) {
+    section = document.createElement("section");
+    section.className = "sc-mode-section";
+    section.setAttribute("data-mode-section", name);
+    section.innerHTML = `<h4 class="sc-mode-section-title">${escapeHtml(title)}</h4><div class="sc-mode-section-body"></div>`;
+    body.appendChild(section);
+  }
+  return section.querySelector(".sc-mode-section-body") || section;
+}
+
+function renderModeNavStatus(mode, target) {
+  if (!target) return;
+  const m = normalizeUiMode(mode);
+  let dot = "active";
+  let text = buildDockStatusCaption();
+  if (m === "fulltext") {
+    const model = buildFulltextStatusModel(state.fulltext || {});
+    dot = model.blocking ? "warn" : (model.ready ? "ready" : (model.running ? "active" : ""));
+    text = model.progressText || model.caption;
+  } else if (m === "clipboard") {
+    dot = (state.clipboardHomeLock || getUIMode() === "clipboard") ? "ready" : "active";
+    text = state.clipboardHomeLock ? "剪贴板首页锁定" : "剪贴板时间线";
+  } else {
+    dot = state.loading ? "active" : "ready";
+    text = state.loadingTier === "remote" ? "远程搜索中" : (state.statusLine || "已同步");
+  }
+  target.innerHTML = `<div class="sc-mode-status-line"><span class="sc-mode-status-dot ${escapeAttr(dot)}"></span><span>${escapeHtml(text)}</span></div>`;
+}
+
+function mountModeNavControls(mode, target) {
+  if (!target) return;
+  const m = normalizeUiMode(mode);
+  const id = m === "local" ? "results-local-filters" : (m === "clipboard" ? "compose-clip-filters" : "fulltext-context-status");
+  const node = document.getElementById(id);
+  if (node && node.parentElement !== target) target.appendChild(node);
+}
+
+function modeNavRunSearch(text, mode) {
+  const input = document.getElementById("search");
+  const value = String(text || "");
+  if (input) input.value = value;
+  state.keyword = value;
+  setUIMode(mode || "local", true);
+  setTimeout(runSearchNow, 0);
+}
+
+function renderModeNavHistory(mode, target) {
+  if (!target) return;
+  const m = normalizeUiMode(mode);
+  const rows = m === "clipboard"
+    ? (state.recentClipboard || []).slice(0, 3).map((r) => ({ icon: "📋", text: String((r && (r.preview || r.content || r.title)) || "") }))
+    : (state.searchHistory || []).slice(0, 10).map((x) => ({ icon: "⌕", text: String(x || "") }));
+  if (!rows.length) {
+    target.innerHTML = `<p class="sc-mode-empty">${m === "clipboard" ? "暂无最近复制" : "暂无最近搜索"}</p>`;
+    return;
+  }
+  target.innerHTML = `<div class="sc-mode-history-list"></div>`;
+  const list = target.querySelector(".sc-mode-history-list");
+  rows.forEach((row) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "sc-mode-history-item";
+    btn.innerHTML = `<span class="sc-mode-history-icon" aria-hidden="true">${escapeHtml(row.icon)}</span><span class="sc-mode-history-text">${escapeHtml(row.text)}</span>`;
+    btn.addEventListener("click", () => modeNavRunSearch(row.text, m === "clipboard" ? "clipboard" : "local"));
+    list.appendChild(btn);
+  });
+}
+
+const SC_MODE_HOTKEY_ROWS = Object.freeze({
+  local: [
+    ["打开搜索中心", "entry", "ch_f", "搜索中心"],
+    ["文件筛选", "filter", "File", "文件"],
+    ["剪贴板筛选", "filter", "clipboard", "剪贴板"],
+    ["全文筛选", "filter", "fulltext", "全文搜索"],
+    ["移动选择", "↑ / ↓", null, null],
+    ["执行当前项", "Enter", null, null],
+    ["预览", "Space", null, null]
+  ],
+  clipboard: [
+    ["剪贴板时间线", "entry", "ch_v", "剪贴板时间线"],
+    ["独立剪贴板面板", "entry", "ch_x", "剪贴板面板"],
+    ["模式内筛选", "侧栏 chip", null, null],
+    ["列表操作", "↑↓ / Enter / 右键", null, null]
+  ],
+  fulltext: [
+    ["进入全文模式", "filter", "fulltext", "全文搜索"],
+    ["立即搜索", "Ctrl+Enter", null, null],
+    ["启动/停止索引", "侧栏按钮", null, null],
+    ["索引范围设置", "设置", null, null]
+  ]
 });
+
+const SC_CAPS_ENTRY_DEFAULTS = Object.freeze({
+  ch_f: "f",
+  ch_v: "v",
+  ch_x: "x"
+});
+
+function normalizeCapsEntryHotkeysPayload(src) {
+  const out = Object.assign({}, SC_CAPS_ENTRY_DEFAULTS);
+  if (!src || typeof src !== "object") return out;
+  Object.keys(SC_CAPS_ENTRY_DEFAULTS).forEach((cmdId) => {
+    if (Object.prototype.hasOwnProperty.call(src, cmdId)) {
+      const k = normalizeHintKey(src[cmdId] || "");
+      if (k) out[cmdId] = k;
+    }
+  });
+  return out;
+}
+
+function getCapsEntryHotkey(cmdId) {
+  const id = String(cmdId || "");
+  const src = state.capsEntryHotkeys || {};
+  const k = normalizeHintKey(src[id] || SC_CAPS_ENTRY_DEFAULTS[id] || "");
+  return k ? ("Caps+" + k.toUpperCase()) : "Caps+?";
+}
+
+function formatCapsHotkey(letter) {
+  const k = normalizeHintKey(letter);
+  return k ? ("Caps+" + k.toUpperCase()) : "Caps+?";
+}
+
+function resolveModeNavHotkeyKey(spec) {
+  if (!spec || spec.length < 2) return "";
+  const kind = String(spec[1] || "");
+  if (kind === "entry" && spec.length >= 3) {
+    return getCapsEntryHotkey(String(spec[2] || ""));
+  }
+  if (kind === "filter" && spec.length >= 4) {
+    return formatCapsHotkey(getHintHotkey("filter", String(spec[2] || "")));
+  }
+  return kind;
+}
+
+function resolveModeNavHotkeyBind(spec) {
+  if (!spec || spec.length < 4) return null;
+  if (String(spec[1] || "") !== "filter") return null;
+  return { group: "filter", value: String(spec[2] || ""), label: String(spec[3] || spec[0] || "") };
+}
+
+function resolveModeNavHotkeyAction(spec) {
+  if (!spec || spec.length < 2) return null;
+  const kind = String(spec[1] || "");
+  if (kind === "filter") {
+    const bind = resolveModeNavHotkeyBind(spec);
+    if (!bind) return null;
+    return {
+      kind: "bind",
+      title: "点击修改 " + bind.label + " 快捷键",
+      run: () => openHotkeyBindDialog(bind.group, bind.value, bind.label)
+    };
+  }
+  if (kind === "entry" && spec.length >= 4) {
+    const label = String(spec[3] || spec[0] || "入口快捷键");
+    const cmdId = String(spec[2] || "");
+    return {
+      kind: "entry",
+      title: "点击前往快捷键设置",
+      run: () => postToAhk({ type: "openSettingsPanel", defaultStartTab: "hotkeys", focusCommandId: cmdId, focusLabel: label })
+    };
+  }
+  return null;
+}
+
+function buildModeNavHotkeyRows(mode) {
+  return SC_MODE_HOTKEY_ROWS[normalizeUiMode(mode)] || SC_MODE_HOTKEY_ROWS.local;
+}
+
+function renderModeNavHotkeys(mode, target) {
+  if (!target) return;
+  const rows = buildModeNavHotkeyRows(mode);
+  target.innerHTML = `<div class="sc-mode-hotkey-list"></div><div class="sc-mode-hotkey-footer"></div>`;
+  const list = target.querySelector(".sc-mode-hotkey-list");
+  rows.forEach((spec) => {
+    const label = String(spec[0] || "");
+    const keyText = resolveModeNavHotkeyKey(spec);
+    const action = resolveModeNavHotkeyAction(spec);
+    const row = document.createElement("div");
+    row.className = "sc-mode-hotkey-row";
+    const keyEl = document.createElement(action ? "button" : "span");
+    keyEl.className = "sc-mode-hotkey-key" + (action ? " is-bindable" : "");
+    if (action) keyEl.type = "button";
+    keyEl.textContent = keyText;
+    if (action) {
+      keyEl.title = action.title;
+      keyEl.addEventListener("click", action.run);
+    }
+    row.innerHTML = `<span>${escapeHtml(label)}</span>`;
+    row.appendChild(keyEl);
+    list.appendChild(row);
+  });
+  const footer = target.querySelector(".sc-mode-hotkey-footer");
+  if (footer) {
+    const plus = document.createElement("button");
+    plus.type = "button";
+    plus.className = "sc-mode-hotkey-plus";
+    plus.textContent = "快捷键+ · 绑定与提示";
+    plus.addEventListener("click", () => openQuickHotkeyEntry());
+    footer.appendChild(plus);
+  }
+}
+
+function closeModeNavDrawer() {
+  const overlay = document.getElementById("sc-mode-drawer-overlay");
+  if (!overlay) return;
+  overlay.classList.remove("open");
+  overlay.setAttribute("aria-hidden", "true");
+  state.modeNavDrawerMode = "";
+}
+
+function openModeNavDrawer(mode) {
+  if (!isScNarrow()) return;
+  const m = normalizeUiMode(mode);
+  if (m !== "local" && m !== "clipboard" && m !== "fulltext") return;
+  const overlay = document.getElementById("sc-mode-drawer-overlay");
+  const body = document.getElementById("sc-mode-drawer-body");
+  const title = document.getElementById("sc-mode-drawer-title");
+  if (!overlay || !body || !title) return;
+  state.modeNavDrawerMode = m;
+  title.textContent = (getModeBarItems().find((it) => it.id === m)?.label) || "模式详情";
+  body.innerHTML = "";
+  renderModeNavStatus(m, ensureModeNavSection(body, "status", "状态"));
+  mountModeNavControls(m, ensureModeNavSection(body, "controls", m === "fulltext" ? "操作" : "筛选"));
+  renderModeNavHistory(m, ensureModeNavSection(body, "history", m === "clipboard" ? "最近复制" : "最近搜索"));
+  renderModeNavHotkeys(m, ensureModeNavSection(body, "hotkeys", "常用快捷键"));
+  overlay.classList.add("open");
+  overlay.setAttribute("aria-hidden", "false");
+}
+
+function syncModeNavDrawer() {
+  if (!isScNarrow()) {
+    closeModeNavDrawer();
+    return;
+  }
+  if (!state.modeNavDrawerMode) return;
+  const current = String(state.modeNavDrawerMode || "");
+  if (current) openModeNavDrawer(current);
+}
+
+function advanceModeNavDrawer(step) {
+  if (!isScNarrow() || !state.modeNavDrawerMode) return;
+  const order = ["local", "clipboard", "fulltext"];
+  const cur = normalizeUiMode(state.modeNavDrawerMode);
+  const idx = order.indexOf(cur);
+  if (idx < 0) return;
+  const next = order[(idx + step + order.length) % order.length];
+  setUIMode(next, true);
+  openModeNavDrawer(next);
+}
+
+function syncModeNavBodies() {
+  document.querySelectorAll(".sc-mode-card").forEach((card) => {
+    const mode = String(card.getAttribute("data-mode") || "");
+    if (mode !== "local" && mode !== "clipboard" && mode !== "fulltext") return;
+    const statEl = card.querySelector(".sc-mode-card-stat");
+    if (statEl) statEl.textContent = getModeNavStat(mode);
+    const body = card.querySelector(".sc-mode-card-body");
+    if (!body) return;
+    renderModeNavStatus(mode, ensureModeNavSection(body, "status", "状态"));
+    mountModeNavControls(mode, ensureModeNavSection(body, "controls", mode === "fulltext" ? "操作" : "筛选"));
+    renderModeNavHistory(mode, ensureModeNavSection(body, "history", mode === "clipboard" ? "最近复制" : "最近搜索"));
+    renderModeNavHotkeys(mode, ensureModeNavSection(body, "hotkeys", "常用快捷键"));
+  });
+  renderModeNavGlobal();
+  syncModeNavDrawer();
+}
+
+function renderModeNavGlobal() {
+  const host = document.getElementById("sc-mode-nav-global");
+  if (!host) return;
+  const recycleN = Number(state.recycleCount) || 0;
+  const cpuCap = String((document.getElementById("sc-cpu-cap") && document.getElementById("sc-cpu-cap").textContent) || "CPU —").trim();
+  const dockCap = buildDockStatusCaption();
+  const mode = getUIMode();
+  let dockDotCls = "active";
+  if (mode === "fulltext") {
+    const ft = state.fulltext || {};
+    if (ft.lastError && !ft.running) dockDotCls = "warn";
+    else if (Array.isArray(state.results) && state.results.length > 0) dockDotCls = "ready";
+  } else if (Array.isArray(state.results) && state.results.length > 0) {
+    dockDotCls = "ready";
+  }
+  host.innerHTML =
+    `<div class="sc-mode-nav-global-meta">` +
+      `<div class="sc-mode-nav-global-meta-row"><span class="sc-mode-nav-global-dot ${dockDotCls}" aria-hidden="true"></span><strong>${escapeHtml(dockCap)}</strong></div>` +
+      `<div class="sc-mode-nav-global-meta-row"><span class="sc-mode-nav-global-dot active" aria-hidden="true"></span>${escapeHtml(cpuCap)}</div>` +
+    `</div>` +
+    `<button type="button" class="sc-mode-nav-global-btn" id="sc-nav-btn-recycle" title="搜索中心回收站">` +
+      `<span class="sc-mode-nav-global-icon" aria-hidden="true">🗑</span>` +
+      `<span class="sc-mode-nav-global-cap">搜索回收站</span>` +
+      `<span class="sc-mode-nav-global-badge${recycleN < 1 ? " muted" : ""}" id="sc-nav-recycle-badge">${recycleN}</span>` +
+    `</button>` +
+    `<button type="button" class="sc-mode-nav-global-btn" id="sc-nav-btn-win-recycle" title="Windows 系统回收站">` +
+      `<span class="sc-mode-nav-global-icon" aria-hidden="true">♻</span>` +
+      `<span class="sc-mode-nav-global-cap">系统回收站</span>` +
+    `</button>` +
+    `<button type="button" class="sc-mode-nav-global-btn" id="sc-nav-btn-hotkey-plus" title="快捷键绑定与提示">` +
+      `<span class="sc-mode-nav-global-icon" aria-hidden="true">⌨</span>` +
+      `<span class="sc-mode-nav-global-cap">快捷键+</span>` +
+    `</button>`;
+  const recycleBtn = document.getElementById("sc-nav-btn-recycle");
+  if (recycleBtn) recycleBtn.addEventListener("click", () => openRecycleModal());
+  const winRecycleBtn = document.getElementById("sc-nav-btn-win-recycle");
+  if (winRecycleBtn) winRecycleBtn.addEventListener("click", () => postToAhk({ type: "openWindowsRecycleBin" }));
+  const hotkeyBtn = document.getElementById("sc-nav-btn-hotkey-plus");
+  if (hotkeyBtn) hotkeyBtn.addEventListener("click", () => openQuickHotkeyEntry());
+}
 
 function syncModeNavCards() {
   const mode = getUIMode();
@@ -5488,17 +6117,19 @@ function renderModeBar() {
         "</button>" +
         "<div class=\"sc-mode-card-body\" role=\"tabpanel\"></div>";
       const head = card.querySelector(".sc-mode-card-head");
-      if (head) head.addEventListener("click", () => setUIMode(m.id, true));
+      if (head) head.addEventListener("click", () => {
+        setUIMode(m.id, true);
+        if (isScNarrow()) openModeNavDrawer(m.id);
+      });
       bar.appendChild(card);
     }
     const statEl = card.querySelector(".sc-mode-card-stat");
-    if (statEl) statEl.textContent = meta.statHint || m.desc;
-    const body = card.querySelector(".sc-mode-card-body");
-    if (body && m.id !== "web" && !body.querySelector(".sc-mode-nav-placeholder")) {
-      body.innerHTML = "<p class=\"sc-mode-nav-placeholder\">" + escapeHtml(SC_MODE_NAV_PLACEHOLDER[m.id] || "") + "</p>";
-    }
+    if (statEl) statEl.textContent = (m.id === "local" || m.id === "clipboard" || m.id === "fulltext")
+      ? getModeNavStat(m.id)
+      : (meta.statHint || m.desc);
   });
   syncModeNavCards();
+  syncModeNavBodies();
   if (mode !== "web") syncWebModeNavAiRows();
 }
 
@@ -5728,6 +6359,7 @@ function initComposeClipFilters() {
     renderClipComposeFilters();
     renderResults();
     syncResultCountLabel();
+    syncModeNavBodies();
   });
 }
 
@@ -5850,7 +6482,7 @@ function buildDockStatusTooltip() {
 
 function buildDockStatusCaption() {
   const mode = getUIMode();
-  const n = Array.isArray(state.results) ? state.results.length : 0;
+  const n = Array.isArray(state.results) ? getDisplayResults().length : 0;
   if (mode === "clipboard") {
     return n > 0 ? ("剪贴板 " + n + " 条") : "剪贴板";
   }
@@ -5887,6 +6519,8 @@ function buildFtSummaryTooltip() {
 }
 
 function syncStatusBarUi() {
+  document.body.classList.toggle("sc-mode-fulltext-active", getUIMode() === "fulltext");
+  document.body.classList.toggle("sc-status-compact", isScNarrow());
   const tip = buildDockStatusTooltip();
   const dockCap = document.getElementById("dock-status-cap");
   if (dockCap) dockCap.textContent = buildDockStatusCaption();
@@ -5913,18 +6547,6 @@ function syncStatusBarUi() {
   const toggleCap = document.getElementById("ft-toggle-cap");
   const running = !!(state.fulltext && state.fulltext.running);
   if (toggleCap) toggleCap.textContent = running ? "停止索引" : "启动索引";
-  const recycleBtn = document.getElementById("btn-sc-recycle");
-  if (recycleBtn) {
-    const n = Number(state.recycleCount) || 0;
-    recycleBtn.title = n > 0 ? ("搜索中心回收站（" + n + " 条）") : "搜索中心回收站";
-  }
-  const recycleCap = document.getElementById("sc-recycle-cap");
-  if (recycleCap) {
-    const n = Number(state.recycleCount) || 0;
-    recycleCap.textContent = n > 0 ? ("回收站 " + n + " 条") : "搜索回收站";
-  }
-  const winRecycle = document.getElementById("btn-win-recycle-sc");
-  if (winRecycle) winRecycle.title = "打开 Windows 系统回收站";
   syncFtDrawerSummary();
 }
 
@@ -6589,6 +7211,7 @@ function applyFulltextStatus(payload) {
   }
   syncStatusBarUi();
   syncFulltextComposeContext();
+  syncModeNavBodies();
   if (getUIMode() === "fulltext") {
     syncComposeHintStrip();
     const list = document.getElementById("result-list");
@@ -7773,6 +8396,7 @@ function renderFilters() {
       state.filterType = nextFilter;
       renderFilters();
       renderResults();
+      syncModeNavBodies();
       postToAhk({ type: "setFilter", filterType: nextFilter, keyword, queryId: scNextQueryId() });
     };
     let pressedHandled = false;
@@ -8118,9 +8742,18 @@ function getSelectedItemPath(item) {
   const p = (item.path && String(item.path).trim()) || "";
   if (p && looksLikeWindowsPath(p)) return p;
   const dt = String(item.dataType || item.type || "").toLowerCase();
-  const isFileish = dt === "file" || dt === "folder" || /文件|路径/.test(String(item.source || ""));
+  const isFileish = dt === "file" || dt === "folder"
+    || dt === "image" || dt === "video" || dt === "audio" || dt === "archive"
+    || /文件|路径|images|cache/i.test(String(item.source || ""));
   const c = item.content ? String(item.content).trim() : "";
-  if (isFileish && looksLikeWindowsPath(c)) return c;
+  if (looksLikeWindowsPath(c)) return c;
+  const sub = item.subtitle ? String(item.subtitle).trim() : "";
+  if (looksLikeWindowsPath(sub)) return sub;
+  if (isFileish) {
+    const joined = [String(item.title || ""), sub, c].join(" ");
+    const m = joined.match(/[A-Za-z]:\\[^\r\n\t]+?\.(png|jpe?g|gif|svg|webp|bmp|ico|txt|log|md|json|pdf|zip|rar|7z|mp4|mkv|mp3|wav)\b/i);
+    if (m && looksLikeWindowsPath(m[0])) return m[0];
+  }
   return "";
 }
 
@@ -9534,17 +10167,12 @@ function buildSkeletonListHtml(count) {
 }
 
 function syncRecycleBadge() {
-  const badge = document.getElementById("recycle-badge");
-  if (!badge) return;
   const n = Number(state.recycleCount) || 0;
-  badge.textContent = String(n);
-  badge.classList.toggle("muted", n < 1);
-  const recycleBtn = document.getElementById("btn-sc-recycle");
-  if (recycleBtn) {
-    recycleBtn.title = n > 0 ? ("搜索中心回收站（" + n + " 条）") : "搜索中心回收站";
+  const navBadge = document.getElementById("sc-nav-recycle-badge");
+  if (navBadge) {
+    navBadge.textContent = String(n);
+    navBadge.classList.toggle("muted", n < 1);
   }
-  const recycleCap = document.getElementById("sc-recycle-cap");
-  if (recycleCap) recycleCap.textContent = n > 0 ? ("回收站 " + n + " 条") : "搜索回收站";
 }
 
 function renderRecycleModalList() {
@@ -9657,17 +10285,13 @@ function applyState(payload) {
 
 function scResultsNeedDefaultSearchKick() {
   if (getUIMode() === "clipboard" || state.keyword) return false;
+  if ((state.searchHistory || []).length > 0) return false;
   const rows = Array.isArray(state.resultsRaw) ? state.resultsRaw : [];
   if (!rows.length) return true;
-  const hasHistory = rows.some((r) => {
-    const dt = String((r && (r.dataType || r.originalDataType || r.type)) || "").toLowerCase();
-    return dt === "history";
-  });
-  if (hasHistory) return false;
-  if (rows.length <= 3) {
+  if (rows.length <= 2) {
     return rows.every((r) => {
       const dt = String((r && (r.dataType || r.originalDataType || r.type)) || "").toLowerCase();
-      return dt === "tutorial" || dt === "history" || dt === "clipboard_top";
+      return dt === "tutorial" || dt === "clipboard_top";
     });
   }
   return false;
@@ -9796,6 +10420,20 @@ function applyStateNow(payload) {
   state.filters = normalizeListPayload(payload.filters).filter((f) => !isModeLevelFilterKey(f && f.key));
   if (!state.filters.length) {
     state.filters = fallbackFilterPayload();
+  }
+  state.searchHistory = normalizeStringListPayload(payload.searchHistory).slice(0, 20);
+  state.recentClipboard = normalizeListPayload(payload.recentClipboard).map((r) => {
+    if (!r || typeof r !== "object") return { preview: String(r || "") };
+    return {
+      preview: String(r.preview || r.content || r.title || ""),
+      content: String(r.content || r.preview || ""),
+      dataType: String(r.dataType || r.type || ""),
+      time: String(r.time || "")
+    };
+  }).filter((r) => r.preview).slice(0, 6);
+  state.clipboardSummary = (payload.clipboardSummary && typeof payload.clipboardSummary === "object") ? payload.clipboardSummary : {};
+  if (payload.capsEntryHotkeys != null) {
+    state.capsEntryHotkeys = normalizeCapsEntryHotkeysPayload(payload.capsEntryHotkeys);
   }
   state.filterType = payload.filterType || "";
   if (payload.uiMode == null || payload.uiMode === "") {
@@ -10196,14 +10834,6 @@ if (btnFtSettingsTop) {
   });
 }
 
-const btnScRecycle = document.getElementById("btn-sc-recycle");
-if (btnScRecycle) {
-  btnScRecycle.addEventListener("click", () => openRecycleModal());
-}
-const btnWinRecycleSc = document.getElementById("btn-win-recycle-sc");
-if (btnWinRecycleSc) {
-  btnWinRecycleSc.addEventListener("click", () => postToAhk({ type: "openWindowsRecycleBin" }));
-}
 const recycleClose = document.getElementById("recycle-close");
 if (recycleClose) {
   recycleClose.addEventListener("click", () => closeRecycleModal());
@@ -10227,6 +10857,13 @@ if (recycleOverlay) {
     if (e.target === recycleOverlay) closeRecycleModal();
   });
 }
+const modeDrawerOverlay = document.getElementById("sc-mode-drawer-overlay");
+if (modeDrawerOverlay) {
+  modeDrawerOverlay.addEventListener("click", (e) => {
+    if (e.target === modeDrawerOverlay) closeModeNavDrawer();
+  });
+}
+document.getElementById("sc-mode-drawer-close")?.addEventListener("click", () => closeModeNavDrawer());
 document.addEventListener("pointerdown", (event) => {
   const trigger = event.target && event.target.closest ? event.target.closest(".hotkey-hint-btn") : null;
   if (!trigger) return;
@@ -10370,6 +11007,10 @@ document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") {
     if (getUIMode() === "cli" && shouldYieldKeysToCliTerminal(event)) return;
     event.preventDefault();
+    if (modeDrawerOverlay && modeDrawerOverlay.classList.contains("open")) {
+      closeModeNavDrawer();
+      return;
+    }
     if (state.expandedRow) {
       state.expandedRow = 0;
       unmountInlinePreview();
@@ -10378,6 +11019,19 @@ document.addEventListener("keydown", (event) => {
     }
     requestHostClose("escape");
     return;
+  }
+
+  if (modeDrawerOverlay && modeDrawerOverlay.classList.contains("open") && !isTyping) {
+    if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
+      event.preventDefault();
+      advanceModeNavDrawer(-1);
+      return;
+    }
+    if (event.key === "ArrowRight" || event.key === "ArrowDown") {
+      event.preventDefault();
+      advanceModeNavDrawer(1);
+      return;
+    }
   }
 
   if (document.activeElement && document.activeElement.id === "search") {
@@ -10441,6 +11095,7 @@ document.addEventListener("keyup", (event) => {
 window.addEventListener("resize", () => {
   scheduleRunPreview();
   scheduleWebEmbedContentRect();
+  syncModeNavDrawer();
 });
 
 window.addEventListener("blur", () => {
@@ -10623,6 +11278,11 @@ if (window.chrome && window.chrome.webview) {
     }
     if (payload.type === "clipFloat") {
       applyClipFloatPayload(payload);
+      return;
+    }
+    if (payload.type === "capsEntryHotkeys") {
+      state.capsEntryHotkeys = normalizeCapsEntryHotkeysPayload(payload.capsEntryHotkeys);
+      syncModeNavBodies();
       return;
     }
     if (payload.type === "vk_set_filter") {

@@ -4649,6 +4649,12 @@ _VK_SyncEmbeddedCapslockHotkeys() {
     HotkeyP := pVal
     _VK_RegisterCapsLockDispatchHotkeys()
     _VK_RegisterEmbeddedScopedHotkeys()
+    try {
+        if FuncExists("SCWV_PushCapsEntryHotkeys")
+            SCWV_PushCapsEntryHotkeys()
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e)
+    }
     } finally {
         g_VK_RebindInProgress := false
     }

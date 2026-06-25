@@ -2759,8 +2759,15 @@ FloatingToolbar_DispatchWebMessage(msg) {
                     case "Prompt", "NewPrompt":
                         PromptQuickPad_OpenCaptureDraft(t, true)
                     case "Record":
-                        SurfaceIntent_Open("clipboard_panel")
-                        CP_SetSearchText(t, true, true)
+                        if (FuncExists("SearchCenter_ShouldUseWebView") && SearchCenter_ShouldUseWebView()) {
+                            try SurfaceIntent_OpenClipboardUnified(t, "clipboard_hotkey")
+                            catch as _e {
+                                NmerCatch(A_ThisFunc, _e)
+                            }
+                        } else {
+                            SurfaceIntent_Open("clipboard_panel")
+                            CP_SetSearchText(t, true, true)
+                        }
                     default:
                         ; 未定义入口图标统一回退到搜索中心
                         FloatingToolbar_RequestSearchByKeyword(t)
@@ -6275,17 +6282,94 @@ FloatingToolbar_ActivateSearchCenter() {
     try SCWV_Log("toolbar_activate_search_end", "opened=" . (opened ? "1" : "0") . " vis=" . (usedWebView ? (SCWV_IsVisible() ? "1" : "0") : "n/a"))
 }
 
+FloatingToolbar_ActivateClipboardUnified() {
+    global g_SCWV_WaitingUiFinishedReveal
+    opened := false
+    usedWebView := false
+
+    try FloatingToolbar_NormalizeInputRuntime("toolbar_clipboard")
+    try usedWebView := SearchCenter_ShouldUseWebView()
+    try {
+        if (SearchCenter_IsOpeningOrBusy()) {
+            if (usedWebView) {
+                SCWV_SubmitIntent("open", 20, Map(
+                    "reason", "toolbar_clipboard_busy",
+                    "initialMode", "clipboard",
+                    "triggerSource", "clipboard_hotkey"
+                ))
+            } else {
+                try SurfaceIntent_Open("clipboard_panel")
+            }
+            return
+        }
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e)
+    }
+    try FloatingToolbarCollapseTransientUi()
+    try FloatingToolbar_PageDockLeave("search")
+
+    try {
+        if (usedWebView) {
+            SCWV_SubmitIntent("open", 20, Map(
+                "reason", "toolbar_clipboard_open",
+                "initialMode", "clipboard",
+                "triggerSource", "clipboard_hotkey"
+            ))
+            opened := true
+        } else {
+            SurfaceIntent_Open("clipboard_panel")
+            opened := true
+        }
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e)
+    }
+
+    if (!opened && usedWebView) {
+        try {
+            SCWV_ResetHostState()
+            SCWV_SubmitIntent("open", 20, Map(
+                "reason", "toolbar_clipboard_recover",
+                "initialMode", "clipboard",
+                "triggerSource", "clipboard_hotkey"
+            ))
+            opened := true
+        } catch as _e {
+            NmerCatch(A_ThisFunc, _e)
+        }
+    }
+    if (!opened) {
+        try SurfaceIntent_Open("clipboard_panel")
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e)
+        }
+    }
+
+    if (usedWebView) {
+        try FloatingToolbar_PageDockEnter("search")
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e)
+        }
+        try SCWV_RequestFocusInput()
+        catch as _e {
+            NmerCatch(A_ThisFunc, _e)
+        }
+    }
+}
+
 FloatingToolbarExecuteButtonAction(action, buttonHwnd) {
     switch action {
         case "Search":
             FloatingToolbar_ActivateSearchCenter()
         case "Record":
-            ; 剪贴板：WebView2 + ClipMain/FTS5 等，失败时提示
-            try SurfaceIntent_Open("clipboard_panel")
-            catch as err {
-                try TrayTip("剪贴板", "无法显示 WebView 剪贴板: " . err.Message, "Iconx 1")
+            try {
+                if (FuncExists("SearchCenter_ShouldUseWebView") && SearchCenter_ShouldUseWebView())
+                    FloatingToolbar_ActivateClipboardUnified()
+                else
+                    SurfaceIntent_Open("clipboard_panel")
+            } catch as err {
+                try TrayTip("剪贴板", "无法显示剪贴板: " . err.Message, "Iconx 1")
                 catch {
-                    OutputDebug("[FloatingToolbar] CP_Show failed: " . err.Message)
+                    OutputDebug("[FloatingToolbar] clipboard open failed: " . err.Message)
                 }
             }
         case "AIAssistant", "Prompt":
@@ -6375,6 +6459,83 @@ FloatingToolbar_SearchToggleDeferred(*) {
     FloatingToolbarExecuteButtonAction("Search", 0)
 }
 
+FloatingToolbar_ClipboardToggleDeferred(*) {
+    global g_SCWV_Gui, g_SCWV_UserMinimized
+    try {
+        if (FuncExists("SearchCenter_ShouldUseWebView") && SearchCenter_ShouldUseWebView()) {
+            try {
+                if (FuncExists("SCWV_IsClipboardUnifiedActive") && SCWV_IsClipboardUnifiedActive()) {
+                    try SCWV_MinimizeHost()
+                    catch {
+                        try SurfaceIntent_Close("search_center", Map("persistSelection", 1, "reason", "ftb_clipboard_toggle_minimize"))
+                        catch as _e {
+                            NmerCatch(A_ThisFunc, _e)
+                        }
+                    }
+                    return
+                }
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e)
+            }
+            try {
+                if IsObject(g_SCWV_Gui) && g_SCWV_Gui.HasProp("Hwnd") && NmerPanel_IsMinimized(g_SCWV_Gui.Hwnd) {
+                    g_SCWV_UserMinimized := false
+                    try WinRestore("ahk_id " . g_SCWV_Gui.Hwnd)
+                    catch as _e {
+                        NmerCatch(A_ThisFunc, _e)
+                    }
+                    try SCWV_SetUnifiedMode("clipboard", true)
+                    catch as _e {
+                        NmerCatch(A_ThisFunc, _e)
+                    }
+                    try FloatingToolbar_PageDockEnter("search")
+                    catch as _e {
+                        NmerCatch(A_ThisFunc, _e)
+                    }
+                    try SCWV_RequestFocusInput()
+                    catch as _e {
+                        NmerCatch(A_ThisFunc, _e)
+                    }
+                    return
+                }
+            } catch as _e {
+                NmerCatch(A_ThisFunc, _e)
+            }
+            FloatingToolbar_ActivateClipboardUnified()
+            return
+        }
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e)
+    }
+    try {
+        global g_CP_Gui, g_CP_Visible
+        if IsObject(g_CP_Gui) && g_CP_Gui.HasProp("Hwnd") {
+            if NmerPanel_IsShown(g_CP_Gui.Hwnd) {
+                NmerPanel_MinimizeGui(g_CP_Gui, "clipboard")
+                return
+            }
+            if NmerPanel_IsMinimized(g_CP_Gui.Hwnd) {
+                NmerPanel_RestoreGui(g_CP_Gui)
+                try CP_Show()
+                catch as _e {
+                    NmerCatch(A_ThisFunc, _e)
+                }
+                return
+            }
+        }
+        if (IsSet(g_CP_Visible) && g_CP_Visible) {
+            try NmerPanel_MinimizeGui(g_CP_Gui, "clipboard")
+            catch {
+                SurfaceIntent_Close("clipboard_panel")
+            }
+            return
+        }
+    } catch as _e {
+        NmerCatch(A_ThisFunc, _e)
+    }
+    FloatingToolbarExecuteButtonAction("Record", 0)
+}
+
 FloatingToolbar_PromptToggleDeferred(*) {
     global g_PQP_Gui
     try {
@@ -6421,33 +6582,8 @@ FloatingToolbarToggleButtonAction(action) {
             SetTimer(FloatingToolbar_SearchToggleDeferred, -10)
             return
         case "Record":
-            try {
-                global g_CP_Gui, g_CP_Visible
-                if IsObject(g_CP_Gui) && g_CP_Gui.HasProp("Hwnd") {
-                    if NmerPanel_IsShown(g_CP_Gui.Hwnd) {
-                        NmerPanel_MinimizeGui(g_CP_Gui, "clipboard")
-                        return
-                    }
-                    if NmerPanel_IsMinimized(g_CP_Gui.Hwnd) {
-                        NmerPanel_RestoreGui(g_CP_Gui)
-                        try CP_Show()
-                        catch as _e {
-                            NmerCatch(A_ThisFunc, _e) 
-                        }
-                        return
-                    }
-                }
-                if (IsSet(g_CP_Visible) && g_CP_Visible) {
-                    try NmerPanel_MinimizeGui(g_CP_Gui, "clipboard")
-                    catch {
-                        SurfaceIntent_Close("clipboard_panel")
-                    }
-                    return
-                }
-            } catch as _e {
-                NmerCatch(A_ThisFunc, _e) 
-            }
-            FloatingToolbarExecuteButtonAction(action, 0)
+            SetTimer(FloatingToolbar_ClipboardToggleDeferred, -10)
+            return
         case "AIAssistant", "Prompt":
             ; 延后一帧：与 WM_ACTIVATE、Hide/postMessage 顺序对齐，减少关不掉或关掉又弹回
             SetTimer(FloatingToolbar_PromptToggleDeferred, -10)

@@ -4,6 +4,8 @@
 global ConfigWebViewNavFallbackTried := false
 ; 由搜索中心等单次打开设置时覆盖首屏标签，不写入 INI
 global g_ConfigWebView_OneShotDefaultTab := ""
+global g_ConfigWebView_OneShotFocusCommandId := ""
+global g_ConfigWebView_OneShotFocusLabel := ""
 global g_ConfigWebView_PendingStudioSync := false
 global g_ConfigWebView_PendingLlmTestResult := 0
 ; 每次打开设置窗仅允许一次「跳到默认启动页」，避免 ready 与延迟 initData 重复抢导航
@@ -1019,6 +1021,7 @@ ConfigWebView_LoadPromptTemplatePresets(*) {
 
 ConfigWebView_BuildInitData() {
     global CursorPath, CapsLockHoldTimeSeconds, CapsLockHoldVkEnabled, AutoStart, DefaultStartTab, g_ConfigWebView_OneShotDefaultTab
+    global g_ConfigWebView_OneShotFocusCommandId, g_ConfigWebView_OneShotFocusLabel
     global ThemeMode, FunctionPanelPos, ConfigPanelScreenIndex, ConfigPanelPos, ClipboardPanelPos, PanelScreenIndex
     global PromptQuickCaptureHotkey
     global SummonHotkeyPreset, SummonHotkeyCustom, CapsLockMode
@@ -1140,6 +1143,16 @@ ConfigWebView_BuildInitData() {
             ? NormalizeDefaultStartTab(g_ConfigWebView_OneShotDefaultTab) : g_ConfigWebView_OneShotDefaultTab
         g_ConfigWebView_OneShotDefaultTab := ""
     }
+    focusCommandId := ""
+    focusLabel := ""
+    if (IsSet(g_ConfigWebView_OneShotFocusCommandId) && g_ConfigWebView_OneShotFocusCommandId != "") {
+        focusCommandId := Trim(String(g_ConfigWebView_OneShotFocusCommandId))
+        g_ConfigWebView_OneShotFocusCommandId := ""
+    }
+    if (IsSet(g_ConfigWebView_OneShotFocusLabel) && g_ConfigWebView_OneShotFocusLabel != "") {
+        focusLabel := Trim(String(g_ConfigWebView_OneShotFocusLabel))
+        g_ConfigWebView_OneShotFocusLabel := ""
+    }
     autoStartForWeb := FuncExists("ReadPersistedAutoStart") ? ReadPersistedAutoStart() : AutoStart
     AutoStart := autoStartForWeb
     cfgPayload := Map(
@@ -1194,6 +1207,8 @@ ConfigWebView_BuildInitData() {
         "floatingToolbarButtonOptions", FloatingToolbarButtonOptions,
         "floatingToolbarMenuOptions", FloatingToolbarMenuOptions,
         "appearanceActivationMode", NormalizeAppearanceActivationMode(AppearanceActivationMode),
+        "focusCommandId", focusCommandId,
+        "focusLabel", focusLabel,
         "holePositionMode", IniRead(ConfigFile, "Appearance", "HolePositionMode", "anchor"),
         "holeTriggerDistance", Integer(IniRead(ConfigFile, "Appearance", "HoleTriggerDistance", "260")),
         "holeDismissDistance", Integer(IniRead(ConfigFile, "Appearance", "HoleDismissDistance", "320")),

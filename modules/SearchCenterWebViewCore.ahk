@@ -1214,6 +1214,9 @@ _SCWV_PostHostShowFire(*) {
     try _SCWV_PushClipFloatToWeb()
     catch {
     }
+    try SCWV_PushCapsEntryHotkeys()
+    catch {
+    }
     if (ts != "clipboard_hotkey" && ts != "fulltext_hotkey" && !SCWV_IsWebSearchUIMode())
         SCWV_EnsureSearchHomeVisible()
     try {
@@ -3673,6 +3676,49 @@ _SCWV_SyncScHotkeyBindings(payloadMap) {
     _SCWV_ClearScVkBindingOverrides()
 }
 
+; CapsLock+ 入口命令（ch_f/ch_v/ch_x 等）供侧栏快捷键区展示，与 VK 全局绑定同步
+_SCWV_BuildCapsEntryHotkeys() {
+    global g_InverseBindings, g_Commands
+    defaults := Map("ch_f", "f", "ch_v", "v", "ch_x", "x")
+    if (g_Commands is Map && g_Commands.Has("SuggestedBindings") && g_Commands["SuggestedBindings"] is Map) {
+        sb := g_Commands["SuggestedBindings"]
+        for cmdId, defKey in defaults {
+            if sb.Has(cmdId) && Trim(String(sb[cmdId])) != ""
+                defaults[cmdId] := StrLower(Trim(String(sb[cmdId])))
+        }
+    }
+    out := Map()
+    for cmdId, defKey in defaults {
+        letter := ""
+        if (IsSet(g_InverseBindings) && g_InverseBindings is Map && g_InverseBindings.Has(cmdId)) {
+            if FuncExists("_VK_ToEmbeddedHotkeyValue") {
+                try letter := _VK_ToEmbeddedHotkeyValue(g_InverseBindings[cmdId])
+                catch {
+                    letter := ""
+                }
+            }
+        }
+        if (letter = "")
+            letter := String(defKey)
+        out[cmdId] := _SCWV_SanitizeForJson(letter)
+    }
+    return out
+}
+
+SCWV_PushCapsEntryHotkeys() {
+    if !SearchCenter_ShouldUseWebView()
+        return
+    try {
+        if !(SCWV_IsVisible() || SCWV_IsRevealedToUser())
+            return
+    } catch {
+        return
+    }
+    try SCWV_PostJson(Map("type", "capsEntryHotkeys", "capsEntryHotkeys", _SCWV_BuildCapsEntryHotkeys()))
+    catch {
+    }
+}
+
 ; 将 Go 返回的扁平 items 按 originalDataType 分组为 SearchAllDataSources 形状
 _SCWV_GroupGoItemsToAllDataResults(GoItems, hasMoreGo) {
     buckets := Map()
@@ -5231,14 +5277,20 @@ SCWV_ProcessWebMessageJson(jsonStr) {
             _SCWV_SyncScHotkeyBindings(pl)
         case "openSettingsPanel":
             try {
-                global g_ConfigWebView_OneShotDefaultTab
+                global g_ConfigWebView_OneShotDefaultTab, g_ConfigWebView_OneShotFocusCommandId, g_ConfigWebView_OneShotFocusLabel
                 g_ConfigWebView_OneShotDefaultTab := ""
+                g_ConfigWebView_OneShotFocusCommandId := ""
+                g_ConfigWebView_OneShotFocusLabel := ""
                 if (msg.Has("defaultStartTab")) {
                     tab := Trim(String(msg["defaultStartTab"]))
                     validTabs := Map("general", true, "appearance", true, "prompts", true, "hotkeys", true, "advanced", true, "screenshot", true, "search", true, "customize", true)
                     if (tab != "" && validTabs.Has(tab))
                         g_ConfigWebView_OneShotDefaultTab := tab
                 }
+                if (msg.Has("focusCommandId"))
+                    g_ConfigWebView_OneShotFocusCommandId := Trim(String(msg["focusCommandId"]))
+                if (msg.Has("focusLabel"))
+                    g_ConfigWebView_OneShotFocusLabel := Trim(String(msg["focusLabel"]))
                 if IsSet(ShowConfigWebViewGUI) {
                     SurfaceIntent_Open("config_webview")
                 } else if IsSet(ShowConfigGUI) {
@@ -6256,6 +6308,7 @@ SCWV_PushState(msgType := "state") {
     global SearchCenterHasMoreData, SearchCenterEngineMode
     global g_SCWV_RecycleBin, g_SCWV_PinnedKeys, g_SCWV_LifecyclePhase, g_SCWV_UiMode
     global g_SCWV_ActiveClientQueryID, g_SCWV_LoadingTier
+    global g_SC_HistoryCache
 
     if !SearchCenter_ShouldUseWebView()
         return
@@ -6337,6 +6390,49 @@ SCWV_PushState(msgType := "state") {
         ))
     }
 
+    searchHistory := []
+    try {
+        _SCWV_EnsureHistoryCacheLoaded()
+        if (Type(g_SC_HistoryCache) = "Array") {
+            for _, h in g_SC_HistoryCache {
+                kw := Trim(String(h))
+                if (kw = "")
+                    continue
+                searchHistory.Push(_SCWV_SanitizeForJson(kw))
+                if (searchHistory.Length >= 20)
+                    break
+            }
+        }
+    } catch {
+    }
+
+    recentClipboard := []
+    clipTotal := 0
+    try {
+        _SCWV_EnsureClipboardDb()
+        clipTotal := _SCWV_QueryClipboardTotalCount()
+        hotRows := _SCWV_QueryRecentClipboard(86400 * 3650, 3)
+        if (hotRows is Array) {
+            if (clipTotal <= 0)
+                clipTotal := hotRows.Length
+            for _, row in hotRows {
+                if !(row is Map)
+                    continue
+                content := row.Has("content") ? String(row["content"]) : ""
+                preview := Trim(StrReplace(StrReplace(content, "`r`n", " "), "`n", " "))
+                if (StrLen(preview) > 120)
+                    preview := SubStr(preview, 1, 120) . "..."
+                recentClipboard.Push(Map(
+                    "preview", _SCWV_SanitizeForJson(preview),
+                    "content", _SCWV_SanitizeForJson(content),
+                    "dataType", row.Has("dataType") ? _SCWV_SanitizeForJson(row["dataType"]) : "",
+                    "time", row.Has("time") ? _SCWV_SanitizeForJson(row["time"]) : ""
+                ))
+            }
+        }
+    } catch {
+    }
+
     currentCategoryKey := GetSearchCenterCurrentCategoryKey()
     global g_SCWV_ClipboardHomeLock, g_SCWV_UiMode
     umStatus := StrLower(Trim(String(g_SCWV_UiMode)))
@@ -6370,6 +6466,10 @@ SCWV_PushState(msgType := "state") {
         "engines", _SCWV_BuildEnginePayload(currentCategoryKey),
         "selectedEngines", _SCWV_CopyArray(SearchCenterSelectedEngines),
         "filters", _SCWV_BuildFilterPayload(),
+        "searchHistory", searchHistory,
+        "recentClipboard", recentClipboard,
+        "clipboardSummary", Map("total", clipTotal),
+        "capsEntryHotkeys", _SCWV_BuildCapsEntryHotkeys(),
         "filterType", SearchCenterFilterType,
         "results", results,
         "statusLine", status,
@@ -11267,6 +11367,32 @@ _SCWV_ApplyClipboardTimelineLocal(keyword := "", offset := 0, limit := 0) {
     return true
 }
 
+_SCWV_QueryClipboardTotalCount() {
+    global ClipboardDB, ClipboardFTS5DB
+    _SCWV_EnsureClipboardDb()
+    if (IsSet(ClipboardFTS5DB) && ClipboardFTS5DB && ClipboardFTS5DB != 0) {
+        try {
+            table := ""
+            if ClipboardFTS5DB.GetTable("SELECT COUNT(*) FROM ClipMain", &table) {
+                if (table.HasRows && table.Rows.Length > 0)
+                    return Integer(table.Rows[1][1])
+            }
+        } catch {
+        }
+    }
+    if !(IsSet(ClipboardDB) && ClipboardDB && ClipboardDB != 0)
+        return 0
+    try {
+        table := ""
+        if ClipboardDB.GetTable("SELECT COUNT(*) FROM CursorData", &table) {
+            if (table.HasRows && table.Rows.Length > 0)
+                return Integer(table.Rows[1][1])
+        }
+    } catch {
+    }
+    return 0
+}
+
 _SCWV_QueryRecentClipboard(maxAgeSec := 180, limit := 3) {
     global ClipboardDB, ClipboardFTS5DB, g_SCWV_ClipboardHotMaxAgeSec
     rows := []
@@ -11368,8 +11494,7 @@ _SCWV_BuildClipboardTopResultItem(content) {
     }
 }
 
-; 教程卡 + 历史项推送到 UI（从 Load 抽出，避免重复拼装）
-; 顺序：历史 → 最近复制 → 仅两者皆空时展示新手指南
+; 本地首页：历史/最近复制改由侧栏 searchHistory/recentClipboard 展示；结果区仅保留新手指南兜底
 _SCWV_HistoryPushResultsToUI(historyArr, hotRows := unset) {
     global SearchCenterCurrentLimit, SearchCenterSearchResults, SearchCenterHasMoreData
     SearchCenterSearchResults := []
@@ -11382,26 +11507,6 @@ _SCWV_HistoryPushResultsToUI(historyArr, hotRows := unset) {
     hasHistory := (Type(historyArr) = "Array" && historyArr.Length > 0)
     hasClip := (hotRows is Array && hotRows.Length > 0)
 
-    if hasHistory {
-        limit := (SearchCenterCurrentLimit && SearchCenterCurrentLimit > 0) ? SearchCenterCurrentLimit : 30
-        histCount := 0
-        for _, item in historyArr {
-            SearchCenterSearchResults.Push({
-                Title: String(item),
-                Source: "用户搜索记录",
-                DataType: "history",
-                Time: "",
-                Path: String(item),
-                OriginalDataType: "history"
-            })
-            histCount += 1
-            if (histCount >= (limit + 5))
-                break
-        }
-    }
-    if hasClip
-        SearchCenterSearchResults.Push(_SCWV_BuildClipboardTopResultItem(hotRows[1]["content"]))
-
     if (!hasHistory && !hasClip) {
         tutorialContent := "快速上手（30秒）`n"
                          . "1. 输入关键词：支持文件名、路径片段、剪贴板内容、模板名。`n"
@@ -11412,6 +11517,7 @@ _SCWV_HistoryPushResultsToUI(historyArr, hotRows := unset) {
                          . "- 找复制过的内容：输入片段后切到剪贴板筛选。`n"
                          . "- 找提示词或配置：输入关键词后切到对应筛选。`n`n"
                          . "高效操作`n"
+                         . "- 左侧目录可查看最近搜索、筛选与快捷键。`n"
                          . "- 双击或 Enter：执行当前结果。`n"
                          . "- 右键结果：复制、发送到、置顶、删除。`n"
                          . "- 空格：重新加载当前文件预览（PDF 默认走侧栏 PDF.js）。`n`n"

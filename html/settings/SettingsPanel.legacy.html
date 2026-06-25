@@ -1653,6 +1653,14 @@
       },
       { id: "vk_dir", name: "方向", commands: ["ch_w", "ch_s", "ch_a", "ch_d"] }
     ];
+    function findHotkeysSubTabByCommandId(cmdId) {
+      const id = String(cmdId || "").trim();
+      if (!id) return "overview";
+      for (const preset of HK_VK_PRESETS) {
+        if (Array.isArray(preset.commands) && preset.commands.includes(id)) return preset.id;
+      }
+      return "overview";
+    }
     const APP_SHORTCUT_REFERENCE = [
       { combo: "长按 CapsLock", label: "KeyBinder 快捷键面板", desc: "达到「通用设置」中的长按时间后弹出；可在下方关闭此行为，改从托盘打开虚拟键盘。" },
       { combo: "悬浮栏 · 搜索", label: "搜索中心", desc: "打开全局搜索中心，检索文件、剪贴板与 AI 能力。" },
@@ -1695,6 +1703,9 @@
       hkRecording: null,
       hkRecordHudText: "",
       hkCmdSearch: "",
+      hkFocusCommandId: "",
+      hkFocusLabel: "",
+      hkFocusPulseUntil: 0,
       appUpdate: null,
       cacheInfo: null,
       fullText: {
@@ -2928,6 +2939,8 @@
       let rowCls = "cmd-row";
       if (hasReal || hasSuggested) rowCls += " has-binding";
       if (isRec) rowCls += " recording active-focus";
+      if (!isRec && state.hkFocusCommandId === id && Date.now() < Number(state.hkFocusPulseUntil || 0))
+        rowCls += " active-focus";
       if (hasReal) rowCls += " binding-custom";
       else if (hasSuggested) rowCls += " binding-suggested";
       else if (isNone) rowCls += " binding-none";
@@ -2986,6 +2999,19 @@
         const cmd = buildKeybinderCommandMap()[cmdId] || { name: row.label, desc: row.desc };
         return renderVkCmdRowHtml(cmdId, cmd);
       }).join("");
+    }
+    function pulseHotkeyCommandRow(cmdId) {
+      const id = String(cmdId || "").trim();
+      if (!id) return;
+      const row = document.querySelector(`.hk-bind-zone .cmd-row[data-vk-cmd="${CSS.escape(id)}"]`);
+      if (!row) return;
+      row.classList.remove("active-focus");
+      void row.offsetWidth;
+      row.classList.add("active-focus");
+      row.scrollIntoView({ behavior: "smooth", block: "center" });
+      setTimeout(() => {
+        row.classList.remove("active-focus");
+      }, 2400);
     }
     function renderHotkeysSubTabHtml(d, subId) {
       const capsHold = Number(d.capslockHoldTimeSeconds);
@@ -6836,6 +6862,8 @@ ${pathRow("autohotkey", "AutoHotkey", paths.autohotkey || "")}
         suppressAutoSave = true;
         const p = msg.payload || {};
         const shouldNavigate = !!msg.navigateToStartTab;
+        const focusCommandId = String(p.focusCommandId || "").trim();
+        const focusLabel = String(p.focusLabel || "").trim();
         const serverStartTab = normalizeDefaultStartTab(p.defaultStartTab);
         const pForMerge = { ...p };
         if (!shouldNavigate) delete pForMerge.defaultStartTab;
@@ -6872,8 +6900,12 @@ ${pathRow("autohotkey", "AutoHotkey", paths.autohotkey || "")}
         if (p.appUpdate && typeof p.appUpdate === "object") state.appUpdate = p.appUpdate;
         applyAppUpdateUi();
         if (shouldNavigate) {
-          if (state.hotkeysSubTab === "niuma" || state.hotkeysSubTab === "qa") state.hotkeysSubTab = "overview";
           state.activeTab = serverStartTab;
+          if (state.activeTab === "hotkeys") {
+            state.hotkeysSubTab = findHotkeysSubTabByCommandId(focusCommandId);
+          } else if (state.hotkeysSubTab === "niuma" || state.hotkeysSubTab === "qa") {
+            state.hotkeysSubTab = "overview";
+          }
           try { sessionStorage.setItem("settings.activeTab", serverStartTab); } catch (_) {}
           document.querySelectorAll(".tab-btn").forEach(b => b.classList.toggle("active", b.dataset.tab === serverStartTab));
         } else if (initDataReceived) {
@@ -6895,6 +6927,21 @@ ${pathRow("autohotkey", "AutoHotkey", paths.autohotkey || "")}
         if (state.selectedPromptTemplateId && !ids.includes(state.selectedPromptTemplateId))
           state.selectedPromptTemplateId = "";
         render();
+        if (shouldNavigate && state.activeTab === "hotkeys" && focusCommandId) {
+          state.hkFocusCommandId = focusCommandId;
+          state.hkFocusLabel = focusLabel || focusCommandId;
+          state.hkFocusPulseUntil = Date.now() + 2800;
+          setTimeout(() => pulseHotkeyCommandRow(focusCommandId), 80);
+          setTimeout(() => {
+            if (state.hkFocusCommandId === focusCommandId) {
+              state.hkFocusCommandId = "";
+              state.hkFocusLabel = "";
+              state.hkFocusPulseUntil = 0;
+              if (state.activeTab === "hotkeys")
+                render();
+            }
+          }, 3000);
+        }
         setStatus("已连接", "ok");
         lastSavedHash = stableStringify(pruneSettingsPayload(readFromUI()));
         lastSentHash = lastSavedHash;
