@@ -54,7 +54,25 @@ ScCli_PostJsonToHost(payload) {
         try SCWV_PostJson(payload)
 }
 
-ScCli_FocusTtydForEngine(engine := "") {
+ScCli_ClickHostClientPoint(x, y) {
+    gui := ScCli_GetHostGui()
+    if !IsObject(gui) || !gui.HasProp("Hwnd")
+        return false
+    hwnd := gui.Hwnd
+    if !hwnd || !WinExist("ahk_id " . hwnd)
+        return false
+    try {
+        CoordMode("Mouse", "Client")
+        WinActivate("ahk_id " . hwnd)
+        Sleep(50)
+        Click(Integer(x), Integer(y))
+        return true
+    } catch {
+        return false
+    }
+}
+
+ScCli_FocusTtydForEngine(engine := "", clickX := "", clickY := "") {
     eng := Trim(String(engine))
     if (eng = "")
         eng := "codex_cli"
@@ -71,7 +89,11 @@ ScCli_FocusTtydForEngine(engine := "") {
     try ScCli_PostJsonToHost(Map("type", "focusCliFrame", "engine", eng))
     catch {
     }
-    Sleep(140)
+    wbVisible := false
+    try wbVisible := FuncExists("CliWb_IsVisible") && CliWb_IsVisible()
+    catch {
+    }
+    Sleep(wbVisible ? 160 : 120)
     gui := ScCli_GetHostGui()
     try {
         if (IsObject(gui) && gui.HasProp("Hwnd")) {
@@ -81,30 +103,62 @@ ScCli_FocusTtydForEngine(engine := "") {
         }
     } catch {
     }
-    Sleep(80)
+    Sleep(wbVisible ? 80 : 60)
+    hasClick := (clickX != "" && clickY != "")
+    if (hasClick) {
+        ScCli_ClickHostClientPoint(clickX, clickY)
+        Sleep(wbVisible ? 150 : 100)
+    }
     return true
 }
 
-ScCli_InjectPromptToTtyd(prompt, engine := "") {
+ScCli_MsgClickXY(msg) {
+    if !(msg is Map)
+        return Map("x", "", "y", "")
+    cx := msg.Has("clickX") ? msg["clickX"] : ""
+    cy := msg.Has("clickY") ? msg["clickY"] : ""
+    return Map("x", cx, "y", cy)
+}
+
+ScCli_InjectPromptToTtyd(prompt, engine := "", clickX := "", clickY := "") {
     p := Trim(String(prompt))
     if (p = "")
         return false
-    if !ScCli_FocusTtydForEngine(engine)
+    if !ScCli_FocusTtydForEngine(engine, clickX, clickY)
         return false
+    eng := Trim(String(engine))
+    if (eng = "")
+        eng := "codex_cli"
+    try eng := NiumaTtyd_NormalizeEngine(eng)
+    catch {
+        eng := "codex_cli"
+    }
+    wbVisible := false
+    try wbVisible := FuncExists("CliWb_IsVisible") && CliWb_IsVisible()
+    catch {
+    }
+    enterWait := (eng = "codex_cli" || eng = "claude_cli") ? 200 : (wbVisible ? 100 : 70)
     clipBak := ""
     try clipBak := ClipboardAll()
     catch {
     }
-    try A_Clipboard := p
-    catch {
-        try A_Clipboard := ""
-    }
-    Sleep(60)
+    Sleep(wbVisible ? 60 : 40)
     try {
-        Send("^v")
-        Sleep(70)
+        SendText(p)
+        Sleep(enterWait)
         Send("{Enter}")
     } catch {
+        try A_Clipboard := p
+        catch {
+            try A_Clipboard := ""
+        }
+        Sleep(60)
+        try {
+            Send("^v")
+            Sleep(enterWait)
+            Send("{Enter}")
+        } catch {
+        }
     }
     try {
         if (clipBak != "")
@@ -114,8 +168,8 @@ ScCli_InjectPromptToTtyd(prompt, engine := "") {
     return true
 }
 
-ScCli_PasteToTtyd(engine := "") {
-    if !ScCli_FocusTtydForEngine(engine)
+ScCli_PasteToTtyd(engine := "", clickX := "", clickY := "") {
+    if !ScCli_FocusTtydForEngine(engine, clickX, clickY)
         return false
     try {
         Send("^v")
@@ -125,8 +179,8 @@ ScCli_PasteToTtyd(engine := "") {
     return true
 }
 
-ScCli_InterruptTtyd(engine := "") {
-    if !ScCli_FocusTtydForEngine(engine)
+ScCli_InterruptTtyd(engine := "", clickX := "", clickY := "") {
+    if !ScCli_FocusTtydForEngine(engine, clickX, clickY)
         return false
     try {
         Send("^{c}")
@@ -136,7 +190,7 @@ ScCli_InterruptTtyd(engine := "") {
     return true
 }
 
-ScCli_SendToCLI(prompt, engine := "") {
+ScCli_SendToCLI(prompt, engine := "", clickX := "", clickY := "") {
     global SearchCenterWebKeyword
     p := Trim(String(prompt))
     if (p = "")
@@ -151,7 +205,7 @@ ScCli_SendToCLI(prompt, engine := "") {
         try _SCWV_RecordSearchHistory(p)
         catch {
         }
-    ScCli_InjectPromptToTtyd(p, engine)
+    ScCli_InjectPromptToTtyd(p, engine, clickX, clickY)
 }
 
 ScCli_OpenCliWorkDir(engine := "") {
@@ -212,20 +266,24 @@ SearchCenterCliBridge_HandleMessage(msg, context := "cli_workbench", senderWv2 :
         case "cliSend":
             prompt := msg.Has("prompt") ? String(msg["prompt"]) : ""
             eng := msg.Has("engine") ? Trim(String(msg["engine"])) : ""
-            ScCli_SendToCLI(prompt, eng)
+            pt := ScCli_MsgClickXY(msg)
+            ScCli_SendToCLI(prompt, eng, pt["x"], pt["y"])
             return true
         case "cliInject":
             prompt := msg.Has("prompt") ? String(msg["prompt"]) : ""
             eng := msg.Has("engine") ? Trim(String(msg["engine"])) : ""
-            ScCli_InjectPromptToTtyd(prompt, eng)
+            pt := ScCli_MsgClickXY(msg)
+            ScCli_InjectPromptToTtyd(prompt, eng, pt["x"], pt["y"])
             return true
         case "cliPaste":
             eng := msg.Has("engine") ? Trim(String(msg["engine"])) : ""
-            ScCli_PasteToTtyd(eng)
+            pt := ScCli_MsgClickXY(msg)
+            ScCli_PasteToTtyd(eng, pt["x"], pt["y"])
             return true
         case "cliInterrupt":
             eng := msg.Has("engine") ? Trim(String(msg["engine"])) : ""
-            ScCli_InterruptTtyd(eng)
+            pt := ScCli_MsgClickXY(msg)
+            ScCli_InterruptTtyd(eng, pt["x"], pt["y"])
             return true
         case "cliOpen":
             if FuncExists("OpenSelectedCLIAgents")

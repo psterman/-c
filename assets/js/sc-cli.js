@@ -42,6 +42,580 @@ const SC_CLI_ENGINE_ROLE = {
   zhipu_cli: "智谱 CLI",
   copilot_cli: "Copilot CLI"
 };
+const SC_CLI_ENGINE_META = {
+  codex_cli: { vendor: "OpenAI", capabilities: ["CLI", "代码"] },
+  gemini_cli: { vendor: "Google", capabilities: ["CLI"] },
+  openclaw_cli: { vendor: "OpenClaw", capabilities: ["CLI", "Agent"] },
+  qwen_cli: { vendor: "阿里云", capabilities: ["CLI", "通义"] },
+  ollama_cli: { vendor: "Ollama", capabilities: ["CLI", "本地"] },
+  claude_cli: { vendor: "Anthropic", capabilities: ["CLI", "代码"] },
+  deepseek_cli: { vendor: "DeepSeek", capabilities: ["CLI", "代码"] },
+  kimi_cli: { vendor: "Moonshot", capabilities: ["CLI"] },
+  zhipu_cli: { vendor: "智谱", capabilities: ["CLI"] },
+  copilot_cli: { vendor: "GitHub", capabilities: ["CLI", "Copilot"] }
+};
+const SC_CLI_PENDING_FIELDS = [
+  { key: "terminalOutput", label: "终端输出旁路", note: "需改 ttyd 承载方式" },
+  { key: "modelMetrics", label: "模型内部指标", note: "需 CLI 侧 API" }
+];
+const SC_CLI_AUDIT_DEDUP_MS = 10000;
+const SC_CLI_AUDIT_MAX = 20;
+const SC_CLI_CMD_SUMMARY_MAX = 48;
+const SC_CLI_DETAIL_RAIL_KEY = "sc_cli_detail_rail_v1";
+const SC_CLI_TASK_TITLE_KEY = "sc_cli_task_title_v1";
+const SC_CLI_DETAIL_NARROW_MQ = "(max-width: 900px)";
+function cliEncodeStoragePart(s) {
+  return encodeURIComponent(String(s || ""));
+}
+function cliTaskTitleStorageKey(engine) {
+  const eng = normalizeCliEngineId(engine);
+  const wd = String((ensureCliRuntime(eng).hostMeta || {}).workDir || "");
+  return SC_CLI_TASK_TITLE_KEY + ":" + eng + ":" + cliEncodeStoragePart(wd);
+}
+function getCliTaskTitle(engine) {
+  const eng = normalizeCliEngineId(engine || getActiveCliEngine());
+  try {
+    const v = localStorage.getItem(cliTaskTitleStorageKey(eng));
+    if (v != null) return String(v);
+  } catch (_) {}
+  return ensureCliRuntime(eng).taskTitle || "";
+}
+function setCliTaskTitle(engine, title) {
+  const eng = normalizeCliEngineId(engine || getActiveCliEngine());
+  const rt = ensureCliRuntime(eng);
+  const t = String(title || "");
+  rt.taskTitle = t;
+  try { localStorage.setItem(cliTaskTitleStorageKey(eng), t); } catch (_) {}
+}
+function syncCliTaskTitleInput(engine) {
+  if (!isCliWorkbenchSurface()) return;
+  const input = document.getElementById("cli-task-title");
+  if (!input) return;
+  const t = getCliTaskTitle(engine);
+  if (document.activeElement !== input) input.value = t;
+}
+function applyCliDetailRailVisible() {
+  if (!isCliWorkbenchSurface()) return;
+  const layout = document.getElementById("layout");
+  const toggle = document.getElementById("cli-detail-toggle");
+  const userOpen = state.detailRailUserOpen !== false;
+  const narrow = !!state.detailRailNarrowForced;
+  const expanded = userOpen && !narrow;
+  document.body.classList.toggle("cli-detail-collapsed", !expanded);
+  if (layout) layout.classList.toggle("cli-detail-collapsed", !expanded);
+  if (toggle) {
+    toggle.setAttribute("aria-expanded", expanded ? "true" : "false");
+    toggle.textContent = expanded ? "收起" : "详情";
+  }
+}
+function setCliDetailRailUserOpen(open) {
+  if (!isCliWorkbenchSurface()) return;
+  state.detailRailUserOpen = !!open;
+  try { localStorage.setItem(SC_CLI_DETAIL_RAIL_KEY, state.detailRailUserOpen ? "1" : "0"); } catch (_) {}
+  applyCliDetailRailVisible();
+}
+function toggleCliDetailRail() {
+  if (!isCliWorkbenchSurface()) return;
+  setCliDetailRailUserOpen(!state.detailRailUserOpen);
+}
+function syncCliDetailRailResponsive() {
+  if (!isCliWorkbenchSurface()) return;
+  try {
+    state.detailRailNarrowForced = window.matchMedia(SC_CLI_DETAIL_NARROW_MQ).matches;
+  } catch (_) {
+    state.detailRailNarrowForced = false;
+  }
+  applyCliDetailRailVisible();
+}
+function refreshCliWorkbenchUi(engine, engRow) {
+  if (!isCliWorkbenchSurface()) return;
+  const eng = normalizeCliEngineId(engine || getActiveCliEngine());
+  const row = engRow || getCliEnginesForTabs().find((e) => e && e.value === eng);
+  updateCliTopbar(eng, row);
+  renderCliModelDetail(eng);
+  renderCliSidebarContext(eng);
+  syncCliTaskTitleInput(eng);
+}
+function renderCliSidebarContext(engine) {
+  if (!isCliWorkbenchSurface()) return;
+  const body = document.getElementById("cli-sidebar-context-body");
+  if (!body) return;
+  const eng = normalizeCliEngineId(engine || getActiveCliEngine());
+  const hm = (ensureCliRuntime(eng).hostMeta || {});
+  const workDir = hm.workDir ? String(hm.workDir) : "";
+  let html = "";
+  html += "<div class=\"cli-sidebar-ctx-row\"><span class=\"cli-sidebar-ctx-label\">目录</span><span class=\"cli-sidebar-ctx-val\" title=\"" + escapeAttr(workDir) + "\">" + escapeHtml(workDir ? cliTruncatePath(workDir, 42) : "未检测到") + "</span></div>";
+  html += "<div class=\"cli-sidebar-ctx-row\"><span class=\"cli-sidebar-ctx-label\">分支</span><span class=\"cli-sidebar-ctx-val\">" + escapeHtml(cliFormatGitBranch(hm)) + "</span></div>";
+  const entries = Array.isArray(hm.dirEntries) ? hm.dirEntries : [];
+  if (entries.length) {
+    html += "<ul class=\"cli-dir-list\">";
+    entries.slice(0, 12).forEach((item) => {
+      if (!item) return;
+      const name = String(item.name || "");
+      const isDir = !!item.isDir;
+      html += "<li class=\"cli-dir-entry" + (isDir ? " cli-dir-entry--folder" : "") + "\">" + escapeHtml((isDir ? "📁 " : "📄 ") + name) + "</li>";
+    });
+    html += "</ul>";
+  }
+  body.innerHTML = html;
+}
+function cliEngineMeta(engineId) {
+  const id = normalizeCliEngineId(engineId);
+  const base = SC_CLI_ENGINE_META[id] || { vendor: "—", capabilities: ["CLI"] };
+  const tool = String(SC_CLI_AUTO_BOOT_CMD[id] || "").trim();
+  return Object.assign({ tool: tool || "—" }, base);
+}
+function isCliWorkbenchSurface() {
+  return !!document.body && document.body.classList.contains("wb-cli-layout")
+    && !!document.querySelector("#layout.wb-app.sc-cli-active");
+}
+function ensureCliRuntime(engine) {
+  const eng = normalizeCliEngineId(engine || getActiveCliEngine());
+  if (!state.cliRuntime || typeof state.cliRuntime !== "object") state.cliRuntime = {};
+  if (!state.cliRuntime[eng]) {
+    state.cliRuntime[eng] = {
+      lastInput: "",
+      recentCommands: [],
+      busy: false,
+      errorCount: 0,
+      lastError: "",
+      openRequestedAt: 0,
+      connectMs: null,
+      retryCount: 0,
+      lastRetryAt: 0,
+      lastReadyAt: 0,
+      lastErrorAt: 0,
+      auditLog: [],
+      taskTitle: "",
+      hostMeta: null,
+      pendingReqId: ""
+    };
+  }
+  return state.cliRuntime[eng];
+}
+function cliShouldRefreshRuntimeUi(engine, reqId, partial) {
+  const eng = normalizeCliEngineId(engine);
+  if (normalizeCliEngineId(getActiveCliEngine()) !== eng) return false;
+  if (partial) return true;
+  if (reqId === "init") return true;
+  const rt = ensureCliRuntime(eng);
+  if (!reqId) return true;
+  return String(reqId) === String(rt.pendingReqId || "");
+}
+function cliApplyHostMeta(engine, meta, opts) {
+  const eng = normalizeCliEngineId(engine);
+  if (!meta || typeof meta !== "object") return false;
+  const rt = ensureCliRuntime(eng);
+  const prev = rt.hostMeta && typeof rt.hostMeta === "object" ? rt.hostMeta : {};
+  const options = opts || {};
+  const partial = String(options.partial || "");
+  if (partial === "stats") {
+    rt.hostMeta = Object.assign({}, prev, {
+      cpuPercent: meta.cpuPercent !== undefined ? meta.cpuPercent : prev.cpuPercent,
+      memoryMb: meta.memoryMb !== undefined ? meta.memoryMb : prev.memoryMb,
+      statsAt: meta.statsAt != null ? meta.statsAt : prev.statsAt
+    });
+  } else {
+    const next = Object.assign({}, prev, meta);
+    if (Array.isArray(meta.dirEntries)) next.dirEntries = meta.dirEntries;
+    else if (!meta.dirEntries && Array.isArray(prev.dirEntries)) next.dirEntries = prev.dirEntries;
+    rt.hostMeta = next;
+    if (meta.fetchError) rt.hostMeta.fetchError = String(meta.fetchError);
+    else if (rt.hostMeta.fetchError && meta.workDir) delete rt.hostMeta.fetchError;
+  }
+  if (options.refreshUi && cliShouldRefreshRuntimeUi(eng, options.reqId, !!partial)) {
+    if (partial === "stats") renderCliModelDetail(eng);
+    else refreshCliWorkbenchUi(eng);
+  }
+  return true;
+}
+function requestCliEngineRuntime(engine, reason) {
+  if (!isCliWorkbenchSurface()) return;
+  const eng = normalizeCliEngineId(engine || getActiveCliEngine());
+  const rt = ensureCliRuntime(eng);
+  const reqId = "cer_" + Date.now();
+  rt.pendingReqId = reqId;
+  rt.runtimeRequestedAt = Date.now();
+  postToAhk({ type: "cli_engine_changed", engine: eng, reqId: reqId, reason: String(reason || "") });
+}
+function handleCliEngineRuntimeMessage(payload) {
+  if (!payload || payload.type !== "cli_engine_runtime") return false;
+  if (!isCliWorkbenchSurface()) return false;
+  const eng = normalizeCliEngineId(payload.engine || "");
+  if (!eng) return true;
+  const reqId = String(payload.reqId || "");
+  const partial = String(payload.partial || "");
+  const rt = ensureCliRuntime(eng);
+  if (payload.ok === false) {
+    rt.hostMeta = Object.assign({}, rt.hostMeta || {}, {
+      fetchError: String(payload.error || "获取失败")
+    });
+  } else if (payload.engineRuntime) {
+    cliApplyHostMeta(eng, payload.engineRuntime, { reqId, refreshUi: false, partial });
+  }
+  if (cliShouldRefreshRuntimeUi(eng, reqId, !!partial)) {
+    if (partial === "stats") renderCliModelDetail(eng);
+    else refreshCliWorkbenchUi(eng);
+  }
+  return true;
+}
+function handleCliAuditMessage(payload) {
+  if (!payload || payload.type !== "cli_audit_event") return false;
+  if (!isCliWorkbenchSurface()) return false;
+  const eng = normalizeCliEngineId(payload.engine || getActiveCliEngine());
+  cliPushAudit(eng, payload.kind || "system", payload.level || "info", payload.message || "");
+  if (eng === normalizeCliEngineId(getActiveCliEngine())) renderCliModelDetail(eng);
+  return true;
+}
+function cliConnStateForEngine(engine) {
+  const eng = normalizeCliEngineId(engine);
+  const rt = ensureCliRuntime(eng);
+  if (rt.lastError && !isCliEngineReady(eng)) return "error";
+  if (isCliEngineReady(eng)) return "ready";
+  if (rt.openRequestedAt > 0 || rt.busy) return "loading";
+  return "idle";
+}
+function cliConnStateLabel(stateKey) {
+  if (stateKey === "ready") return "已连接";
+  if (stateKey === "loading") return "连接中";
+  if (stateKey === "error") return "连接失败";
+  return "未连接";
+}
+function cliTruncatePath(p, max) {
+  const s = String(p || "").trim();
+  if (!s) return "";
+  max = max || 36;
+  if (s.length <= max) return s;
+  return "…" + s.slice(-(max - 1));
+}
+function cliSummarizeCommand(text, max) {
+  const s = String(text || "").trim();
+  max = max || SC_CLI_CMD_SUMMARY_MAX;
+  if (!s) return "";
+  if (s.length <= max) return s;
+  return s.slice(0, max - 1) + "…";
+}
+function cliNormalizeCommandEntry(c) {
+  if (c && typeof c === "object" && c.text) {
+    return { text: String(c.text), summary: String(c.summary || cliSummarizeCommand(c.text)) };
+  }
+  const t = String(c || "").trim();
+  return t ? { text: t, summary: cliSummarizeCommand(t) } : null;
+}
+function cliFormatRelativeTime(ts) {
+  if (ts == null || ts === "") return "";
+  let ms = Number(ts);
+  if (!isFinite(ms) || ms <= 0) return "";
+  if (ms < 1e12) ms *= 1000;
+  const diff = Date.now() - ms;
+  if (diff < 45000) return "刚刚";
+  if (diff < 3600000) return Math.floor(diff / 60000) + " 分钟前";
+  if (diff < 86400000) return Math.floor(diff / 3600000) + " 小时前";
+  if (diff < 604800000) return Math.floor(diff / 86400000) + " 天前";
+  const d = new Date(ms);
+  const hh = String(d.getHours()).padStart(2, "0");
+  const mm = String(d.getMinutes()).padStart(2, "0");
+  return (d.getMonth() + 1) + "-" + d.getDate() + " " + hh + ":" + mm;
+}
+function cliFormatGitStatus(hm) {
+  hm = hm && typeof hm === "object" ? hm : {};
+  if (hm.gitRepo === false) return "非 Git 目录";
+  const st = hm.gitStatus ? String(hm.gitStatus) : "";
+  const mc = Number(hm.modifiedCount) || 0;
+  const uc = Number(hm.untrackedCount) || 0;
+  if (!st) return "未检测到";
+  if (st === "clean") return "clean";
+  if (st === "modified") return "modified (" + mc + ")";
+  if (st === "untracked") return "untracked (" + uc + ")";
+  if (st === "mixed") return "mixed (" + mc + "+" + uc + ")";
+  return st;
+}
+function cliFormatGitBranch(hm) {
+  hm = hm && typeof hm === "object" ? hm : {};
+  if (hm.gitRepo === false) return "非 Git 目录";
+  const branch = hm.branch ? String(hm.branch) : "";
+  if (branch) return branch;
+  return "未检测到";
+}
+function cliFormatCommit(hm) {
+  if (!hm || typeof hm !== "object") return "未检测到";
+  if (hm.gitRepo === false) return "非 Git 目录";
+  const hash = hm.commitHash ? String(hm.commitHash) : "";
+  const subj = hm.commitSubject ? String(hm.commitSubject) : "";
+  const at = hm.commitAt ? String(hm.commitAt) : "";
+  const legacy = hm.recentCommit ? String(hm.recentCommit) : "";
+  if (!hash && legacy) return legacy;
+  if (!hash) return "未检测到";
+  const rel = cliFormatRelativeTime(at);
+  const title = cliTruncatePath(subj || "—", 36);
+  return hash + " " + title + (rel ? " · " + rel : "");
+}
+function cliFormatResourceStats(hm) {
+  hm = hm && typeof hm === "object" ? hm : {};
+  const cpuRaw = hm.cpuPercent;
+  const memRaw = hm.memoryMb;
+  let cpuLabel = "采样中";
+  if (cpuRaw === null || cpuRaw === "") cpuLabel = "—";
+  else if (cpuRaw !== undefined) cpuLabel = String(cpuRaw) + "%";
+  let memLabel = "采样中";
+  if (memRaw === null || memRaw === "") memLabel = "—";
+  else {
+    const memMb = Number(memRaw);
+    if (!isNaN(memMb)) memLabel = memMb >= 1024 ? (memMb / 1024).toFixed(1) + " GB" : memMb.toFixed(0) + " MB";
+  }
+  return "CPU " + cpuLabel + " | 内存 " + memLabel;
+}
+function cliPushAudit(engine, kind, level, message) {
+  if (!isCliWorkbenchSurface()) return;
+  const eng = normalizeCliEngineId(engine || getActiveCliEngine());
+  const rt = ensureCliRuntime(eng);
+  const k = String(kind || "system");
+  const lv = String(level || "info");
+  const msg = String(message || "").trim();
+  if (!msg) return;
+  const now = Date.now();
+  if (!Array.isArray(rt.auditLog)) rt.auditLog = [];
+  const last = rt.auditLog.length ? rt.auditLog[rt.auditLog.length - 1] : null;
+  if (last && last.kind === k && (now - Number(last.ts || 0)) < SC_CLI_AUDIT_DEDUP_MS) {
+    last.ts = now;
+    last.message = msg;
+    last.count = (Number(last.count) || 1) + 1;
+    return;
+  }
+  rt.auditLog.push({ ts: now, kind: k, level: lv, message: msg, count: 1 });
+  if (rt.auditLog.length > SC_CLI_AUDIT_MAX) rt.auditLog = rt.auditLog.slice(-SC_CLI_AUDIT_MAX);
+}
+function cliTrackCommandSent(engine, text) {
+  const eng = normalizeCliEngineId(engine);
+  const rt = ensureCliRuntime(eng);
+  const cmd = String(text || "").trim();
+  if (!cmd) return;
+  rt.lastInput = cmd;
+  rt.busy = true;
+  const entry = { text: cmd, summary: cliSummarizeCommand(cmd) };
+  const prev = (rt.recentCommands || []).map(cliNormalizeCommandEntry).filter(Boolean);
+  rt.recentCommands = [entry].concat(prev.filter((c) => c.text !== cmd)).slice(0, 5);
+}
+function cliDetailValClass(kind) {
+  if (kind === "error") return "cli-val-error";
+  if (kind === "pending") return "cli-val-pending";
+  if (kind === "unknown") return "cli-val-unknown";
+  return "cli-val-ok";
+}
+function cliRenderDetailDl(rows) {
+  let html = '<dl class="cli-detail-dl">';
+  rows.forEach((row) => {
+    if (!row) return;
+    const cls = cliDetailValClass(row.kind);
+    const val = row.html != null ? row.html : escapeHtml(row.value);
+    html += "<dt>" + escapeHtml(row.label) + "</dt><dd class=\"" + cls + "\">" + val + "</dd>";
+  });
+  html += "</dl>";
+  return html;
+}
+function cliRenderCommandHistory(rt) {
+  const items = (rt.recentCommands || []).map(cliNormalizeCommandEntry).filter(Boolean).slice(0, 5);
+  if (!items.length) return "—";
+  let html = '<ul class="cli-cmd-history">';
+  items.forEach((item) => {
+    html += '<li title="' + escapeAttr(item.text) + '">' + escapeHtml(item.summary) + "</li>";
+  });
+  html += "</ul>";
+  return html;
+}
+function cliRenderAuditTimeline(rt) {
+  const rows = (rt.auditLog || []).slice(-5).reverse();
+  if (!rows.length) return '<span class="cli-val-unknown">暂无事件</span>';
+  let html = '<ul class="cli-audit-list">';
+  rows.forEach((row) => {
+    const kind = escapeHtml(row.kind || "system");
+    const time = escapeHtml(cliFormatRelativeTime(row.ts) || "—");
+    const msg = escapeHtml(row.message || "");
+    const cnt = Number(row.count) > 1 ? " ×" + row.count : "";
+    html += '<li class="cli-audit-item cli-audit-' + kind + '"><span class="cli-audit-time">' + time + '</span><span class="cli-audit-msg">' + msg + cnt + "</span></li>";
+  });
+  html += "</ul>";
+  return html;
+}
+function cliRenderTtydUrlRow(eng) {
+  const full = getCliTtydUrlForCopy(eng) || cliBaseUrlForEngine(eng);
+  let summary = "未就绪";
+  try {
+    const u = new URL(full, window.location.href);
+    summary = u.hostname + ":" + (u.port || cliPortForEngine(eng));
+  } catch (_) {
+    summary = cliTruncatePath(full, 28);
+  }
+  return '<div class="cli-url-row">' +
+    '<span class="cli-url-summary">' + escapeHtml(summary) + "</span>" +
+    '<button type="button" class="cli-url-copy cli-compose-act" data-act="copyurl" title="复制 URL">复制</button>' +
+    '<details class="cli-url-details"><summary>详情</summary><code class="cli-url-full">' + escapeHtml(full) + "</code></details>" +
+    "</div>";
+}
+function renderCliModelDetail(engine) {
+  if (!isCliWorkbenchSurface()) return;
+  const body = document.getElementById("cli-detail-body");
+  if (!body) return;
+  const eng = normalizeCliEngineId(engine || getActiveCliEngine());
+  const rt = ensureCliRuntime(eng);
+  const conn = cliConnStateForEngine(eng);
+  const port = cliPortForEngine(eng);
+  const connectMs = rt.connectMs != null ? String(rt.connectMs) + " ms" : "—";
+  const lastErr = rt.lastError ? String(rt.lastError) : "—";
+  const hm = rt.hostMeta && typeof rt.hostMeta === "object" ? rt.hostMeta : {};
+  const workDir = hm.workDir ? String(hm.workDir) : "";
+  const hostPort = hm.port != null ? String(hm.port) : String(port);
+  const shell = hm.shell ? cliTruncatePath(String(hm.shell), 56) : "";
+  const nodeVer = hm.nodeVersion ? String(hm.nodeVersion) : "";
+  const pyVer = hm.pythonVersion ? String(hm.pythonVersion) : "";
+  const gitVer = hm.gitVersion ? String(hm.gitVersion).replace(/^git version\s+/i, "") : "";
+  const cliToolVer = hm.cliToolVersion ? String(hm.cliToolVersion) : "";
+  const envParts = [];
+  if (nodeVer) envParts.push("Node " + nodeVer);
+  else if (pyVer) envParts.push("Python " + pyVer);
+  if (gitVer) envParts.push("Git " + gitVer);
+  if (cliToolVer) envParts.push(cliToolVer);
+  const envText = envParts.length ? envParts.join(" | ") : "未检测到";
+  const taskTitle = getCliTaskTitle(eng) || "—";
+  const readyRel = rt.lastReadyAt ? cliFormatRelativeTime(rt.lastReadyAt) : "—";
+  const errRel = rt.lastErrorAt ? cliFormatRelativeTime(rt.lastErrorAt) : "—";
+  const retryRel = rt.lastRetryAt ? cliFormatRelativeTime(rt.lastRetryAt) : "—";
+  let html = "";
+  html += "<section class=\"cli-detail-group cli-detail-section\"><div class=\"cli-detail-section-title\">任务上下文</div>";
+  html += cliRenderDetailDl([
+    { label: "任务便签", value: taskTitle, kind: taskTitle !== "—" ? "ok" : "unknown" },
+    { label: "工作目录", value: workDir ? cliTruncatePath(workDir, 48) : (hm.fetchError ? String(hm.fetchError) : "未检测到"), kind: workDir ? "ok" : "unknown" },
+    { label: "Git 分支", value: cliFormatGitBranch(hm), kind: hm.branch ? "ok" : (hm.gitRepo === false ? "unknown" : "unknown") },
+    { label: "Git 状态", value: cliFormatGitStatus(hm), kind: hm.gitStatus ? "ok" : "unknown" },
+    { label: "最近 commit", value: cliFormatCommit(hm), kind: (hm.commitHash || hm.recentCommit) ? "ok" : "unknown" },
+    { label: "最近命令", html: cliRenderCommandHistory(rt), kind: (rt.recentCommands || []).length ? "ok" : "unknown" }
+  ]);
+  html += "</section>";
+  html += "<section class=\"cli-detail-group cli-detail-section\"><div class=\"cli-detail-section-title\">连接与观测</div>";
+  html += cliRenderDetailDl([
+    { label: "连接", value: cliConnStateLabel(conn), kind: conn === "error" ? "error" : (conn === "ready" ? "ok" : "unknown") },
+    { label: "端口", value: hostPort, kind: "ok" },
+    { label: "连接耗时", value: connectMs, kind: rt.connectMs != null ? "ok" : "unknown" },
+    { label: "就绪时间", value: readyRel, kind: rt.lastReadyAt ? "ok" : "unknown" },
+    { label: "最近错误", value: errRel + (rt.lastError ? " · " + cliTruncatePath(lastErr, 32) : ""), kind: rt.lastErrorAt ? "error" : "ok" },
+    { label: "重试", value: (rt.retryCount || 0) + " 次" + (retryRel !== "—" ? " · " + retryRel : ""), kind: rt.retryCount ? "unknown" : "ok" },
+    { label: "错误次数", value: String(rt.errorCount || 0), kind: rt.errorCount ? "error" : "ok" },
+    { label: "资源占用", value: cliFormatResourceStats(hm), kind: "ok" },
+    { label: "环境", value: envText, kind: envParts.length ? "ok" : "unknown" },
+    { label: "Shell", value: shell || "未检测到", kind: shell ? "ok" : "unknown" },
+    { label: "ttyd", html: cliRenderTtydUrlRow(eng), kind: "ok" },
+    { label: "事件", html: cliRenderAuditTimeline(rt), kind: (rt.auditLog || []).length ? "ok" : "unknown" }
+  ]);
+  html += "</section>";
+  html += "<details class=\"cli-detail-pending\"><summary>待接入</summary>";
+  html += cliRenderDetailDl(SC_CLI_PENDING_FIELDS.map((f) => ({
+    label: f.label,
+    value: f.note || "未接入",
+    kind: "pending"
+  })));
+  html += "</details>";
+  body.innerHTML = html;
+}
+function updateCliTopbar(engine, engRow) {
+  if (!isCliWorkbenchSurface()) return;
+  const eng = normalizeCliEngineId(engine || getActiveCliEngine());
+  const row = engRow || getCliEnginesForTabs().find((e) => e && e.value === eng);
+  const name = (row && row.name) ? row.name : eng;
+  const port = cliPortForEngine(eng);
+  const conn = cliConnStateForEngine(eng);
+  const rt = ensureCliRuntime(eng);
+  const titleEl = document.getElementById("cli-topbar-title");
+  const dotEl = document.getElementById("cli-conn-dot");
+  const connTextEl = document.getElementById("cli-topbar-conn");
+  const latencyEl = document.getElementById("cli-topbar-latency");
+  const topStatus = document.getElementById("wb-topbar-status");
+  const shellTitle = document.getElementById("cliTitle");
+  if (titleEl) titleEl.textContent = name;
+  if (dotEl) {
+    dotEl.dataset.state = conn;
+    dotEl.title = cliConnStateLabel(conn);
+  }
+  if (connTextEl) {
+    connTextEl.textContent = cliConnStateLabel(conn);
+    connTextEl.dataset.state = conn;
+  }
+  if (latencyEl) {
+    latencyEl.textContent = rt.connectMs != null ? "耗时 " + rt.connectMs + " ms" : "";
+  }
+  if (topStatus) topStatus.textContent = ":" + port;
+  if (shellTitle) shellTitle.textContent = name + " · ttyd :" + port;
+}
+function cliDispatchTerminalAction(fn) {
+  if (!isCliWorkbenchSurface()) {
+    if (typeof fn === "function") fn();
+    return;
+  }
+  scheduleCliTerminalFocusForSend();
+  setTimeout(() => { if (typeof fn === "function") fn(); }, 90);
+}
+let _cliWbSurfaceInited = false;
+function runCliComposeAction(act) {
+  const a = String(act || "");
+  if (a === "send") {
+    sendComposeToCli();
+    return;
+  }
+  if (a === "interrupt") cliDispatchTerminalAction(() => interruptCli());
+  else if (a === "paste") cliDispatchTerminalAction(() => pasteToCli());
+  else if (a === "clear") cliDispatchTerminalAction(() => clearCliTerminal());
+  else if (a === "retry") retryCliConnection();
+  else if (a === "copyurl") copyCliTtydUrl();
+  else if (a === "workdir") openCliWorkDir();
+  else if (a === "external") openCliExternal();
+  else if (a === "quick") toggleCliQuickPanel();
+}
+function initCliWorkbenchSurface() {
+  if (!isCliWorkbenchSurface() || _cliWbSurfaceInited) return;
+  _cliWbSurfaceInited = true;
+  try {
+    const v = localStorage.getItem(SC_CLI_DETAIL_RAIL_KEY);
+    state.detailRailUserOpen = (v !== "0");
+  } catch (_) {
+    state.detailRailUserOpen = true;
+  }
+  syncCliDetailRailResponsive();
+  const toggle = document.getElementById("cli-detail-toggle");
+  if (toggle) toggle.addEventListener("click", () => toggleCliDetailRail());
+  const taskInput = document.getElementById("cli-task-title");
+  if (taskInput) {
+    taskInput.addEventListener("change", () => {
+      setCliTaskTitle(getActiveCliEngine(), taskInput.value);
+      renderCliModelDetail(getActiveCliEngine());
+    });
+    taskInput.addEventListener("blur", () => {
+      setCliTaskTitle(getActiveCliEngine(), taskInput.value);
+      renderCliModelDetail(getActiveCliEngine());
+    });
+  }
+  const dock = document.querySelector(".cli-compose-dock");
+  if (dock) {
+    dock.addEventListener("click", (e) => {
+      const sum = e.target.closest(".cli-compose-more > summary");
+      if (sum) return;
+      const btn = e.target.closest(".cli-compose-act[data-act]");
+      if (!btn) return;
+      e.preventDefault();
+      runCliComposeAction(btn.dataset.act);
+    });
+  }
+  const detailBody = document.getElementById("cli-detail-body");
+  if (detailBody) {
+    detailBody.addEventListener("click", (e) => {
+      const btn = e.target.closest("[data-act]");
+      if (!btn || !btn.dataset.act) return;
+      e.preventDefault();
+      runCliComposeAction(btn.dataset.act);
+    });
+  }
+  try {
+    window.matchMedia(SC_CLI_DETAIL_NARROW_MQ).addEventListener("change", syncCliDetailRailResponsive);
+  } catch (_) {}
+}
 function cliEngineRoleLabel(engineId) {
   const id = normalizeCliEngineId(engineId);
   return SC_CLI_ENGINE_ROLE[id] || id.replace(/_cli$/, "");
@@ -134,25 +708,79 @@ const _cliAutoRetryCountByEngine = new Map();
 let _cliConnectFallbackTimer = 0;
 let _cliLoadingPollTimer = 0;
 const _cliLoadingPollCountByEngine = new Map();
+function getCliTerminalClickPoint() {
+  const stack = getCliFrameStackEl();
+  const fr = getActiveCliFrameEl();
+  const el = fr || stack;
+  if (!el || !el.getBoundingClientRect) return null;
+  const rect = el.getBoundingClientRect();
+  if (rect.width < 8 || rect.height < 8) return null;
+  return {
+    x: Math.round(rect.left + rect.width * 0.5),
+    y: Math.round(rect.top + Math.min(rect.height * 0.72, rect.height - 16))
+  };
+}
+function cliSendHostExtras() {
+  if (!isCliWorkbenchSurface()) return {};
+  const pt = getCliTerminalClickPoint();
+  if (!pt) return {};
+  return { clickX: pt.x, clickY: pt.y };
+}
+function scheduleCliTerminalFocusForSend() {
+  setCliTerminalFocusLock(true);
+  const input = document.getElementById("search");
+  if (input && document.activeElement === input) {
+    try { input.blur(); } catch (_) {}
+  }
+  focusCliTerminalFrame();
+  requestAnimationFrame(() => {
+    focusCliTerminalFrame();
+    requestAnimationFrame(() => focusCliTerminalFrame());
+  });
+}
+let _cliPendingComposeSend = "";
 function sendComposeToCli() {
   const input = document.getElementById("search");
-  const keyword = input ? String(input.value || "") : "";
-  state.keyword = keyword;
-  if (!keyword.trim()) {
+  const keyword = input ? String(input.value || "").trim() : "";
+  if (!keyword) {
     const st = document.getElementById("status");
     if (st) st.textContent = "请输入要发送的内容";
     return;
   }
+  state.keyword = keyword;
   const eng = getActiveCliEngine();
   const ready = isCliEngineReady(eng) && cliFrameUrlLooksLiveForPort(cliPortForEngine(eng));
+  if (isCliWorkbenchSurface()) {
+    ensureCliFrameForEngine(eng);
+    setActiveCliFrame(eng);
+    scheduleCliTerminalFocusForSend();
+  }
   if (!ready) {
+    _cliPendingComposeSend = keyword;
     setCliLoadingVisible(true, "终端初始化中，请稍候…");
     throttledNiumaCliOpen(false);
+  } else {
+    _cliPendingComposeSend = "";
   }
-  postToAhk({ type: "cliSend", prompt: keyword, engine: eng });
-  try {
-    input.focus();
-  } catch (_) {}
+  const payload = Object.assign({ type: "cliSend", prompt: keyword, engine: eng }, cliSendHostExtras());
+  const fireSend = () => {
+    postToAhk(payload);
+    cliTrackCommandSent(eng, keyword);
+    cliPushAudit(eng, "send", "info", "已发送: " + cliSummarizeCommand(keyword, 40));
+    if (isCliWorkbenchSurface()) renderCliModelDetail(eng);
+    if (input) {
+      input.value = "";
+      input.style.height = "auto";
+      state.keyword = "";
+    }
+    const st = document.getElementById("status");
+    if (st && ready) st.textContent = "已发送到终端";
+  };
+  if (isCliWorkbenchSurface()) {
+    setTimeout(fireSend, 90);
+  } else {
+    fireSend();
+  }
 }
 function cliPortForEngine(engine) {
   const k = normalizeCliEngineId(engine);
@@ -453,6 +1081,7 @@ function throttledNiumaCliOpen(force) {
   const last = Number(_cliOpenThrottleByEngine.get(engine) || 0);
   if (!force && now - last < scCliOpenThrottleMs()) return;
   _cliOpenThrottleByEngine.set(engine, now);
+  ensureCliRuntime(engine).openRequestedAt = now;
   postToAhk({ type: "niuma_cli_open", engine, reqId: "sc_" + now });
 }
 
@@ -482,11 +1111,6 @@ function syncCliWorkspace(spawnIfNeeded) {
   setActiveCliFrame(engine);
   state.activeCliEngine = engine;
   const engRow = getCliEnginesForTabs().find((e) => e && e.value === engine);
-  const titleEl = document.getElementById("cliTitle");
-  const topStatus = document.getElementById("wb-topbar-status");
-  const titleText = (engRow ? engRow.name : engine) + " · 端口 " + cliPortForEngine(engine);
-  if (titleEl) titleEl.textContent = titleText;
-  if (topStatus) topStatus.textContent = titleText;
   renderCliQuickCmds();
   const port = cliPortForEngine(engine);
   ensureCliFrameForEngine(engine);
@@ -524,6 +1148,7 @@ function syncCliWorkspace(spawnIfNeeded) {
       setCliTerminalFocusLock(true);
     }, 0);
   }
+  refreshCliWorkbenchUi(engine, engRow);
 }
 
 function renderCliEngineTabs() {
@@ -558,16 +1183,14 @@ function renderCliEngineTabs() {
       const iconHtml = engine.iconUrl
         ? "<img class=\"web-chip-icon\" src=\"" + escapeAttr(engine.iconUrl) + "\" alt=\"\">"
         : "<span class=\"web-chip-fallback\">" + escapeHtml(String(engine.name || engId).slice(0, 1).toUpperCase()) + "</span>";
-      const taskText = ready
-        ? (isActive ? "当前任务：终端就绪" : "当前任务：待命")
-        : (isActive ? "当前任务：连接 ttyd…" : "当前任务：未连接");
-      const progressPct = ready ? (isActive ? "100" : "0") : (isActive ? "45" : "0");
+      const statusText = ready
+        ? (isActive ? "就绪" : "待命")
+        : (isActive ? "连接中" : "未连接");
       btn.innerHTML =
         "<span class=\"sc-web-ai-row__icon\">" + iconHtml + "</span>" +
         "<span class=\"sc-web-ai-row__main\">" +
-          "<span class=\"sc-web-ai-row__title\">" + escapeHtml((engine.name || engId) + " - " + cliEngineRoleLabel(engId)) + "</span>" +
-          "<span class=\"sc-web-ai-row__sub\">" + escapeHtml(taskText) + (isActive && !ready ? " 45%" : (isActive && ready ? " 100%" : "")) + "</span>" +
-          "<span class=\"sc-web-ai-row__progress\"><span class=\"sc-web-ai-row__progress-fill" + (isActive && !ready ? " is-indeterminate" : "") + "\" style=\"width:" + progressPct + "%\"></span></span>" +
+          "<span class=\"sc-web-ai-row__title\">" + escapeHtml((engine.name || engId) + " · " + cliEngineRoleLabel(engId)) + "</span>" +
+          "<span class=\"sc-web-ai-row__sub\">" + escapeHtml(statusText) + "</span>" +
         "</span>" +
         "<span class=\"sc-web-ai-row__dot" + (ready ? " dot-ready" : (isActive ? " dot-loading" : "")) + "\" aria-hidden=\"true\"></span>";
     } else {
@@ -584,6 +1207,7 @@ function renderCliEngineTabs() {
       state.activeCliEngine = id;
       renderCliEngineTabs();
       syncCliWorkspace(true);
+      requestCliEngineRuntime(id, "switch");
       renderCliQuickCmds();
     });
     wrap.appendChild(btn);
@@ -628,8 +1252,15 @@ function sendCliQuickCmd(cmd) {
     setCliLoadingVisible(true, "终端初始化中，请稍候…");
     throttledNiumaCliOpen(false);
   }
-  setCliTerminalFocusLock(true);
-  postToAhk({ type: "cliSend", prompt: text, engine: eng });
+  if (isCliWorkbenchSurface()) {
+    ensureCliFrameForEngine(eng);
+    setActiveCliFrame(eng);
+    scheduleCliTerminalFocusForSend();
+  } else {
+    setCliTerminalFocusLock(true);
+  }
+  postToAhk(Object.assign({ type: "cliSend", prompt: text, engine: eng }, cliSendHostExtras()));
+  cliTrackCommandSent(eng, text);
   focusCliTerminalFrame();
 }
 
@@ -642,9 +1273,10 @@ function renderCliQuickCmds() {
     wrap.classList.add("hidden");
     return;
   }
-  const open = isCliQuickPanelOpen();
+  const wbDock = isCliWorkbenchSurface() && wrap.classList.contains("cli-quick-cmds-bottom");
+  const open = wbDock || isCliQuickPanelOpen();
   wrap.classList.toggle("hidden", !open);
-  if (toggleBtn) toggleBtn.classList.toggle("primary", open);
+  if (toggleBtn) toggleBtn.classList.toggle("primary", open && !wbDock);
   if (!open) {
     wrap.innerHTML = "";
     return;
@@ -652,6 +1284,12 @@ function renderCliQuickCmds() {
   const engine = getActiveCliEngine();
   const cmds = getCliQuickCmdsForEngine(engine);
   wrap.innerHTML = "";
+  if (wbDock) {
+    const label = document.createElement("span");
+    label.className = "cli-quick-cmds-label";
+    label.textContent = "常用命令";
+    wrap.appendChild(label);
+  }
   cmds.forEach((item) => {
     const btn = document.createElement("button");
     btn.type = "button";
@@ -663,50 +1301,101 @@ function renderCliQuickCmds() {
   });
 }
 
+function openCliWorkDir() {
+  const engine = getActiveCliEngine();
+  postToAhk({ type: "niuma_cli_open_workdir", engine, reqId: "sc_wd_" + Date.now() });
+}
+function pasteToCli() {
+  const engine = getActiveCliEngine();
+  setCliTerminalFocusLock(true);
+  postToAhk(Object.assign({ type: "cliPaste", engine }, cliSendHostExtras()));
+}
+function interruptCli() {
+  const engine = getActiveCliEngine();
+  setCliTerminalFocusLock(true);
+  postToAhk(Object.assign({ type: "cliInterrupt", engine }, cliSendHostExtras()));
+}
+function openCliExternal() {
+  const engine = getActiveCliEngine();
+  postToAhk({
+    type: "niuma_cli_open_external",
+    engine,
+    baseUrl: cliUrlWithTheme(cliBaseUrlForEngine(engine)),
+    reqId: "sc_x_" + Date.now()
+  });
+}
+function toggleCliQuickPanel() {
+  setCliQuickPanelOpen(!isCliQuickPanelOpen());
+}
+function clearCliTerminal() {
+  sendCliQuickCmd("cls");
+}
+function retryCliConnection() {
+  const eng = getActiveCliEngine();
+  if (isCliWorkbenchSurface()) {
+    const rt = ensureCliRuntime(eng);
+    rt.retryCount = (Number(rt.retryCount) || 0) + 1;
+    rt.lastRetryAt = Date.now();
+    cliPushAudit(eng, "retry", "warn", "发起重连");
+    renderCliModelDetail(eng);
+    clearCliEngineReady(eng);
+    resetCliOpenThrottle(eng);
+    postToAhk({
+      type: "niuma_cli_restart",
+      engine: eng,
+      baseUrl: cliBaseUrlForEngine(eng),
+      reqId: "sc_retry_" + Date.now()
+    });
+    setCliLoadingVisible(true, "正在重连…");
+    return;
+  }
+  throttledNiumaCliOpen(true);
+}
+function getCliTtydUrlForCopy(engine) {
+  const eng = normalizeCliEngineId(engine);
+  const cached = String(_cliUrlByEngine.get(eng) || "").trim();
+  if (cached && cached.indexOf("about:blank") !== 0) return cached;
+  if (isCliEngineReady(eng)) return cliUrlWithTheme(cliBaseUrlForEngine(eng));
+  return "";
+}
+function copyCliTtydUrl() {
+  const eng = getActiveCliEngine();
+  const url = getCliTtydUrlForCopy(eng);
+  const st = document.getElementById("status");
+  if (!url) {
+    if (st) st.textContent = "暂无可用连接地址";
+    return;
+  }
+  const done = () => { if (st) st.textContent = "已复制 ttyd URL"; };
+  const fail = () => { if (st) st.textContent = "复制失败"; };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(url).then(done).catch(fail);
+  } else {
+    try {
+      const ta = document.createElement("textarea");
+      ta.value = url;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      document.body.removeChild(ta);
+      done();
+    } catch (_) {
+      fail();
+    }
+  }
+}
+
 function initCliTerminalControls() {
   const workDirBtn = document.getElementById("cliWorkDirBtn");
   const pasteBtn = document.getElementById("cliPasteBtn");
   const interruptBtn = document.getElementById("cliInterruptBtn");
   const quickToggleBtn = document.getElementById("cliQuickToggleBtn");
   const popBtn = document.getElementById("cliPopBtn");
-  if (workDirBtn) {
-    workDirBtn.addEventListener("click", () => {
-      const engine = getActiveCliEngine();
-      postToAhk({ type: "niuma_cli_open_workdir", engine, reqId: "sc_wd_" + Date.now() });
-    });
-  }
-  if (pasteBtn) {
-    pasteBtn.addEventListener("click", () => {
-      const engine = getActiveCliEngine();
-      setCliTerminalFocusLock(true);
-      postToAhk({ type: "cliPaste", engine });
-      focusCliTerminalFrame();
-    });
-  }
-  if (interruptBtn) {
-    interruptBtn.addEventListener("click", () => {
-      const engine = getActiveCliEngine();
-      setCliTerminalFocusLock(true);
-      postToAhk({ type: "cliInterrupt", engine });
-      focusCliTerminalFrame();
-    });
-  }
-  if (quickToggleBtn) {
-    quickToggleBtn.addEventListener("click", () => {
-      setCliQuickPanelOpen(!isCliQuickPanelOpen());
-    });
-  }
-  if (popBtn) {
-    popBtn.addEventListener("click", () => {
-      const engine = getActiveCliEngine();
-      postToAhk({
-        type: "niuma_cli_open_external",
-        engine,
-        baseUrl: cliUrlWithTheme(cliBaseUrlForEngine(engine)),
-        reqId: "sc_x_" + Date.now()
-      });
-    });
-  }
+  if (workDirBtn) workDirBtn.addEventListener("click", () => openCliWorkDir());
+  if (pasteBtn) pasteBtn.addEventListener("click", () => pasteToCli());
+  if (interruptBtn) interruptBtn.addEventListener("click", () => interruptCli());
+  if (quickToggleBtn) quickToggleBtn.addEventListener("click", () => toggleCliQuickPanel());
+  if (popBtn) popBtn.addEventListener("click", () => openCliExternal());
   const fr = getActiveCliFrameEl();
   if (fr) {
     fr.setAttribute("tabindex", "0");
@@ -721,11 +1410,24 @@ function initCliTerminalControls() {
   document.addEventListener("pointerdown", (e) => {
     if (getUIMode() !== "cli") return;
     const t = e.target;
-    if (t && t.closest && (t.closest(".cli-frame-stack") || t.closest("#cli-engine-tabs") || t.closest("#cli-engine-sidebar") || t.closest("#compose-context-cli") || t.closest(".cli-bar") || t.closest("#cliQuickCmds") || t.closest(".wb-compose"))) {
+    if (t && t.closest && (t.closest("#cli-detail-rail") || t.closest("#cli-sidebar-context") || t.closest("#cli-task-title"))) {
+      setCliTerminalFocusLock(false);
+      return;
+    }
+    if (t && t.closest && t.closest(".cli-frame-stack")) {
       setCliTerminalFocusLock(true);
-      if (t.closest(".cli-frame-stack")) {
-        focusCliTerminalFrame();
-      }
+      focusCliTerminalFrame();
+      return;
+    }
+    if (t && t.closest && (t.closest(".wb-compose-inner") || t.closest("#search") || t.closest(".cli-compose-dock"))) {
+      setCliTerminalFocusLock(false);
+      return;
+    }
+    if (t && t.closest && (t.closest("#cli-engine-tabs") || t.closest("#cli-engine-sidebar") || t.closest("#compose-context-cli") || t.closest(".cli-bar"))) {
+      setCliTerminalFocusLock(false);
+      return;
+    }
+    if (t && t.closest && (t.closest("#cliQuickCmds") || t.closest(".cli-compose-toolbar") || t.closest(".cli-compose-more"))) {
       return;
     }
     setCliTerminalFocusLock(false);
@@ -737,9 +1439,18 @@ function handleTtydHostMessage(payload) {
   if (!payload || !payload.type) return false;
   if (payload.type === "ttyd_ready") {
     const eng = normalizeCliEngineId(payload.engine || getActiveCliEngine());
+    const rt = eng ? ensureCliRuntime(eng) : null;
     if (eng) {
       markCliEngineReady(eng);
       ensureCliFrameForEngine(eng);
+    }
+    if (rt) {
+      rt.busy = false;
+      rt.lastError = "";
+      rt.lastReadyAt = Date.now();
+      cliPushAudit(eng, "ready", "success", "终端已就绪");
+      const started = Number(rt.openRequestedAt) || 0;
+      if (started > 0) rt.connectMs = Math.max(0, Date.now() - started);
     }
     resetCliOpenThrottle(eng);
     _cliAutoRetryCountByEngine.delete(eng);
@@ -755,16 +1466,38 @@ function handleTtydHostMessage(payload) {
       setCliLoadingVisible(false);
       stopCliLoadingPoll();
       renderCliEngineTabs();
+      if (active === eng) refreshCliWorkbenchUi(eng);
     }
     const bootCmd = String(payload.autoBootCmd || "").trim();
     if (bootCmd) scheduleCliAutoBoot(eng, bootCmd);
     if (active !== eng) return true;
     const st = document.getElementById("status");
     if (st) st.textContent = "ttyd 终端已就绪";
+    refreshCliWorkbenchUi(eng);
+    if (isCliWorkbenchSurface()) requestCliEngineRuntime(eng, "ttyd_ready");
+    if (_cliPendingComposeSend && isCliWorkbenchSurface()) {
+      const pending = String(_cliPendingComposeSend || "").trim();
+      _cliPendingComposeSend = "";
+      if (pending) {
+        setTimeout(() => {
+          scheduleCliTerminalFocusForSend();
+          postToAhk(Object.assign({ type: "cliSend", prompt: pending, engine: eng }, cliSendHostExtras()));
+          cliTrackCommandSent(eng, pending);
+        }, 320);
+      }
+    }
     return true;
   }
   if (payload.type === "ttyd_error") {
     const eng = normalizeCliEngineId(payload.engine || "");
+    const rt = eng ? ensureCliRuntime(eng) : null;
+    if (eng && rt) {
+      rt.busy = false;
+      rt.errorCount = (Number(rt.errorCount) || 0) + 1;
+      rt.lastError = String(payload.message || "启动失败");
+      rt.lastErrorAt = Date.now();
+      cliPushAudit(eng, "error", "error", String(payload.message || "启动失败").slice(0, 80));
+    }
     if (eng && eng !== getActiveCliEngine()) return true;
     if (eng) clearCliEngineReady(eng);
     resetCliOpenThrottle(eng);
@@ -777,6 +1510,10 @@ function handleTtydHostMessage(payload) {
       st.textContent = msg.indexOf("timeout") >= 0
         ? "ttyd 连接超时，可点「打开」或「重启」重试"
         : "ttyd：" + msg;
+    }
+    if (eng === getActiveCliEngine()) {
+      refreshCliWorkbenchUi(eng);
+      renderCliEngineTabs();
     }
     return true;
   }
@@ -792,6 +1529,7 @@ function ensureCliControlsInited() {
   if (_scCliControlsInited) return;
   _scCliControlsInited = true;
   initCliTerminalControls();
+  initCliWorkbenchSurface();
 }
 
 if (typeof globalThis !== "undefined") {
@@ -808,4 +1546,25 @@ if (typeof globalThis !== "undefined") {
   globalThis.normalizeCliEngineId = normalizeCliEngineId;
   globalThis.setCliTerminalFocusLock = setCliTerminalFocusLock;
   globalThis.focusCliTerminalFrame = focusCliTerminalFrame;
+  globalThis.isCliWorkbenchSurface = isCliWorkbenchSurface;
+  globalThis.initCliWorkbenchSurface = initCliWorkbenchSurface;
+  globalThis.renderCliModelDetail = renderCliModelDetail;
+  globalThis.updateCliTopbar = updateCliTopbar;
+  globalThis.toggleCliDetailRail = toggleCliDetailRail;
+  globalThis.syncCliDetailRailResponsive = syncCliDetailRailResponsive;
+  globalThis.cliApplyHostMeta = cliApplyHostMeta;
+  globalThis.requestCliEngineRuntime = requestCliEngineRuntime;
+  globalThis.handleCliEngineRuntimeMessage = handleCliEngineRuntimeMessage;
+  globalThis.handleCliAuditMessage = handleCliAuditMessage;
+  globalThis.refreshCliWorkbenchUi = refreshCliWorkbenchUi;
+  globalThis.renderCliSidebarContext = renderCliSidebarContext;
+  globalThis.openCliWorkDir = openCliWorkDir;
+  globalThis.pasteToCli = pasteToCli;
+  globalThis.interruptCli = interruptCli;
+  globalThis.openCliExternal = openCliExternal;
+  globalThis.clearCliTerminal = clearCliTerminal;
+  globalThis.retryCliConnection = retryCliConnection;
+  globalThis.copyCliTtydUrl = copyCliTtydUrl;
+  globalThis.getCliTaskTitle = getCliTaskTitle;
+  globalThis.setCliTaskTitle = setCliTaskTitle;
 }

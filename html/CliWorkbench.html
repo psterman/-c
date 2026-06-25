@@ -69,31 +69,40 @@ html[data-theme="light"], html[data-theme="light"] body {
             <div id="cli-engine-sidebar" class="sc-web-nav-tabs cli-engine-sidebar" role="tablist" aria-label="CLI 引擎标签"></div>
           </div>
         </details>
+        <details class="cli-sidebar-context" id="cli-sidebar-context">
+          <summary>目录 / 分支</summary>
+          <div id="cli-sidebar-context-body" class="cli-sidebar-context-body"></div>
+        </details>
       </div>
     </details>
     <div id="cli-engine-tabs" class="cli-engine-tabs" hidden aria-hidden="true"></div>
   </aside>
 
   <div class="wb-main">
-    <header class="wb-topbar">
-      <div class="wb-topbar-title">CLI 终端</div>
-      <span class="wb-topbar-status" id="wb-topbar-status" aria-live="polite"></span>
+    <header class="wb-topbar wb-topbar-cli">
+      <div class="cli-topbar-status-group" aria-label="连接状态">
+        <span class="cli-conn-dot" id="cli-conn-dot" data-state="idle" title="连接状态" aria-hidden="true"></span>
+        <span class="cli-topbar-conn" id="cli-topbar-conn">未连接</span>
+        <span class="cli-topbar-latency" id="cli-topbar-latency" aria-live="polite"></span>
+      </div>
+      <span class="cli-topbar-vsep" aria-hidden="true"></span>
+      <div class="cli-topbar-engine" id="cli-topbar-title">CLI 终端</div>
+      <span class="cli-topbar-port" id="wb-topbar-status" aria-live="polite"></span>
+      <span class="cli-topbar-vsep" aria-hidden="true"></span>
+      <label class="cli-topbar-task-wrap">
+        <input type="text" id="cli-task-title" class="cli-topbar-task" placeholder="任务便签（本地）" autocomplete="off" spellcheck="false" />
+      </label>
+      <span class="cli-topbar-spacer" aria-hidden="true"></span>
+      <button type="button" class="cli-detail-toggle" id="cli-detail-toggle" title="折叠/展开工作台信息" aria-expanded="true">详情</button>
       <button type="button" class="wb-close" id="cli-wb-close" title="关闭" aria-label="关闭">×</button>
     </header>
-    <div class="wb-compose">
-      <div class="wb-compose-inner">
-        <span class="wb-compose-icon">&gt;</span>
-        <textarea id="search" rows="1" placeholder="输入命令或问题，Enter 发送到当前终端…" autocomplete="off" spellcheck="false"></textarea>
-      </div>
-    </div>
-    <div id="status" class="wb-status-line" aria-live="polite"></div>
-    <div class="wb-content">
+    <div class="wb-content cli-stage" id="cli-stage">
       <div id="cli-workspace" class="cli-workspace" aria-label="CLI 终端">
         <section id="cliPane" class="cli-pane">
           <div class="cli-shell">
-            <div class="cli-bar">
+            <div class="cli-bar cli-bar-slim" hidden aria-hidden="true">
               <div class="cli-title" id="cliTitle">CLI 终端</div>
-              <div class="cli-btns" role="toolbar" aria-label="终端工具栏">
+              <div class="cli-btns cli-btns-ghost" hidden aria-hidden="true">
                 <button type="button" class="cli-btn" id="cliWorkDirBtn" title="在资源管理器中打开工作目录">工作目录</button>
                 <button type="button" class="cli-btn" id="cliPasteBtn" title="将剪贴板内容粘贴到终端">粘贴</button>
                 <button type="button" class="cli-btn" id="cliInterruptBtn" title="向终端发送 Ctrl+C 中断">中断</button>
@@ -101,7 +110,6 @@ html[data-theme="light"], html[data-theme="light"] body {
                 <button type="button" class="cli-btn" id="cliPopBtn" title="在系统浏览器中打开 ttyd">外部打开</button>
               </div>
             </div>
-            <div id="cliQuickCmds" class="cli-quick-cmds" aria-label="快捷命令"></div>
             <div id="cli-frame-stack" class="cli-frame-stack" aria-label="CLI ttyd 终端">
               <div id="cliLoading" class="cli-loading hidden">正在连接 ttyd…</div>
               <iframe id="cliFrame" class="cli-frame" src="about:blank" title="CLI ttyd 终端"></iframe>
@@ -109,6 +117,64 @@ html[data-theme="light"], html[data-theme="light"] body {
           </div>
         </section>
       </div>
+      <aside id="cli-detail-rail" class="cli-detail-rail" aria-label="工作台信息">
+        <div class="cli-detail-head">工作台信息</div>
+        <div class="cli-detail-body" id="cli-detail-body"></div>
+      </aside>
+    </div>
+    <div id="status" class="wb-status-line" aria-live="polite"></div>
+    <div class="wb-compose wb-compose-bottom cli-compose-dock">
+      <div class="wb-compose-inner">
+        <span class="wb-compose-icon">&gt;</span>
+        <textarea id="search" rows="1" placeholder="输入命令或问题，Enter 发送，Shift+Enter 换行…" autocomplete="off" spellcheck="false"></textarea>
+      </div>
+      <div class="cli-compose-toolbar" role="toolbar" aria-label="终端操作">
+        <div class="cli-compose-group cli-compose-group--primary" aria-label="主命令">
+          <button type="button" class="cli-compose-act cli-tool-btn cli-tool-btn--primary" data-act="send" title="发送到终端 (Enter)">
+            <span class="cli-tool-glyph" aria-hidden="true">⏎</span>
+            <span class="cli-tool-label">发送</span>
+          </button>
+          <button type="button" class="cli-compose-act cli-tool-btn cli-tool-btn--danger" data-act="interrupt" title="中断 (Ctrl+C)">
+            <span class="cli-tool-glyph" aria-hidden="true">■</span>
+            <span class="cli-tool-label">中断</span>
+          </button>
+        </div>
+        <div class="cli-compose-group" aria-label="终端操作">
+          <button type="button" class="cli-compose-act cli-tool-btn" data-act="paste" title="粘贴到终端">
+            <span class="cli-tool-glyph" aria-hidden="true">⎘</span>
+            <span class="cli-tool-label">粘贴</span>
+          </button>
+          <button type="button" class="cli-compose-act cli-tool-btn" data-act="clear" title="清屏">
+            <span class="cli-tool-glyph" aria-hidden="true">⌫</span>
+            <span class="cli-tool-label">清屏</span>
+          </button>
+        </div>
+        <div class="cli-compose-sep" aria-hidden="true"></div>
+        <div class="cli-compose-group cli-compose-group--session" aria-label="会话与连接">
+          <button type="button" class="cli-compose-act cli-tool-btn" data-act="retry" title="重试连接">
+            <span class="cli-tool-glyph" aria-hidden="true">↻</span>
+            <span class="cli-tool-label">重试连接</span>
+          </button>
+          <button type="button" class="cli-compose-act cli-tool-btn" data-act="copyurl" title="复制 ttyd URL">
+            <span class="cli-tool-glyph" aria-hidden="true">⛓</span>
+            <span class="cli-tool-label">复制 URL</span>
+          </button>
+          <button type="button" class="cli-compose-act cli-tool-btn" data-act="external" title="在浏览器打开 ttyd">
+            <span class="cli-tool-glyph" aria-hidden="true">↗</span>
+            <span class="cli-tool-label">外部打开</span>
+          </button>
+          <details class="cli-compose-more">
+            <summary class="cli-compose-act cli-tool-btn" title="更多操作">
+              <span class="cli-tool-glyph" aria-hidden="true">⋯</span>
+              <span class="cli-tool-label">更多</span>
+            </summary>
+            <div class="cli-compose-more-body">
+              <button type="button" class="cli-compose-act" data-act="workdir">工作目录</button>
+            </div>
+          </details>
+        </div>
+      </div>
+      <div id="cliQuickCmds" class="cli-quick-cmds cli-quick-cmds-bottom" aria-label="快捷命令"></div>
     </div>
   </div>
 </div>
@@ -139,6 +205,9 @@ const state = {
   activeCliEngine: "codex_cli",
   selectedEngines: [],
   cliReadyEngines: {},
+  cliRuntime: {},
+  detailRailUserOpen: true,
+  detailRailNarrowForced: false,
   hostMinimized: false,
   hostForeground: true
 };
@@ -164,6 +233,13 @@ function applyInit(payload) {
   state.currentCategoryKey = "cli";
   state.hostMinimized = false;
   state.hostForeground = true;
+  if (payload.engineRuntime && typeof cliApplyHostMeta === "function") {
+    cliApplyHostMeta(payload.activeCliEngine || state.activeCliEngine, payload.engineRuntime, {
+      reqId: "init",
+      refreshUi: true,
+      partial: false
+    });
+  }
   if (typeof ensureCliControlsInited === "function") ensureCliControlsInited();
   if (typeof renderCliEngineTabs === "function") renderCliEngineTabs();
   if (typeof renderCliQuickCmds === "function") renderCliQuickCmds();
@@ -209,6 +285,10 @@ if (searchEl) {
       if (typeof sendComposeToCli === "function") sendComposeToCli();
     }
   });
+  searchEl.addEventListener("input", () => {
+    searchEl.style.height = "auto";
+    searchEl.style.height = Math.min(searchEl.scrollHeight, 120) + "px";
+  });
 }
 if (window.chrome && window.chrome.webview) {
   window.chrome.webview.addEventListener("message", (ev) => {
@@ -226,6 +306,8 @@ if (window.chrome && window.chrome.webview) {
       return;
     }
     if (payload.type === "init" || payload.type === "state") applyInit(payload);
+    if (typeof handleCliEngineRuntimeMessage === "function" && handleCliEngineRuntimeMessage(payload)) return;
+    if (typeof handleCliAuditMessage === "function" && handleCliAuditMessage(payload)) return;
     if (typeof handleTtydHostMessage === "function" && handleTtydHostMessage(payload)) return;
     if (payload.type === "focusCliFrame") {
       const eng = typeof normalizeCliEngineId === "function"
@@ -243,12 +325,14 @@ if (window.chrome && window.chrome.webview) {
 }
 window.addEventListener("resize", () => {
   if (typeof syncCliSidebarIndicator === "function") syncCliSidebarIndicator();
+  if (typeof syncCliDetailRailResponsive === "function") syncCliDetailRailResponsive();
 });
 </script>
 <script src="https://app.local/assets/js/sc-cli.js"></script>
 <script>
 applyTheme(state.themeMode);
 if (typeof ensureCliControlsInited === "function") ensureCliControlsInited();
+if (typeof initCliWorkbenchSurface === "function") initCliWorkbenchSurface();
 if (typeof renderCliEngineTabs === "function") renderCliEngineTabs();
 if (typeof scheduleSyncCliWorkspace === "function") scheduleSyncCliWorkspace(true);
 postToAhk({ type: "ready" });
